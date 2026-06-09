@@ -78,17 +78,27 @@
     if (!(v %in% names(x)) || is.na(dt)) {
       next
     }
-    res <- .coerce_to_type(x[[v]], dt)
     old <- attributes(x[[v]])
-    x[[v]] <- res$value
-    for (a in setdiff(names(old), c("class", "levels", "names"))) {
+    if (dt %in% c("date", "datetime", "time")) {
+      # Realize to the R presentation class (Date/POSIXct/vport_time) using
+      # the spec displayFormat (default by dataType when absent). dataType
+      # drives the class; an unrecognized format leaves the column numeric.
+      before_na <- sum(is.na(x[[v]]))
+      x[[v]] <- .realize_temporal(x[[v]], dt, vars$display_format[i])
+      # Re-attach label etc., but keep the realized class and its tzone.
+      keep_off <- c("class", "levels", "names", "tzone")
+      n_na <- sum(is.na(x[[v]])) - before_na
+    } else {
+      res <- .coerce_to_type(x[[v]], dt)
+      x[[v]] <- res$value
+      keep_off <- c("class", "levels", "names")
+      n_na <- res$n_na_introduced
+    }
+    for (a in setdiff(names(old), keep_off)) {
       attr(x[[v]], a) <- old[[a]]
     }
-    if (res$n_na_introduced > 0L) {
-      introduced <- c(
-        introduced,
-        sprintf("%s (%d)", v, res$n_na_introduced)
-      )
+    if (n_na > 0L) {
+      introduced <- c(introduced, sprintf("%s (%d)", v, n_na))
     }
   }
   if (length(introduced)) {

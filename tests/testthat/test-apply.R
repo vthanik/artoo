@@ -37,6 +37,27 @@ test_that("apply_spec drops columns the spec does not declare", {
   expect_false("NOTSPEC" %in% names(out))
 })
 
+test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guard)", {
+  spec <- demo_spec()
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+
+  expect_s3_class(adsl$TRTSDT, "Date")
+  # Deflating to SAS days must use the 1960 epoch, not the R 1970 epoch:
+  # the two differ by 3653 days, the historical bug.
+  sas_days <- vport:::.deflate_temporal(adsl$TRTSDT, "date")
+  r_epoch_days <- as.numeric(unclass(adsl$TRTSDT))
+  ok <- !is.na(sas_days)
+  expect_equal(sas_days[ok], r_epoch_days[ok] + 3653)
+})
+
+test_that("a scaffolded date variable realizes to a Date NA", {
+  spec <- demo_spec()
+  raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
+  out <- apply_spec(raw, spec, "ADSL", check = "off")
+  expect_s3_class(out$TRTSDT, "Date")
+  expect_true(all(is.na(out$TRTSDT)))
+})
+
 test_that("apply_spec does not mutate its input (transactional)", {
   spec <- demo_spec()
   before <- cdisc_adsl
