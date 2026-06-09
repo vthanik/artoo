@@ -1,0 +1,342 @@
+# vport_temporal.R -- SAS temporal realize/deflate + format classification.
+#
+# vport presents SAS date/datetime/time columns as native R Date / POSIXct /
+# vport_time so they render correctly in the data viewer, while the codecs
+# store them as SAS-epoch numerics. `.realize_temporal` (numeric/ISO -> R
+# class) and `.deflate_temporal` (R class -> SAS numeric) are the shared
+# pair every codec calls; the SAS displayFormat rides in vport_meta. The
+# format-classification table is ported from the herald archive
+# (xpt-encoding.R); the R-Date conversions there are superseded by the
+# epoch-explicit math here.
+
+# SAS epoch anchors. date = days since 1960-01-01; datetime = seconds since
+# 1960-01-01 00:00:00 UTC. Computed once at load (deterministic, no locale).
+.sas_epoch_date <- as.Date("1960-01-01")
+.sas_epoch_datetime <- as.POSIXct("1960-01-01 00:00:00", tz = "UTC")
+
+# ---- format classification (ported; classification only) -------------------
+
+.sas_date_formats <- c(
+  "DATE",
+  "DAY",
+  "DDMMYY",
+  "DDMMYYB",
+  "DDMMYYC",
+  "DDMMYYD",
+  "DDMMYYN",
+  "DDMMYYP",
+  "DDMMYYS",
+  "MMDDYY",
+  "MMDDYYB",
+  "MMDDYYC",
+  "MMDDYYD",
+  "MMDDYYN",
+  "MMDDYYP",
+  "MMDDYYS",
+  "YYMMDD",
+  "YYMMDDB",
+  "YYMMDDC",
+  "YYMMDDD",
+  "YYMMDDN",
+  "YYMMDDP",
+  "YYMMDDS",
+  "YYMM",
+  "YYMMC",
+  "YYMMD",
+  "YYMMN",
+  "YYMMP",
+  "YYMMS",
+  "YYQ",
+  "YYQC",
+  "YYQD",
+  "YYQN",
+  "YYQP",
+  "YYQS",
+  "YYQR",
+  "YYQRC",
+  "YYQRD",
+  "YYQRN",
+  "YYQRP",
+  "YYQRS",
+  "MMYY",
+  "MMYYC",
+  "MMYYD",
+  "MMYYN",
+  "MMYYP",
+  "MMYYS",
+  "MONYY",
+  "MONNAME",
+  "MONTH",
+  "QTR",
+  "QTRR",
+  "YEAR",
+  "WEEKDAY",
+  "WEEKDATE",
+  "WEEKDATX",
+  "WORDDATE",
+  "WORDDATX",
+  "JULIAN",
+  "JULDAY",
+  "NENGO",
+  "MINGUO",
+  "HDATE",
+  "HEBDATE",
+  "EURDFDD",
+  "EURDFDE",
+  "EURDFDN",
+  "EURDFDT",
+  "EURDFDWN",
+  "EURDFMN",
+  "EURDFMY",
+  "EURDFWDX",
+  "EURDFWKX",
+  "NLDATE",
+  "NLDATEL",
+  "NLDATEM",
+  "NLDATEMD",
+  "NLDATEMN",
+  "NLDATES",
+  "NLDATEW",
+  "NLDATEWN",
+  "NLDATEYM",
+  "NLDATEYMW",
+  "PDJULG",
+  "PDJULI",
+  "B8601DA",
+  "E8601DA",
+  "DTDATE",
+  "DTYEAR",
+  "DTMONYY",
+  "DTWKDATX",
+  "DTYYQC"
+)
+.sas_datetime_formats <- c(
+  "DATETIME",
+  "DATEAMPM",
+  "MDYAMPM",
+  "B8601DN",
+  "B8601DT",
+  "B8601DZ",
+  "B8601LZ",
+  "E8601DN",
+  "E8601DT",
+  "E8601DZ",
+  "E8601LZ",
+  "NLDATM",
+  "NLDATMAP",
+  "NLDATMDT",
+  "NLDATMMD",
+  "NLDATMMN",
+  "NLDATMS",
+  "NLDATMTM",
+  "NLDATMW",
+  "NLDATMWN",
+  "NLDATMWZ",
+  "NLDATMYM",
+  "NLDATMYW",
+  "NLDATMZ",
+  "DTTIME"
+)
+.sas_time_formats <- c(
+  "TIME",
+  "TIMEAMPM",
+  "HHMM",
+  "HOUR",
+  "MMSS",
+  "TOD",
+  "B8601TM",
+  "B8601TZ",
+  "E8601TM",
+  "E8601TZ",
+  "NLTIME",
+  "NLTIMMAP",
+  "NLTIMAP"
+)
+
+#' @noRd
+.is_sas_date_format <- function(fmt_name) {
+  toupper(fmt_name) %in% .sas_date_formats
+}
+#' @noRd
+.is_sas_datetime_format <- function(fmt_name) {
+  toupper(fmt_name) %in% .sas_datetime_formats
+}
+#' @noRd
+.is_sas_time_format <- function(fmt_name) {
+  toupper(fmt_name) %in% .sas_time_formats
+}
+
+# Split a SAS format string into name / width / decimals. "DATE9." ->
+# (DATE, 9, 0); "F8.2" -> (F, 8, 2); "DATETIME16" -> (DATETIME, 16, 0).
+#' @noRd
+.parse_format_str <- function(fmt) {
+  if (is.null(fmt) || length(fmt) != 1L || is.na(fmt) || !nzchar(fmt)) {
+    return(list(name = "", length = 0L, decimals = 0L))
+  }
+  dot <- regexpr("\\.[0-9]*$", fmt)
+  if (dot > 0L) {
+    before <- substr(fmt, 1L, dot - 1L)
+    after <- substr(fmt, dot + 1L, nchar(fmt))
+    decimals <- if (nzchar(after)) as.integer(after) else 0L
+  } else {
+    before <- fmt
+    decimals <- 0L
+  }
+  wm <- regexpr("[0-9]+$", before)
+  if (wm > 0L) {
+    name <- substr(before, 1L, wm - 1L)
+    width <- as.integer(substr(before, wm, nchar(before)))
+  } else {
+    name <- before
+    width <- 0L
+  }
+  list(name = name, length = width, decimals = decimals)
+}
+
+# ---- resolvers (shared by coerce, encode, meta_from_frame) ------------------
+
+# The R class a dataType presents as (vs .type_storage's on-disk mode).
+#' @noRd
+.presentation_class <- function(data_type) {
+  switch(
+    data_type,
+    date = "Date",
+    datetime = "POSIXct",
+    time = "vport_time",
+    .type_storage(data_type)
+  )
+}
+
+# The displayFormat to use: the given one, else the SAS default by dataType.
+#' @noRd
+.resolve_display_format <- function(data_type, display_format = NA) {
+  if (
+    !is.null(display_format) &&
+      length(display_format) == 1L &&
+      !is.na(display_format) &&
+      nzchar(display_format)
+  ) {
+    return(display_format)
+  }
+  switch(
+    data_type,
+    date = "DATE9.",
+    datetime = "DATETIME20.",
+    time = "TIME8.",
+    NA_character_
+  )
+}
+
+# ---- realize: storage -> R presentation class ------------------------------
+
+#' @noRd
+.hms_to_seconds <- function(x) {
+  vapply(
+    strsplit(x, ":", fixed = TRUE),
+    function(p) {
+      if (length(p) != 3L || anyNA(p)) {
+        return(NA_real_)
+      }
+      as.numeric(p[1L]) * 3600 + as.numeric(p[2L]) * 60 + as.numeric(p[3L])
+    },
+    numeric(1)
+  )
+}
+
+#' @noRd
+.realize_date <- function(col) {
+  if (inherits(col, "Date")) {
+    return(col)
+  }
+  if (is.character(col)) {
+    full <- is.na(col) | grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", col)
+    if (!all(full)) {
+      return(col) # partial ISO -> stay character (never silent NA)
+    }
+    return(as.Date(col))
+  }
+  as.Date(as.numeric(col), origin = .sas_epoch_date)
+}
+
+#' @noRd
+.realize_datetime <- function(col) {
+  if (inherits(col, "POSIXct")) {
+    attr(col, "tzone") <- "UTC" # force UTC display, same instant
+    return(col)
+  }
+  if (is.character(col)) {
+    full <- is.na(col) |
+      grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}", col)
+    if (!all(full)) {
+      return(col)
+    }
+    return(as.POSIXct(col, tz = "UTC", format = "%Y-%m-%dT%H:%M:%S"))
+  }
+  as.POSIXct(as.numeric(col), origin = .sas_epoch_datetime, tz = "UTC")
+}
+
+#' @noRd
+.realize_time <- function(col) {
+  if (is_vport_time(col)) {
+    return(col)
+  }
+  if (is.character(col)) {
+    full <- is.na(col) | grepl("^[0-9]+:[0-9]{2}:[0-9]{2}$", col)
+    if (!all(full)) {
+      return(col)
+    }
+    return(vport_time(.hms_to_seconds(col)))
+  }
+  vport_time(as.numeric(col))
+}
+
+# Realize a temporal column to its R class. dataType is authoritative for the
+# class; displayFormat only validates -- when it does not classify as the
+# matching family, the column is left numeric and the caller (check_spec)
+# reports it. Idempotent on already-correct classes.
+#' @noRd
+.realize_temporal <- function(col, data_type, display_format = NA) {
+  if (!(data_type %in% c("date", "datetime", "time"))) {
+    return(col)
+  }
+  fmt <- .resolve_display_format(data_type, display_format)
+  fmt_name <- .parse_format_str(fmt)$name
+  ok <- switch(
+    data_type,
+    date = .is_sas_date_format(fmt_name),
+    datetime = .is_sas_datetime_format(fmt_name),
+    time = .is_sas_time_format(fmt_name)
+  )
+  if (!isTRUE(ok)) {
+    return(col)
+  }
+  switch(
+    data_type,
+    date = .realize_date(col),
+    datetime = .realize_datetime(col),
+    time = .realize_time(col)
+  )
+}
+
+# ---- deflate: R presentation class -> SAS-epoch numeric --------------------
+
+# Robust to an already-numeric input (pass through), so double-deflate and a
+# never-realized column both behave.
+#' @noRd
+.deflate_temporal <- function(col, data_type) {
+  switch(
+    data_type,
+    date = if (inherits(col, "Date")) {
+      as.numeric(col - .sas_epoch_date)
+    } else {
+      as.numeric(col)
+    },
+    datetime = if (inherits(col, "POSIXct")) {
+      as.numeric(col) - as.numeric(.sas_epoch_datetime)
+    } else {
+      as.numeric(col)
+    },
+    time = if (is_vport_time(col)) unclass(col) else as.numeric(col),
+    as.numeric(col)
+  )
+}
