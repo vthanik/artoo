@@ -11,3 +11,6 @@ MEMORY.md
 
 # macOS
 .DS_Store
+
+# Session pickup notes (not checked in)
+handoff.md
