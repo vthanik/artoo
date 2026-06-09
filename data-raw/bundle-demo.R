@@ -35,7 +35,9 @@ unhaven <- function(df) {
 trim_rows <- function(df, n) {
   labs <- lapply(df, function(x) attr(x, "label", exact = TRUE))
   out <- df[seq_len(min(n, nrow(df))), , drop = FALSE]
-  for (nm in names(out)) attr(out[[nm]], "label") <- labs[[nm]]
+  for (nm in names(out)) {
+    attr(out[[nm]], "label") <- labs[[nm]]
+  }
   rownames(out) <- NULL
   out
 }
@@ -72,7 +74,11 @@ derive_variables <- function(df, dataset) {
   data.frame(
     dataset = dataset,
     variable = names(df),
-    label = vapply(df, function(x) attr(x, "label", exact = TRUE) %||% "", character(1)),
+    label = vapply(
+      df,
+      function(x) attr(x, "label", exact = TRUE) %||% "",
+      character(1)
+    ),
     data_type = vapply(df, infer_data_type, character(1)),
     length = vapply(df, infer_length, integer(1)),
     order = seq_along(df),
@@ -117,6 +123,10 @@ stopifnot(is_vport_spec(
 ))
 
 usethis::use_data(
-  cdisc_adsl, cdisc_dm, cdisc_datasets, cdisc_variables, cdisc_codelists,
+  cdisc_adsl,
+  cdisc_dm,
+  cdisc_datasets,
+  cdisc_variables,
+  cdisc_codelists,
   overwrite = TRUE
 )

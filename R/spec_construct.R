@@ -77,6 +77,14 @@
 #' @param study *Study-level metadata.* `<data.frame> | NULL`. A single row
 #'   of named study fields (e.g. `studyid`, `standard`).
 #' @param values *Value-level (VLM) metadata.* `<data.frame> | NULL`.
+#' @param methods *Derivation methods.* `<data.frame> | NULL`. The
+#'   Define-XML method definitions variables reference by `method_id`; must
+#'   carry `method_id` when supplied. Completeness (e.g. a referenced
+#'   method has a description) is checked by [validate_spec()], not here.
+#' @param comments *Comment definitions.* `<data.frame> | NULL`. Referenced
+#'   by `comment_id`; must carry `comment_id` when supplied.
+#' @param documents *Document references.* `<data.frame> | NULL`. Referenced
+#'   by `document_id`; must carry `document_id` when supplied.
 #'
 #' @return *A validated `vport_spec` object.* Inspect it with
 #'   [spec_datasets()] / [spec_variables()], or check it with
@@ -110,7 +118,10 @@ vport_spec <- function(
   variables = NULL,
   codelists = NULL,
   study = NULL,
-  values = NULL
+  values = NULL,
+  methods = NULL,
+  comments = NULL,
+  documents = NULL
 ) {
   call <- rlang::caller_env()
   if (is.null(datasets) || is.null(variables)) {
@@ -144,10 +155,42 @@ vport_spec <- function(
     "codelists",
     call
   )
+  methods <- .coerce_slot(
+    methods,
+    .spec_cols_methods,
+    .spec_req_methods,
+    "methods",
+    call
+  )
+  comments <- .coerce_slot(
+    comments,
+    .spec_cols_comments,
+    .spec_req_comments,
+    "comments",
+    call
+  )
+  documents <- .coerce_slot(
+    documents,
+    .spec_cols_documents,
+    .spec_req_documents,
+    "documents",
+    call
+  )
   study <- if (is.null(study)) {
     data.frame()
   } else {
     as.data.frame(study, stringsAsFactors = FALSE, check.names = FALSE)
+  }
+
+  # Demote a tibble (or other data-frame subclass) value-level table to a
+  # plain data frame, so every slot is a uniform data.frame and a spec
+  # round-trips identically through write_spec()/read_spec().
+  if (!is.null(values)) {
+    values <- as.data.frame(
+      values,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
   }
 
   # Canonicalise each variable's data_type to a CDISC dataType.
@@ -172,6 +215,9 @@ vport_spec <- function(
     datasets = datasets,
     variables = variables,
     codelists = codelists,
+    methods = methods,
+    comments = comments,
+    documents = documents,
     values = values
   )
 }

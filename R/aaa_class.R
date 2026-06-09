@@ -48,8 +48,11 @@
   dataset = "character",
   label = "character",
   class = "character",
+  subclass = "character",
   structure = "character",
-  keys = "character"
+  keys = "character",
+  standard = "character",
+  comment_id = "character"
 )
 .spec_req_datasets <- c("dataset")
 
@@ -65,9 +68,16 @@
   key_sequence = "integer",
   order = "integer",
   codelist_id = "character",
+  method_id = "character",
+  comment_id = "character",
   mandatory = "logical",
   significant_digits = "integer",
-  origin = "character"
+  origin = "character",
+  source = "character",
+  predecessor = "character",
+  assigned_value = "character",
+  pages = "character",
+  role = "character"
 )
 .spec_req_variables <- c("dataset", "variable", "data_type")
 
@@ -76,9 +86,41 @@
   term = "character",
   decode = "character",
   order = "integer",
-  extended = "logical"
+  extended = "logical",
+  comment_id = "character"
 )
 .spec_req_codelists <- c("codelist_id", "term")
+
+# Methods, comments, documents -- the Define-XML supporting metadata that
+# variables / value-level rows reference by id. Carried so validation can
+# check completeness (e.g. a referenced method's description is present)
+# and referential integrity.
+.spec_cols_methods <- c(
+  method_id = "character",
+  name = "character",
+  type = "character",
+  description = "character",
+  expression_context = "character",
+  expression_code = "character",
+  document_id = "character",
+  pages = "character"
+)
+.spec_req_methods <- c("method_id")
+
+.spec_cols_comments <- c(
+  comment_id = "character",
+  description = "character",
+  document_id = "character",
+  pages = "character"
+)
+.spec_req_comments <- c("comment_id")
+
+.spec_cols_documents <- c(
+  document_id = "character",
+  title = "character",
+  href = "character"
+)
+.spec_req_documents <- c("document_id")
 
 # ---- S7 classes ----------------------------------------------------------
 
@@ -95,6 +137,9 @@ vport_spec_class <- S7::new_class(
     datasets = S7::class_data.frame,
     variables = S7::class_data.frame,
     codelists = S7::class_data.frame,
+    methods = S7::class_data.frame,
+    comments = S7::class_data.frame,
+    documents = S7::class_data.frame,
     values = S7::new_property(S7::class_any, default = NULL)
   ),
   validator = function(self) {
@@ -120,4 +165,21 @@ vport_meta_class <- S7::new_class(
   validator = function(self) {
     .meta_validate(self)
   }
+)
+
+# The S7 vport_check class: the result of validate_spec(). Stores the
+# findings table, the validated scope (dataset names), and a short study
+# label for the report header. Printed as a sectioned text report by the
+# print/format methods (see validate_spec.R); @findings stays a plain data
+# frame for programmatic use.
+#' @noRd
+vport_check_class <- S7::new_class(
+  "vport_check",
+  package = "vport",
+  properties = list(
+    findings = S7::class_data.frame,
+    scope = S7::new_property(S7::class_character, default = character(0)),
+    study = S7::new_property(S7::class_character, default = "(unspecified)"),
+    summary = S7::new_property(S7::class_list, default = list())
+  )
 )

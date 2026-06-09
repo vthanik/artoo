@@ -1,0 +1,242 @@
+[
+  {
+    "id": "study_name_present",
+    "dimension": "study",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "The study-level metadata carries no study name.",
+    "reason": null
+  },
+  {
+    "id": "dataset_label_present",
+    "dimension": "dataset",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset has no label.",
+    "reason": null
+  },
+  {
+    "id": "dataset_keys_resolve",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset's key variables are not all defined in the spec.",
+    "reason": null
+  },
+  {
+    "id": "dataset_comment_resolves",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset references a comment id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "variable_label_present",
+    "dimension": "variable",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable has no label.",
+    "reason": null
+  },
+  {
+    "id": "variable_length_positive",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable has a non-positive length.",
+    "reason": null
+  },
+  {
+    "id": "variable_sigdigits_nonneg",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable has negative significant digits.",
+    "reason": null
+  },
+  {
+    "id": "variable_method_resolves",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable references a method id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "variable_comment_resolves",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable references a comment id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "variable_derived_has_method",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable with Origin='Derived' has no method.",
+    "reason": null
+  },
+  {
+    "id": "codelist_comment_resolves",
+    "dimension": "codelist",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A codelist references a comment id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "method_id_unique",
+    "dimension": "method",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A method id is defined more than once.",
+    "reason": null
+  },
+  {
+    "id": "method_description_present",
+    "dimension": "method",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A referenced method has a blank description.",
+    "reason": null
+  },
+  {
+    "id": "method_document_resolves",
+    "dimension": "method",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A method references a document id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "comment_id_unique",
+    "dimension": "comment",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A comment id is defined more than once.",
+    "reason": null
+  },
+  {
+    "id": "comment_description_present",
+    "dimension": "comment",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A referenced comment has a blank description.",
+    "reason": null
+  },
+  {
+    "id": "comment_document_resolves",
+    "dimension": "comment",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A comment references a document id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "document_id_unique",
+    "dimension": "document",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A document id is defined more than once.",
+    "reason": null
+  },
+  {
+    "id": "ct_value_in_codelist",
+    "dimension": "ct",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A data value is not among the codelist's terms.",
+    "reason": null
+  },
+  {
+    "id": "ct_term_unused",
+    "dimension": "ct",
+    "severity": "note",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A codelist term is defined in the spec but absent from the data.",
+    "reason": null
+  },
+  {
+    "id": "variable_present_in_data",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A spec variable has no column in the supplied data.",
+    "reason": null
+  },
+  {
+    "id": "arm_result_metadata",
+    "dimension": "arm",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "deferred",
+    "description": "Analysis Results Metadata integrity.",
+    "reason": "needs ARM slots vport does not carry"
+  },
+  {
+    "id": "codelist_term_standard_ct",
+    "dimension": "codelist",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "deferred",
+    "description": "Codelist term/decode is a valid NCI CT pair.",
+    "reason": "needs a bundled NCI CT library"
+  },
+  {
+    "id": "data_composite_key_unique",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "deferred",
+    "description": "No duplicate rows for the spec-declared composite key in data.",
+    "reason": "in-data conformance beyond CT membership"
+  }
+]

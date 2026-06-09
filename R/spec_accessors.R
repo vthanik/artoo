@@ -249,3 +249,104 @@ spec_study <- function(spec, field = NULL) {
   }
   study[[field]]
 }
+
+#' Derivation methods in a spec
+#'
+#' Return the method definitions a specification carries. Variables and
+#' value-level rows reference these by `method_id`; [validate_spec()] checks
+#' that every reference resolves and that each referenced method is
+#' complete (has a description).
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#'
+#' @return *A data frame of method metadata* (`method_id`, `name`, `type`,
+#'   `description`, ...), one row per method. Empty when the spec defines no
+#'   methods.
+#'
+#' @examples
+#' # ---- Example 1: the methods a spec defines ----
+#' #
+#' # Build a spec with one derivation method and read it back.
+#' spec <- vport_spec(
+#'   data.frame(dataset = "ADSL"),
+#'   data.frame(dataset = "ADSL", variable = "AGEGR1", data_type = "string"),
+#'   methods = data.frame(
+#'     method_id = "MT.AGEGR1",
+#'     description = "Age group from AGE.",
+#'     stringsAsFactors = FALSE
+#'   )
+#' )
+#' spec_methods(spec)
+#'
+#' @seealso [spec_comments()], [spec_documents()], [validate_spec()].
+#' @export
+spec_methods <- function(spec) {
+  .check_spec_arg(spec)
+  spec@methods
+}
+
+#' Comment definitions in a spec
+#'
+#' Return the comment definitions a specification carries. Datasets,
+#' variables, value-level rows, and codelists reference these by
+#' `comment_id`; [validate_spec()] checks the references resolve and each
+#' referenced comment has a body.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#'
+#' @return *A data frame of comment metadata* (`comment_id`, `description`,
+#'   ...), one row per comment. Empty when the spec defines no comments.
+#'
+#' @examples
+#' # ---- Example 1: the comments a spec defines ----
+#' #
+#' # Build a spec with one comment and read it back.
+#' spec <- vport_spec(
+#'   data.frame(dataset = "ADSL"),
+#'   data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+#'   comments = data.frame(
+#'     comment_id = "C.AGE",
+#'     description = "Age in years at informed consent.",
+#'     stringsAsFactors = FALSE
+#'   )
+#' )
+#' spec_comments(spec)
+#'
+#' @seealso [spec_methods()], [spec_documents()], [validate_spec()].
+#' @export
+spec_comments <- function(spec) {
+  .check_spec_arg(spec)
+  spec@comments
+}
+
+#' Document references in a spec
+#'
+#' Return the document references a specification carries. Methods and
+#' comments point to these by `document_id`.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#'
+#' @return *A data frame of document metadata* (`document_id`, `title`,
+#'   `href`), one row per document. Empty when the spec defines none.
+#'
+#' @examples
+#' # ---- Example 1: the documents a spec defines ----
+#' #
+#' # Build a spec with one document reference and read it back.
+#' spec <- vport_spec(
+#'   data.frame(dataset = "ADSL"),
+#'   data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+#'   documents = data.frame(
+#'     document_id = "SAP",
+#'     title = "Statistical Analysis Plan",
+#'     stringsAsFactors = FALSE
+#'   )
+#' )
+#' spec_documents(spec)
+#'
+#' @seealso [spec_methods()], [spec_comments()], [validate_spec()].
+#' @export
+spec_documents <- function(spec) {
+  .check_spec_arg(spec)
+  spec@documents
+}

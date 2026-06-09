@@ -4,54 +4,71 @@
 \alias{validate_spec}
 \title{Validate a specification for submission-readiness}
 \usage{
-validate_spec(spec)
+validate_spec(spec, data = NULL, dataset = NULL, strict = FALSE)
 }
 \arguments{
-\item{spec}{\emph{The specification to validate.}
-\verb{<vport_spec>: required}. Build one with \code{\link[=vport_spec]{vport_spec()}}.}
+\item{spec}{\emph{The specification to validate.} \verb{<vport_spec>: required}.}
+
+\item{data}{\emph{Optional input data for controlled-terminology checks.}
+\verb{<data.frame> | named list | NULL}. When supplied, data values are
+cross-checked against the spec codelists. A single data frame requires
+a length-1 \code{dataset}. (Wired in a later step.)}
+
+\item{dataset}{\emph{Restrict to one or more datasets.} \verb{<character> | NULL}.
+\code{NULL} (default) validates every dataset.
+
+\strong{Restriction:} each name must be a dataset in the spec.}
+
+\item{strict}{\emph{Abort on an error-severity finding.} \verb{<logical(1)>: default FALSE}. When \code{TRUE}, all findings are still collected, then
+the call aborts with \code{vport_error_validation} if any error exists.}
 }
 \value{
-\emph{A data frame of findings} (\code{check}, \code{dataset}, \code{variable},
-\code{severity}, \code{message}), returned invisibly when no error-severity
-finding exists. Aborts with class \code{vport_error_validation} otherwise.
+\emph{A \code{vport_check} object.} Its \verb{@findings} data frame has columns
+\code{check}, \code{dimension}, \code{severity}, \code{dataset}, \code{variable}, \code{message}.
+Print it for the sectioned report.
 }
 \description{
-Run vport's intrinsic, self-contained checks over a \code{vport_spec} and
-report what would block a clean submission. Structural validity (required
-columns, types, cross-slot references) is already guaranteed by
-\code{\link[=vport_spec]{vport_spec()}} at construction; \code{validate_spec()} adds the
-submission-readiness layer (labels present, sort keys resolvable, length
-and significant-digits sane). It returns the findings invisibly when the
-spec is clean and aborts the moment an error-severity issue is found.
+Run vport's bundled, self-contained checks over a \code{vport_spec},
+\strong{scoped to the dataset(s) you are working on}, and return a
+\code{vport_check} that prints a sectioned report. Every finding is keyed to
+an open rule in the shipped catalog (see \code{spec_rules.json}); the result
+object keeps the findings as a plain data frame in \verb{@findings} for
+programmatic use.
 }
 \details{
-\strong{Self-contained.} The rule set is bundled in vport; there is no external
-rule-engine dependency. The set is deliberately thin and intrinsic, not a
-full Define-XML conformance engine.
+\strong{Dataset-scoped.} A spec workbook carries many datasets. Pass
+\code{dataset} to validate only the one(s) you are working on -- the
+methods, comments, and codelists those datasets reference are checked
+for completeness, but unrelated datasets are not. \code{dataset = NULL}
+validates the whole spec.
+
+\strong{Collect, do not stop.} Every finding is collected and returned;
+\code{validate_spec()} does not abort on an error-severity finding unless
+\code{strict = TRUE}.
 }
 \examples{
-# ---- Example 1: a clean spec returns its findings invisibly ----
+# ---- Example 1: validate one dataset ----
 #
-# The bundled CDISC demo spec is fully labelled with resolvable keys, so it
-# passes; the findings data frame comes back (here empty).
-ds <- cdisc_datasets
-ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
-validate_spec(spec)
+# Build a spec from the bundled tables and validate just ADSL; the
+# result prints a sectioned report and keeps the findings table.
+spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+chk <- validate_spec(spec, dataset = "ADSL")
+chk@findings
 
-# ---- Example 2: catch the error instead of stopping ----
+# ---- Example 2: gate on errors with strict ----
 #
-# Point a key at a variable that is not in the spec: that is an
-# error-severity finding, so validate_spec() throws. Catch it to inspect.
+# Point a key at a missing variable, then validate strictly and catch
+# the resulting error.
 bad_ds <- cdisc_datasets
 bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
 bad <- vport_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
 tryCatch(
-  validate_spec(bad),
-  vport_error_validation = function(e) conditionMessage(e)
+  validate_spec(bad, dataset = "DM", strict = TRUE),
+  vport_error_validation = function(e) conditionMessage(e)[1]
 )
 
 }
 \seealso{
-\code{\link[=vport_spec]{vport_spec()}} to build a spec; \code{\link[=spec_variables]{spec_variables()}} to inspect it.
+\code{\link[=vport_spec]{vport_spec()}} to build a spec; \code{\link[=spec_methods]{spec_methods()}} /
+\code{\link[=spec_comments]{spec_comments()}} for the metadata checked.
 }

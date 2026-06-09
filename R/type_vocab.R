@@ -27,6 +27,18 @@
   date = "date",
   datetime = "datetime",
   time = "time",
+  # Define-XML date subtypes. Dataset-JSON v1.1 has no "partial*" /
+  # "incomplete*" dataType -- a partial date IS dataType "date" with a
+  # partial ISO value (the partialness lives in the value/displayFormat).
+  # ISO 8601 duration / interval have no dedicated dataType -> string.
+  partialdate = "date",
+  partialtime = "time",
+  partialdatetime = "datetime",
+  incompletedate = "date",
+  incompletetime = "time",
+  incompletedatetime = "datetime",
+  durationdatetime = "string",
+  intervaldatetime = "string",
   uri = "URI",
   url = "URI"
 )

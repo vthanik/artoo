@@ -19,6 +19,16 @@ test_that(".parse_type accepts an already-canonical value case-insensitively", {
   expect_equal(vport:::.parse_type("uri"), "URI")
 })
 
+test_that(".parse_type maps Define-XML date subtypes to CDISC dataTypes", {
+  expect_equal(vport:::.parse_type("partialDate"), "date")
+  expect_equal(vport:::.parse_type("partialTime"), "time")
+  expect_equal(vport:::.parse_type("partialDatetime"), "datetime")
+  expect_equal(vport:::.parse_type("incompleteDate"), "date")
+  expect_equal(vport:::.parse_type("incompleteDatetime"), "datetime")
+  expect_equal(vport:::.parse_type("durationDatetime"), "string")
+  expect_equal(vport:::.parse_type("intervalDatetime"), "string")
+})
+
 test_that(".parse_type rejects an unknown token", {
   expect_error(vport:::.parse_type("widget"), class = "vport_error_type")
   expect_error(vport:::.parse_type("widget"), "closed CDISC set")

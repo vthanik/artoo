@@ -9,7 +9,10 @@ vport_spec(
   variables = NULL,
   codelists = NULL,
   study = NULL,
-  values = NULL
+  values = NULL,
+  methods = NULL,
+  comments = NULL,
+  documents = NULL
 )
 }
 \arguments{
@@ -36,6 +39,17 @@ resolve here.}
 of named study fields (e.g. \code{studyid}, \code{standard}).}
 
 \item{values}{\emph{Value-level (VLM) metadata.} \verb{<data.frame> | NULL}.}
+
+\item{methods}{\emph{Derivation methods.} \verb{<data.frame> | NULL}. The
+Define-XML method definitions variables reference by \code{method_id}; must
+carry \code{method_id} when supplied. Completeness (e.g. a referenced
+method has a description) is checked by \code{\link[=validate_spec]{validate_spec()}}, not here.}
+
+\item{comments}{\emph{Comment definitions.} \verb{<data.frame> | NULL}. Referenced
+by \code{comment_id}; must carry \code{comment_id} when supplied.}
+
+\item{documents}{\emph{Document references.} \verb{<data.frame> | NULL}. Referenced
+by \code{document_id}; must carry \code{document_id} when supplied.}
 }
 \value{
 \emph{A validated \code{vport_spec} object.} Inspect it with

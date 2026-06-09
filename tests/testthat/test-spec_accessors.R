@@ -59,4 +59,48 @@ test_that("spec_study() rejects an unknown field", {
 test_that("accessors reject a non-spec argument", {
   expect_error(spec_datasets(mtcars), class = "vport_error_input")
   expect_error(spec_variables(mtcars), class = "vport_error_input")
+  expect_error(spec_methods(mtcars), class = "vport_error_input")
+  expect_error(spec_comments(mtcars), class = "vport_error_input")
+  expect_error(spec_documents(mtcars), class = "vport_error_input")
+})
+
+test_that("spec_methods/comments/documents return their slots", {
+  spec <- vport_spec(
+    data.frame(dataset = "ADSL"),
+    data.frame(
+      dataset = "ADSL",
+      variable = "AGEGR1",
+      data_type = "string",
+      method_id = "MT.AGEGR1",
+      stringsAsFactors = FALSE
+    ),
+    methods = data.frame(
+      method_id = "MT.AGEGR1",
+      description = "Age group.",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "C1",
+      description = "Note.",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "SAP",
+      title = "SAP",
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_identical(spec_methods(spec)$method_id, "MT.AGEGR1")
+  expect_identical(spec_comments(spec)$comment_id, "C1")
+  expect_identical(spec_documents(spec)$document_id, "SAP")
+})
+
+test_that("the supporting-metadata slots are empty by default", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
+  )
+  expect_equal(nrow(spec_methods(spec)), 0L)
+  expect_equal(nrow(spec_comments(spec)), 0L)
+  expect_equal(nrow(spec_documents(spec)), 0L)
 })

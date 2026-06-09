@@ -77,6 +77,24 @@
       .spec_cols_codelists,
       .spec_req_codelists,
       "codelists"
+    ),
+    .validate_slot(
+      self@methods,
+      .spec_cols_methods,
+      .spec_req_methods,
+      "methods"
+    ),
+    .validate_slot(
+      self@comments,
+      .spec_cols_comments,
+      .spec_req_comments,
+      "comments"
+    ),
+    .validate_slot(
+      self@documents,
+      .spec_cols_documents,
+      .spec_req_documents,
+      "documents"
     )
   )
 
