@@ -152,6 +152,74 @@
   vport_meta_class(dataset = ds_meta, columns = cols)
 }
 
+# ---- build vport_meta from a bare frame (no spec) ---------------------------
+
+# One column entry derived from a data frame column's attributes and R class
+# (the no-spec path). A user/haven `label`/`format.sas` attribute wins;
+# otherwise the dataType and default displayFormat are inferred from the class
+# so a plain frame still writes with sensible metadata.
+#' @noRd
+.col_from_frame_col <- function(name, col, dataset) {
+  ti <- .infer_frame_type(col)
+  fmt_attr <- attr(col, "format.sas", exact = TRUE) %||%
+    attr(col, "format", exact = TRUE)
+  display_format <- if (!is.null(fmt_attr) && nzchar(fmt_attr)) {
+    as.character(fmt_attr)
+  } else {
+    ti$display_format
+  }
+  len_attr <- attr(col, "SASlength", exact = TRUE) %||%
+    attr(col, "width", exact = TRUE) %||%
+    attr(col, "sas.length", exact = TRUE)
+  label <- attr(col, "label", exact = TRUE)
+  col_meta <- list(
+    itemOID = paste0("IT.", dataset, ".", name),
+    name = name,
+    label = .na_to_null(label %||% NA),
+    dataType = ti$data_type,
+    targetDataType = NULL,
+    length = .resolve_xpt_length(len_attr, col),
+    displayFormat = display_format,
+    keySequence = NULL,
+    codelist = NULL,
+    significantDigits = NULL,
+    origin = NULL
+  )
+  .drop_null(col_meta)
+}
+
+# Build a vport_meta from a data frame that carries no metadata_json -- from
+# its per-column attributes and R classes -- so write_*() preserves labels,
+# formats, and types even without a spec. Returns NULL for a 0-column frame.
+#' @noRd
+.meta_from_frame <- function(x) {
+  if (ncol(x) == 0L) {
+    return(NULL)
+  }
+  raw_name <- attr(x, "dataset_name", exact = TRUE)
+  ds_name <- if (
+    is.character(raw_name) && length(raw_name) == 1L && nzchar(raw_name)
+  ) {
+    toupper(raw_name)
+  } else {
+    "DATA"
+  }
+  cols <- lapply(names(x), function(nm) {
+    .col_from_frame_col(nm, x[[nm]], ds_name)
+  })
+  names(cols) <- names(x)
+
+  ds_label <- attr(x, "label", exact = TRUE)
+  ds_meta <- .assemble_dataset_meta(
+    itemGroupOID = paste0("IG.", ds_name),
+    name = ds_name,
+    label = .na_to_null(ds_label %||% NA),
+    records = nrow(x),
+    keys = .meta_keys(cols)
+  )
+  vport_meta_class(dataset = ds_meta, columns = cols)
+}
+
 # ---- serializer: vport_meta <-> Dataset-JSON metadata string ----------------
 
 # The ONE serializer. Emits the Dataset-JSON v1.1 itemGroup metadata block

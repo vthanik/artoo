@@ -6,13 +6,16 @@
 # read_dataset() re-attaches whatever meta the codec recovers. Codecs never
 # touch raw attributes -- the meta spine is the only metadata path.
 
-# The vport_meta a frame carries, or NULL when it carries none.
+# The vport_meta to write with: the frame's own metadata_json when present,
+# else one derived from its column attributes + R classes (so a bare or
+# haven-shaped frame still writes with labels/formats/types). NULL only for a
+# 0-column frame.
 #' @noRd
 .maybe_meta <- function(x) {
   if (is.character(attr(x, "metadata_json", exact = TRUE))) {
     get_meta(x)
   } else {
-    NULL
+    .meta_from_frame(x)
   }
 }
 

@@ -207,6 +207,41 @@
   )
 }
 
+# The xpt storage length: the meta length when set, else max(nchar) for a
+# character column, else 8 (full IEEE precision) for a numeric one.
+#' @noRd
+.resolve_xpt_length <- function(meta_len, col) {
+  if (!is.null(meta_len) && length(meta_len) == 1L && !is.na(meta_len)) {
+    return(as.integer(meta_len))
+  }
+  if (is.character(col) || is.factor(col)) {
+    m <- suppressWarnings(max(nchar(as.character(col)), 1L, na.rm = TRUE))
+    return(as.integer(m))
+  }
+  8L
+}
+
+# Infer a column's CDISC dataType and default SAS displayFormat from its R
+# class (the no-spec path). Temporal classes win over their double backing.
+#' @noRd
+.infer_frame_type <- function(col) {
+  if (inherits(col, "Date")) {
+    list(data_type = "date", display_format = "DATE9.")
+  } else if (inherits(col, "POSIXct")) {
+    list(data_type = "datetime", display_format = "DATETIME20.")
+  } else if (is_vport_time(col)) {
+    list(data_type = "time", display_format = "TIME8.")
+  } else if (is.factor(col) || is.character(col)) {
+    list(data_type = "string", display_format = NULL)
+  } else if (is.logical(col)) {
+    list(data_type = "boolean", display_format = NULL)
+  } else if (is.integer(col)) {
+    list(data_type = "integer", display_format = NULL)
+  } else {
+    list(data_type = "float", display_format = NULL)
+  }
+}
+
 # The displayFormat to use: the given one, else the SAS default by dataType.
 #' @noRd
 .resolve_display_format <- function(data_type, display_format = NA) {

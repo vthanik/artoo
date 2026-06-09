@@ -88,16 +88,29 @@ test_that("rds round-trip preserves the data values", {
   expect_equal(as.data.frame(back), as.data.frame(adsl))
 })
 
-test_that("write_rds on a bare frame (no meta) round-trips the data", {
+test_that("write_rds on a bare frame round-trips data and infers metadata", {
   path <- withr::local_tempfile(fileext = ".rds")
   write_rds(cdisc_dm, path)
   back <- read_rds(path)
+  # data values round-trip (compare ignoring the now-attached metadata_json)
+  attr(back, "metadata_json") <- NULL
   expect_equal(as.data.frame(back), as.data.frame(cdisc_dm))
+  # and a bare frame now carries metadata derived from its columns
+  back2 <- read_rds(path)
+  expect_true(is_vport_meta(get_meta(back2)))
 })
 
 test_that("write_dataset rejects a non-data-frame x", {
   path <- withr::local_tempfile(fileext = ".rds")
   expect_error(write_dataset(list(1), path), class = "vport_error_input")
+})
+
+test_that("read_rds of a plain saveRDS file returns the bare data frame", {
+  path <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(cdisc_dm, path) # no metadata_json attr
+  back <- read_rds(path)
+  expect_s3_class(back, "data.frame")
+  expect_null(attr(back, "metadata_json", exact = TRUE))
 })
 
 test_that("read_dataset aborts when the file does not exist", {
