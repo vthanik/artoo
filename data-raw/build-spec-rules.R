@@ -99,12 +99,63 @@ rules <- rbind(
     "A variable with Origin='Derived' has no method."
   ),
 
+  rule(
+    "variable_order_positive",
+    "variable",
+    "error",
+    "A variable order is not a positive integer."
+  ),
+  rule(
+    "variable_length_for_text",
+    "variable",
+    "warning",
+    "A string/integer variable has no length."
+  ),
+
+  # ---- value-level ----
+  rule(
+    "value_whereclause_present",
+    "value",
+    "error",
+    "A value-level row has no where-clause."
+  ),
+  rule(
+    "value_variable_resolves",
+    "value",
+    "warning",
+    "A value-level row names a variable not in the dataset."
+  ),
+  rule(
+    "value_method_resolves",
+    "value",
+    "error",
+    "A value-level row references a method id that is not defined."
+  ),
+  rule(
+    "value_comment_resolves",
+    "value",
+    "error",
+    "A value-level row references a comment id that is not defined."
+  ),
+  rule(
+    "value_codelist_resolves",
+    "value",
+    "error",
+    "A value-level row references a codelist id that is not defined."
+  ),
+
   # ---- codelist ----
   rule(
     "codelist_comment_resolves",
     "codelist",
     "error",
     "A codelist references a comment id that is not defined."
+  ),
+  rule(
+    "codelist_terms_present",
+    "codelist",
+    "warning",
+    "A referenced codelist defines no terms."
   ),
 
   # ---- method ----
@@ -155,6 +206,29 @@ rules <- rbind(
     "A document id is defined more than once."
   ),
 
+  # ---- unreferenced (whole-spec mode only) ----
+  rule(
+    "method_unused",
+    "method",
+    "note",
+    "A method is defined but referenced by nothing.",
+    scope = "whole-spec"
+  ),
+  rule(
+    "comment_unused",
+    "comment",
+    "note",
+    "A comment is defined but referenced by nothing.",
+    scope = "whole-spec"
+  ),
+  rule(
+    "document_unused",
+    "document",
+    "note",
+    "A document is defined but referenced by nothing.",
+    scope = "whole-spec"
+  ),
+
   # ---- controlled terminology vs input data (requires data) ----
   rule(
     "ct_value_in_codelist",
@@ -194,6 +268,14 @@ rules <- rbind(
     "Codelist term/decode is a valid NCI CT pair.",
     status = "deferred",
     reason = "needs a bundled NCI CT library"
+  ),
+  rule(
+    "codelist_decode_present",
+    "codelist",
+    "note",
+    "A coded term has no decoded value.",
+    status = "deferred",
+    reason = "cannot distinguish enumerated value lists (no decode expected) from coded terms"
   ),
   rule(
     "data_composite_key_unique",

@@ -221,6 +221,7 @@
     variables = vars,
     values = vals,
     codelists_all = spec@codelists,
+    codelists_ref = cl_ref,
     methods_all = mt_all,
     comments_all = cm_all,
     documents_all = spec@documents,
@@ -545,6 +546,153 @@
   )
 }
 
+# ---- Wave 3: variable / value-level / codelist breadth + unused ----------
+
+#' @noRd
+.chk_variable_order <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("order" %in% names(v))) {
+    return(.empty_findings())
+  }
+  bad <- !is.na(v$order) & v$order <= 0L
+  .finding(
+    "variable_order_positive",
+    v$dataset[bad],
+    v$variable[bad],
+    sprintf(
+      "Variable %s.%s has a non-positive order (%d).",
+      v$dataset[bad],
+      v$variable[bad],
+      v$order[bad]
+    )
+  )
+}
+
+#' @noRd
+.chk_variable_length_for_text <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !all(c("data_type", "length") %in% names(v))) {
+    return(.empty_findings())
+  }
+  needs_len <- v$data_type %in% c("string", "integer")
+  bad <- needs_len & is.na(v$length)
+  .finding(
+    "variable_length_for_text",
+    v$dataset[bad],
+    v$variable[bad],
+    sprintf(
+      "Variable %s.%s is %s but has no length.",
+      v$dataset[bad],
+      v$variable[bad],
+      v$data_type[bad]
+    )
+  )
+}
+
+# Value-level rows live in the passthrough `values` slot; every check is
+# guarded on the column being present.
+#' @noRd
+.chk_value_resolve <- function(sc, col, parent_ids, check_id, label) {
+  vl <- sc$values
+  if (is.null(vl) || !nrow(vl) || !(col %in% names(vl))) {
+    return(.empty_findings())
+  }
+  ds <- if ("dataset" %in% names(vl)) vl$dataset else NA_character_
+  var <- if ("variable" %in% names(vl)) vl$variable else NA_character_
+  bad <- !.blank(vl[[col]]) & !(trimws(vl[[col]]) %in% parent_ids)
+  .finding(
+    check_id,
+    ds[bad],
+    var[bad],
+    sprintf(
+      "Value-level row references undefined %s '%s'.",
+      label,
+      vl[[col]][bad]
+    )
+  )
+}
+
+#' @noRd
+.chk_value_whereclause <- function(sc) {
+  vl <- sc$values
+  if (is.null(vl) || !nrow(vl) || !("where_clause" %in% names(vl))) {
+    return(.empty_findings())
+  }
+  ds <- if ("dataset" %in% names(vl)) vl$dataset else NA_character_
+  var <- if ("variable" %in% names(vl)) vl$variable else NA_character_
+  bad <- .blank(vl$where_clause)
+  .finding(
+    "value_whereclause_present",
+    ds[bad],
+    var[bad],
+    "A value-level row has no where-clause."
+  )
+}
+
+#' @noRd
+.chk_value_variable <- function(sc) {
+  vl <- sc$values
+  if (
+    is.null(vl) || !nrow(vl) || !all(c("dataset", "variable") %in% names(vl))
+  ) {
+    return(.empty_findings())
+  }
+  v <- sc$variables
+  key <- paste(vl$dataset, vl$variable)
+  known <- paste(v$dataset, v$variable)
+  bad <- !.blank(vl$variable) & !(key %in% known)
+  .finding(
+    "value_variable_resolves",
+    vl$dataset[bad],
+    vl$variable[bad],
+    sprintf(
+      "Value-level row %s.%s is not a variable in the dataset.",
+      vl$dataset[bad],
+      vl$variable[bad]
+    )
+  )
+}
+
+#' @noRd
+.chk_codelist_terms <- function(sc) {
+  cl <- sc$codelists_ref
+  if (is.null(cl) || !nrow(cl) || !("codelist_id" %in% names(cl))) {
+    return(.empty_findings())
+  }
+  has_term <- "term" %in% names(cl)
+  parts <- lapply(unique(cl$codelist_id), function(id) {
+    rows <- cl[cl$codelist_id == id, , drop = FALSE]
+    terms <- if (has_term) rows$term[!.blank(rows$term)] else character(0)
+    if (length(terms)) {
+      return(NULL)
+    }
+    .finding(
+      "codelist_terms_present",
+      NA_character_,
+      id,
+      sprintf("Codelist '%s' defines no terms.", id)
+    )
+  })
+  .bind_findings(parts)
+}
+
+# Unreferenced supporting metadata (whole-spec mode only).
+#' @noRd
+.chk_unused <- function(tbl, key, ref_ids, check_id, label) {
+  if (is.null(tbl) || !nrow(tbl) || !(key %in% names(tbl))) {
+    return(.empty_findings())
+  }
+  defined <- unique(trimws(as.character(tbl[[key]])))
+  defined <- defined[nzchar(defined)]
+  unused <- setdiff(defined, ref_ids)
+  .finding(
+    check_id,
+    NA_character_,
+    unused,
+    sprintf("%s '%s' is defined but never referenced.", label, unused)
+  )
+}
+
 # ---- Controlled terminology vs input data (only when data supplied) -----
 
 # Resolve the data frame for one scoped dataset from the `data` argument:
@@ -682,7 +830,7 @@
 
 #' @noRd
 .run_checks <- function(sc) {
-  .bind_findings(list(
+  parts <- list(
     .chk_study_name(sc),
     .chk_dataset_label(sc),
     .chk_dataset_keys(sc),
@@ -690,10 +838,36 @@
     .chk_variable_label(sc),
     .chk_variable_length(sc),
     .chk_variable_sigdigits(sc),
+    .chk_variable_order(sc),
+    .chk_variable_length_for_text(sc),
     .chk_variable_method_resolves(sc),
     .chk_variable_comment_resolves(sc),
     .chk_variable_derived_has_method(sc),
+    .chk_value_whereclause(sc),
+    .chk_value_variable(sc),
+    .chk_value_resolve(
+      sc,
+      "method_id",
+      .refs(sc$methods_all, "method_id"),
+      "value_method_resolves",
+      "method"
+    ),
+    .chk_value_resolve(
+      sc,
+      "comment_id",
+      .refs(sc$comments_all, "comment_id"),
+      "value_comment_resolves",
+      "comment"
+    ),
+    .chk_value_resolve(
+      sc,
+      "codelist_id",
+      .refs(sc$codelists_all, "codelist_id"),
+      "value_codelist_resolves",
+      "codelist"
+    ),
     .chk_codelist_comment(sc),
+    .chk_codelist_terms(sc),
     .chk_id_unique(
       sc$methods_all,
       "method_id",
@@ -734,7 +908,37 @@
       .refs(sc$documents_all, "document_id"),
       "document_id_unique"
     )
-  ))
+  )
+  # Unreferenced checks only make sense across the whole spec.
+  if (isTRUE(sc$whole)) {
+    parts <- c(
+      parts,
+      list(
+        .chk_unused(
+          sc$methods_all,
+          "method_id",
+          sc$ref_method,
+          "method_unused",
+          "Method"
+        ),
+        .chk_unused(
+          sc$comments_all,
+          "comment_id",
+          sc$ref_comment,
+          "comment_unused",
+          "Comment"
+        ),
+        .chk_unused(
+          sc$documents_all,
+          "document_id",
+          sc$ref_document,
+          "document_unused",
+          "Document"
+        )
+      )
+    )
+  }
+  .bind_findings(parts)
 }
 
 # The set of check ids the engine can emit -- consumed by the parity test.
@@ -748,10 +952,18 @@
     "variable_label_present",
     "variable_length_positive",
     "variable_sigdigits_nonneg",
+    "variable_order_positive",
+    "variable_length_for_text",
     "variable_method_resolves",
     "variable_comment_resolves",
     "variable_derived_has_method",
+    "value_whereclause_present",
+    "value_variable_resolves",
+    "value_method_resolves",
+    "value_comment_resolves",
+    "value_codelist_resolves",
     "codelist_comment_resolves",
+    "codelist_terms_present",
     "method_id_unique",
     "method_description_present",
     "method_document_resolves",
@@ -759,6 +971,9 @@
     "comment_description_present",
     "comment_document_resolves",
     "document_id_unique",
+    "method_unused",
+    "comment_unused",
+    "document_unused",
     "ct_value_in_codelist",
     "ct_term_unused",
     "variable_present_in_data"

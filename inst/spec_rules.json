@@ -100,6 +100,76 @@
     "reason": null
   },
   {
+    "id": "variable_order_positive",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable order is not a positive integer.",
+    "reason": null
+  },
+  {
+    "id": "variable_length_for_text",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A string/integer variable has no length.",
+    "reason": null
+  },
+  {
+    "id": "value_whereclause_present",
+    "dimension": "value",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A value-level row has no where-clause.",
+    "reason": null
+  },
+  {
+    "id": "value_variable_resolves",
+    "dimension": "value",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A value-level row names a variable not in the dataset.",
+    "reason": null
+  },
+  {
+    "id": "value_method_resolves",
+    "dimension": "value",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A value-level row references a method id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "value_comment_resolves",
+    "dimension": "value",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A value-level row references a comment id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "value_codelist_resolves",
+    "dimension": "value",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A value-level row references a codelist id that is not defined.",
+    "reason": null
+  },
+  {
     "id": "codelist_comment_resolves",
     "dimension": "codelist",
     "severity": "error",
@@ -107,6 +177,16 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A codelist references a comment id that is not defined.",
+    "reason": null
+  },
+  {
+    "id": "codelist_terms_present",
+    "dimension": "codelist",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A referenced codelist defines no terms.",
     "reason": null
   },
   {
@@ -180,6 +260,36 @@
     "reason": null
   },
   {
+    "id": "method_unused",
+    "dimension": "method",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A method is defined but referenced by nothing.",
+    "reason": null
+  },
+  {
+    "id": "comment_unused",
+    "dimension": "comment",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A comment is defined but referenced by nothing.",
+    "reason": null
+  },
+  {
+    "id": "document_unused",
+    "dimension": "document",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A document is defined but referenced by nothing.",
+    "reason": null
+  },
+  {
     "id": "ct_value_in_codelist",
     "dimension": "ct",
     "severity": "warning",
@@ -228,6 +338,16 @@
     "status": "deferred",
     "description": "Codelist term/decode is a valid NCI CT pair.",
     "reason": "needs a bundled NCI CT library"
+  },
+  {
+    "id": "codelist_decode_present",
+    "dimension": "codelist",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "deferred",
+    "description": "A coded term has no decoded value.",
+    "reason": "cannot distinguish enumerated value lists (no decode expected) from coded terms"
   },
   {
     "id": "data_composite_key_unique",

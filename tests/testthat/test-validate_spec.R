@@ -298,6 +298,111 @@ test_that("value-level rows are scoped to the dataset", {
   expect_identical(chk@scope, "DM")
 })
 
+# ---- Wave 3 breadth: variable / value-level / codelist / unused ---------
+
+test_that("variable order and text-length checks fire", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("A", "B"),
+      data_type = c("string", "string"),
+      order = c(-1L, 1L),
+      length = c(NA_integer_, 5L),
+      label = "x",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(studyname = "S1")
+  )
+  f <- validate_spec(spec, dataset = "DM")@findings
+  expect_true(any(f$check == "variable_order_positive" & f$variable == "A"))
+  expect_true(any(f$check == "variable_length_for_text" & f$variable == "A"))
+})
+
+test_that("value-level resolution and where-clause checks fire", {
+  spec <- vport_spec(
+    data.frame(dataset = "ADSL", label = "ADSL"),
+    data.frame(
+      dataset = "ADSL",
+      variable = "PARAMCD",
+      data_type = "string",
+      label = "P",
+      length = 8L,
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "ADSL",
+      variable = c("PARAMCD", "GHOST"),
+      where_clause = c(NA, "X EQ 1"),
+      method_id = c("MT.NOPE", NA),
+      codelist_id = c(NA, "CL.NOPE"),
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(studyname = "S1")
+  )
+  f <- validate_spec(spec, dataset = "ADSL")@findings
+  expect_true(any(f$check == "value_whereclause_present"))
+  expect_true(any(f$check == "value_variable_resolves" & f$variable == "GHOST"))
+  expect_true(any(f$check == "value_method_resolves"))
+  expect_true(any(f$check == "value_codelist_resolves"))
+})
+
+test_that("codelist terms-present fires for an empty referenced codelist", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      codelist_id = "CL.EMPTY",
+      label = "x",
+      length = 1L,
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.EMPTY",
+      term = NA_character_,
+      decode = NA_character_,
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(studyname = "S1")
+  )
+  f <- validate_spec(spec, dataset = "DM")@findings
+  expect_true(any(
+    f$check == "codelist_terms_present" & f$variable == "CL.EMPTY"
+  ))
+})
+
+test_that("unused checks fire only in whole-spec mode", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "AGE",
+      data_type = "integer",
+      label = "Age",
+      length = 8L
+    ),
+    methods = data.frame(
+      method_id = "MT.UNUSED",
+      description = "x",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "DOC.UNUSED",
+      title = "t",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(studyname = "S1")
+  )
+  whole <- validate_spec(spec)@findings
+  expect_true(any(whole$check == "method_unused"))
+  expect_true(any(whole$check == "document_unused"))
+  # Scoped mode skips unused checks.
+  scoped <- validate_spec(spec, dataset = "DM")@findings
+  expect_false(any(scoped$check == "method_unused"))
+})
+
 # ---- controlled terminology vs input data -------------------------------
 
 ct_spec <- function() {
