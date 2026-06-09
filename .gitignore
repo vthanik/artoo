@@ -1,0 +1,13 @@
+# Local-only Claude Code files
+CLAUDE.local.md
+MEMORY.md
+.local/
+
+# R session/state
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store

@@ -1,0 +1,251 @@
+# spec_accessors.R -- pure, total accessors onto a vport_spec.
+
+# Abort unless `spec` is a vport_spec.
+#' @noRd
+.check_spec_arg <- function(spec, call = rlang::caller_env()) {
+  if (!is_vport_spec(spec)) {
+    cli::cli_abort(
+      c(
+        "{.arg spec} must be a {.cls vport_spec}.",
+        "x" = "You supplied {.obj_type_friendly {spec}}.",
+        "i" = "Build one with {.fn vport_spec}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  invisible(spec)
+}
+
+# Abort unless `dataset` names a dataset in the spec.
+#' @noRd
+.check_dataset_arg <- function(spec, dataset, call = rlang::caller_env()) {
+  known <- spec_datasets(spec)
+  if (length(dataset) != 1L || is.na(dataset) || !(dataset %in% known)) {
+    cli::cli_abort(
+      c(
+        "{.arg dataset} must be one of the spec's datasets.",
+        "x" = "{.val {dataset}} is not in the spec.",
+        "i" = "Available: {.val {known}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  invisible(dataset)
+}
+
+#' Dataset names in a spec
+#'
+#' List the datasets a specification defines. The result is the set of
+#' names you pass as the `dataset` argument to the other accessors and to
+#' `apply_spec()`.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#'
+#' @return *A character vector of dataset names*, de-duplicated and with
+#'   `NA`s dropped. Empty when the spec has no datasets.
+#'
+#' @examples
+#' # ---- Example 1: the datasets the pilot ADaM spec defines ----
+#' #
+#' # Build the spec from the bundled CDISC-pilot tables and list its
+#' # datasets -- the names you pass to the other accessors.
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec_datasets(spec)
+#'
+#' @seealso [spec_variables()] for one dataset's variables; [spec_keys()]
+#'   for its sort keys.
+#' @export
+spec_datasets <- function(spec) {
+  .check_spec_arg(spec)
+  ds <- spec@datasets
+  if (!("dataset" %in% names(ds)) || !nrow(ds)) {
+    return(character(0))
+  }
+  unique(ds$dataset[!is.na(ds$dataset)])
+}
+
+#' Variables in a spec
+#'
+#' Return the variable-metadata table for one dataset, or for the whole
+#' spec. Each row carries the variable's CDISC `data_type`, label, length,
+#' display format, key sequence, and codelist reference.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param dataset *Restrict to one dataset.* `<character(1)> | NULL`. When
+#'   `NULL` (default) every dataset's variables are returned; otherwise only
+#'   the named dataset's rows.
+#'
+#'   **Restriction:** a non-`NULL` `dataset` must name a dataset in the spec
+#'   (see [spec_datasets()]); an unknown name aborts with
+#'   `vport_error_input`.
+#'
+#' @return *A data frame of variable metadata*, one row per variable. Filter
+#'   or arrange it with ordinary base / `dplyr` verbs.
+#'
+#' @examples
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#'
+#' # ---- Example 1: one dataset's variables ----
+#' #
+#' # Pass a dataset name to get just that domain's variables, already
+#' # canonicalised to CDISC dataTypes.
+#' head(spec_variables(spec, "DM")[, c("variable", "label", "data_type")])
+#'
+#' # ---- Example 2: every variable across the spec ----
+#' #
+#' # Omit `dataset` to get the full table, e.g. to count variables per domain.
+#' table(spec_variables(spec)$dataset)
+#'
+#' @seealso [spec_datasets()] for the dataset names; [spec_codelist()] for a
+#'   variable's controlled terminology.
+#' @export
+spec_variables <- function(spec, dataset = NULL) {
+  .check_spec_arg(spec)
+  vars <- spec@variables
+  if (is.null(dataset)) {
+    return(vars)
+  }
+  .check_dataset_arg(spec, dataset)
+  vars[!is.na(vars$dataset) & vars$dataset == dataset, , drop = FALSE]
+}
+
+#' Terms of one codelist
+#'
+#' Return the controlled-terminology terms and decodes for a single
+#' codelist. Use it to inspect the values a coded variable is allowed to
+#' take before applying the spec.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param codelist_id *The codelist to return.* `<character(1)>: required`.
+#'
+#'   **Restriction:** must name a codelist present in the spec's
+#'   `codelists` slot; an unknown id aborts with `vport_error_input`.
+#'
+#' @return *A data frame of the codelist's terms* (`term`, `decode`,
+#'   `order`, `extended`), one row per term.
+#'
+#' @examples
+#' # ---- Example 1: the terms behind a coded variable ----
+#' #
+#' # SEX is coded against C66731; spec_codelist() returns the terms and their
+#' # decodes that apply_spec() will enforce or decode.
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec_codelist(spec, "C66731")
+#'
+#' @seealso [spec_variables()] for which variables reference a codelist.
+#' @export
+spec_codelist <- function(spec, codelist_id) {
+  .check_spec_arg(spec)
+  cl <- spec@codelists
+  known <- if ("codelist_id" %in% names(cl)) {
+    unique(cl$codelist_id)
+  } else {
+    character(0)
+  }
+  if (
+    length(codelist_id) != 1L || is.na(codelist_id) || !(codelist_id %in% known)
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg codelist_id} must be a codelist in the spec.",
+        "x" = "{.val {codelist_id}} is not present.",
+        "i" = "Available: {.val {known}}."
+      ),
+      class = "vport_error_input"
+    )
+  }
+  cl[!is.na(cl$codelist_id) & cl$codelist_id == codelist_id, , drop = FALSE]
+}
+
+#' Sort keys for a dataset
+#'
+#' Parse a dataset's sort keys into a character vector of variable names.
+#' These keys drive the sort step of `apply_spec()` and the `keySequence`
+#' written to each output format.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param dataset *The dataset whose keys to parse.* `<character(1)>:
+#'   required`.
+#'
+#'   **Restriction:** must name a dataset in the spec.
+#'
+#' @return *A character vector of key variable names*, split from the
+#'   dataset's `keys` cell (whitespace- or comma-separated). Empty when no
+#'   keys are declared.
+#'
+#' @examples
+#' # ---- Example 1: parse a dataset's sort keys ----
+#' #
+#' # Declare DM's keys, then read them back as the ordered vector apply_spec()
+#' # sorts by. (STUDYID and USUBJID are real DM variables in the demo data.)
+#' ds <- cdisc_datasets
+#' ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
+#' spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+#' spec_keys(spec, "DM")
+#'
+#' @seealso [spec_datasets()] for the dataset names; [spec_variables()] for
+#'   the variables a key must reference.
+#' @export
+spec_keys <- function(spec, dataset) {
+  .check_spec_arg(spec)
+  .check_dataset_arg(spec, dataset)
+  ds <- spec@datasets
+  raw <- ds$keys[!is.na(ds$dataset) & ds$dataset == dataset]
+  raw <- raw[!is.na(raw) & nzchar(raw)]
+  if (!length(raw)) {
+    return(character(0))
+  }
+  keys <- unlist(strsplit(raw[[1]], "[[:space:],]+"))
+  keys[nzchar(keys)]
+}
+
+#' Study-level metadata
+#'
+#' Return the study-level metadata row, or a single field from it. Holds the
+#' study identifier, standard, and implementation-guide version that scope
+#' the whole spec.
+#'
+#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param field *Return one field instead of the row.* `<character(1)> |
+#'   NULL`. When `NULL` (default) the whole study data frame is returned.
+#'
+#'   **Restriction:** a non-`NULL` `field` must be a column of the study
+#'   table; an unknown field aborts with `vport_error_input`.
+#'
+#' @return *The study data frame*, or the value of one `field`.
+#'
+#' @examples
+#' # ---- Example 1: the whole study row, then one field ----
+#' #
+#' # spec_study() with no field returns the study-level table; pass a field
+#' # name to pull a single value such as the study identifier.
+#' spec <- vport_spec(
+#'   cdisc_datasets, cdisc_variables,
+#'   codelists = cdisc_codelists,
+#'   study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
+#' )
+#' spec_study(spec)
+#' spec_study(spec, "studyid")
+#'
+#' @seealso [spec_datasets()] for the datasets the study scopes.
+#' @export
+spec_study <- function(spec, field = NULL) {
+  .check_spec_arg(spec)
+  study <- spec@study
+  if (is.null(field)) {
+    return(study)
+  }
+  if (length(field) != 1L || !(field %in% names(study))) {
+    cli::cli_abort(
+      c(
+        "{.arg field} must be a study-level field.",
+        "x" = "{.val {field}} is not present.",
+        "i" = "Available: {.val {names(study)}}."
+      ),
+      class = "vport_error_input"
+    )
+  }
+  study[[field]]
+}

@@ -1,0 +1,12 @@
+^CLAUDE\.md$
+^CLAUDE\.local\.md$
+^MEMORY\.md$
+^build\.md$
+^debugging\.md$
+^design\.md$
+^handoff\.md$
+^data-raw$
+^\.local$
+^_archive$
+^.*\.Rproj$
+^\.Rproj\.user$

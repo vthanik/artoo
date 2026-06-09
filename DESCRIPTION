@@ -1,0 +1,36 @@
+Package: vport
+Title: Versatile Lossless Port for Clinical Datasets
+Version: 0.0.0.9000
+Authors@R:
+    person("Vignesh", "Thanikachalam", , "about.vignesh@gmail.com",
+           role = c("aut", "cre", "cph"))
+Description: Reads and writes clinical-trial datasets losslessly across
+    SAS XPORT (XPT), CDISC Dataset-JSON, and Apache Parquet, applying a
+    specification to produce submission-ready SDTM and ADaM datasets. A
+    single canonical metadata model carries labels, CDISC data types,
+    lengths, SAS display formats, controlled-terminology references, and
+    sort keys identically across every format, so conversion between any
+    two formats is lossless by construction. Pure R and lightweight, with
+    no external 'SAS' or 'Java' runtime.
+License: MIT + file LICENSE
+URL: https://vthanik.github.io/vport/, https://github.com/vthanik/vport
+BugReports: https://github.com/vthanik/vport/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.2)
+Imports:
+    cli,
+    rlang (>= 1.1.0),
+    S7
+Suggests:
+    knitr,
+    nanoparquet,
+    readxl,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    tibble,
+    withr
+Config/testthat/edition: 3
+LazyData: true
+Config/roxygen2/version: 8.0.0
