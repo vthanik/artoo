@@ -9,6 +9,7 @@
         [x] type_mismatch
         [x] length_overflow
         [x] codelist_membership
+        [x] display_format
         encoding_check: resolve from write target
 
 ---
@@ -22,5 +23,6 @@
         [x] type_mismatch
         [ ] length_overflow
         [x] codelist_membership
+        [x] display_format
         encoding_check: US-ASCII
 

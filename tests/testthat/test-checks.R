@@ -78,6 +78,57 @@ test_that("apply_spec threads checks through to the conformance step", {
   expect_false(any(findings$check == "codelist_membership"))
 })
 
+test_that("vport_checks() includes the display_format dimension", {
+  ck <- vport_checks()
+  expect_true(ck$display_format)
+  expect_error(
+    vport_checks(display_format = NA),
+    class = "vport_error_input"
+  )
+})
+
+test_that("check_spec flags a temporal var with a non-matching format", {
+  spec <- vport_spec(
+    data.frame(dataset = "ADSL"),
+    data.frame(
+      dataset = "ADSL",
+      variable = "TRTSDT",
+      data_type = "date",
+      display_format = "$CHAR8.",
+      stringsAsFactors = FALSE
+    )
+  )
+  dat <- data.frame(TRTSDT = c(19725, 19726))
+  res <- check_spec(dat, spec, "ADSL")
+  hit <- res[res$check == "display_format", , drop = FALSE]
+  expect_identical(hit$variable, "TRTSDT")
+  expect_identical(hit$severity, "warning")
+
+  # toggling it off suppresses the finding
+  off <- check_spec(
+    dat,
+    spec,
+    "ADSL",
+    checks = vport_checks(display_format = FALSE)
+  )
+  expect_false(any(off$check == "display_format"))
+})
+
+test_that("check_spec does not flag a valid temporal format", {
+  spec <- vport_spec(
+    data.frame(dataset = "ADSL"),
+    data.frame(
+      dataset = "ADSL",
+      variable = "TRTSDT",
+      data_type = "date",
+      display_format = "DATE9.",
+      stringsAsFactors = FALSE
+    )
+  )
+  res <- check_spec(data.frame(TRTSDT = 19725), spec, "ADSL")
+  expect_false(any(res$check == "display_format"))
+})
+
 test_that("check_spec rejects a non-vport_checks checks argument", {
   spec <- demo_spec()
   expect_error(

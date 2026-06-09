@@ -12,7 +12,8 @@
   "extra_variable",
   "type_mismatch",
   "length_overflow",
-  "codelist_membership"
+  "codelist_membership",
+  "display_format"
 )
 
 #' Control which conformance checks run
@@ -38,6 +39,9 @@
 #' @param length_overflow *Flag character values longer than the spec length.*
 #'   `<logical(1)>: default TRUE`.
 #' @param codelist_membership *Flag values outside their codelist.*
+#'   `<logical(1)>: default TRUE`.
+#' @param display_format *Flag a date/datetime/time variable whose
+#'   displayFormat is not a recognized SAS format of that family.*
 #'   `<logical(1)>: default TRUE`.
 #' @param encoding_check *Target encoding for the write-time encoding gate.*
 #'   `<character(1)> | NULL`. When `NULL` (default) the encoding is resolved
@@ -70,6 +74,7 @@ vport_checks <- function(
   type_mismatch = TRUE,
   length_overflow = TRUE,
   codelist_membership = TRUE,
+  display_format = TRUE,
   encoding_check = NULL
 ) {
   call <- rlang::caller_env()
@@ -78,7 +83,8 @@ vport_checks <- function(
     extra_variable = extra_variable,
     type_mismatch = type_mismatch,
     length_overflow = length_overflow,
-    codelist_membership = codelist_membership
+    codelist_membership = codelist_membership,
+    display_format = display_format
   )
   for (nm in names(toggles)) {
     v <- toggles[[nm]]

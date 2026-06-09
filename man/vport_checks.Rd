@@ -10,6 +10,7 @@ vport_checks(
   type_mismatch = TRUE,
   length_overflow = TRUE,
   codelist_membership = TRUE,
+  display_format = TRUE,
   encoding_check = NULL
 )
 }
@@ -27,6 +28,10 @@ dataType.} \verb{<logical(1)>: default TRUE}.}
 \verb{<logical(1)>: default TRUE}.}
 
 \item{codelist_membership}{\emph{Flag values outside their codelist.}
+\verb{<logical(1)>: default TRUE}.}
+
+\item{display_format}{\emph{Flag a date/datetime/time variable whose
+displayFormat is not a recognized SAS format of that family.}
 \verb{<logical(1)>: default TRUE}.}
 
 \item{encoding_check}{\emph{Target encoding for the write-time encoding gate.}

@@ -190,6 +190,35 @@ check_spec <- function(x, spec, dataset, checks = NULL) {
         )
       }
     }
+
+    fmt <- vars$display_format[i]
+    if (
+      checks$display_format &&
+        dt %in% c("date", "datetime", "time") &&
+        !is.na(fmt)
+    ) {
+      fmt_name <- .parse_format_str(fmt)$name
+      ok <- switch(
+        dt,
+        date = .is_sas_date_format(fmt_name),
+        datetime = .is_sas_datetime_format(fmt_name),
+        time = .is_sas_time_format(fmt_name)
+      )
+      if (!isTRUE(ok)) {
+        found[[length(found) + 1L]] <- .cs_finding(
+          "display_format",
+          v,
+          "warning",
+          sprintf(
+            "'%s' is dataType '%s' but displayFormat '%s' is not a recognized SAS %s format.",
+            v,
+            dt,
+            fmt,
+            dt
+          )
+        )
+      }
+    }
   }
 
   if (!length(found)) {
