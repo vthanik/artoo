@@ -4,7 +4,7 @@
 \alias{check_spec}
 \title{Check a dataset against its spec}
 \usage{
-check_spec(x, spec, dataset)
+check_spec(x, spec, dataset, checks = NULL)
 }
 \arguments{
 \item{x}{\emph{The data frame to check.} \verb{<data.frame>: required}. Typically
@@ -15,6 +15,9 @@ the output of \code{\link[=apply_spec]{apply_spec()}}, but any frame works.}
 \item{dataset}{\emph{The dataset whose rules apply.} \verb{<character(1)>: required}.
 
 \strong{Restriction:} must name a dataset in \code{spec} (see \code{\link[=spec_datasets]{spec_datasets()}}).}
+
+\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; build a control
+with \code{\link[=vport_checks]{vport_checks()}} to disable some.}
 }
 \value{
 \emph{A findings data frame} with columns \code{check}, \code{variable},
@@ -56,6 +59,6 @@ check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
 
 }
 \seealso{
-\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=validate_spec]{validate_spec()}} for spec
-integrity.
+\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=vport_checks]{vport_checks()}} to select
+dimensions; \code{\link[=validate_spec]{validate_spec()}} for spec integrity.
 }

@@ -55,6 +55,9 @@
 #'   required`.
 #'
 #'   **Restriction:** must name a dataset in `spec` (see [spec_datasets()]).
+#' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
+#'   | NULL`. When `NULL` (default) every dimension runs; build a control
+#'   with [vport_checks()] to disable some.
 #'
 #' @return *A findings data frame* with columns `check`, `variable`,
 #'   `severity` (`"error"` or `"warning"`), and `message`, one row per
@@ -77,11 +80,12 @@
 #' raw$NOTASPEC <- 1
 #' check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
 #'
-#' @seealso [apply_spec()] which runs this; [validate_spec()] for spec
-#'   integrity.
+#' @seealso [apply_spec()] which runs this; [vport_checks()] to select
+#'   dimensions; [validate_spec()] for spec integrity.
 #' @export
-check_spec <- function(x, spec, dataset) {
+check_spec <- function(x, spec, dataset, checks = NULL) {
   call <- rlang::caller_env()
+  checks <- .check_checks_arg(checks, call = call)
   if (!is.data.frame(x)) {
     cli::cli_abort(
       c(
@@ -99,23 +103,25 @@ check_spec <- function(x, spec, dataset) {
   found <- list()
 
   # Missing / extra variables.
-  missing <- setdiff(vars$variable, names(x))
-  for (v in missing) {
-    found[[length(found) + 1L]] <- .cs_finding(
-      "missing_variable",
-      v,
-      "error",
-      sprintf("Spec variable '%s' is absent from the data.", v)
-    )
+  if (checks$missing_variable) {
+    for (v in setdiff(vars$variable, names(x))) {
+      found[[length(found) + 1L]] <- .cs_finding(
+        "missing_variable",
+        v,
+        "error",
+        sprintf("Spec variable '%s' is absent from the data.", v)
+      )
+    }
   }
-  extra <- setdiff(names(x), vars$variable)
-  for (v in extra) {
-    found[[length(found) + 1L]] <- .cs_finding(
-      "extra_variable",
-      v,
-      "warning",
-      sprintf("Column '%s' is not declared in the spec.", v)
-    )
+  if (checks$extra_variable) {
+    for (v in setdiff(names(x), vars$variable)) {
+      found[[length(found) + 1L]] <- .cs_finding(
+        "extra_variable",
+        v,
+        "warning",
+        sprintf("Column '%s' is not declared in the spec.", v)
+      )
+    }
   }
 
   # Per-variable: type mismatch, length overflow, codelist membership.
@@ -127,7 +133,7 @@ check_spec <- function(x, spec, dataset) {
     col <- x[[v]]
     dt <- vars$data_type[i]
 
-    if (!is.na(dt)) {
+    if (checks$type_mismatch && !is.na(dt)) {
       want <- .type_storage(dt)
       have <- .storage_of(col)
       if (!is.na(have) && have != want) {
@@ -147,7 +153,7 @@ check_spec <- function(x, spec, dataset) {
     }
 
     len <- vars$length[i]
-    if (!is.na(len) && is.character(col)) {
+    if (checks$length_overflow && !is.na(len) && is.character(col)) {
       over <- max(nchar(col), 0L, na.rm = TRUE)
       if (over > len) {
         found[[length(found) + 1L]] <- .cs_finding(
@@ -165,7 +171,7 @@ check_spec <- function(x, spec, dataset) {
     }
 
     clid <- vars$codelist_id[i]
-    if (!is.na(clid)) {
+    if (checks$codelist_membership && !is.na(clid)) {
       terms <- spec_codelist(spec, clid)$term
       vals <- as.character(col)
       bad <- unique(vals[!is.na(vals) & !(vals %in% terms)])

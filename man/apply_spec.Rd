@@ -11,7 +11,8 @@ apply_spec(
   check = c("warn", "strict", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
-  steps = NULL
+  steps = NULL,
+  checks = NULL
 )
 }
 \arguments{
@@ -45,6 +46,10 @@ When \code{NULL} (default) every step runs; otherwise any of
 \code{"stamp"}, applied in their canonical order.
 
 \strong{Tip:} omit \code{"stamp"} to conform without attaching metadata.}
+
+\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
+\code{\link[=vport_checks]{vport_checks()}} control to disable some. Has no effect when
+\code{check = "off"}.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{vport_meta} (read it with

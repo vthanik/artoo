@@ -88,6 +88,10 @@
 #'   `"stamp"`, applied in their canonical order.
 #'
 #'   **Tip:** omit `"stamp"` to conform without attaching metadata.
+#' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
+#'   | NULL`. When `NULL` (default) every dimension runs; pass a
+#'   [vport_checks()] control to disable some. Has no effect when
+#'   `check = "off"`.
 #'
 #' @return *A conformed `<data.frame>`* carrying `vport_meta` (read it with
 #'   [get_meta()]) and a `vport.conformance` attribute when `check` ran.
@@ -120,7 +124,8 @@ apply_spec <- function(
   check = c("warn", "strict", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
-  steps = NULL
+  steps = NULL,
+  checks = NULL
 ) {
   call <- rlang::caller_env()
   check <- match.arg(check)
@@ -166,7 +171,7 @@ apply_spec <- function(
   }
 
   if (check != "off") {
-    findings <- check_spec(out, spec, dataset)
+    findings <- check_spec(out, spec, dataset, checks = checks)
     attr(out, "vport.conformance") <- findings
     errs <- findings[findings$severity == "error", , drop = FALSE]
     if (nrow(errs)) {
