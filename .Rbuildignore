@@ -14,3 +14,10 @@
 ^_reference$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.github$
+^_pkgdown\.yml$
+^pkgdown$
+^docs$
+^README\.qmd$
+^vignettes/articles$
+^codecov\.yml$

@@ -1,5 +1,11 @@
 # vport 0.0.0.9000
 
+* Added a pkgdown website, two Quarto vignettes ("From spec to submission
+  dataset" and "One dataset, every format"), and a rendered README covering
+  the spec-to-submission workflow and lossless any-to-any conversion.
+* Added continuous integration: `R CMD check` across macOS, Windows, and
+  Ubuntu (release, devel, and oldrel-1), test-coverage reporting to Codecov,
+  and pkgdown site deployment.
 * `read_dataset()` and every per-format reader (`read_xpt()`, `read_json()`,
   `read_parquet()`, `read_rds()`) gained `col_select` and `n_max` for partial
   reads. A generic post-decode filter is the single source of selection
