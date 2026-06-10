@@ -113,3 +113,14 @@
   full IBM-370 float and SAS-epoch temporal round-trip, special-missing
   (`.A`-`.Z`, `._`) fidelity, and encoding round-trip for any single-byte
   charset.
+* `vport_spec` and `vport_meta` now print a readable summary (header, slot
+  counts, and a truncated preview) instead of dumping their raw S7
+  properties; `format()` returns the same lines.
+* `apply_spec()` no longer silently abandons row ordering when only some
+  spec variables carry an `order`: it orders the numbered variables and
+  trails the rest, warning with class `vport_warning_order`.
+* `apply_spec()` scaffold and drop progress messages now carry the
+  condition class `vport_message_apply`, so a pipeline can muffle them with
+  `withCallingHandlers()` without suppressing other output.
+* `read_spec()` informs (class `vport_message_p21_sheet`) which sheet it
+  used when several sheets in a Pinnacle 21 workbook match one role.

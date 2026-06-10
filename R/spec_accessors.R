@@ -165,7 +165,8 @@ spec_codelists <- function(spec, codelist_id = NULL) {
         "x" = "{.val {codelist_id}} is not present.",
         "i" = "Available: {.val {known}}."
       ),
-      class = "vport_error_input"
+      class = "vport_error_input",
+      call = rlang::caller_env()
     )
   }
   cl[!is.na(cl$codelist_id) & cl$codelist_id == codelist_id, , drop = FALSE]
@@ -256,7 +257,8 @@ spec_study <- function(spec, field = NULL) {
         "x" = "{.val {field}} is not present.",
         "i" = "Available: {.val {names(study)}}."
       ),
-      class = "vport_error_input"
+      class = "vport_error_input",
+      call = rlang::caller_env()
     )
   }
   study[[field]]

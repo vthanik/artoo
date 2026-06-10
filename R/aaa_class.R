@@ -27,19 +27,6 @@
 # (e.g. an ADaM numeric date is dataType "date", targetDataType "integer").
 .cdisc_targettypes <- c("integer", "decimal")
 
-# SDTM/ADaM variable origin (Define-XML).
-.vport_origin <- c(
-  "Collected",
-  "Derived",
-  "Assigned",
-  "Protocol",
-  "Predecessor",
-  NA
-)
-
-# Codelist decode no-match policy.
-.vport_nomatch <- c("error", "keep", "na")
-
 # ---- Per-slot column schemas: name -> required storage mode --------------
 # `req` lists the columns a slot MUST carry; the rest are optional and are
 # filled with a typed NA at construction.

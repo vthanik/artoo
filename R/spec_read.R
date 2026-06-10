@@ -211,7 +211,6 @@ read_spec <- function(path) {
 
 #' @noRd
 .read_spec_json <- function(path, call = rlang::caller_env()) {
-  rlang::check_installed("jsonlite", reason = "to read a JSON spec.")
   raw <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE)
   .check_spec_json_version(raw[["vport_spec_version"]], call)
 
@@ -254,7 +253,8 @@ read_spec <- function(path) {
         "Spec JSON version {.val {v}} is not the supported version {.val {supported}}.",
         "i" = "Reading anyway; some fields may not be recognised."
       ),
-      class = "vport_warning_spec"
+      class = "vport_warning_spec",
+      call = call
     )
   }
   invisible()
@@ -337,7 +337,8 @@ read_spec <- function(path) {
 }
 
 # Match the first sheet whose normalised name is in the alias set. NULL
-# when no sheet matches.
+# when no sheet matches. When several sheets match the same role, inform
+# which one was chosen so an ambiguous workbook is not silently resolved.
 #' @noRd
 .match_p21_sheet <- function(sheets, aliases) {
   norm <- function(x) gsub(" ", "", tolower(trimws(x)), fixed = TRUE)
@@ -345,7 +346,18 @@ read_spec <- function(path) {
   if (!length(idx)) {
     return(NULL)
   }
-  sheets[idx[1L]]
+  used <- sheets[idx[1L]]
+  if (length(idx) > 1L) {
+    ignored <- sheets[idx[-1L]]
+    cli::cli_inform(
+      c(
+        "Several sheets match one Pinnacle 21 role.",
+        "i" = "Using {.val {used}}; ignoring {.val {ignored}}."
+      ),
+      class = "vport_message_p21_sheet"
+    )
+  }
+  used
 }
 
 # Read one sheet as text and drop all-blank rows. NULL when the sheet is
@@ -359,15 +371,14 @@ read_spec <- function(path) {
     readxl::read_excel(path, sheet = sheet_name, col_types = "text"),
     stringsAsFactors = FALSE
   )
-  if (nrow(df)) {
-    blank <- vapply(
-      seq_len(nrow(df)),
-      function(i) {
-        cells <- as.character(unlist(df[i, , drop = TRUE]))
-        all(is.na(cells) | !nzchar(trimws(cells)))
-      },
-      logical(1L)
-    )
+  if (nrow(df) && ncol(df)) {
+    # Vectorise per column (each column is already a vector) and AND the
+    # per-column blank masks, rather than rebuilding a 1-row frame per row.
+    blank_cols <- lapply(df, function(col) {
+      cc <- as.character(col)
+      is.na(cc) | !nzchar(trimws(cc))
+    })
+    blank <- Reduce(`&`, blank_cols)
     df <- df[!blank, , drop = FALSE]
     rownames(df) <- NULL
   }

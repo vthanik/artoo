@@ -3,7 +3,6 @@
 # ---- Native JSON round-trip (F1) ----------------------------------------
 
 test_that("read_spec() round-trips a spec through JSON identically (F1)", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     cdisc_datasets,
     cdisc_variables,
@@ -15,7 +14,6 @@ test_that("read_spec() round-trips a spec through JSON identically (F1)", {
 })
 
 test_that("read_spec() round-trips value-level and study slots (F1)", {
-  skip_if_not_installed("jsonlite")
   vlm <- data.frame(
     dataset = "ADSL",
     variable = "PARAMCD",
@@ -51,7 +49,6 @@ test_that("vport_spec() demotes a tibble value-level table to plain df (H2)", {
 })
 
 test_that("read_spec() preserves non-ASCII labels and empty strings (H8)", {
-  skip_if_not_installed("jsonlite")
   vars <- data.frame(
     dataset = "DM",
     variable = c("A", "B"),
@@ -69,7 +66,6 @@ test_that("read_spec() preserves non-ASCII labels and empty strings (H8)", {
 })
 
 test_that("read_spec() reconstructs empty optional slots", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     data.frame(dataset = "DM"),
     data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
@@ -83,7 +79,6 @@ test_that("read_spec() reconstructs empty optional slots", {
 })
 
 test_that("read_spec() warns on an unrecognised version but still reads (H10)", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     data.frame(dataset = "DM"),
     data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
@@ -163,7 +158,6 @@ test_that("read_spec() populates methods/comments/documents slots", {
 })
 
 test_that("read_spec() round-trips the new slots through JSON (F1)", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     data.frame(dataset = "ADSL"),
     data.frame(
@@ -248,4 +242,29 @@ test_that(".require_p21_sheet errors on an absent or empty required sheet (H7)",
     ),
     class = "vport_error_spec"
   )
+})
+
+# ---- .match_p21_sheet alias resolution ----------------------------------
+
+test_that(".match_p21_sheet informs when several sheets match one role", {
+  expect_message(
+    used <- vport:::.match_p21_sheet(c("Datasets", "datasets "), "datasets"),
+    class = "vport_message_p21_sheet"
+  )
+  # The first match wins; the inform names it.
+  expect_identical(used, "Datasets")
+  expect_snapshot(
+    invisible(vport:::.match_p21_sheet(c("Datasets", "datasets "), "datasets"))
+  )
+})
+
+test_that(".match_p21_sheet returns NULL when nothing matches", {
+  expect_null(vport:::.match_p21_sheet(c("Foo", "Bar"), "datasets"))
+})
+
+test_that(".match_p21_sheet on a single match is silent", {
+  expect_no_message(
+    used <- vport:::.match_p21_sheet(c("Variables", "Datasets"), "datasets")
+  )
+  expect_identical(used, "Datasets")
 })

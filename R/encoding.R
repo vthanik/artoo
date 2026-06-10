@@ -283,8 +283,7 @@
 # FDA Study Data TCG prohibits bytes 160-191 in submission xpt. Runs on the
 # POST-transcode single-byte stream (so it neither false-fires on multibyte
 # UTF-8 nor misses real extended chars). Returns the integer positions of any
-# forbidden bytes. Wired into the encoding_check conformance gate in a later
-# phase; shipped + unit-tested now.
+# forbidden bytes. Drives the xpt writer's FDA-byte warning (codec_xpt.R).
 #' @noRd
 .fda_forbidden_bytes <- function(raw) {
   if (!length(raw)) {

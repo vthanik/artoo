@@ -75,7 +75,6 @@
 write_spec <- function(spec, path) {
   call <- rlang::caller_env()
   .check_path(path, call = call)
-  rlang::check_installed("jsonlite", reason = "to write a spec to JSON.")
   if (!is_vport_spec(spec)) {
     cli::cli_abort(
       c(

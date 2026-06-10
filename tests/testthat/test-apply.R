@@ -78,6 +78,10 @@ test_that("apply_spec rejects an unknown step", {
     apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
     class = "vport_error_input"
   )
+  expect_snapshot(
+    apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
+    error = TRUE
+  )
 })
 
 test_that("apply_spec validates x and dataset", {
@@ -90,6 +94,8 @@ test_that("apply_spec validates x and dataset", {
     apply_spec(cdisc_adsl, spec, "NOPE"),
     class = "vport_error_input"
   )
+  expect_snapshot(apply_spec(list(1), spec, "ADSL"), error = TRUE)
+  expect_snapshot(apply_spec(cdisc_adsl, spec, "NOPE"), error = TRUE)
 })
 
 test_that("decode = none leaves coded values untouched", {

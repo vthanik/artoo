@@ -17,7 +17,7 @@ validate_spec(
 \item{data}{\emph{Optional input data for controlled-terminology checks.}
 \verb{<data.frame> | named list | NULL}. When supplied, data values are
 cross-checked against the spec codelists. A single data frame requires
-a length-1 \code{dataset}. (Wired in a later step.)}
+a length-1 \code{dataset}; pass a named list to validate several at once.}
 
 \item{dataset}{\emph{Restrict to one or more datasets.} \verb{<character> | NULL}.
 \code{NULL} (default) validates every dataset.

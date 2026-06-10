@@ -196,7 +196,7 @@ apply_spec <- function(
         cli::cli_warn(
           c(
             "{nrow(errs)} conformance error{?s} for {.val {dataset}}.",
-            "i" = "See {.code attr(x, \"vport.conformance\")} for details."
+            "i" = "See the {.field vport.conformance} attribute of the returned data frame for details."
           ),
           class = "vport_warning_conformance",
           call = call

@@ -850,7 +850,7 @@
 #' @param data *Optional input data for controlled-terminology checks.*
 #'   `<data.frame> | named list | NULL`. When supplied, data values are
 #'   cross-checked against the spec codelists. A single data frame requires
-#'   a length-1 `dataset`. (Wired in a later step.)
+#'   a length-1 `dataset`; pass a named list to validate several at once.
 #' @param dataset *Restrict to one or more datasets.* `<character> | NULL`.
 #'   `NULL` (default) validates every dataset.
 #'

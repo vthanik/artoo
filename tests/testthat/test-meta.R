@@ -154,6 +154,11 @@ test_that("set_meta then get_meta round-trips through a frame attribute", {
   expect_identical(got@columns, meta@columns)
 })
 
+test_that("get_meta aborts on a frame carrying no metadata", {
+  expect_error(get_meta(cdisc_adsl), class = "vport_error_input")
+  expect_snapshot(get_meta(cdisc_adsl), error = TRUE)
+})
+
 # ---- Wave 3: set_meta projects label / format.sas onto columns -------------
 
 test_that("set_meta projects the column label and SAS format onto the frame", {

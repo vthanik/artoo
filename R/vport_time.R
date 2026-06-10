@@ -135,7 +135,8 @@ as.character.vport_time <- function(x, ...) {
   if (!.is_time_rhs(value)) {
     cli::cli_abort(
       "Cannot assign {.obj_type_friendly {value}} into a {.cls vport_time}.",
-      class = "vport_error_input"
+      class = "vport_error_input",
+      call = rlang::caller_env()
     )
   }
   v <- unclass(x)
@@ -148,7 +149,8 @@ as.character.vport_time <- function(x, ...) {
   if (!.is_time_rhs(value)) {
     cli::cli_abort(
       "Cannot assign {.obj_type_friendly {value}} into a {.cls vport_time}.",
-      class = "vport_error_input"
+      class = "vport_error_input",
+      call = rlang::caller_env()
     )
   }
   v <- unclass(x)
@@ -158,11 +160,13 @@ as.character.vport_time <- function(x, ...) {
 
 #' @exportS3Method c vport_time
 c.vport_time <- function(...) {
+  call <- rlang::caller_env()
   parts <- lapply(list(...), function(a) {
     if (!.is_time_rhs(a)) {
       cli::cli_abort(
         "Cannot combine {.cls vport_time} with {.obj_type_friendly {a}}.",
-        class = "vport_error_input"
+        class = "vport_error_input",
+        call = call
       )
     }
     if (is_vport_time(a)) unclass(a) else as.double(a)
@@ -205,7 +209,8 @@ Ops.vport_time <- function(e1, e2) {
         "Cannot compare a {.cls vport_time} with a character value.",
         "i" = "Build a {.cls vport_time} with {.fn vport_time}, or compare on seconds."
       ),
-      class = "vport_error_input"
+      class = "vport_error_input",
+      call = rlang::caller_env()
     )
   }
   v1 <- if (is_vport_time(e1)) unclass(e1) else e1

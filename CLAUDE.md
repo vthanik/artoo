@@ -38,8 +38,9 @@ for the phase checklist.
 - Roxygen follows the tabular bar (see `CLAUDE.local.md` roxygen
   standard).
 - `air` formats after edits. Inner loop: document → test → check → air.
-- **Demo data is built reproducibly from public sources**
-  (`pharmaverseadam` / `pharmaversesdtm`) in `data-raw/`, never copied
-  from a private archive — end users and CI must be able to rebuild it.
+- **Demo data is built reproducibly from public sources** (the PHUSE Test
+  Data Factory, `phuse-org/phuse-scripts`, downloaded in
+  `data-raw/bundle-demo.R`), never copied from a private archive — end
+  users and CI must be able to rebuild it.
 
 See `build.md` for the dev loop. See `debugging.md` for troubleshooting.

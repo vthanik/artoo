@@ -33,7 +33,6 @@
 #' @noRd
 .spec_rules <- function() {
   if (is.null(.spec_rules_env$rules)) {
-    rlang::check_installed("jsonlite", reason = "to read the rule catalog.")
     path <- system.file("spec_rules.json", package = "vport")
     if (!nzchar(path)) {
       cli::cli_abort(
@@ -67,34 +66,39 @@
       class = "vport_error_validation"
     )
   }
-  if (!all(r$severity %in% .spec_severities)) {
+  bad_sev <- unique(r$severity[!r$severity %in% .spec_severities])
+  if (length(bad_sev)) {
     cli::cli_abort(
-      "Rule catalog has an unknown severity.",
+      "Rule catalog has unknown severit{?y/ies}: {.val {bad_sev}}.",
       class = "vport_error_validation"
     )
   }
-  if (!all(r$dimension %in% .spec_dimensions)) {
+  bad_dim <- unique(r$dimension[!r$dimension %in% .spec_dimensions])
+  if (length(bad_dim)) {
     cli::cli_abort(
-      "Rule catalog has an unknown dimension.",
+      "Rule catalog has unknown dimension{?s}: {.val {bad_dim}}.",
       class = "vport_error_validation"
     )
   }
-  if (!all(r$engine %in% .spec_engines)) {
+  bad_eng <- unique(r$engine[!r$engine %in% .spec_engines])
+  if (length(bad_eng)) {
     cli::cli_abort(
-      "Rule catalog has an unknown engine.",
+      "Rule catalog has unknown engine{?s}: {.val {bad_eng}}.",
       class = "vport_error_validation"
     )
   }
   # A data-engine rule cannot run without data.
-  if (any(r$engine == "data" & !r$requires_data)) {
+  no_data <- unique(r$id[r$engine == "data" & !r$requires_data])
+  if (length(no_data)) {
     cli::cli_abort(
-      "Rule catalog has a data-engine rule that does not require data.",
+      "Rule catalog data-engine rule{?s} {.val {no_data}} must require data.",
       class = "vport_error_validation"
     )
   }
-  if (anyDuplicated(r$id)) {
+  dup_id <- unique(r$id[duplicated(r$id)])
+  if (length(dup_id)) {
     cli::cli_abort(
-      "Rule catalog has duplicate ids.",
+      "Rule catalog has duplicate id{?s}: {.val {dup_id}}.",
       class = "vport_error_validation"
     )
   }

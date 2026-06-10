@@ -16,7 +16,8 @@ from the PHUSE Test Data Factory (\code{phuse-org/phuse-scripts}).
 cdisc_dm
 }
 \description{
-A 60-subject sample of the pharmaverse SDTM demographics domain: one row per
-subject, with the standard DM variables (labels preserved as attributes).
+A 60-subject sample of the CDISC pilot SDTM demographics domain (DM): one
+row per subject, with the standard DM variables (labels preserved as
+attributes).
 }
 \keyword{datasets}

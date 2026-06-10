@@ -13,9 +13,23 @@
 #' @noRd
 .apply_info <- function(spec, dataset, call = rlang::caller_env()) {
   vars <- spec_variables(spec, dataset)
-  if ("order" %in% names(vars)) {
+  if ("order" %in% names(vars) && nrow(vars)) {
     ord <- suppressWarnings(as.integer(vars$order))
-    if (!anyNA(ord)) {
+    # A partial order (some but not all rows numbered) still sorts: the
+    # numbered rows take their positions and the unnumbered ones trail,
+    # rather than silently abandoning the spec's ordering intent.
+    if (anyNA(ord) && !all(is.na(ord))) {
+      n_missing <- sum(is.na(ord))
+      cli::cli_warn(
+        c(
+          "{n_missing} variable{?s} in dataset {.val {dataset}} {?has/have} no {.field order}.",
+          "i" = "Ordering the numbered variables first; unnumbered ones trail in spec order."
+        ),
+        class = "vport_warning_order",
+        call = call
+      )
+      vars <- vars[order(ord, na.last = TRUE), , drop = FALSE]
+    } else if (!anyNA(ord)) {
       vars <- vars[order(ord), , drop = FALSE]
     }
   }
@@ -52,7 +66,10 @@
   for (i in seq_along(missing)) {
     x[[missing[i]]] <- .na_for_type(types[i], n)
   }
-  cli::cli_inform("Scaffolded {length(missing)} variable{?s}: {.var {missing}}")
+  cli::cli_inform(
+    "Scaffolded {length(missing)} variable{?s}: {.var {missing}}",
+    class = "vport_message_apply"
+  )
   x
 }
 
@@ -61,7 +78,10 @@
 .drop_unspec <- function(x, info, call = rlang::caller_env()) {
   to_drop <- setdiff(names(x), info$spec_vars)
   if (length(to_drop)) {
-    cli::cli_inform("Dropped {length(to_drop)} variable{?s}: {.var {to_drop}}")
+    cli::cli_inform(
+      "Dropped {length(to_drop)} variable{?s}: {.var {to_drop}}",
+      class = "vport_message_apply"
+    )
   }
   keep <- info$spec_vars[info$spec_vars %in% names(x)]
   x[keep]

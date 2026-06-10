@@ -198,6 +198,18 @@
     }
     for (nm in names(cols)) {
       col <- cols[[nm]]
+      # List key and the column's own `name` must agree, or keyed lookups
+      # (keys, codelist projection, col_select) silently target the wrong row.
+      if (!is.null(col$name) && !identical(as.character(col$name), nm)) {
+        issues <- c(
+          issues,
+          sprintf(
+            "vport_meta column `%s` has a mismatched name field: %s.",
+            nm,
+            as.character(col$name)
+          )
+        )
+      }
       dt <- col$dataType %||% col$data_type
       if (!is.null(dt) && !(dt %in% .cdisc_datatypes)) {
         issues <- c(
@@ -208,6 +220,30 @@
             dt
           )
         )
+      }
+      tdt <- col$targetDataType
+      if (!is.null(tdt) && !(tdt %in% .cdisc_targettypes)) {
+        issues <- c(
+          issues,
+          sprintf(
+            "vport_meta column `%s` has non-CDISC targetDataType: %s.",
+            nm,
+            tdt
+          )
+        )
+      }
+      for (fld in c("length", "keySequence")) {
+        v <- col[[fld]]
+        if (!is.null(v) && (length(v) != 1L || !is.numeric(v) || is.na(v))) {
+          issues <- c(
+            issues,
+            sprintf(
+              "vport_meta column `%s` has a non-integer %s.",
+              nm,
+              fld
+            )
+          )
+        }
       }
     }
   }

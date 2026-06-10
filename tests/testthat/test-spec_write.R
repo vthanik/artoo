@@ -1,7 +1,6 @@
 # Tests for write_spec() (native vport JSON).
 
 test_that("write_spec() writes the canonical key order with a null values slot", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     cdisc_datasets,
     cdisc_variables,
@@ -31,7 +30,6 @@ test_that("write_spec() writes the canonical key order with a null values slot",
 })
 
 test_that("write_spec() is deterministic (byte-identical on rewrite)", {
-  skip_if_not_installed("jsonlite")
   spec <- vport_spec(
     cdisc_datasets,
     cdisc_variables,
@@ -45,7 +43,6 @@ test_that("write_spec() is deterministic (byte-identical on rewrite)", {
 })
 
 test_that("write_spec() rejects a non-spec input", {
-  skip_if_not_installed("jsonlite")
   p <- withr::local_tempfile(fileext = ".json")
   expect_error(write_spec(mtcars, p), class = "vport_error_input")
   expect_snapshot(write_spec(mtcars, p), error = TRUE)

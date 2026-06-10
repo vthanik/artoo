@@ -52,6 +52,13 @@ test_that("c and rep preserve the class", {
   expect_true(is_vport_time(rep(b, 3)))
 })
 
+test_that("c.vport_time rejects an incompatible part with caller attribution", {
+  a <- vport_time(c(1, 2))
+  expect_error(c(a, "x"), class = "vport_error_input")
+  # The error attributes to the c() call, not the internal lapply lambda.
+  expect_snapshot(c(a, "x"), error = TRUE)
+})
+
 test_that("a vport_time survives as a data.frame column", {
   df <- data.frame(
     id = 1:3,
@@ -138,6 +145,13 @@ test_that("[<- aborts on a character RHS (no silent corruption)", {
     },
     class = "vport_error_input"
   )
+  # The abort attributes to the assignment call, not the internal coercion.
+  expect_snapshot(
+    {
+      t[1] <- "noon"
+    },
+    error = TRUE
+  )
 })
 
 test_that("[[<- guards the RHS type like [<-", {
@@ -178,6 +192,7 @@ test_that("comparison with a character value aborts (review)", {
   t <- vport_time(30600)
   expect_error(t == "08:30:00", class = "vport_error_input")
   expect_error("08:30:00" == t, class = "vport_error_input")
+  expect_snapshot(t == "08:30:00", error = TRUE)
   # numeric and NA comparisons stay legal
   expect_true(t == 30600)
   expect_true(is.na(t == NA))

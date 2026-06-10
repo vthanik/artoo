@@ -16,8 +16,8 @@ the PHUSE Test Data Factory (\code{phuse-org/phuse-scripts}).
 cdisc_adsl
 }
 \description{
-A 60-subject sample of the pharmaverse ADaM subject-level analysis dataset:
-one row per subject, with treatment, demographic, baseline, and disposition
-variables (labels preserved as column attributes).
+A 60-subject sample of the CDISC pilot ADaM subject-level analysis dataset
+(ADSL): one row per subject, with treatment, demographic, baseline, and
+disposition variables (labels preserved as column attributes).
 }
 \keyword{datasets}

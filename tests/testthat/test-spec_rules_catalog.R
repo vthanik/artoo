@@ -1,7 +1,6 @@
 # Tests for the open rule catalog (inst/spec_rules.json) and code parity.
 
 test_that("the rule catalog parses and has the required shape", {
-  skip_if_not_installed("jsonlite")
   r <- vport:::.spec_rules()
   expect_s3_class(r, "data.frame")
   expect_true(all(
@@ -24,7 +23,6 @@ test_that("the rule catalog parses and has the required shape", {
 })
 
 test_that("implemented spec-engine ids exactly match what validate_spec emits", {
-  skip_if_not_installed("jsonlite")
   r <- vport:::.spec_rules()
   implemented <- r$id[r$status == "implemented" & r$engine == "spec"]
   emitted <- vport:::.engine_check_ids()
@@ -32,14 +30,12 @@ test_that("implemented spec-engine ids exactly match what validate_spec emits", 
 })
 
 test_that("implemented data-engine ids match the vport_checks() dimensions", {
-  skip_if_not_installed("jsonlite")
   r <- vport:::.spec_rules()
   data_ids <- r$id[r$status == "implemented" & r$engine == "data"]
   expect_setequal(data_ids, names(formals(vport_checks)))
 })
 
 test_that("every check the engine emits has a valid catalog entry", {
-  skip_if_not_installed("jsonlite")
   # .spec_rule() aborts on an unknown id, so this also guards typos.
   for (id in vport:::.engine_check_ids()) {
     row <- vport:::.spec_rule(id)
@@ -49,7 +45,6 @@ test_that("every check the engine emits has a valid catalog entry", {
 })
 
 test_that("the catalog also documents deferred rules (transparency)", {
-  skip_if_not_installed("jsonlite")
   r <- vport:::.spec_rules()
   expect_true(any(r$status == "deferred"))
 })
@@ -97,6 +92,38 @@ test_that(".check_rules_df rejects a malformed catalog", {
   )
   dup <- rbind(ok, ok)
   expect_error(vport:::.check_rules_df(dup), class = "vport_error_validation")
+})
+
+test_that(".check_rules_df names the offending value in each integrity error", {
+  ok <- data.frame(
+    id = "x",
+    dimension = "study",
+    severity = "warning",
+    requires_data = FALSE,
+    scope = "scoped",
+    status = "implemented",
+    engine = "spec",
+    stringsAsFactors = FALSE
+  )
+  bad_sev <- ok
+  bad_sev$severity <- "fatal"
+  expect_error(vport:::.check_rules_df(bad_sev), "fatal")
+  bad_dim <- ok
+  bad_dim$dimension <- "galaxy"
+  expect_error(vport:::.check_rules_df(bad_dim), "galaxy")
+  bad_engine <- ok
+  bad_engine$engine <- "quantum"
+  expect_error(vport:::.check_rules_df(bad_engine), "quantum")
+  bad_data <- ok
+  bad_data$id <- "no_data_rule"
+  bad_data$engine <- "data"
+  expect_error(vport:::.check_rules_df(bad_data), "no_data_rule")
+  dup <- rbind(ok, ok)
+  expect_error(vport:::.check_rules_df(dup), "x")
+
+  expect_snapshot(vport:::.check_rules_df(bad_sev), error = TRUE)
+  expect_snapshot(vport:::.check_rules_df(bad_data), error = TRUE)
+  expect_snapshot(vport:::.check_rules_df(dup), error = TRUE)
 })
 
 test_that(".spec_rule aborts on an unknown id", {

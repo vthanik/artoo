@@ -36,6 +36,8 @@ test_that("spec_codelists() rejects an unknown codelist", {
     spec_codelists(demo_spec(), "C00000"),
     class = "vport_error_input"
   )
+  # Attributes to the user's spec_codelists() call, not an internal frame.
+  expect_snapshot(spec_codelists(demo_spec(), "C00000"), error = TRUE)
 })
 
 test_that("spec_keys() parses whitespace-separated keys", {
@@ -54,6 +56,7 @@ test_that("spec_study() returns the row or one field", {
 
 test_that("spec_study() rejects an unknown field", {
   expect_error(spec_study(demo_spec(), "nope"), class = "vport_error_input")
+  expect_snapshot(spec_study(demo_spec(), "nope"), error = TRUE)
 })
 
 test_that("accessors reject a non-spec argument", {

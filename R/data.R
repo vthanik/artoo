@@ -50,9 +50,9 @@
 
 #' Demo subject-level analysis dataset (ADaM ADSL)
 #'
-#' A 60-subject sample of the pharmaverse ADaM subject-level analysis dataset:
-#' one row per subject, with treatment, demographic, baseline, and disposition
-#' variables (labels preserved as column attributes).
+#' A 60-subject sample of the CDISC pilot ADaM subject-level analysis dataset
+#' (ADSL): one row per subject, with treatment, demographic, baseline, and
+#' disposition variables (labels preserved as column attributes).
 #'
 #' @format A data frame with 60 rows and 48 variables (`STUDYID`, `USUBJID`,
 #'   `TRT01P`, `AGE`, `SEX`, `RACE`, `SAFFL`, `TRTSDT`, ...).
@@ -63,8 +63,9 @@
 
 #' Demo demographics dataset (SDTM DM)
 #'
-#' A 60-subject sample of the pharmaverse SDTM demographics domain: one row per
-#' subject, with the standard DM variables (labels preserved as attributes).
+#' A 60-subject sample of the CDISC pilot SDTM demographics domain (DM): one
+#' row per subject, with the standard DM variables (labels preserved as
+#' attributes).
 #'
 #' @format A data frame with 60 rows and 25 variables (`STUDYID`, `DOMAIN`,
 #'   `USUBJID`, `AGE`, `SEX`, `RACE`, `ARM`, `COUNTRY`, ...).

@@ -27,6 +27,41 @@ test_that("vport_meta rejects keys that name unknown columns", {
   )
 })
 
+test_that("vport_meta rejects a non-CDISC targetDataType", {
+  expect_error(
+    vport:::vport_meta_class(
+      columns = list(
+        AGE = list(dataType = "integer", targetDataType = "widget")
+      )
+    ),
+    "non-CDISC targetDataType"
+  )
+})
+
+test_that("vport_meta rejects a non-integer length or keySequence", {
+  expect_error(
+    vport:::vport_meta_class(
+      columns = list(AGE = list(dataType = "integer", length = "ten"))
+    ),
+    "non-integer length"
+  )
+  expect_error(
+    vport:::vport_meta_class(
+      columns = list(AGE = list(dataType = "integer", keySequence = "1"))
+    ),
+    "non-integer keySequence"
+  )
+})
+
+test_that("vport_meta rejects a name field that disagrees with its list key", {
+  expect_error(
+    vport:::vport_meta_class(
+      columns = list(AGE = list(name = "SEX", dataType = "integer"))
+    ),
+    "mismatched name"
+  )
+})
+
 test_that("the closed CDISC vocabularies are exactly the spec set", {
   expect_setequal(
     vport:::.cdisc_datatypes,

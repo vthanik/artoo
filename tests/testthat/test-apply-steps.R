@@ -134,6 +134,37 @@ test_that("apply_spec exposes na_position to the user", {
 
 # ---- .apply_info ------------------------------------------------------------
 
+test_that("a partial variables$order warns and trails the unnumbered vars", {
+  v <- cdisc_variables
+  # Blank one DM variable's order so the column is only partially numbered.
+  v$order[v$dataset == "DM" & v$variable == "DOMAIN"] <- NA_integer_
+  spec <- vport_spec(cdisc_datasets, v, codelists = cdisc_codelists)
+  expect_warning(
+    out <- apply_spec(cdisc_dm, spec, "DM", on_error = "off"),
+    class = "vport_warning_order"
+  )
+  # DOMAIN lost its order, so it now trails the still-numbered USUBJID.
+  expect_gt(match("DOMAIN", names(out)), match("USUBJID", names(out)))
+})
+
+test_that("a fully numbered order does not warn", {
+  spec <- demo_spec()
+  expect_no_warning(
+    suppressMessages(apply_spec(cdisc_dm, spec, "DM", on_error = "off"))
+  )
+})
+
+test_that("scaffold and drop progress carry class vport_message_apply", {
+  spec <- demo_spec()
+  raw <- cdisc_dm
+  raw$NOTSPEC <- "x" # not in the spec -> dropped
+  raw$AGE <- NULL # in the spec -> scaffolded back
+  expect_message(
+    apply_spec(raw, spec, "DM", on_error = "off"),
+    class = "vport_message_apply"
+  )
+})
+
 test_that("a duplicated spec variable aborts with vport_error_spec", {
   vars <- cdisc_variables
   dup <- vars[vars$dataset == "DM" & vars$variable == "SEX", , drop = FALSE]

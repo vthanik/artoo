@@ -467,7 +467,8 @@
         "Truncated {length(label_trunc)} label{?s} to 40 bytes for xpt v5: {.var {label_trunc}}.",
         "i" = "Use {.code version = 8} to keep long labels."
       ),
-      class = "vport_warning_encoding"
+      class = "vport_warning_encoding",
+      call = call
     )
   }
   if (length(fda_cols)) {
@@ -477,7 +478,8 @@
         "i" = "The FDA Study Data TCG prohibits these bytes in submission xpt; write with {.code encoding = \"US-ASCII\"} for a submission.",
         "i" = "See https://www.fda.gov/media/153632/download."
       ),
-      class = "vport_warning_encoding"
+      class = "vport_warning_encoding",
+      call = call
     )
   }
   recs
@@ -564,7 +566,8 @@
         "Truncated the dataset label to 40 bytes for xpt.",
         "i" = "XPORT stores at most 40 bytes of dataset label."
       ),
-      class = "vport_warning_encoding"
+      class = "vport_warning_encoding",
+      call = call
     )
   }
   ds_label <- ds_label40
@@ -603,7 +606,8 @@
           "x" = "v5 cannot distinguish a trailing blank row from padding; it will not read back.",
           "i" = "Use {.code version = 8}, which records the row count."
         ),
-        class = "vport_warning_encoding"
+        class = "vport_warning_encoding",
+        call = call
       )
     }
   }
