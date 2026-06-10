@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# vport
+# vport <a href="https://vthanik.github.io/vport/"><img src="man/figures/logo.png" align="right" height="139" alt="vport website" /></a>
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml)

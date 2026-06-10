@@ -2,7 +2,7 @@
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
-# vport
+# vport <a href="https://vthanik.github.io/vport/"><img src="man/figures/logo.png" align="right" height="139" alt="vport website" /></a>
 
 <!-- badges: start -->
 

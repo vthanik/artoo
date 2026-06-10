@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-107 -66 732 732" width="732" height="732" role="img" aria-label="vport: lossless CDISC-native dataset I/O for R">
+  <defs>
+    <clipPath id="hex"><polygon points="517.08,449.00 259.00,598.00 0.92,449.00 0.92,151.00 259.00,2.00 517.08,151.00"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#hex)">
+    <rect x="0" y="0" width="518" height="600" fill="#1e3a5f"/>
+    <g>
+      <!-- jet climbing off the bow, contrail on its axis -->
+      <g transform="translate(350 190) rotate(-14)">
+        <line x1="-64" y1="0" x2="-18" y2="0" stroke="#7cb3ff" stroke-width="4.5" stroke-linecap="round" opacity="0.45"/>
+        <path d="M40,0 L-13,-11 L-4,0 L-13,11 Z" fill="#7cb3ff"/>
+      </g>
+      <!-- island + radar mast -->
+      <rect x="194" y="212" width="34" height="38" rx="3" fill="#ffffff"/>
+      <line x1="211" y1="212" x2="211" y2="197" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="211" cy="191" r="3.5" fill="#ffffff"/>
+      <!-- flight deck + hull -->
+      <rect x="132" y="250" width="258" height="11" rx="3" fill="#ffffff"/>
+      <path d="M160,261 L364,261 L342,296 L186,296 Z" fill="#ffffff"/>
+      <!-- waves -->
+      <path d="M136,318 Q166,306 196,318 T256,318 T316,318 T376,318" fill="none" stroke="#7cb3ff" stroke-width="5" stroke-linecap="round"/>
+      <path d="M168,340 Q198,328 228,340 T288,340 T348,340" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity="0.35"/>
+    </g>
+    <g fill="#ffffff"><g transform="translate(119.00 472) scale(0.09333 -0.09333)" fill="#ffffff"><path transform="translate(0 0)" d="M236 0 21 496H141L300 112L460 496H579L363 0Z"/><path transform="translate(600 0)" d="M69 -220V496H161L169 420H175Q195 457 235.5 482.5Q276 508 332 508Q390 508 438.0 478.5Q486 449 514.5 391.5Q543 334 543 248Q543 163 513.5 105.0Q484 47 434.0 17.5Q384 -12 322 -12Q267 -12 230.0 10.0Q193 32 175 60V-220ZM304 89Q360 89 397.5 129.0Q435 169 435 249Q435 329 397.5 368.0Q360 407 304 407Q247 407 209.5 367.5Q172 328 172 248Q172 169 209.5 129.0Q247 89 304 89Z"/><path transform="translate(1200 0)" d="M300 -12Q229 -12 173.0 20.0Q117 52 85.0 110.5Q53 169 53 248Q53 327 85.0 385.5Q117 444 173.0 476.0Q229 508 301 508Q373 508 428.5 476.0Q484 444 515.5 385.5Q547 327 547 248Q547 169 515.0 110.5Q483 52 427.5 20.0Q372 -12 300 -12ZM300 89Q338 89 370.0 106.0Q402 123 421.5 158.5Q441 194 441 248Q441 303 421.5 338.0Q402 373 370.5 390.0Q339 407 301 407Q263 407 231.0 390.0Q199 373 179.5 338.0Q160 303 160 248Q160 166 201.5 127.5Q243 89 300 89Z"/><path transform="translate(1800 0)" d="M77 0V92H198V371Q198 404 166 404H87V496H206Q247 496 273.0 472.5Q299 449 299 407V395H304Q315 451 351.5 479.5Q388 508 458 508H535V396H427Q368 396 336.0 355.0Q304 314 304 257V92H458V0Z"/><path transform="translate(2400 0)" d="M354 0Q281 0 238.0 35.5Q195 71 195 162V406H70V496H144Q195 496 204 546L219 626H301V496H497V406H301V164Q301 125 318.5 109.5Q336 94 379 94H495V0Z"/></g></g>
+  </g>
+
+  <polygon points="501.49,440.00 259.00,580.00 16.51,440.00 16.51,160.00 259.00,20.00 501.49,160.00" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.35"/>
+</svg>
