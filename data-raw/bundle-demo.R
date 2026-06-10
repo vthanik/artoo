@@ -5,8 +5,8 @@
 # tool; haven is NOT a package dependency). The shipped .rda files are
 # self-contained base-R data frames.
 #
-# NOTE (dogfooding TODO): once vport's own read_xpt() lands (Phase 3),
-# switch the reader below from haven::read_xpt() to vport::read_xpt().
+# Dogfood: the .xpt sources are read with vport's own read_xpt() -- vport eats
+# its own cooking, so the demo data exercises the reader it ships.
 #
 # Run from the package root:  Rscript data-raw/bundle-demo.R
 #
@@ -20,13 +20,18 @@ read_phuse_xpt <- function(rel) {
   tf <- tempfile(fileext = ".xpt")
   on.exit(unlink(tf), add = TRUE)
   utils::download.file(file.path(phuse, rel), tf, quiet = TRUE, mode = "wb")
-  haven::read_xpt(tf)
+  read_xpt(tf)
 }
 
-# Strip haven classes to base R while preserving each column's variable
-# label, so the bundled data carries no haven dependency.
+# Reduce a vport-read frame to plain base R for shipping: drop the metadata_json
+# frame sidecar and the projected SAS format attr, keep each column's variable
+# label. vport already returns a base data.frame with native temporal classes,
+# so there is no haven dependency to strip.
 unhaven <- function(df) {
-  df <- haven::zap_formats(haven::zap_labels(df))
+  attr(df, "metadata_json") <- NULL
+  for (nm in names(df)) {
+    attr(df[[nm]], "format.sas") <- NULL
+  }
   as.data.frame(df, stringsAsFactors = FALSE)
 }
 

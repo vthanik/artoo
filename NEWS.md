@@ -25,6 +25,9 @@
   a blank row that v5 cannot read back.
 * A failed atomic move now aborts (`vport_error_codec`) instead of leaving the
   caller believing a file was written.
+* The bundled `cdisc_*` demo data is now built with vport's own `read_xpt()`
+  (dogfooding). Blank character cells read back as `NA` (vport's XPORT
+  convention) rather than `""`; values and labels are otherwise unchanged.
 * `apply_spec()` renamed its `check` argument to `on_error`, with values
   `c("warn", "abort", "off")` (`"strict"` is now `"abort"`); the
   error-escalation message caps at three findings (breaking).
