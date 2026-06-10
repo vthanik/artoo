@@ -244,7 +244,9 @@ test_that("a ragged row aborts at its index (C5)", {
 test_that("a non-Dataset-JSON file aborts cleanly (E2)", {
   p <- withr::local_tempfile(fileext = ".json")
   writeLines('{"a":1}', p)
-  scrub <- function(x) gsub("'/[^']*\\.json'", "'<path>'", x)
+  # Scrub the tempfile path by anchoring on the stable message text, so any
+  # separator/drive (incl. Windows paths) collapses to '<path>'.
+  scrub <- function(x) sub("'[^']*' is not a Dataset-JSON", "'<path>' is not a Dataset-JSON", x)
   expect_snapshot(read_json(p), error = TRUE, transform = scrub)
   expect_error(read_json(p), class = "vport_error_codec")
 })

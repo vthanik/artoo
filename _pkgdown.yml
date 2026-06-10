@@ -1,7 +1,47 @@
 url: https://vthanik.github.io/vport/
 
+development:
+  mode: auto
+
+authors:
+  Vignesh Thanikachalam:
+    href: https://github.com/vthanik
+
 template:
   bootstrap: 5
+  bslib:
+    primary: "#3b82f6"
+    base_font: { google: "DM Sans" }
+    heading_font: { google: "DM Sans" }
+    code_font: { google: "DM Mono" }
+    border-radius: 0
+    btn-border-radius: 3px
+    grid-gutter-width: 3rem
+    pkgdown-nav-height: 78px
+
+code:
+  width: 71
+
+navbar:
+  type: light
+  bg: none
+  structure:
+    left: [reference, articles, news]
+    right: [search, github]
+
+home:
+  title: Lossless CDISC-native dataset I/O for R
+  description: >
+    Read and write clinical-trial datasets losslessly across SAS XPORT,
+    CDISC Dataset-JSON, Apache Parquet, and RDS through one canonical
+    metadata model. Pure R and lightweight.
+  links:
+  - text: CDISC Dataset-JSON v1.1
+    href: https://cdisc-org.github.io/DataExchange-DatasetJson/
+  - text: FDA Study Data Technical Conformance Guide
+    href: https://www.fda.gov/media/153632/download
+  - text: PHUSE Test Data Factory (demo data)
+    href: https://github.com/phuse-org/phuse-scripts/tree/master/data/adam
 
 reference:
 - title: Spec
