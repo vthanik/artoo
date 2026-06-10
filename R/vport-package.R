@@ -7,6 +7,7 @@
 # `devtools::load_all()`.
 .onLoad <- function(libname, pkgname) {
   S7::methods_register()
+  .encoding_onload()
 }
 
 # Quiet R CMD check for symbols used via NSE / referenced only in roxygen.

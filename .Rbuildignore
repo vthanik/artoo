@@ -1,5 +1,8 @@
+^\.claude$
 ^CLAUDE\.md$
 ^CLAUDE\.local\.md$
+^tasks$
+^.*\.zip$
 ^MEMORY\.md$
 ^build\.md$
 ^debugging\.md$

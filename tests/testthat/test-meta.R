@@ -91,6 +91,55 @@ test_that("integer column attributes survive the round-trip as integers", {
   expect_type(back@columns$STUDYID$length, "integer")
 })
 
+# ---- C2: source-encoding extension (_vport namespace) ----------------------
+
+test_that("source encoding rides the _vport extension, never a CDISC key", {
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "ADSL")
+  meta <- S7::set_props(
+    meta,
+    dataset = c(meta@dataset, list(encoding = "WINDOWS-1252"))
+  )
+
+  # extensions = TRUE: encoding emitted ONLY under _vport, not top-level.
+  ext <- jsonlite::fromJSON(
+    vport:::.meta_to_datasetjson(meta, extensions = TRUE),
+    simplifyVector = FALSE
+  )
+  expect_identical(ext[["_vport"]]$sourceEncoding, "WINDOWS-1252")
+  expect_false("encoding" %in% names(ext))
+
+  # extensions = FALSE (the default, Dataset-JSON FILE path): no _vport,
+  # and no stray encoding key -- strict CDISC.
+  strict <- jsonlite::fromJSON(
+    vport:::.meta_to_datasetjson(meta, extensions = FALSE),
+    simplifyVector = FALSE
+  )
+  expect_false("_vport" %in% names(strict))
+  expect_false("encoding" %in% names(strict))
+})
+
+test_that("the _vport sourceEncoding round-trips back into @dataset$encoding", {
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "ADSL")
+  meta <- S7::set_props(
+    meta,
+    dataset = c(meta@dataset, list(encoding = "WINDOWS-1252"))
+  )
+  json <- vport:::.meta_to_datasetjson(meta, extensions = TRUE)
+  back <- vport:::.meta_from_datasetjson(json)
+  expect_identical(back@dataset$encoding, "WINDOWS-1252")
+})
+
+test_that("a meta without encoding is byte-identical across the round-trip", {
+  # No regression: extensions default FALSE and encoding drops as NULL.
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "DM")
+  back <- vport:::.meta_from_datasetjson(vport:::.meta_to_datasetjson(meta))
+  expect_identical(back@dataset, meta@dataset)
+  expect_false("encoding" %in% names(back@dataset))
+})
+
 # ---- get_meta / set_meta bridge --------------------------------------------
 
 test_that("set_meta then get_meta round-trips through a frame attribute", {

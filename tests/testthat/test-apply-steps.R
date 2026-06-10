@@ -94,6 +94,32 @@ test_that("sort_keys orders rows by the dataset keys and records them", {
   expect_false(is.unsorted(out$USUBJID))
 })
 
+test_that("sort_keys na_position controls where missing keys land (C1)", {
+  x <- data.frame(K = c("B", NA, "A"), v = 1:3, stringsAsFactors = FALSE)
+  # Default / "first": SAS PROC SORT + FDA convention -> NA leads.
+  first <- vport:::.sort_keys(x, list(keys = "K"))
+  expect_identical(first$K, c(NA, "A", "B"))
+  expect_identical(first$v, c(2L, 3L, 1L))
+  expect_identical(
+    vport:::.sort_keys(x, list(keys = "K"), "first")$v,
+    c(2L, 3L, 1L)
+  )
+  # "last": R / pandas / Polars convention -> NA trails.
+  last <- vport:::.sort_keys(x, list(keys = "K"), "last")
+  expect_identical(last$K, c("A", "B", NA))
+  expect_identical(last$v, c(3L, 1L, 2L))
+})
+
+test_that("apply_spec exposes na_position to the user", {
+  spec <- keyed_spec()
+  raw <- cdisc_dm
+  raw$USUBJID[1] <- NA
+  first <- apply_spec(raw, spec, "DM", check = "off", na_position = "first")
+  last <- apply_spec(raw, spec, "DM", check = "off", na_position = "last")
+  expect_true(is.na(first$USUBJID[1])) # missing leads
+  expect_true(is.na(last$USUBJID[nrow(last)])) # missing trails
+})
+
 # ---- .apply_info ------------------------------------------------------------
 
 test_that("a duplicated spec variable aborts with vport_error_spec", {

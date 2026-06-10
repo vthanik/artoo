@@ -163,3 +163,36 @@ test_that("realize then deflate round-trips a date vector exactly", {
   )
   expect_identical(back, days)
 })
+
+# ---- external oracle: known SAS-epoch day / second counts -------------------
+# Independent of the deflate code: 1960-01-01 is day 0, 1960 is a leap year.
+
+test_that(".deflate_temporal matches known SAS-epoch constants", {
+  expect_identical(vport:::.deflate_temporal(as.Date("1960-01-01"), "date"), 0)
+  expect_identical(
+    vport:::.deflate_temporal(as.Date("1961-01-01"), "date"),
+    366
+  )
+  expect_identical(
+    vport:::.deflate_temporal(as.Date("2020-01-01"), "date"),
+    21915
+  )
+  expect_identical(
+    vport:::.deflate_temporal(
+      as.POSIXct("1960-01-01 00:00:01", tz = "UTC"),
+      "datetime"
+    ),
+    1
+  )
+})
+
+test_that(".realize_temporal inverts the known SAS-epoch constants", {
+  expect_identical(
+    vport:::.realize_temporal(0, "date", "DATE9."),
+    as.Date("1960-01-01")
+  )
+  expect_identical(
+    vport:::.realize_temporal(366, "date", "DATE9."),
+    as.Date("1961-01-01")
+  )
+})

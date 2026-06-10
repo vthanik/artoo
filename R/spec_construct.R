@@ -264,17 +264,32 @@ vport_spec <- function(
   }
 }
 
-#' Is `x` a vport_spec?
+#' Test for a vport_spec object
 #'
-#' @param x An object.
-#' @return `TRUE` if `x` is a `vport_spec`, otherwise `FALSE`.
+#' Report whether an object is a `vport_spec` -- the validated CDISC
+#' specification that drives the vport workflow (spec -> apply_spec ->
+#' read_/write_). [vport_spec()] builds one; this is the type guard before you
+#' pass it to [apply_spec()] or reach into it with the spec accessors.
+#'
+#' @param x *Object to test.* `<any>`.
+#'
+#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `vport_spec`, else `FALSE`.
+#'
 #' @examples
-#' is_vport_spec(vport_spec(
-#'   data.frame(dataset = "DM"),
-#'   data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
-#' ))
-#' is_vport_spec(mtcars)
-#' @seealso [vport_spec()].
+#' # ---- Example 1: guard a built specification ----
+#' #
+#' # vport_spec() assembles and validates a spec; is_vport_spec() confirms the
+#' # type before you drive apply_spec() with it.
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' is_vport_spec(spec)
+#'
+#' # ---- Example 2: an ordinary object is not a spec ----
+#' #
+#' # Any non-vport_spec value -- a bare data frame, say -- returns FALSE.
+#' is_vport_spec(cdisc_dm)
+#'
+#' @seealso [vport_spec()] to build one; [is_vport_meta()] for the metadata
+#'   guard.
 #' @export
 is_vport_spec <- function(x) {
   S7::S7_inherits(x, vport_spec_class)

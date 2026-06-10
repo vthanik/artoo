@@ -33,6 +33,7 @@
   "records",
   "studyOID",
   "metaDataVersionOID",
+  "encoding",
   "keys"
 )
 
@@ -94,6 +95,7 @@
   records = NULL,
   studyOID = NULL,
   metaDataVersionOID = NULL,
+  encoding = NULL,
   keys = character(0)
 ) {
   .drop_null(list(
@@ -103,6 +105,7 @@
     records = records,
     studyOID = studyOID,
     metaDataVersionOID = metaDataVersionOID,
+    encoding = encoding,
     keys = keys
   ))
 }
@@ -225,15 +228,27 @@
 # The ONE serializer. Emits the Dataset-JSON v1.1 itemGroup metadata block
 # (no `rows` -- the data lives natively in each container; the .json codec
 # appends rows). Every codec embeds this exact string verbatim.
+#
+# `encoding` is vport's on-disk source-encoding record. Dataset-JSON v1.1
+# has a closed top-level vocabulary with no `encoding` key, so it is NEVER
+# spread into the standard block; with `extensions = TRUE` it rides a single
+# namespaced `_vport` object instead. The sidecar string set_meta() stamps
+# (rds/xpt/parquet) carries the extension; the Phase-4 Dataset-JSON FILE
+# codec serializes with `extensions = FALSE` to stay strict-CDISC. `_vport`
+# is the forward home for future vport extensions (e.g. vportMetaVersion).
 #' @noRd
-.meta_to_datasetjson <- function(meta) {
+.meta_to_datasetjson <- function(meta, extensions = FALSE) {
   ds <- meta@dataset
   payload <- c(
     list(datasetJSONVersion = "1.1.0"),
-    # keys are derivable from keySequence; never serialized.
-    ds[setdiff(names(ds), "keys")],
+    # keys derivable from keySequence; encoding is a vport extension. Neither
+    # is spread into the standard CDISC block.
+    ds[setdiff(names(ds), c("keys", "encoding"))],
     list(columns = unname(meta@columns))
   )
+  if (isTRUE(extensions) && !is.null(ds$encoding)) {
+    payload <- c(payload, list(`_vport` = list(sourceEncoding = ds$encoding)))
+  }
   jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null")
 }
 
@@ -261,6 +276,13 @@
   names(cols) <- vapply(cols, function(c) c$name, character(1))
 
   records <- if (!is.null(p$records)) as.integer(p$records) else NULL
+  enc <- if (
+    !is.null(p[["_vport"]]) && !is.null(p[["_vport"]]$sourceEncoding)
+  ) {
+    as.character(p[["_vport"]]$sourceEncoding)
+  } else {
+    NULL
+  }
   ds_meta <- .assemble_dataset_meta(
     itemGroupOID = as.character(p$itemGroupOID),
     name = as.character(p$name),
@@ -268,6 +290,7 @@
     records = records,
     studyOID = .na_to_null(p$studyOID %||% NA),
     metaDataVersionOID = .na_to_null(p$metaDataVersionOID %||% NA),
+    encoding = enc,
     keys = .meta_keys(cols)
   )
 
@@ -426,6 +449,6 @@ set_meta <- function(x, meta) {
       call = call
     )
   }
-  attr(x, "metadata_json") <- .meta_to_datasetjson(meta)
+  attr(x, "metadata_json") <- .meta_to_datasetjson(meta, extensions = TRUE)
   x
 }

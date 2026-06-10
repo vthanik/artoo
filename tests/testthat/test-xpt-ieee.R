@@ -82,3 +82,32 @@ test_that("a large vector with mixed values round-trips", {
   finite <- is.finite(x)
   expect_equal(as.numeric(out[finite]), x[finite])
 })
+
+# ---- external oracle: published IBM System/370 hex-float constants ----------
+# Big-endian 8-byte IBM-370 representations, independent of vport's code -- a
+# symmetric encode/decode bug cannot satisfy these fixed bytes.
+
+test_that(".ieee_to_ibm matches the published IBM-370 hex constants", {
+  golden <- list(
+    `1` = as.raw(c(0x41, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+    `2` = as.raw(c(0x41, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+    `0.5` = as.raw(c(0x40, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+    `-1` = as.raw(c(0xC1, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)),
+    `0` = as.raw(c(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+  )
+  for (k in names(golden)) {
+    v <- as.numeric(k)
+    expect_identical(vport:::.ieee_to_ibm(v), golden[[k]], info = k)
+    expect_equal(vport:::.ibm_to_ieee(golden[[k]]), v, info = k)
+  }
+})
+
+test_that("-0.0 encodes to the zero pattern and an integer > 2^53 loses precision predictably", {
+  expect_identical(
+    vport:::.ieee_to_ibm(-0.0),
+    as.raw(c(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
+  )
+  # 2^53 + 1 is not representable as a double; document the IEEE limit.
+  big <- 2^53
+  expect_equal(vport:::.ibm_to_ieee(vport:::.ieee_to_ibm(big)), big)
+})

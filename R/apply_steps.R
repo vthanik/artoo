@@ -183,13 +183,21 @@
 }
 
 # 6. Sort rows by the dataset's keys; record the keys used in `vport.sort`.
+# `na_position` controls where missing key values land: "first" (SAS PROC
+# SORT / FDA convention, the default) or "last" (R / pandas / Polars).
 #' @noRd
-.sort_keys <- function(x, info, call = rlang::caller_env()) {
+.sort_keys <- function(
+  x,
+  info,
+  na_position = "first",
+  call = rlang::caller_env()
+) {
   keys <- info$keys[info$keys %in% names(x)]
   if (!length(keys)) {
     return(x)
   }
-  ord <- do.call(order, unname(as.list(x[keys])))
+  na_last <- identical(na_position, "last")
+  ord <- do.call(order, c(unname(as.list(x[keys])), list(na.last = na_last)))
   x <- x[ord, , drop = FALSE]
   rownames(x) <- NULL
   attr(x, "vport.sort") <- keys

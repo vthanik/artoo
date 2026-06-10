@@ -35,6 +35,24 @@
   charToRaw(.pad_to(as.character(x), width))
 }
 
+# One string to a raw vector of exactly `width` BYTES, right-padded with ASCII
+# spaces. Unlike .str_to_raw (which measures characters via .pad_to), this
+# packs by byte so a multibyte (UTF-8 target) value fills a fixed-width OBS
+# field correctly. charToRaw returns the stored bytes regardless of the
+# Encoding mark, so a value transcoded by .to_target lands as its target
+# bytes. The xpt OBS writer sizes `width` as the max byte length (F1), so
+# truncation never fires on real data; the floor guard is defensive only.
+#' @noRd
+.str_to_raw_bytes <- function(x, width) {
+  b <- charToRaw(x)
+  n <- length(b)
+  if (n >= width) {
+    b[seq_len(width)]
+  } else {
+    c(b, rep(as.raw(0x20), width - n))
+  }
+}
+
 # Integer <-> big-endian raw (S370FPIB), used for var counts / lengths / npos.
 #' @noRd
 .int_to_pib2 <- function(x) {

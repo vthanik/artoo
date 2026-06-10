@@ -11,6 +11,7 @@ apply_spec(
   check = c("warn", "strict", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  na_position = c("first", "last"),
   steps = NULL,
   checks = NULL
 )
@@ -39,6 +40,12 @@ finding.
 \item{no_match}{\emph{Policy for values absent from a codelist when decoding.}
 \verb{<character(1)>}. One of \code{"error"} (default), \code{"keep"}, or \code{"na"}. Has
 no effect when \code{decode = "none"}.}
+
+\item{na_position}{\emph{Where missing key values sort.} \verb{<character(1)>}. One
+of \code{"first"} (default) or \code{"last"}. \code{"first"} matches SAS \verb{PROC SORT}
+(and the FDA submission convention) by ordering missings before present
+values; \code{"last"} matches R's \code{order()} and the pandas/Polars default.
+Affects only the \code{"sort"} step.}
 
 \item{steps}{\emph{Run only a subset of the pipeline.} \verb{<character> | NULL}.
 When \code{NULL} (default) every step runs; otherwise any of

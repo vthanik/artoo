@@ -23,7 +23,8 @@ Imports:
     cli,
     jsonlite,
     rlang (>= 1.1.0),
-    S7
+    S7,
+    utf8
 Suggests:
     knitr,
     nanoparquet,

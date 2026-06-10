@@ -82,6 +82,11 @@
 #' @param no_match *Policy for values absent from a codelist when decoding.*
 #'   `<character(1)>`. One of `"error"` (default), `"keep"`, or `"na"`. Has
 #'   no effect when `decode = "none"`.
+#' @param na_position *Where missing key values sort.* `<character(1)>`. One
+#'   of `"first"` (default) or `"last"`. `"first"` matches SAS `PROC SORT`
+#'   (and the FDA submission convention) by ordering missings before present
+#'   values; `"last"` matches R's `order()` and the pandas/Polars default.
+#'   Affects only the `"sort"` step.
 #' @param steps *Run only a subset of the pipeline.* `<character> | NULL`.
 #'   When `NULL` (default) every step runs; otherwise any of
 #'   `"scaffold"`, `"drop"`, `"coerce"`, `"decode"`, `"order"`, `"sort"`,
@@ -124,6 +129,7 @@ apply_spec <- function(
   check = c("warn", "strict", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  na_position = c("first", "last"),
   steps = NULL,
   checks = NULL
 ) {
@@ -131,6 +137,7 @@ apply_spec <- function(
   check <- match.arg(check)
   decode <- match.arg(decode)
   no_match <- match.arg(no_match)
+  na_position <- match.arg(na_position)
 
   if (!is.data.frame(x)) {
     cli::cli_abort(
@@ -164,7 +171,7 @@ apply_spec <- function(
     out <- .order_cols(out, info, call)
   }
   if ("sort" %in% run) {
-    out <- .sort_keys(out, info, call)
+    out <- .sort_keys(out, info, na_position, call)
   }
   if ("stamp" %in% run) {
     out <- .stamp_meta(out, info, spec, dataset, call)
