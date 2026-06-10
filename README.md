@@ -1,31 +1,16 @@
 
 
-<!-- README.md is generated from README.qmd. Edit the .qmd, then run
-     quarto::quarto_render("README.qmd"). -->
+<!-- README.md is generated from README.qmd. Please edit that file -->
 
 # vport
 
 <!-- badges: start -->
 
-[![CRAN
-status](https://www.r-pkg.org/badges/version/vport)](https://CRAN.R-project.org/package=vport)
-[![R-CMD-check](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml)
-[![Codecov test
-coverage](https://codecov.io/gh/vthanik/vport/graph/badge.svg)](https://app.codecov.io/gh/vthanik/vport)
-[![Project Status:
-Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
-<!-- badges: end -->
+[![R-CMD-check](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/vport/graph/badge.svg)](https://app.codecov.io/gh/vthanik/vport) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
 
-**vport** (“versatile port”) is a lightweight, lossless, CDISC-native
-reader and writer for clinical-trial datasets. It moves data between
-**SAS XPORT (XPT)**, **CDISC Dataset-JSON v1.1**, **Apache Parquet**,
-and **RDS** through one canonical metadata model, so converting between
-any two formats is lossless *by construction* — not by best effort.
+**vport** (“versatile port”) is a lightweight, lossless, CDISC-native reader and writer for clinical-trial datasets. It moves data between **SAS XPORT (XPT)**, **CDISC Dataset-JSON v1.1**, **Apache Parquet**, and **RDS** through one canonical metadata model, so converting between any two formats is lossless *by construction* — not by best effort.
 
-It is **pure R and lightweight**: no external SAS or Java runtime, and
-no heavy I/O dependency. One metadata model carries labels, CDISC data
-types, lengths, SAS display formats, controlled-terminology references,
-and sort keys identically across every format.
+It is **pure R and lightweight**: no external SAS or Java runtime, and no heavy I/O dependency. One metadata model carries labels, CDISC data types, lengths, SAS display formats, controlled-terminology references, and sort keys identically across every format.
 
 ## Installation
 
@@ -36,8 +21,7 @@ pak::pak("vthanik/vport")
 
 ## Quick start
 
-Build a spec, conform a raw frame into a submission-ready dataset, then
-write it to the format the FDA expects:
+Build a spec, conform a raw frame into a submission-ready dataset, then write it to the format the FDA expects:
 
 ``` r
 library(vport)
@@ -59,8 +43,7 @@ get_meta(read_xpt(path))@dataset$records
 
 ## Any-to-any, lossless
 
-One conformed dataset becomes a file in any supported format, and any
-file becomes any other, with the metadata carried straight through:
+One conformed dataset becomes a file in any supported format, and any file becomes any other, with the metadata carried straight through:
 
 ``` r
 json <- tempfile(fileext = ".json")
@@ -86,16 +69,12 @@ write_xpt(read_json(json), out)
 | Apache Parquet | `read_parquet()` | `write_parquet()` | Analytics, columnar store |
 | RDS | `read_rds()` | `write_rds()` | Fast R-native storage |
 
-The generic `read_dataset()` / `write_dataset()` dispatch on the file
-extension; every reader supports partial reads via `col_select` and
-`n_max`.
+The generic `read_dataset()` / `write_dataset()` dispatch on the file extension; every reader supports partial reads via `col_select` and `n_max`.
 
 ## Learn more
 
-- `vignette("from-spec-to-submission")` — the spec → apply → check →
-  write workflow.
-- `vignette("one-dataset-every-format")` — lossless any-to-any
-  conversion.
+- `vignette("from-spec-to-submission")` — the spec → apply → check → write workflow.
+- `vignette("one-dataset-every-format")` — lossless any-to-any conversion.
 
 ## License
 

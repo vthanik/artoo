@@ -1,24 +1,25 @@
 ---
-format: gfm
-default-image-extension: ""
+format:
+  gfm:
+    default-image-extension: ""
+    wrap: none
 ---
 
-<!-- README.md is generated from README.qmd. Edit the .qmd, then run
-     quarto::quarto_render("README.qmd"). -->
+<!-- README.md is generated from README.qmd. Please edit that file -->
 
 ```{r}
 #| include: false
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "man/figures/README-"
+  fig.path = "man/figures/README-",
+  out.width = "100%"
 )
 ```
 
 # vport
 
 <!-- badges: start -->
-[![CRAN status](https://www.r-pkg.org/badges/version/vport)](https://CRAN.R-project.org/package=vport)
 [![R-CMD-check](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/vthanik/vport/graph/badge.svg)](https://app.codecov.io/gh/vthanik/vport)
 [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
