@@ -17,17 +17,34 @@
 # `call` lands as the trailing formal. Resolved with match.fun() at
 # dispatch time (storing the names, not the closures, keeps covr's
 # instrumented bindings live and lets a codec be redefined). `extensions`
-# are lowercase, dot-free; `mode` is "rw" or "r".
+# are lowercase, dot-free; `mode` is "rw" or "r". `engine` names an optional
+# Suggests package the codec needs (e.g. "nanoparquet"); NULL means the codec
+# is pure-R and always available. check_formats() consults it.
 #' @noRd
-.register_codec <- function(format, encode, decode, extensions, mode = "rw") {
+.register_codec <- function(
+  format,
+  encode,
+  decode,
+  extensions,
+  mode = "rw",
+  engine = NULL
+) {
   .vport_codecs[[format]] <- list(
     format = format,
     encode = encode,
     decode = decode,
     extensions = tolower(extensions),
-    mode = mode
+    mode = mode,
+    engine = engine
   )
   invisible(NULL)
+}
+
+# Whether a codec's optional engine package is installed (TRUE for pure-R
+# codecs, which carry no engine).
+#' @noRd
+.codec_available <- function(codec) {
+  is.null(codec$engine) || requireNamespace(codec$engine, quietly = TRUE)
 }
 
 # All registered format names, sorted.

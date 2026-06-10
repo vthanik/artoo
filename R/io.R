@@ -223,12 +223,18 @@ check_formats <- function() {
     format = fmts,
     read = vapply(
       fmts,
-      function(f) .vport_codecs[[f]]$mode %in% c("rw", "r"),
+      function(f) {
+        codec <- .vport_codecs[[f]]
+        codec$mode %in% c("rw", "r") && .codec_available(codec)
+      },
       logical(1)
     ),
     write = vapply(
       fmts,
-      function(f) .vport_codecs[[f]]$mode == "rw",
+      function(f) {
+        codec <- .vport_codecs[[f]]
+        codec$mode == "rw" && .codec_available(codec)
+      },
       logical(1)
     ),
     extensions = vapply(

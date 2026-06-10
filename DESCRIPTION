@@ -27,7 +27,7 @@ Imports:
     utf8
 Suggests:
     knitr,
-    nanoparquet,
+    nanoparquet (>= 0.3.0),
     readxl,
     rmarkdown,
     testthat (>= 3.0.0),

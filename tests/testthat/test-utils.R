@@ -39,3 +39,26 @@ test_that(".check_path accepts one non-empty string and rejects the rest", {
 test_that(".onLoad registers S7 methods without error", {
   expect_no_error(vport:::.onLoad("lib", "vport"))
 })
+
+test_that(".move_into_place renames a temp file into the target", {
+  dir <- withr::local_tempdir()
+  tmp <- file.path(dir, "src.tmp")
+  path <- file.path(dir, "dest.txt")
+  writeLines("hi", tmp)
+  vport:::.move_into_place(tmp, path)
+  expect_true(file.exists(path))
+  expect_false(file.exists(tmp))
+  expect_identical(readLines(path), "hi")
+})
+
+test_that(".move_into_place falls back to copy when rename fails", {
+  testthat::local_mocked_bindings(.rename_file = function(from, to) FALSE)
+  dir <- withr::local_tempdir()
+  tmp <- file.path(dir, "src.tmp")
+  path <- file.path(dir, "dest.txt")
+  writeLines("hi", tmp)
+  vport:::.move_into_place(tmp, path)
+  expect_true(file.exists(path))
+  expect_false(file.exists(tmp))
+  expect_identical(readLines(path), "hi")
+})

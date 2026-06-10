@@ -1,0 +1,209 @@
+# codec_parquet.R -- the Apache Parquet codec (nanoparquet engine + sidecar).
+#
+# Parquet stores the data natively via nanoparquet (a lightweight, zero-R-dep
+# engine -- arrow is banned), and vport's full CDISC metadata rides alongside
+# as the universal `metadata_json` sidecar (plan 4.0/4.1): the single
+# Dataset-JSON-shaped string set_meta() stamps, embedded verbatim in the
+# parquet file's key-value metadata under the key "metadata_json". This is
+# exactly where vport beats plain nanoparquet/arrow, which drop
+# labels/formats/codelists -- vport round-trips the complete vport_meta.
+#
+# Read precedence is META-FIRST (plan D1): types are reconstructed from the
+# sidecar, with nanoparquet's native column types advisory. A parquet written
+# by another tool (no sidecar) degrades gracefully to a bare frame, never an
+# error (plan 9.B). nanoparquet round-trips a tens-of-KB metadata value
+# verbatim, so the chunked-key fallback is unnecessary at clinical spec sizes.
+
+.parquet_meta_key <- "metadata_json"
+
+# Pull the metadata_json value out of a parquet file's key-value metadata, or
+# NULL when the file carries none (a foreign / plain-nanoparquet file).
+#' @noRd
+.parquet_sidecar <- function(path) {
+  md <- nanoparquet::read_parquet_metadata(path)
+  kv <- md$file_meta_data$key_value_metadata
+  tbl <- if (is.null(kv) || !length(kv)) NULL else kv[[1L]]
+  if (is.null(tbl) || !(.parquet_meta_key %in% tbl$key)) {
+    return(NULL)
+  }
+  # The key is present (checked above) and parquet KV values are always single
+  # strings, so the first match is the sidecar.
+  out <- tbl$value[tbl$key == .parquet_meta_key][[1L]]
+  Encoding(out) <- "UTF-8"
+  out
+}
+
+# encode contract: (x, meta, path, <codec args>, call) -> invisible(path).
+#' @noRd
+.encode_parquet <- function(
+  x,
+  meta,
+  path,
+  call = rlang::caller_env()
+) {
+  rlang::check_installed("nanoparquet", reason = "to write Parquet files.")
+
+  # vport_time is a classed double with no native parquet type; store the bare
+  # seconds (the read path realizes it back from the sidecar dataType). Date
+  # and POSIXct have native parquet types, so they pass through untouched.
+  for (nm in names(x)) {
+    if (is_vport_time(x[[nm]])) {
+      x[[nm]] <- unclass(x[[nm]])
+    }
+  }
+  # The frame-level metadata_json attribute (if any) is not a column; drop it
+  # so it never leaks into the parquet schema. The sidecar below is the home.
+  attr(x, "metadata_json") <- NULL
+
+  kv <- if (is_vport_meta(meta)) {
+    stats::setNames(
+      .meta_to_datasetjson(meta, extensions = TRUE),
+      .parquet_meta_key
+    )
+  } else {
+    NULL
+  }
+
+  # Atomic write: build in a temp file, then rename over the target.
+  tmp <- tempfile(tmpdir = dirname(path), fileext = ".parquet.tmp")
+  ok <- FALSE
+  tryCatch(
+    {
+      if (is.null(kv)) {
+        nanoparquet::write_parquet(x, tmp)
+      } else {
+        nanoparquet::write_parquet(x, tmp, metadata = kv)
+      }
+      ok <- TRUE
+    },
+    finally = if (!ok && file.exists(tmp)) {
+      unlink(tmp)
+    }
+  )
+  .move_into_place(tmp, path)
+  invisible(path)
+}
+
+# decode contract: (path, <codec args>, call) -> list(data, meta).
+#' @noRd
+.decode_parquet <- function(path, call = rlang::caller_env()) {
+  rlang::check_installed("nanoparquet", reason = "to read Parquet files.")
+
+  df <- as.data.frame(nanoparquet::read_parquet(path))
+  json <- .parquet_sidecar(path)
+  if (is.null(json)) {
+    # Foreign / plain-nanoparquet parquet: no vport metadata. Degrade to a
+    # bare frame rather than aborting (plan 9.B).
+    return(list(data = df, meta = NULL))
+  }
+
+  meta <- .meta_from_datasetjson(json)
+  # Realize temporal columns from the sidecar dataType (plan D1: meta-first).
+  # Date/POSIXct survive nanoparquet natively and realize idempotently; a time
+  # column comes back a bare double and becomes vport_time here.
+  for (nm in names(meta@columns)) {
+    cm <- meta@columns[[nm]]
+    dt <- cm$dataType %||% ""
+    if (dt %in% c("date", "datetime", "time") && nm %in% names(df)) {
+      df[[nm]] <- .realize_temporal(df[[nm]], dt, cm$displayFormat %||% NA)
+    }
+  }
+  list(data = df, meta = meta)
+}
+
+# ---- exported wrappers ------------------------------------------------------
+
+#' Write a dataset to Apache Parquet
+#'
+#' Serialize a data frame to an Apache Parquet (`.parquet`) file, storing the
+#' data natively while preserving the full `vport_meta` as a CDISC-shaped
+#' sidecar in the file's key-value metadata. The emit end of the vport
+#' workflow (spec -> apply_spec -> write_parquet); a thin wrapper over
+#' [write_dataset()] with `format = "parquet"`. Requires the lightweight
+#' `nanoparquet` package.
+#'
+#' @details
+#' **Metadata where plain Parquet has none.** A bare nanoparquet/arrow file
+#' drops labels, formats, and codelists; `write_parquet()` embeds the complete
+#' `vport_meta` as a single Dataset-JSON-shaped string under the
+#' `metadata_json` key, so [read_parquet()] restores every CDISC attribute.
+#' The same string is what a `.json` file or an rds carries, so conversion
+#' between any two formats stays lossless. A reader without vport still opens
+#' the data and can see the `metadata_json` block.
+#'
+#' @param x *The dataset to write.* `<data.frame>: required`. Typically the
+#'   output of [apply_spec()], carrying `vport_meta`.
+#' @param path *Destination `.parquet` path.* `<character(1)>: required`.
+#'
+#' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
+#'
+#' @examples
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#'
+#' # ---- Example 1: write a conformed dataset to Parquet ----
+#' #
+#' # apply_spec() attaches the metadata; write_parquet() stores the data
+#' # natively and the metadata as a CDISC-shaped sidecar.
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' path <- tempfile(fileext = ".parquet")
+#' write_parquet(adsl, path)
+#'
+#' # ---- Example 2: round-trip and confirm the metadata survived ----
+#' #
+#' # Reading it back yields an identical vport_meta.
+#' back <- read_parquet(path)
+#' identical(get_meta(back)@columns, get_meta(adsl)@columns)
+#'
+#' @seealso [read_parquet()] for the inverse; [write_dataset()] for the
+#'   generic dispatcher.
+#' @export
+write_parquet <- function(x, path) {
+  write_dataset(x, path, format = "parquet")
+}
+
+#' Read a dataset from Apache Parquet
+#'
+#' Read an Apache Parquet (`.parquet`) file back to a data frame, restoring the
+#' `vport_meta` from its `metadata_json` sidecar and realizing SAS
+#' date/datetime/time variables to R `Date` / `POSIXct` / `vport_time`. A
+#' parquet written by another tool (with no vport sidecar) reads back as a
+#' bare frame. A thin wrapper over [read_dataset()] with `format = "parquet"`.
+#' Requires the lightweight `nanoparquet` package.
+#'
+#' @param path *Source `.parquet` path.* `<character(1)>: required`.
+#'
+#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
+#'   (read it with [get_meta()]); otherwise a plain data frame.
+#'
+#' @examples
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#'
+#' # ---- Example 1: round-trip a conformed dataset through Parquet ----
+#' #
+#' # The variable labels, types, and keys survive the round-trip.
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' path <- tempfile(fileext = ".parquet")
+#' write_parquet(adsl, path)
+#' back <- read_parquet(path)
+#' get_meta(back)@columns$STUDYID$label
+#'
+#' # ---- Example 2: the metadata names the dataset and row count ----
+#' #
+#' # The restored vport_meta exposes the dataset-level attributes.
+#' get_meta(back)@dataset$records
+#'
+#' @seealso [write_parquet()] for the inverse; [read_dataset()] for the
+#'   generic dispatcher.
+#' @export
+read_parquet <- function(path) {
+  read_dataset(path, format = "parquet")
+}
+
+.register_codec(
+  "parquet",
+  encode = ".encode_parquet",
+  decode = ".decode_parquet",
+  extensions = c("parquet", "pq"),
+  mode = "rw",
+  engine = "nanoparquet"
+)

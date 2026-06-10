@@ -225,19 +225,21 @@
 
 # ---- serializer: vport_meta <-> Dataset-JSON metadata string ----------------
 
-# The ONE serializer. Emits the Dataset-JSON v1.1 itemGroup metadata block
-# (no `rows` -- the data lives natively in each container; the .json codec
-# appends rows). Every codec embeds this exact string verbatim.
+# The ONE serializer's structural core. Builds the Dataset-JSON v1.1 itemGroup
+# metadata block as a named list (no `rows` -- the data lives natively in each
+# container; the .json file codec appends `rows` to this same list). Sharing
+# this single payload builder between the sidecar string and the .json file
+# codec is what keeps the formats from drifting (plan F4/4.0).
 #
 # `encoding` is vport's on-disk source-encoding record. Dataset-JSON v1.1
 # has a closed top-level vocabulary with no `encoding` key, so it is NEVER
 # spread into the standard block; with `extensions = TRUE` it rides a single
 # namespaced `_vport` object instead. The sidecar string set_meta() stamps
-# (rds/xpt/parquet) carries the extension; the Phase-4 Dataset-JSON FILE
-# codec serializes with `extensions = FALSE` to stay strict-CDISC. `_vport`
-# is the forward home for future vport extensions (e.g. vportMetaVersion).
+# (rds/xpt/parquet) carries the extension; the Dataset-JSON FILE codec
+# serializes with `extensions = FALSE` to stay strict-CDISC. `_vport` is the
+# forward home for future vport extensions (e.g. vportMetaVersion).
 #' @noRd
-.meta_to_datasetjson <- function(meta, extensions = FALSE) {
+.meta_payload <- function(meta, extensions = FALSE) {
   ds <- meta@dataset
   payload <- c(
     list(datasetJSONVersion = "1.1.0"),
@@ -249,7 +251,18 @@
   if (isTRUE(extensions) && !is.null(ds$encoding)) {
     payload <- c(payload, list(`_vport` = list(sourceEncoding = ds$encoding)))
   }
-  jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null")
+  payload
+}
+
+# The ONE serializer. Emits the metadata block as a JSON string; every codec
+# embeds this exact string verbatim into its container's KV/attribute slot.
+#' @noRd
+.meta_to_datasetjson <- function(meta, extensions = FALSE) {
+  jsonlite::toJSON(
+    .meta_payload(meta, extensions),
+    auto_unbox = TRUE,
+    null = "null"
+  )
 }
 
 # Coerce a parsed JSON scalar list back to a typed column entry in canonical
@@ -266,12 +279,12 @@
   col
 }
 
-# Inverse of .meta_to_datasetjson(): parse the metadata string back to a
-# vport_meta, reconstructed in the same canonical orders so the round-trip
-# is an identity.
+# Rebuild a vport_meta from an ALREADY-parsed Dataset-JSON object (the shape
+# jsonlite::fromJSON(simplifyVector = FALSE) returns). The .json file codec,
+# which parses the file once to also read `rows`, reuses this directly; the
+# string entry point .meta_from_datasetjson() parses then delegates here.
 #' @noRd
-.meta_from_datasetjson <- function(json) {
-  p <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+.meta_from_parsed <- function(p) {
   cols <- lapply(p$columns, .col_from_parsed)
   names(cols) <- vapply(cols, function(c) c$name, character(1))
 
@@ -295,6 +308,14 @@
   )
 
   vport_meta_class(dataset = ds_meta, columns = cols)
+}
+
+# Inverse of .meta_to_datasetjson(): parse the metadata string back to a
+# vport_meta, reconstructed in the same canonical orders so the round-trip
+# is an identity.
+#' @noRd
+.meta_from_datasetjson <- function(json) {
+  .meta_from_parsed(jsonlite::fromJSON(json, simplifyVector = FALSE))
 }
 
 # ---- public frame bridge ----------------------------------------------------

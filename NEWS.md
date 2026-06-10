@@ -1,5 +1,17 @@
 # vport 0.0.0.9000
 
+* `read_json()` and `write_json()` read and write CDISC Dataset-JSON v1.1
+  files through the `vport_meta` spine, with byte-stable output (injectable
+  `created`), meta-driven type fidelity (a whole-number double does not drift
+  to integer on re-read), `targetDataType` numeric-date emission, exact
+  `decimal`-as-string round-tripping, and a structural probe that rejects a
+  non-Dataset-JSON file cleanly.
+* `read_parquet()` and `write_parquet()` read and write Apache Parquet files
+  via the lightweight `nanoparquet` engine, embedding the full `vport_meta`
+  as a CDISC-shaped `metadata_json` sidecar; a parquet written by another
+  tool degrades gracefully to a bare frame.
+* `check_formats()` reports the Parquet row as unavailable until
+  `nanoparquet` is installed.
 * `apply_spec()` gained a `na_position` argument controlling where missing
   key values sort: `"first"` (the default, matching SAS `PROC SORT` and the
   FDA submission convention) or `"last"` (matching R, pandas, and Polars).

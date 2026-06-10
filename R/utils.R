@@ -56,6 +56,27 @@
   )
 }
 
+# Thin wrapper over base file.rename so the move-into-place fallback below is
+# unit-testable: tests mock this vport-namespace binding (base functions
+# called unqualified cannot be mocked by testthat).
+#' @noRd
+.rename_file <- function(from, to) {
+  file.rename(from, to)
+}
+
+# Move a freshly written temp file into its final place. A same-directory
+# rename is atomic, so a crash mid-write never corrupts a prior good file; the
+# copy path is a fallback for the rare filesystem that refuses the rename.
+# Codecs build in `tempfile(tmpdir = dirname(path))` then call this.
+#' @noRd
+.move_into_place <- function(tmp, path) {
+  if (!.rename_file(tmp, path)) {
+    file.copy(tmp, path, overwrite = TRUE)
+    unlink(tmp)
+  }
+  invisible(path)
+}
+
 # Validate that `path` is a single, non-NA, non-empty string.
 #' @noRd
 .check_path <- function(path, call = rlang::caller_env()) {
