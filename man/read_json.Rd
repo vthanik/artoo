@@ -4,7 +4,7 @@
 \alias{read_json}
 \title{Read a dataset from CDISC Dataset-JSON}
 \usage{
-read_json(path, col_select = NULL, n_max = Inf)
+read_json(path, col_select = NULL, n_max = Inf, encoding = NULL)
 }
 \arguments{
 \item{path}{\emph{Source \code{.json} path.} \verb{<character(1)>: required}. A JSON file
@@ -21,6 +21,11 @@ columns natively, the rest filter after decode.
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
 the row count; the returned \code{vport_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
+
+\item{encoding}{\emph{Source charset of the file bytes.} \verb{<character(1)> | NULL}. \code{NULL} (default) reads UTF-8, as Dataset-JSON requires. Pass an
+IANA or SAS charset name (e.g. \code{"windows-1252"}) only to read a
+non-conformant file a producer wrote in that charset; the bytes are
+transcoded to UTF-8 on read.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with

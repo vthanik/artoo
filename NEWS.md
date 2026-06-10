@@ -82,6 +82,16 @@
   tool degrades gracefully to a bare frame.
 * `check_formats()` reports the Parquet row as unavailable until
   `nanoparquet` is installed.
+* `read_json()`, `read_parquet()`, and `read_rds()` gained an `encoding`
+  argument that transcodes a foreign (non-UTF-8) file's bytes to UTF-8 on
+  read; previously only `read_xpt()` could read non-UTF-8 source bytes.
+* `write_parquet()` and `write_rds()` gained an `encoding` argument that
+  records the data's source charset in the `vport_meta` (the containers stay
+  UTF-8 by spec), so a later `write_xpt()` reproduces the original single-byte
+  stream. `write_json()` stays UTF-8 only, as CDISC Dataset-JSON requires.
+* `write_json()` and `write_parquet()` now NFC-normalize character columns on
+  write, so the serialized output is canonical Unicode (a no-op on ASCII /
+  single-byte data, so existing output is byte-stable).
 * `apply_spec()` gained a `na_position` argument controlling where missing
   key values sort: `"first"` (the default, matching SAS `PROC SORT` and the
   FDA submission convention) or `"last"` (matching R, pandas, and Polars).

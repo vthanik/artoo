@@ -4,7 +4,7 @@
 \alias{read_rds}
 \title{Read a dataset from rds}
 \usage{
-read_rds(path, col_select = NULL, n_max = Inf)
+read_rds(path, col_select = NULL, n_max = Inf, encoding = NULL)
 }
 \arguments{
 \item{path}{\emph{Source \code{.rds} path.} \verb{<character(1)>: required}.}
@@ -20,6 +20,10 @@ columns natively, the rest filter after decode.
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
 the row count; the returned \code{vport_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
+
+\item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) returns the strings exactly as saved (faithful R
+round-trip). Pass a charset name only to transcode a foreign rds whose
+string columns hold that charset's bytes.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded

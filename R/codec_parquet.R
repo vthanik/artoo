@@ -39,16 +39,28 @@
   x,
   meta,
   path,
+  encoding = NULL,
   call = rlang::caller_env()
 ) {
   rlang::check_installed("nanoparquet", reason = "to write Parquet files.")
 
+  # Parquet bytes stay UTF-8 (the format's STRING type is UTF-8 by spec); an
+  # explicit `encoding` is recorded as the source-charset metadata so a later
+  # write_xpt() can reproduce the original bytes. Validate the name loudly.
+  if (!is.null(encoding) && is_vport_meta(meta)) {
+    .resolve_charset(encoding, call)
+    meta <- .meta_set_encoding(meta, encoding)
+  }
+
   # vport_time is a classed double with no native parquet type; store the bare
   # seconds (the read path realizes it back from the sidecar dataType). Date
   # and POSIXct have native parquet types, so they pass through untouched.
+  # Character columns are NFC-canonicalised (a no-op on ASCII / single-byte).
   for (nm in names(x)) {
     if (is_vport_time(x[[nm]])) {
       x[[nm]] <- unclass(x[[nm]])
+    } else if (is.character(x[[nm]])) {
+      x[[nm]] <- .nfc(x[[nm]])
     }
   }
   # The frame-level metadata_json attribute (if any) is not a column; drop it
@@ -117,11 +129,19 @@
 .decode_parquet <- function(
   path,
   col_select = NULL,
+  encoding = NULL,
   call = rlang::caller_env()
 ) {
   rlang::check_installed("nanoparquet", reason = "to read Parquet files.")
 
   df <- .parquet_read_frame(path, col_select)
+  # Parquet STRING bytes are UTF-8; canonicalise to internal UTF-8 (NFC). An
+  # explicit `encoding` instead reads a foreign file whose bytes are that
+  # charset. Non-character columns pass through untouched.
+  source_enc <- encoding %||% "UTF-8"
+  for (nm in names(df)) {
+    df[[nm]] <- .recode_col(df[[nm]], source_enc)
+  }
   json <- .parquet_sidecar(path)
   if (is.null(json)) {
     # Foreign / plain-nanoparquet parquet: no vport metadata. Degrade to a
@@ -166,6 +186,11 @@
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `vport_meta`.
 #' @param path *Destination `.parquet` path.* `<character(1)>: required`.
+#' @param encoding *Source charset to record.* `<character(1)> | NULL`. The
+#'   parquet bytes are always written as UTF-8 (the format's STRING type is
+#'   UTF-8 by spec); `encoding` only records the data's original charset in the
+#'   `vport_meta`, so a later [write_xpt()] can reproduce the source bytes.
+#'   `NULL` (default) leaves the recorded encoding untouched.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
@@ -189,8 +214,8 @@
 #' @seealso [read_parquet()] for the inverse; [write_dataset()] for the
 #'   generic dispatcher.
 #' @export
-write_parquet <- function(x, path) {
-  write_dataset(x, path, format = "parquet")
+write_parquet <- function(x, path, encoding = NULL) {
+  write_dataset(x, path, format = "parquet", encoding = encoding)
 }
 
 #' Read a dataset from Apache Parquet
@@ -203,6 +228,10 @@ write_parquet <- function(x, path) {
 #' Requires the lightweight `nanoparquet` package.
 #'
 #' @param path *Source `.parquet` path.* `<character(1)>: required`.
+#' @param encoding *Source charset of the string columns.* `<character(1)> |
+#'   NULL`. `NULL` (default) reads the UTF-8 bytes parquet stores. Pass a
+#'   charset name only to read a foreign file whose string columns hold that
+#'   charset's bytes; they are transcoded to UTF-8 on read.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
@@ -228,12 +257,18 @@ write_parquet <- function(x, path) {
 #' @seealso [write_parquet()] for the inverse; [read_dataset()] for the
 #'   generic dispatcher.
 #' @export
-read_parquet <- function(path, col_select = NULL, n_max = Inf) {
+read_parquet <- function(
+  path,
+  col_select = NULL,
+  n_max = Inf,
+  encoding = NULL
+) {
   read_dataset(
     path,
     format = "parquet",
     col_select = col_select,
-    n_max = n_max
+    n_max = n_max,
+    encoding = encoding
   )
 }
 

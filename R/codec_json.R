@@ -150,6 +150,14 @@
   }
   created <- created %||% Sys.time()
 
+  # Canonicalise character columns to NFC so the UTF-8 output is canonical. A
+  # no-op on ASCII / single-byte data, so demo goldens are byte-stable.
+  for (nm in names(x)) {
+    if (is.character(x[[nm]])) {
+      x[[nm]] <- .nfc(x[[nm]])
+    }
+  }
+
   rows <- .json_rows(x, meta, call)
   obj <- c(
     list(
@@ -254,10 +262,12 @@
   )
 }
 
-# Read the file as a UTF-8 string, stripping a leading BOM and refusing an
-# embedded NUL (plan B5).
+# Read the file, stripping a leading BOM and refusing an embedded NUL (plan
+# B5), then transcode the byte stream from `encoding` to internal UTF-8 (NFC).
+# Dataset-JSON is UTF-8 by spec, so `encoding` defaults to UTF-8; a non-UTF-8
+# value reads a foreign (non-conformant) file a producer wrote in that charset.
 #' @noRd
-.json_read_text <- function(path, call) {
+.json_read_text <- function(path, encoding = NULL, call) {
   bytes <- readBin(path, what = "raw", n = file.info(path)$size)
   if (
     length(bytes) >= 3L &&
@@ -277,15 +287,13 @@
       call = call
     )
   }
-  txt <- rawToChar(bytes)
-  Encoding(txt) <- "UTF-8"
-  txt
+  .to_internal(rawToChar(bytes), encoding %||% "UTF-8")
 }
 
 # decode contract: (path, <codec args>, call) -> list(data, meta).
 #' @noRd
-.decode_json <- function(path, call = rlang::caller_env()) {
-  txt <- .json_read_text(path, call)
+.decode_json <- function(path, encoding = NULL, call = rlang::caller_env()) {
+  txt <- .json_read_text(path, encoding, call)
   p <- tryCatch(
     jsonlite::fromJSON(txt, simplifyVector = FALSE),
     error = function(e) {
@@ -422,6 +430,11 @@ write_json <- function(x, path, created = NULL) {
 #'
 #' @param path *Source `.json` path.* `<character(1)>: required`. A JSON file
 #'   that is not Dataset-JSON v1.1 aborts with `vport_error_codec`.
+#' @param encoding *Source charset of the file bytes.* `<character(1)> |
+#'   NULL`. `NULL` (default) reads UTF-8, as Dataset-JSON requires. Pass an
+#'   IANA or SAS charset name (e.g. `"windows-1252"`) only to read a
+#'   non-conformant file a producer wrote in that charset; the bytes are
+#'   transcoded to UTF-8 on read.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` (read it with
@@ -447,8 +460,14 @@ write_json <- function(x, path, created = NULL) {
 #' @seealso [write_json()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_json <- function(path, col_select = NULL, n_max = Inf) {
-  read_dataset(path, format = "json", col_select = col_select, n_max = n_max)
+read_json <- function(path, col_select = NULL, n_max = Inf, encoding = NULL) {
+  read_dataset(
+    path,
+    format = "json",
+    col_select = col_select,
+    n_max = n_max,
+    encoding = encoding
+  )
 }
 
 .register_codec(

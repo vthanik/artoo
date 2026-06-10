@@ -11,8 +11,21 @@
 # No `...`: an unknown argument forwarded by write_dataset() is a loud
 # "unused argument" error, never silently swallowed.
 #' @noRd
-.encode_rds <- function(x, meta, path, call = rlang::caller_env()) {
+.encode_rds <- function(
+  x,
+  meta,
+  path,
+  encoding = NULL,
+  call = rlang::caller_env()
+) {
   if (is_vport_meta(meta)) {
+    # rds is R-native and faithful: strings are saved as-is (Encoding marks
+    # survive saveRDS), never transcoded. An explicit `encoding` only records
+    # the source charset so a later write_xpt() can reproduce the bytes.
+    if (!is.null(encoding)) {
+      .resolve_charset(encoding, call)
+      meta <- .meta_set_encoding(meta, encoding)
+    }
     x <- set_meta(x, meta)
   }
   tmp <- tempfile(tmpdir = dirname(path), fileext = ".rds.tmp")
@@ -23,8 +36,15 @@
 
 # decode contract: (path, <codec args>, call) -> list(data, meta).
 #' @noRd
-.decode_rds <- function(path, call = rlang::caller_env()) {
+.decode_rds <- function(path, encoding = NULL, call = rlang::caller_env()) {
   obj <- readRDS(path)
+  # Faithful by default (a plain readRDS round-trip). Transcode character
+  # columns only when the caller asserts a foreign source charset.
+  if (!is.null(encoding) && is.data.frame(obj)) {
+    for (nm in names(obj)) {
+      obj[[nm]] <- .recode_col(obj[[nm]], encoding)
+    }
+  }
   meta <- if (is.character(attr(obj, "metadata_json", exact = TRUE))) {
     get_meta(obj)
   } else {
@@ -42,6 +62,11 @@
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`.
 #' @param path *Destination `.rds` path.* `<character(1)>: required`.
+#' @param encoding *Source charset to record.* `<character(1)> | NULL`. rds is
+#'   R-native and faithful: strings are saved as-is, never transcoded.
+#'   `encoding` only records the data's original charset in the `vport_meta`,
+#'   so a later [write_xpt()] can reproduce the source bytes. `NULL` (default)
+#'   leaves the recorded encoding untouched.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
@@ -64,8 +89,8 @@
 #' @seealso [read_rds()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.
 #' @export
-write_rds <- function(x, path) {
-  write_dataset(x, path, format = "rds")
+write_rds <- function(x, path, encoding = NULL) {
+  write_dataset(x, path, format = "rds", encoding = encoding)
 }
 
 #' Read a dataset from rds
@@ -75,6 +100,10 @@ write_rds <- function(x, path) {
 #' restored. A thin wrapper over [read_dataset()] with `format = "rds"`.
 #'
 #' @param path *Source `.rds` path.* `<character(1)>: required`.
+#' @param encoding *Source charset of the string columns.* `<character(1)> |
+#'   NULL`. `NULL` (default) returns the strings exactly as saved (faithful R
+#'   round-trip). Pass a charset name only to transcode a foreign rds whose
+#'   string columns hold that charset's bytes.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded
@@ -103,8 +132,14 @@ write_rds <- function(x, path) {
 #' @seealso [write_rds()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_rds <- function(path, col_select = NULL, n_max = Inf) {
-  read_dataset(path, format = "rds", col_select = col_select, n_max = n_max)
+read_rds <- function(path, col_select = NULL, n_max = Inf, encoding = NULL) {
+  read_dataset(
+    path,
+    format = "rds",
+    col_select = col_select,
+    n_max = n_max,
+    encoding = encoding
+  )
 }
 
 .register_codec(

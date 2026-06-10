@@ -4,13 +4,19 @@
 \alias{write_parquet}
 \title{Write a dataset to Apache Parquet}
 \usage{
-write_parquet(x, path)
+write_parquet(x, path, encoding = NULL)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
 output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 
 \item{path}{\emph{Destination \code{.parquet} path.} \verb{<character(1)>: required}.}
+
+\item{encoding}{\emph{Source charset to record.} \verb{<character(1)> | NULL}. The
+parquet bytes are always written as UTF-8 (the format's STRING type is
+UTF-8 by spec); \code{encoding} only records the data's original charset in the
+\code{vport_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes.
+\code{NULL} (default) leaves the recorded encoding untouched.}
 }
 \value{
 \emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.

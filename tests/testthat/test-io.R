@@ -300,3 +300,44 @@ test_that("col_select works on a foreign parquet with no vport metadata", {
   expect_identical(names(back), c("A", "C")) # file order
   expect_null(attr(back, "metadata_json", exact = TRUE)) # bare frame, NULL meta
 })
+
+# ---- Part B: rds encoding (faithful default + foreign read) -----------------
+
+test_that("rds round-trips a multibyte value faithfully", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  path <- withr::local_tempfile(fileext = ".rds")
+  write_rds(df, path)
+  back <- read_rds(path)
+  expect_identical(back$SITE, "café")
+})
+
+test_that("write_rds(encoding=) records the source charset", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  path <- withr::local_tempfile(fileext = ".rds")
+  write_rds(df, path, encoding = "windows-1252")
+  back <- read_rds(path)
+  expect_identical(get_meta(back)@dataset$encoding, "windows-1252")
+})
+
+test_that("read_rds(encoding=) transcodes a foreign byte column; default stays faithful", {
+  w1252 <- iconv("café", "UTF-8", "windows-1252")
+  df <- data.frame(STUDYID = "S1", SITE = w1252, stringsAsFactors = FALSE)
+  path <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(df, path) # plain rds, raw bytes
+  with_enc <- read_rds(path, encoding = "windows-1252")
+  expect_identical(with_enc$SITE, "café")
+  # default read is faithful: leaves the raw byte untranscoded.
+  faithful <- read_rds(path)
+  expect_identical(charToRaw(faithful$SITE), charToRaw(w1252))
+})
+
+test_that("read_rds(encoding=) preserves a column label through the transcode", {
+  col <- c("a", "b")
+  attr(col, "label") <- "Site"
+  df <- data.frame(STUDYID = c("S1", "S2"), stringsAsFactors = FALSE)
+  df$SITE <- col
+  path <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(df, path)
+  back <- read_rds(path, encoding = "windows-1252") # forces .recode_col
+  expect_identical(attr(back$SITE, "label"), "Site")
+})

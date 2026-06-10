@@ -4,7 +4,7 @@
 \alias{read_parquet}
 \title{Read a dataset from Apache Parquet}
 \usage{
-read_parquet(path, col_select = NULL, n_max = Inf)
+read_parquet(path, col_select = NULL, n_max = Inf, encoding = NULL)
 }
 \arguments{
 \item{path}{\emph{Source \code{.parquet} path.} \verb{<character(1)>: required}.}
@@ -20,6 +20,10 @@ columns natively, the rest filter after decode.
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
 the row count; the returned \code{vport_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
+
+\item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) reads the UTF-8 bytes parquet stores. Pass a
+charset name only to read a foreign file whose string columns hold that
+charset's bytes; they are transcoded to UTF-8 on read.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded it

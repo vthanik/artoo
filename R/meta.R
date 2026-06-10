@@ -522,3 +522,13 @@ set_meta <- function(x, meta) {
   ds$records <- as.integer(n)
   vport_meta_class(dataset = ds, columns = meta@columns)
 }
+
+# Record a source-encoding name on a meta's dataset block (the on-disk
+# `_vport.sourceEncoding` field). Rebuilt via the constructor (the codebase
+# never mutates an S7 meta in place).
+#' @noRd
+.meta_set_encoding <- function(meta, encoding) {
+  ds <- meta@dataset
+  ds$encoding <- encoding
+  vport_meta_class(dataset = ds, columns = meta@columns)
+}

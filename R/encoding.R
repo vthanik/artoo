@@ -199,6 +199,36 @@
   out
 }
 
+# Canonicalise an already-UTF-8 character vector to NFC, NA-safe. Used on the
+# WRITE side (json/parquet) so serialized output is canonical. A no-op on
+# ASCII / single-byte content, so existing byte goldens are unaffected; only a
+# decomposed-multibyte-UTF-8 value changes, which is intended normalisation.
+#' @noRd
+.nfc <- function(x) {
+  if (!length(x) || !is.character(x)) {
+    return(x)
+  }
+  out <- utf8::utf8_normalize(enc2utf8(x), map_compat = FALSE)
+  Encoding(out) <- "UTF-8"
+  out
+}
+
+# Attribute-preserving per-column decode for codec reads: transcode a character
+# column's bytes from `enc` to internal UTF-8 (NFC) while keeping its label /
+# format.sas attributes. A non-character column passes through untouched.
+# Encoding marks live in the CHARSXP, not in attributes(), so restoring the
+# saved attributes does not unset the UTF-8 marks .to_internal applied.
+#' @noRd
+.recode_col <- function(col, enc) {
+  if (!is.character(col)) {
+    return(col)
+  }
+  at <- attributes(col)
+  out <- .to_internal(col, enc)
+  attributes(out) <- at
+  out
+}
+
 # WRITE: UTF-8 (internal) -> target charset bytes, under an invalid-byte
 # policy. Returns a character vector whose stored bytes are the target
 # encoding (ready for charToRaw by the codec). "error" fails loud naming

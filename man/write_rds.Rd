@@ -4,12 +4,18 @@
 \alias{write_rds}
 \title{Write a dataset to rds}
 \usage{
-write_rds(x, path)
+write_rds(x, path, encoding = NULL)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}.}
 
 \item{path}{\emph{Destination \code{.rds} path.} \verb{<character(1)>: required}.}
+
+\item{encoding}{\emph{Source charset to record.} \verb{<character(1)> | NULL}. rds is
+R-native and faithful: strings are saved as-is, never transcoded.
+\code{encoding} only records the data's original charset in the \code{vport_meta},
+so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes. \code{NULL} (default)
+leaves the recorded encoding untouched.}
 }
 \value{
 \emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.

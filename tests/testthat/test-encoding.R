@@ -169,3 +169,26 @@ test_that(".resolve_charset repopulates a cleared cache lazily", {
   expect_identical(toupper(vport:::.resolve_charset("UTF-8")), "UTF-8")
   expect_false(is.null(e$list))
 })
+
+# ---- Part B: NFC-on-write and attribute-preserving decode ------------------
+
+test_that(".nfc canonicalizes to NFC and is a no-op on ASCII / non-character", {
+  decomposed <- "café" # cafe + combining acute accent (NFD)
+  precomposed <- "café" # cafe with a precomposed e-acute (NFC)
+  expect_false(identical(decomposed, precomposed)) # genuinely different bytes
+  expect_identical(vport:::.nfc(decomposed), precomposed)
+  expect_identical(vport:::.nfc("plain ascii"), "plain ascii")
+  expect_identical(vport:::.nfc(character(0)), character(0))
+  expect_identical(vport:::.nfc(1:3), 1:3) # non-character passthrough
+})
+
+test_that(".recode_col transcodes a character column and preserves its attributes", {
+  col <- iconv("café", "UTF-8", "windows-1252") # single byte 0xe9
+  attr(col, "label") <- "City"
+  out <- vport:::.recode_col(col, "windows-1252")
+  expect_identical(as.character(out), "café")
+  expect_identical(attr(out, "label"), "City")
+  expect_identical(Encoding(out), "UTF-8")
+  # a non-character column passes through untouched.
+  expect_identical(vport:::.recode_col(1:3, "windows-1252"), 1:3)
+})

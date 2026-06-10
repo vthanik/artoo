@@ -165,3 +165,40 @@ test_that("a failed encode leaves any prior file untouched (9.A.4)", {
   expect_error(write_parquet(bad, p))
   expect_identical(readBin(p, "raw", file.info(p)$size), before)
 })
+
+# ---- Part B: encoding (record on write, foreign-file read) ------------------
+
+test_that("write_parquet/read_parquet round-trip a multibyte value as canonical UTF-8", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  p <- withr::local_tempfile(fileext = ".parquet")
+  write_parquet(df, p)
+  back <- read_parquet(p)
+  expect_identical(back$SITE, "café")
+  expect_identical(Encoding(back$SITE), "UTF-8")
+})
+
+test_that("write_parquet(encoding=) records the source charset; bytes stay UTF-8", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  p <- withr::local_tempfile(fileext = ".parquet")
+  write_parquet(df, p, encoding = "windows-1252")
+  back <- read_parquet(p)
+  expect_identical(get_meta(back)@dataset$encoding, "windows-1252")
+  expect_identical(back$SITE, "café") # the on-disk bytes are valid UTF-8
+  expect_error(
+    write_parquet(
+      df,
+      withr::local_tempfile(fileext = ".parquet"),
+      encoding = "NOPE"
+    ),
+    class = "vport_error_codec"
+  )
+})
+
+test_that("read_parquet(encoding=) decodes a foreign (non-UTF-8) byte column", {
+  w1252 <- iconv("café", "UTF-8", "windows-1252") # raw byte 0xe9
+  df <- data.frame(STUDYID = "S1", SITE = w1252, stringsAsFactors = FALSE)
+  p <- withr::local_tempfile(fileext = ".parquet")
+  nanoparquet::write_parquet(df, p) # raw bytes, no vport sidecar
+  back <- read_parquet(p, encoding = "windows-1252")
+  expect_identical(back$SITE, "café")
+})

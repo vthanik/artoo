@@ -246,7 +246,9 @@ test_that("a non-Dataset-JSON file aborts cleanly (E2)", {
   writeLines('{"a":1}', p)
   # Scrub the tempfile path by anchoring on the stable message text, so any
   # separator/drive (incl. Windows paths) collapses to '<path>'.
-  scrub <- function(x) sub("'[^']*' is not a Dataset-JSON", "'<path>' is not a Dataset-JSON", x)
+  scrub <- function(x) {
+    sub("'[^']*' is not a Dataset-JSON", "'<path>' is not a Dataset-JSON", x)
+  }
   expect_snapshot(read_json(p), error = TRUE, transform = scrub)
   expect_error(read_json(p), class = "vport_error_codec")
 })
@@ -352,4 +354,28 @@ test_that("the encode/decode default branches coerce via character", {
     vport:::.json_decode_column(list("a", NULL), list(dataType = "weird")),
     c("a", NA)
   )
+})
+
+# ---- Part B: encoding (UTF-8 default + foreign-file read) -------------------
+
+test_that("write_json/read_json round-trip a multibyte value as canonical UTF-8", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(df, p)
+  back <- read_json(p)
+  expect_identical(back$SITE, "café")
+  expect_identical(Encoding(back$SITE), "UTF-8")
+})
+
+test_that("read_json(encoding=) decodes a foreign (non-UTF-8) Dataset-JSON file", {
+  df <- data.frame(STUDYID = "S1", SITE = "café", stringsAsFactors = FALSE)
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(df, p)
+  # Rewrite the on-disk file as windows-1252 bytes (a non-conformant producer).
+  txt <- paste(readLines(p, warn = FALSE), collapse = "\n")
+  con <- file(p, "wb")
+  writeBin(charToRaw(iconv(txt, "UTF-8", "windows-1252")), con)
+  close(con)
+  back <- read_json(p, encoding = "windows-1252")
+  expect_identical(back$SITE, "café")
 })
