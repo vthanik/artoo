@@ -4,7 +4,7 @@
 \alias{read_xpt}
 \title{Read a dataset from SAS XPORT}
 \usage{
-read_xpt(path, encoding = NULL)
+read_xpt(path, encoding = NULL, col_select = NULL, n_max = Inf)
 }
 \arguments{
 \item{path}{\emph{Source \code{.xpt} path.} \verb{<character(1)>: required}.}
@@ -12,6 +12,16 @@ read_xpt(path, encoding = NULL)
 \item{encoding}{\emph{Force a source charset.} \verb{<character(1)> | NULL}. \code{NULL}
 (default) auto-detects (UTF-8 when every character value and label is
 valid UTF-8, else Windows-1252). IANA and SAS names both work.}
+
+\item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
+(default) reads every column; otherwise a vector of variable names
+(matching the names as stored, uppercase for v5). Columns return in file
+order, and the \code{vport_meta} is filtered to match.
+
+\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+
+\item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
+the row count; the returned \code{vport_meta} reports the rows actually read.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with

@@ -116,7 +116,9 @@ test_that("a whole-number double stays double on re-read (C1)", {
   write_json(ap, p)
   back <- read_json(p)
   expect_true(is.double(back$N))
-  expect_identical(back$N, c(1, 2, 3))
+  # set_meta() now projects the column label/format.sas as attrs (haven
+  # parity); ignore just those two, the value+type are asserted strictly.
+  expect_equal(back$N, c(1, 2, 3), ignore_attr = c("label", "format.sas"))
 })
 
 test_that("integer, boolean, and time columns round-trip by type", {
@@ -136,8 +138,12 @@ test_that("integer, boolean, and time columns round-trip by type", {
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
-  expect_identical(back$I, c(1L, NA, 3L))
-  expect_identical(back$B, c(TRUE, FALSE, NA))
+  expect_equal(back$I, c(1L, NA, 3L), ignore_attr = c("label", "format.sas"))
+  expect_equal(
+    back$B,
+    c(TRUE, FALSE, NA),
+    ignore_attr = c("label", "format.sas")
+  )
   expect_s3_class(back$TM, "vport_time")
   expect_identical(unclass(back$TM), unclass(ap$TM))
 })

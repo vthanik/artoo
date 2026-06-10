@@ -113,7 +113,8 @@ test_that("Date, POSIXct, and vport_time columns round-trip", {
   expect_s3_class(back$DTM, "POSIXct")
   expect_equal(as.numeric(back$DTM), as.numeric(df$DTM))
   expect_true(is_vport_time(back$TM))
-  expect_identical(unclass(back$TM), unclass(df$TM))
+  # set_meta() projects the SAS format/label as attrs now; compare seconds.
+  expect_identical(as.numeric(back$TM), as.numeric(df$TM))
 })
 
 test_that("a non-temporal numeric format is NOT realized to a date", {
@@ -160,7 +161,7 @@ test_that("a decimal column (R character) writes as a SAS numeric", {
   back <- read_xpt(p)
   # AVAL comes back as a SAS numeric (double), values intact.
   expect_type(back$AVAL, "double")
-  expect_equal(back$AVAL, c(1.5, 100))
+  expect_equal(back$AVAL, c(1.5, 100), ignore_attr = c("label", "format.sas"))
 })
 
 # ---- encoding ---------------------------------------------------------------
@@ -546,7 +547,9 @@ test_that("a non-meta column with a label attr and a meta string without length"
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
   back <- read_xpt(p)
-  expect_identical(back$EXTRA, "hello")
+  expect_identical(as.vector(back$EXTRA), "hello")
+  # set_meta() projects the label onto the column attr (haven parity).
+  expect_identical(attr(back$EXTRA, "label", exact = TRUE), "An extra column")
   expect_identical(get_meta(back)@columns$EXTRA$label, "An extra column")
 })
 
@@ -795,4 +798,227 @@ test_that("special-missing tags survive a temporal round-trip (review codec C3)"
   back <- read_xpt(p)
   expect_s3_class(back$ADT, "Date")
   expect_identical(attr(back$ADT, "sas_missing"), c(NA, ".A"))
+})
+
+# ---- Wave 3: partial reads (col_select / n_max) -----------------------------
+
+test_that("read_xpt n_max caps the records read and the meta record count", {
+  df <- data.frame(
+    SUBJ = sprintf("S%02d", 1:10),
+    N = as.numeric(1:10),
+    stringsAsFactors = FALSE
+  )
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  back <- read_xpt(p, n_max = 3)
+  expect_identical(nrow(back), 3L)
+  expect_identical(as.vector(back$SUBJ), c("S01", "S02", "S03"))
+  expect_identical(get_meta(back)@dataset$records, 3L)
+})
+
+test_that("read_xpt n_max past the end returns every row", {
+  df <- data.frame(SUBJ = c("A", "B"), stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  expect_identical(nrow(read_xpt(p, n_max = 99)), 2L)
+})
+
+test_that("read_xpt col_select returns only the named columns in file order", {
+  df <- data.frame(SUBJ = "A", AGE = 42, SEX = "F", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  back <- read_xpt(p, col_select = c("SEX", "SUBJ"))
+  expect_identical(names(back), c("SUBJ", "SEX")) # file order, not request order
+  expect_named(get_meta(back)@columns, c("SUBJ", "SEX"))
+  expect_identical(as.vector(back$SEX), "F")
+})
+
+test_that("read_xpt col_select rejects an unknown column", {
+  df <- data.frame(SUBJ = "A", AGE = 42, stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  expect_error(
+    read_xpt(p, col_select = c("SUBJ", "NOPE")),
+    class = "vport_error_input"
+  )
+})
+
+test_that("read_xpt col_select and n_max compose", {
+  df <- data.frame(
+    SUBJ = sprintf("S%02d", 1:6),
+    N = as.numeric(1:6),
+    stringsAsFactors = FALSE
+  )
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  back <- read_xpt(p, col_select = "N", n_max = 2)
+  expect_identical(names(back), "N")
+  expect_identical(nrow(back), 2L)
+  expect_identical(as.vector(back$N), c(1, 2))
+})
+
+test_that("n_max works generically on a non-xpt codec (rds)", {
+  # Partial reads now apply to every format: rds caps rows after readRDS via
+  # the generic filter (no native push-down possible for a monolithic blob).
+  p <- withr::local_tempfile(fileext = ".rds")
+  write_rds(cdisc_dm, p)
+  back <- read_dataset(p, n_max = 2)
+  expect_identical(nrow(back), 2L)
+  expect_identical(get_meta(back)@dataset$records, 2L)
+})
+
+# ---- Wave 3: FDA byte gate (TCG bytes 160-191) ------------------------------
+
+test_that("write_xpt warns on FDA-forbidden bytes 160-191 in a single-byte stream", {
+  # The copyright sign is 0xA9 (169) in windows-1252, inside the prohibited
+  # 160-191 range the FDA Study Data TCG bars from submission xpt.
+  df <- data.frame(SUBJ = "A", TXT = "© 2020", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(df, p, encoding = "windows-1252", created = frozen),
+    class = "vport_warning_encoding"
+  )
+})
+
+test_that("the FDA gate stays silent for ASCII and UTF-8 multibyte content", {
+  # ASCII default: nothing in 160-191.
+  df <- data.frame(SUBJ = "A", TXT = "plain", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_no_warning(write_xpt(df, p, created = frozen))
+  # UTF-8 "cafe-acute": the trailing 0xA9 is a multibyte continuation byte, not
+  # an FDA-forbidden single-byte glyph -- the gate must not false-fire.
+  df2 <- data.frame(SUBJ = "A", TXT = "café", stringsAsFactors = FALSE)
+  attr(df2, "dataset_name") <- "T"
+  p2 <- withr::local_tempfile(fileext = ".xpt")
+  expect_no_warning(write_xpt(df2, p2, encoding = "UTF-8", created = frozen))
+})
+
+# ---- Wave 3: write-side + structural correctness ----------------------------
+
+test_that("write_xpt v5 aborts on a name collision that survives uppercasing", {
+  df <- data.frame(age = 1, AGE = 2)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_error(write_xpt(df, p, version = 5), class = "vport_error_codec")
+  # v8 keeps case, so the same frame writes fine.
+  expect_no_error(write_xpt(df, p, version = 8))
+})
+
+test_that("read_xpt aborts on a multi-member transport file", {
+  df <- data.frame(SUBJ = c("A", "B"), N = c(1, 2), stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  # Append a second member header at the (80-byte-aligned) EOF = padded_end.
+  sig <- "HEADER RECORD*******MEMBER  HEADER RECORD!!!!!!!"
+  rec <- charToRaw(sprintf("%-80s", sig))
+  con <- file(p, "ab")
+  writeBin(rec, con)
+  close(con)
+  expect_error(read_xpt(p), class = "vport_error_codec")
+})
+
+test_that("extra blank padding past the obs section does NOT false-abort", {
+  df <- data.frame(SUBJ = c("A", "B"), stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  con <- file(p, "ab")
+  writeBin(rep(as.raw(0x20), 80L), con) # blank, not a HEADER signature
+  close(con)
+  expect_identical(nrow(read_xpt(p)), 2L)
+})
+
+test_that(".xpt_parse_namestr honors the namestr size for the v8 long name", {
+  raw <- as.raw(rep(0L, 140L))
+  raw[1:2] <- vport:::.int_to_pib2(2L) # vartype 2 (char)
+  raw[5:6] <- vport:::.int_to_pib2(8L) # length 8
+  raw[9:16] <- charToRaw("SHORT   ") # short name field
+  raw[89:120] <- charToRaw(sprintf("%-32s", "LONGNAME")) # v8 extended name
+  # 140-byte v8: reads the extended name.
+  v140 <- vport:::.xpt_parse_namestr(raw, 8L, 140L)
+  expect_identical(v140$name, "LONGNAME")
+  # 136-byte VMS v8: the extended-name slice does not exist; uses the short field.
+  v136 <- vport:::.xpt_parse_namestr(raw[1:136], 8L, 136L)
+  expect_identical(v136$name, "SHORT")
+})
+
+test_that(".xpt_parse_member reads the NAMESTR size field (0136)", {
+  base1 <- "HEADER RECORD*******MEMBER  HEADER RECORD!!!!!!!000000000000000001600000000140"
+  substr(base1, 75L, 78L) <- "0136"
+  rec1 <- charToRaw(sprintf("%-80s", base1))
+  filler <- charToRaw(strrep(" ", 80L))
+  nsrec <- charToRaw(sprintf("%-80s", paste0(strrep(" ", 52L), "000001")))
+  con <- rawConnection(c(rec1, filler, filler, filler, nsrec), "rb")
+  on.exit(close(con))
+  mem <- vport:::.xpt_parse_member(con, 5L)
+  expect_identical(mem$namestr_size, 136L)
+  expect_identical(mem$nvars, 1L)
+})
+
+test_that("write_xpt v5 warns when an all-character frame ends in a blank row", {
+  df <- data.frame(
+    A = c("x", ""),
+    B = c("y", NA),
+    stringsAsFactors = FALSE
+  )
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(df, p, version = 5, created = frozen),
+    class = "vport_warning_encoding"
+  )
+  # v8 records the count, so it is exempt.
+  expect_no_warning(write_xpt(df, p, version = 8, created = frozen))
+})
+
+test_that("n_max bounds the v8 disk read (a truncated tail still reads the head)", {
+  # Proof that n_max narrows the bytes read: truncate the obs tail so a full
+  # read short-reads (vport_error_codec), but read_xpt(n_max = k) succeeds
+  # because it never reaches the missing bytes. The v8 header still says 10.
+  df <- data.frame(
+    SUBJ = sprintf("S%02d", 1:10),
+    N = as.numeric(1:10),
+    stringsAsFactors = FALSE
+  )
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, version = 8, created = frozen)
+  sz <- file.info(p)$size
+  raw_all <- readBin(p, "raw", n = sz)
+  writeBin(raw_all[seq_len(sz - 80L)], p) # drop the last 80 obs bytes
+  expect_error(read_xpt(p), class = "vport_error_codec")
+  back <- read_xpt(p, n_max = 5)
+  expect_identical(nrow(back), 5L)
+  expect_identical(as.vector(back$SUBJ), sprintf("S%02d", 1:5))
+})
+
+test_that("read_xpt aborts on a multi-member v8 file (padded-end boundary)", {
+  df <- data.frame(SUBJ = c("A", "B"), N = c(1, 2), stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, version = 8, created = frozen)
+  sig <- "HEADER RECORD*******MEMBV8  HEADER RECORD!!!!!!!"
+  con <- file(p, "ab")
+  writeBin(charToRaw(sprintf("%-80s", sig)), con)
+  close(con)
+  expect_error(read_xpt(p), class = "vport_error_codec")
+})
+
+test_that(".xpt_parse_member defaults the NAMESTR size on an invalid field", {
+  base1 <- "HEADER RECORD*******MEMBER  HEADER RECORD!!!!!!!000000000000000001600000000140"
+  substr(base1, 75L, 78L) <- "ZZZZ" # non-numeric -> default 140
+  rec1 <- charToRaw(sprintf("%-80s", base1))
+  filler <- charToRaw(strrep(" ", 80L))
+  nsrec <- charToRaw(sprintf("%-80s", paste0(strrep(" ", 52L), "000001")))
+  con <- rawConnection(c(rec1, filler, filler, filler, nsrec), "rb")
+  on.exit(close(con))
+  expect_identical(vport:::.xpt_parse_member(con, 5L)$namestr_size, 140L)
 })

@@ -4,7 +4,7 @@
 \alias{read_dataset}
 \title{Read a dataset from any supported format}
 \usage{
-read_dataset(path, format = NULL, ...)
+read_dataset(path, format = NULL, col_select = NULL, n_max = Inf, ...)
 }
 \arguments{
 \item{path}{\emph{Source file path.} \verb{<character(1)>: required}. Its extension
@@ -13,6 +13,18 @@ selects the codec unless \code{format} is given.}
 \item{format}{\emph{Force a codec instead of inferring from the extension.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
 \code{\link[=vport_formats]{vport_formats()}}).}
+
+\item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
+(default) reads every column; otherwise a vector of variable names.
+Columns return in file order (not the requested order) and the
+\code{vport_meta} is filtered to match. Works on every format: parquet narrows
+columns natively, the rest filter after decode.
+
+\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+
+\item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
+the row count; the returned \code{vport_meta} reports the rows actually read.
+xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{...}{\emph{Codec-specific arguments} passed through to the decoder (see
 the per-format wrappers, e.g. \code{\link[=read_xpt]{read_xpt()}}). An argument the codec does

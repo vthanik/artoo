@@ -4,11 +4,23 @@
 \alias{read_json}
 \title{Read a dataset from CDISC Dataset-JSON}
 \usage{
-read_json(path)
+read_json(path, col_select = NULL, n_max = Inf)
 }
 \arguments{
 \item{path}{\emph{Source \code{.json} path.} \verb{<character(1)>: required}. A JSON file
 that is not Dataset-JSON v1.1 aborts with \code{vport_error_codec}.}
+
+\item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
+(default) reads every column; otherwise a vector of variable names.
+Columns return in file order (not the requested order) and the
+\code{vport_meta} is filtered to match. Works on every format: parquet narrows
+columns natively, the rest filter after decode.
+
+\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+
+\item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
+the row count; the returned \code{vport_meta} reports the rows actually read.
+xpt v8 bounds the disk read; the other formats cap after decode.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with

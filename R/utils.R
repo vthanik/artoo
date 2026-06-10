@@ -66,12 +66,23 @@
 
 # Move a freshly written temp file into its final place. A same-directory
 # rename is atomic, so a crash mid-write never corrupts a prior good file; the
-# copy path is a fallback for the rare filesystem that refuses the rename.
+# copy path is a fallback for the rare filesystem that refuses the rename. A
+# failed copy aborts (never leaves the caller thinking it wrote a file).
 # Codecs build in `tempfile(tmpdir = dirname(path))` then call this.
 #' @noRd
-.move_into_place <- function(tmp, path) {
+.move_into_place <- function(tmp, path, call = rlang::caller_env()) {
   if (!.rename_file(tmp, path)) {
-    file.copy(tmp, path, overwrite = TRUE)
+    if (!file.copy(tmp, path, overwrite = TRUE)) {
+      unlink(tmp)
+      cli::cli_abort(
+        c(
+          "Could not move the temporary file into place.",
+          "x" = "Failed to write {.path {path}}."
+        ),
+        class = "vport_error_codec",
+        call = call
+      )
+    }
     unlink(tmp)
   }
   invisible(path)

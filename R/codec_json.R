@@ -422,6 +422,7 @@ write_json <- function(x, path, created = NULL) {
 #'
 #' @param path *Source `.json` path.* `<character(1)>: required`. A JSON file
 #'   that is not Dataset-JSON v1.1 aborts with `vport_error_codec`.
+#' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` (read it with
 #'   [get_meta()]).
@@ -446,8 +447,8 @@ write_json <- function(x, path, created = NULL) {
 #' @seealso [write_json()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_json <- function(path) {
-  read_dataset(path, format = "json")
+read_json <- function(path, col_select = NULL, n_max = Inf) {
+  read_dataset(path, format = "json", col_select = col_select, n_max = n_max)
 }
 
 .register_codec(

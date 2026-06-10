@@ -51,6 +51,15 @@ test_that(".move_into_place renames a temp file into the target", {
   expect_identical(readLines(path), "hi")
 })
 
+test_that(".move_into_place aborts when rename and copy both fail", {
+  testthat::local_mocked_bindings(.rename_file = function(from, to) FALSE)
+  # A non-existent source makes file.copy() return FALSE, so the move fails.
+  expect_error(
+    suppressWarnings(vport:::.move_into_place(tempfile(), tempfile())),
+    class = "vport_error_codec"
+  )
+})
+
 test_that(".move_into_place falls back to copy when rename fails", {
   testthat::local_mocked_bindings(.rename_file = function(from, to) FALSE)
   dir <- withr::local_tempdir()

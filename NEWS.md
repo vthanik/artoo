@@ -1,5 +1,30 @@
 # vport 0.0.0.9000
 
+* `read_dataset()` and every per-format reader (`read_xpt()`, `read_json()`,
+  `read_parquet()`, `read_rds()`) gained `col_select` and `n_max` for partial
+  reads. A generic post-decode filter is the single source of selection
+  correctness (file order, unknown-name error, record-count sync) on every
+  format; xpt narrows rows off disk and Parquet projects columns natively
+  where the engine allows, json and rds filter after the whole-file parse.
+* `read_xpt()` now reads only the requested rows on a large v5 file: the row
+  count comes from an end-of-file backward scan instead of loading the whole
+  observation section, so `n_max` is a true partial read and a multi-gigabyte
+  file no longer blows memory.
+* `read_xpt()` aborts (`vport_error_codec`) on a multi-member transport file
+  instead of silently reading the second member as extra rows, and honors the
+  member header's NAMESTR size field (140, or 136 for the VMS variant).
+* `read_xpt()` and the other readers project the column `label` and SAS
+  `format.sas` from the metadata onto the returned columns (haven parity), so
+  labelled/gtsummary/viewer tooling sees them; the `vport_meta` stays the
+  source of truth.
+* `write_xpt()` warns (`vport_warning_encoding`) when a value would write a
+  byte in 160-191, which the FDA Study Data TCG prohibits in submission xpt;
+  the check runs only on a single-byte stream, never on UTF-8.
+* `write_xpt()` v5 aborts on a variable-name collision that survives
+  uppercasing (`age` and `AGE`), and warns when an all-character frame ends in
+  a blank row that v5 cannot read back.
+* A failed atomic move now aborts (`vport_error_codec`) instead of leaving the
+  caller believing a file was written.
 * `apply_spec()` renamed its `check` argument to `on_error`, with values
   `c("warn", "abort", "off")` (`"strict"` is now `"abort"`); the
   error-escalation message caps at three findings (breaking).

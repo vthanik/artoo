@@ -201,3 +201,102 @@ test_that("read_rds refuses a non-data-frame payload (review D2)", {
   expect_error(read_rds(p), class = "vport_error_codec")
   expect_error(read_dataset(p), class = "vport_error_codec")
 })
+
+# ---- Wave 3: universal partial reads (the generic filter is the authority) ---
+
+test_that("partial-read args are type-validated before any decode runs", {
+  # The payload is not a data frame, so a decode that ran first would raise
+  # vport_error_codec; validation winning proves it runs ahead of decode.
+  p <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(list(a = 1), p)
+  expect_error(read_dataset(p, n_max = -1), class = "vport_error_input")
+  expect_error(read_dataset(p, n_max = NA), class = "vport_error_input")
+  expect_error(read_dataset(p, col_select = 1L), class = "vport_error_input")
+})
+
+test_that("n_max = 0 returns an empty frame and syncs the record count", {
+  p <- withr::local_tempfile(fileext = ".rds")
+  write_rds(cdisc_dm, p)
+  back <- read_rds(p, n_max = 0)
+  expect_identical(nrow(back), 0L)
+  expect_identical(get_meta(back)@dataset$records, 0L)
+})
+
+test_that("col_select returns file order, not the requested order", {
+  p <- withr::local_tempfile(fileext = ".rds")
+  write_rds(cdisc_dm, p)
+  pick <- rev(names(cdisc_dm)[1:3]) # requested reversed
+  back <- read_rds(p, col_select = pick)
+  expect_identical(names(back), names(cdisc_dm)[1:3]) # file order
+})
+
+test_that("col_select with an unknown name aborts vport_error_input (rds, json)", {
+  pr <- withr::local_tempfile(fileext = ".rds")
+  write_rds(cdisc_dm, pr)
+  expect_error(read_rds(pr, col_select = "NOPE"), class = "vport_error_input")
+  pj <- withr::local_tempfile(fileext = ".json")
+  write_json(cdisc_dm, pj)
+  expect_error(read_json(pj, col_select = "NOPE"), class = "vport_error_input")
+})
+
+test_that("selecting every column in file order equals a full read (idempotent)", {
+  p <- withr::local_tempfile(fileext = ".rds")
+  write_rds(cdisc_dm, p)
+  full <- read_rds(p)
+  sel <- read_rds(p, col_select = names(cdisc_dm))
+  expect_identical(full, sel)
+})
+
+test_that(".meta_select_columns recomputes keys, dropping removed key columns", {
+  cols <- list(
+    A = list(
+      itemOID = "IT.T.A",
+      name = "A",
+      dataType = "string",
+      keySequence = 1L
+    ),
+    B = list(
+      itemOID = "IT.T.B",
+      name = "B",
+      dataType = "string",
+      keySequence = 2L
+    ),
+    C = list(itemOID = "IT.T.C", name = "C", dataType = "float")
+  )
+  ds <- vport:::.assemble_dataset_meta(
+    itemGroupOID = "IG.T",
+    name = "T",
+    keys = c("A", "B")
+  )
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  red <- vport:::.meta_select_columns(meta, c("B", "C"))
+  expect_identical(red@dataset$keys, "B")
+  expect_named(red@columns, c("B", "C"))
+})
+
+test_that("json honors col_select and n_max via the generic filter", {
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(cdisc_dm, p)
+  back <- read_json(p, col_select = names(cdisc_dm)[1:2], n_max = 3)
+  expect_identical(names(back), names(cdisc_dm)[1:2])
+  expect_identical(nrow(back), 3L)
+})
+
+test_that("parquet honors col_select (native projection) and n_max", {
+  skip_if_not_installed("nanoparquet")
+  p <- withr::local_tempfile(fileext = ".parquet")
+  write_parquet(cdisc_dm, p)
+  back <- read_parquet(p, col_select = rev(names(cdisc_dm)[1:3]), n_max = 4)
+  expect_identical(names(back), names(cdisc_dm)[1:3]) # file order despite native
+  expect_identical(nrow(back), 4L)
+})
+
+test_that("col_select works on a foreign parquet with no vport metadata", {
+  skip_if_not_installed("nanoparquet")
+  df <- data.frame(A = 1:3, B = 4:6, C = 7:9)
+  p <- withr::local_tempfile(fileext = ".parquet")
+  nanoparquet::write_parquet(df, p)
+  back <- read_parquet(p, col_select = c("C", "A"))
+  expect_identical(names(back), c("A", "C")) # file order
+  expect_null(attr(back, "metadata_json", exact = TRUE)) # bare frame, NULL meta
+})

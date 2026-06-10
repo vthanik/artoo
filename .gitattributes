@@ -1,0 +1,2 @@
+tests/testthat/fixtures/*.xpt    binary
+tests/testthat/_snaps/**/*.xpt   binary

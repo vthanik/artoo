@@ -154,6 +154,41 @@ test_that("set_meta then get_meta round-trips through a frame attribute", {
   expect_identical(got@columns, meta@columns)
 })
 
+# ---- Wave 3: set_meta projects label / format.sas onto columns -------------
+
+test_that("set_meta projects the column label and SAS format onto the frame", {
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "ADSL")
+  x <- set_meta(cdisc_adsl, meta)
+  # STUDYID carries a label in the spec; the projected attr matches the meta.
+  expect_identical(
+    attr(x$STUDYID, "label", exact = TRUE),
+    meta@columns$STUDYID$label
+  )
+})
+
+test_that("set_meta strips a stale label when the new meta has none", {
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "ADSL")
+  x <- set_meta(cdisc_adsl, meta)
+  expect_false(is.null(attr(x$STUDYID, "label", exact = TRUE)))
+  # Re-stamp with a meta whose STUDYID label is removed: the attr must clear,
+  # else .col_meta_from_attrs would resurrect the lying label on a later write.
+  cols <- meta@columns
+  cols$STUDYID$label <- NULL
+  meta2 <- vport:::vport_meta_class(dataset = meta@dataset, columns = cols)
+  x2 <- set_meta(x, meta2)
+  expect_null(attr(x2$STUDYID, "label", exact = TRUE))
+})
+
+test_that("set_meta projection is idempotent", {
+  spec <- demo_spec()
+  meta <- vport:::.meta_from_spec(spec, "ADSL")
+  once <- set_meta(cdisc_adsl, meta)
+  twice <- set_meta(once, meta)
+  expect_identical(once, twice)
+})
+
 test_that("get_meta aborts when the frame carries no metadata", {
   expect_error(get_meta(cdisc_adsl), class = "vport_error_input")
 })

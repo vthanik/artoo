@@ -294,6 +294,11 @@
   nobs <- nrow(x)
   has_meta <- is_vport_meta(meta)
   label_trunc <- character(0)
+  # FDA TCG bytes 160-191 are only meaningful on a single-byte stream; on
+  # UTF-8 those values are multibyte continuation bytes and would false-fire.
+  target_cs <- .resolve_charset(target_enc, call)
+  fda_check <- !identical(toupper(target_cs), "UTF-8")
+  fda_cols <- character(0)
   recs <- vector("list", length(nms))
   for (i in seq_along(nms)) {
     nm <- nms[i]
@@ -388,6 +393,15 @@
       nlng <- 8L
     } else {
       chr <- .to_target(as.character(col), target_enc, on_invalid, call)
+      # FDA TCG bans bytes 160-191 in submission xpt. Check the post-transcode
+      # single-byte stream (skipped for UTF-8, where those are continuation
+      # bytes). Data columns only; one warning after the loop names them all.
+      if (fda_check && length(chr)) {
+        joined <- paste0(chr[!is.na(chr)], collapse = "")
+        if (nzchar(joined) && length(.fda_forbidden_bytes(charToRaw(joined)))) {
+          fda_cols <- c(fda_cols, nm)
+        }
+      }
       bw <- nchar(chr, type = "bytes")
       bw[is.na(chr)] <- 0L
       declared <- if (!is.null(cm) && !is.null(cm$length)) {
@@ -456,6 +470,16 @@
       class = "vport_warning_encoding"
     )
   }
+  if (length(fda_cols)) {
+    cli::cli_warn(
+      c(
+        "Wrote bytes 160-191 in {length(fda_cols)} column{?s}: {.var {fda_cols}}.",
+        "i" = "The FDA Study Data TCG prohibits these bytes in submission xpt; write with {.code encoding = \"US-ASCII\"} for a submission.",
+        "i" = "See https://www.fda.gov/media/153632/download."
+      ),
+      class = "vport_warning_encoding"
+    )
+  }
   recs
 }
 
@@ -484,6 +508,22 @@
       class = "vport_error_input",
       call = call
     )
+  }
+  # v5 uppercases every variable name, so two names colliding only in case
+  # (age + AGE) would silently overwrite a column. Abort before writing.
+  if (version == 5L) {
+    dup <- unique(names(x)[duplicated(toupper(names(x)))])
+    if (length(dup)) {
+      collided <- names(x)[toupper(names(x)) %in% toupper(dup)]
+      cli::cli_abort(
+        c(
+          "Variable names collide when uppercased for xpt v5: {.var {collided}}.",
+          "i" = "v5 names are case-insensitive; rename or use {.code version = 8}."
+        ),
+        class = "vport_error_codec",
+        call = call
+      )
+    }
   }
 
   if (is_vport_meta(meta)) {
@@ -538,6 +578,36 @@
     0L
   }
 
+  # v5 records no row count: the reader recovers it by trimming trailing
+  # all-blank records (padding). In an all-character frame a genuine trailing
+  # all-blank row is indistinguishable from that padding, so it cannot be read
+  # back. v8 stores the count and is exempt. Warn at write time (see C4).
+  if (
+    version == 5L &&
+      nvars > 0L &&
+      nobs > 0L &&
+      all(vapply(recs, function(r) r$vartype == 2L, logical(1)))
+  ) {
+    last_blank <- all(vapply(
+      seq_len(nvars),
+      function(j) {
+        v <- x[[j]][[nobs]]
+        is.na(v) || !nzchar(trimws(as.character(v)))
+      },
+      logical(1)
+    ))
+    if (last_blank) {
+      cli::cli_warn(
+        c(
+          "The final row of this all-character v5 frame is entirely blank.",
+          "x" = "v5 cannot distinguish a trailing blank row from padding; it will not read back.",
+          "i" = "Use {.code version = 8}, which records the row count."
+        ),
+        class = "vport_warning_encoding"
+      )
+    }
+  }
+
   # Atomic write: build in a temp file, then rename over the target so a crash
   # mid-write never corrupts a prior good file. Cleanup runs only on error.
   tmp <- tempfile(tmpdir = dirname(path), fileext = ".xpt.tmp")
@@ -570,10 +640,7 @@
     }
   )
 
-  if (!file.rename(tmp, path)) {
-    file.copy(tmp, path, overwrite = TRUE)
-    unlink(tmp)
-  }
+  .move_into_place(tmp, path, call)
   invisible(path)
 }
 
@@ -616,6 +683,13 @@
       call = call
     )
   }
+  # The member header records the NAMESTR record size at bytes 75-78 ("0140",
+  # or "0136" for the VMS variant). Honor it for the block stride; default to
+  # 140 when the field is absent or implausible.
+  nstr_size <- suppressWarnings(as.integer(substr(s, 75L, 78L)))
+  if (is.na(nstr_size) || nstr_size < 100L || nstr_size > 200L) {
+    nstr_size <- 140L
+  }
   .read_bytes(con, 80L, call)
   desc1 <- .read_bytes(con, 80L, call)
   desc2 <- .read_bytes(con, 80L, call)
@@ -641,11 +715,19 @@
       call = call
     )
   }
-  list(name = ds_name, label = ds_label, nvars = nvars)
+  list(
+    name = ds_name,
+    label = ds_label,
+    nvars = nvars,
+    namestr_size = nstr_size
+  )
 }
 
+# `namestr_size` (140, or 136 for VMS) sizes the record; the field offsets at
+# 1:88 are identical across sizes. The v8 long-name slice at 89:120 only exists
+# in a full 140-byte extended namestr.
 #' @noRd
-.xpt_parse_namestr <- function(raw140, version) {
+.xpt_parse_namestr <- function(raw140, version, namestr_size = 140L) {
   vartype <- .pib2_to_int(raw140[1:2])
   var_length <- .pib2_to_int(raw140[5:6])
   varnum <- .pib2_to_int(raw140[7:8])
@@ -655,7 +737,7 @@
   formatl <- .pib2_to_int(raw140[65:66])
   formatd <- .pib2_to_int(raw140[67:68])
   npos <- .pib4_to_int(raw140[85:88])
-  if (version == 8L) {
+  if (version == 8L && namestr_size >= 140L) {
     name <- .raw_to_str(raw140[89:120])
   }
   list(
@@ -676,13 +758,18 @@
   con,
   nvars,
   version,
+  namestr_size = 140L,
   call = rlang::caller_env()
 ) {
-  total <- nvars * 140L
+  total <- nvars * namestr_size
   block <- if (total > 0L) .read_bytes(con, total, call) else raw(0)
   namestrs <- lapply(seq_len(nvars), function(i) {
-    off <- (i - 1L) * 140L
-    .xpt_parse_namestr(block[(off + 1L):(off + 140L)], version)
+    off <- (i - 1L) * namestr_size
+    .xpt_parse_namestr(
+      block[(off + 1L):(off + namestr_size)],
+      version,
+      namestr_size
+    )
   })
   rem <- total %% 80L
   if (rem > 0L) {
@@ -765,11 +852,13 @@
 }
 
 # v5 stores no obs count: it is the data section after the OBS header, blank-
-# padded to an 80-byte boundary. Compute floor(remaining / obs_length) then
-# trim trailing all-blank records (padding). Single-member, so no next-MEMBER
-# scan. The ambiguity is confined to all-character data (a numeric field is
-# never all-blank), where a genuine trailing all-NA row is indistinguishable
-# from padding -- an inherent v5 limitation (see C4).
+# padded to an 80-byte boundary. Seek from EOF and step back over trailing
+# all-0x20 records (the padding) to find the row count -- one record read per
+# trailing blank, never the whole section, so a partial read (n_max) and a
+# >2GB file both stay bounded. Single-member, so no next-MEMBER scan. The
+# ambiguity is confined to all-character data (a numeric field is never
+# all-blank), where a genuine trailing all-NA row is indistinguishable from
+# padding -- an inherent v5 limitation (see C4).
 #' @noRd
 .xpt_compute_v5_nobs <- function(con, obs_length, path) {
   start <- seek(con, where = NA)
@@ -777,47 +866,155 @@
   if (remaining <= 0 || obs_length == 0L) {
     return(0L)
   }
-  all_raw <- readBin(con, what = "raw", n = remaining)
-  max_nobs <- length(all_raw) %/% obs_length
-  while (max_nobs > 0L) {
-    s <- (max_nobs - 1L) * obs_length + 1L
-    e <- max_nobs * obs_length
-    if (all(all_raw[s:e] == as.raw(0x20))) {
-      max_nobs <- max_nobs - 1L
+  # Double arithmetic: remaining can exceed the 2^31 integer limit.
+  r <- as.double(remaining) %/% obs_length
+  blank <- as.raw(0x20)
+  while (r > 0) {
+    seek(con, where = start + (r - 1) * as.double(obs_length))
+    rec <- readBin(con, what = "raw", n = obs_length)
+    if (length(rec) == obs_length && all(rec == blank)) {
+      r <- r - 1
     } else {
       break
     }
   }
   seek(con, where = start)
-  max_nobs
+  as.integer(r)
+}
+
+# vport reads single-member transport files only. After the obs section (padded
+# to an 80-byte boundary) anything more is a second member; abort -- but only
+# when the bytes at that boundary carry a real "HEADER RECORD*******" signature,
+# so extra blank padding never triggers a false abort. Leaves con at obs_start.
+#' @noRd
+.xpt_check_single_member <- function(
+  con,
+  path,
+  obs_start,
+  nobs,
+  obs_length,
+  call = rlang::caller_env()
+) {
+  if (nobs == 0L || obs_length == 0L) {
+    return(invisible(NULL))
+  }
+  data_bytes <- as.double(nobs) * obs_length
+  padded_end <- obs_start + ceiling(data_bytes / 80) * 80
+  size <- file.info(path)$size
+  if (size > padded_end) {
+    seek(con, where = padded_end)
+    sig <- readBin(con, what = "raw", n = 80L)
+    seek(con, where = obs_start)
+    expected <- charToRaw("HEADER RECORD*******")
+    if (
+      length(sig) >= length(expected) &&
+        all(sig[seq_along(expected)] == expected)
+    ) {
+      cli::cli_abort(
+        c(
+          "This XPORT file has more than one member.",
+          "x" = "vport reads single-member transport files only.",
+          "i" = "Export one dataset per file, or split the members first."
+        ),
+        class = "vport_error_codec",
+        call = call
+      )
+    }
+  }
+  invisible(NULL)
 }
 
 # Read the OBS section into a named list of columns. Field slicing is driven by
 # the parsed npos/nlng. Numerics are right-zero-padded from nlng (2-8 bytes) to
 # 8 before .ibm_to_ieee (real SAS stores high-order bytes only); they carry the
 # sas_missing tag. Characters are byte-passthrough strings (converted later).
+# Resolve col_select (NULL = all) to variable indices in file order. An
+# unknown name is a loud vport_error_input, never a silent drop.
+#' @noRd
+.xpt_resolve_col_select <- function(namestrs, col_select, call) {
+  if (is.null(col_select)) {
+    return(seq_along(namestrs))
+  }
+  all_names <- vapply(namestrs, function(ns) ns$name, character(1))
+  want <- as.character(col_select)
+  missing_cols <- setdiff(want, all_names)
+  if (length(missing_cols)) {
+    cli::cli_abort(
+      c(
+        "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
+        "i" = "The file has {.val {all_names}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  which(all_names %in% want)
+}
+
+# Scan the (over-)read v5 obs bytes for a second member: its HEADER record
+# lands at an 80-byte boundary past member 1's padded obs. Pre-filtered on the
+# leading 'H' so the boundary walk stays cheap. Skips boundary 1 (member 1's
+# first data row).
+#' @noRd
+.xpt_assert_single_member_v5 <- function(all_data, call) {
+  n <- length(all_data)
+  sig <- charToRaw("HEADER RECORD*******")
+  nb <- length(sig)
+  # 80-byte-aligned starts (skipping byte 1, member 1's first row) where the
+  # full signature still fits.
+  max_start <- n - nb + 1L
+  if (max_start < 81L) {
+    return(invisible(NULL))
+  }
+  starts <- seq.int(81L, max_start, by = 80L)
+  cand <- starts[all_data[starts] == sig[1L]]
+  for (s in cand) {
+    if (all(all_data[s:(s + nb - 1L)] == sig)) {
+      cli::cli_abort(
+        c(
+          "This XPORT file has more than one member.",
+          "x" = "vport reads single-member transport files only.",
+          "i" = "Export one dataset per file, or split the members first."
+        ),
+        class = "vport_error_codec",
+        call = call
+      )
+    }
+  }
+  invisible(NULL)
+}
+
+# `keep` selects which variables to materialize (col_select). Field offsets
+# come from each namestr's absolute npos, so the obs bytes are read whole (the
+# record interleaves all fields) but only the kept columns become R vectors.
 #' @noRd
 .xpt_read_obs <- function(
   con,
   namestrs,
   nobs,
   obs_length,
+  keep = seq_along(namestrs),
+  detect_multimember = FALSE,
   call = rlang::caller_env()
 ) {
-  nvars <- length(namestrs)
   col_names <- vapply(namestrs, function(ns) ns$name, character(1))
   if (nobs == 0L || obs_length == 0L) {
-    cols <- lapply(namestrs, function(ns) {
-      if (ns$vartype == 1L) numeric(0) else character(0)
+    cols <- lapply(keep, function(j) {
+      if (namestrs[[j]]$vartype == 1L) numeric(0) else character(0)
     })
-    names(cols) <- col_names
+    names(cols) <- col_names[keep]
     return(cols)
   }
-  all_data <- .read_bytes(con, nobs * obs_length, call)
+  # Record count times record length can exceed the 2^31 integer limit on a
+  # large file; size the read in double arithmetic.
+  all_data <- .read_bytes(con, as.double(nobs) * obs_length, call)
+  if (detect_multimember) {
+    .xpt_assert_single_member_v5(all_data, call)
+  }
   raw_mat <- matrix(all_data, nrow = obs_length, ncol = nobs)
-  cols <- vector("list", nvars)
-  for (j in seq_len(nvars)) {
-    ns <- namestrs[[j]]
+  cols <- vector("list", length(keep))
+  for (idx in seq_along(keep)) {
+    ns <- namestrs[[keep[idx]]]
     rf <- ns$npos + 1L
     rt <- ns$npos + ns$length
     if (ns$vartype == 1L) {
@@ -825,12 +1022,12 @@
       if (ns$length < 8L) {
         vr <- rbind(vr, matrix(as.raw(0x00), 8L - ns$length, nobs))
       }
-      cols[[j]] <- .ibm_to_ieee(as.vector(vr))
+      cols[[idx]] <- .ibm_to_ieee(as.vector(vr))
     } else {
-      cols[[j]] <- .raw_mat_to_strvec(raw_mat[rf:rt, , drop = FALSE], NULL)
+      cols[[idx]] <- .raw_mat_to_strvec(raw_mat[rf:rt, , drop = FALSE], NULL)
     }
   }
-  names(cols) <- col_names
+  names(cols) <- col_names[keep]
   cols
 }
 
@@ -876,6 +1073,8 @@
 .decode_xpt <- function(
   path,
   encoding = NULL,
+  col_select = NULL,
+  n_max = Inf,
   call = rlang::caller_env()
 ) {
   con <- file(path, "rb")
@@ -884,7 +1083,13 @@
   lib <- .xpt_parse_library(con, call)
   version <- lib$version
   mem <- .xpt_parse_member(con, version, call)
-  namestrs <- .xpt_parse_namestr_block(con, mem$nvars, version, call)
+  namestrs <- .xpt_parse_namestr_block(
+    con,
+    mem$nvars,
+    version,
+    mem$namestr_size,
+    call
+  )
 
   nxt <- .xpt_record_str(con, call)
   if (
@@ -893,6 +1098,10 @@
     namestrs <- .xpt_parse_label_extension(con, nxt, namestrs, call)
     nxt <- .xpt_record_str(con, call)
   }
+
+  # Resolve col_select to variable indices, file order preserved.
+  keep <- .xpt_resolve_col_select(namestrs, col_select, call)
+
   nobs <- .xpt_parse_obs_header(nxt, version)
   obs_length <- if (length(namestrs)) {
     sum(vapply(namestrs, function(ns) ns$length, integer(1)))
@@ -902,7 +1111,29 @@
   if (is.na(nobs)) {
     nobs <- .xpt_compute_v5_nobs(con, obs_length, path)
   }
-  cols <- .xpt_read_obs(con, namestrs, nobs, obs_length, call)
+  # Multi-member detection. v8 records the exact row count, so a second member
+  # is the bytes beyond the padded obs section -- check that boundary. v5's
+  # count is EOF-derived, so a second member is absorbed into the (inflated)
+  # count and the read bytes themselves carry its HEADER signature at an
+  # 80-byte boundary -- scanned inside .xpt_read_obs (no extra IO, n_max-bound).
+  obs_start <- seek(con, where = NA)
+  if (version == 8L) {
+    .xpt_check_single_member(con, path, obs_start, nobs, obs_length, call)
+  }
+  if (is.finite(n_max)) {
+    nobs <- min(nobs, max(as.integer(n_max), 0L))
+  }
+  cols <- .xpt_read_obs(
+    con,
+    namestrs,
+    nobs,
+    obs_length,
+    keep,
+    detect_multimember = version == 5L,
+    call = call
+  )
+  # Downstream loops (transcode, realize, meta) align 1:1 with the kept cols.
+  namestrs <- namestrs[keep]
 
   char_idx <- which(vapply(namestrs, function(ns) ns$vartype == 2L, logical(1)))
   # Header text (dataset label, variable labels) is byte-passthrough until
@@ -1075,6 +1306,14 @@ write_xpt <- function(
 #' @param encoding *Force a source charset.* `<character(1)> | NULL`. `NULL`
 #'   (default) auto-detects (UTF-8 when every character value and label is
 #'   valid UTF-8, else Windows-1252). IANA and SAS names both work.
+#' @param col_select *Variables to read.* `<character> | NULL`. `NULL`
+#'   (default) reads every column; otherwise a vector of variable names
+#'   (matching the names as stored, uppercase for v5). Columns return in file
+#'   order, and the `vport_meta` is filtered to match.
+#'
+#'   **Note:** an unknown name is a `vport_error_input`, never a silent drop.
+#' @param n_max *Maximum records to read.* `<numeric(1)>: default Inf`. Caps
+#'   the row count; the returned `vport_meta` reports the rows actually read.
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` (read it with
 #'   [get_meta()]).
@@ -1099,8 +1338,14 @@ write_xpt <- function(
 #' @seealso [write_xpt()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_xpt <- function(path, encoding = NULL) {
-  read_dataset(path, format = "xpt", encoding = encoding)
+read_xpt <- function(path, encoding = NULL, col_select = NULL, n_max = Inf) {
+  read_dataset(
+    path,
+    format = "xpt",
+    encoding = encoding,
+    col_select = col_select,
+    n_max = n_max
+  )
 }
 
 .register_codec(

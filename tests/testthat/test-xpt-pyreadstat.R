@@ -2,24 +2,7 @@
 # reading them with pyreadstat (a third-party readstat-based reader), not just
 # round-tripping against vport itself. Skipped on CRAN and wherever python /
 # pyreadstat is absent (haven is banned, so this is the only real-SAS oracle).
-
-py_with_pyreadstat <- function() {
-  py <- Sys.which("python3")
-  if (py == "") {
-    return("")
-  }
-  ok <- tryCatch(
-    system2(
-      py,
-      c("-c", shQuote("import pyreadstat")),
-      stdout = FALSE,
-      stderr = FALSE
-    ) ==
-      0,
-    error = function(e) FALSE
-  )
-  if (isTRUE(ok)) py else ""
-}
+# py_with_pyreadstat() lives in helper-pyreadstat.R (shared with the fixture).
 
 test_that("a vport-written xpt reads correctly in pyreadstat", {
   skip_on_cran()

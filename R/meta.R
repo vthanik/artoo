@@ -471,5 +471,54 @@ set_meta <- function(x, meta) {
     )
   }
   attr(x, "metadata_json") <- .meta_to_datasetjson(meta, extensions = TRUE)
+  .project_col_attrs(x, meta)
+}
+
+# Project the per-column label and SAS display format from the meta onto the
+# matching frame columns, so labelled/gtsummary/viewer tooling reads them like
+# haven. The meta stays the SSOT; the attrs are a projection -- set when the
+# meta carries a value, strip when it does not, so a meta update never leaves a
+# stale attr that .col_meta_from_attrs would later resurrect on a bare-frame
+# write. Idempotent: set_meta(set_meta(x, m), m) == set_meta(x, m).
+#' @noRd
+.project_col_attrs <- function(x, meta) {
+  cols <- meta@columns
+  for (nm in names(x)) {
+    cm <- cols[[nm]]
+    # A column the meta does not describe: it has no opinion, leave any
+    # user/haven attrs (e.g. a label that is the column's only metadata) alone.
+    if (is.null(cm)) {
+      next
+    }
+    lbl <- cm$label
+    fmt <- cm$displayFormat
+    attr(x[[nm]], "label") <- if (!is.null(lbl) && nzchar(lbl)) lbl else NULL
+    attr(x[[nm]], "format.sas") <- if (!is.null(fmt) && nzchar(fmt)) {
+      fmt
+    } else {
+      NULL
+    }
+  }
   x
+}
+
+# Reduce a meta to a column subset (col_select). Columns are reordered to
+# `keep` (the data's file order); keys are recomputed so a dropped key column
+# simply leaves the key set. Rebuilt via the constructor (the codebase never
+# mutates an S7 meta in place).
+#' @noRd
+.meta_select_columns <- function(meta, keep) {
+  cols <- meta@columns[keep]
+  ds <- meta@dataset
+  ds$keys <- .meta_keys(cols)
+  vport_meta_class(dataset = ds, columns = cols)
+}
+
+# Sync a meta's record count to the rows actually read (n_max). `records` is
+# always present in decoder-produced meta, so the field is replaced in place.
+#' @noRd
+.meta_set_records <- function(meta, n) {
+  ds <- meta@dataset
+  ds$records <- as.integer(n)
+  vport_meta_class(dataset = ds, columns = meta@columns)
 }

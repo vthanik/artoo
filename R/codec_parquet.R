@@ -84,12 +84,44 @@
   invisible(path)
 }
 
+# Read the parquet frame, using nanoparquet's native column projection when it
+# is available and col_select is given (a real columnar IO win). nanoparquet
+# returns columns in the requested order, so the kept names are fed in FILE
+# order (from the schema) to keep behavior identical to a full read. Any
+# failure (old nanoparquet, odd schema) falls back to a full read; the generic
+# filter in read_dataset() is the single source of selection correctness.
+#' @noRd
+.parquet_read_frame <- function(path, col_select) {
+  full <- function() as.data.frame(nanoparquet::read_parquet(path))
+  if (
+    is.null(col_select) ||
+      !"col_select" %in% names(formals(nanoparquet::read_parquet))
+  ) {
+    return(full())
+  }
+  tryCatch(
+    {
+      file_cols <- nanoparquet::read_parquet_schema(path)$name[-1L]
+      keep <- file_cols[file_cols %in% col_select]
+      if (!length(keep)) {
+        return(full()) # all-unknown: let the generic filter raise the error
+      }
+      as.data.frame(nanoparquet::read_parquet(path, col_select = keep))
+    },
+    error = function(e) full()
+  )
+}
+
 # decode contract: (path, <codec args>, call) -> list(data, meta).
 #' @noRd
-.decode_parquet <- function(path, call = rlang::caller_env()) {
+.decode_parquet <- function(
+  path,
+  col_select = NULL,
+  call = rlang::caller_env()
+) {
   rlang::check_installed("nanoparquet", reason = "to read Parquet files.")
 
-  df <- as.data.frame(nanoparquet::read_parquet(path))
+  df <- .parquet_read_frame(path, col_select)
   json <- .parquet_sidecar(path)
   if (is.null(json)) {
     # Foreign / plain-nanoparquet parquet: no vport metadata. Degrade to a
@@ -171,6 +203,7 @@ write_parquet <- function(x, path) {
 #' Requires the lightweight `nanoparquet` package.
 #'
 #' @param path *Source `.parquet` path.* `<character(1)>: required`.
+#' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
 #'   (read it with [get_meta()]); otherwise a plain data frame.
@@ -195,8 +228,13 @@ write_parquet <- function(x, path) {
 #' @seealso [write_parquet()] for the inverse; [read_dataset()] for the
 #'   generic dispatcher.
 #' @export
-read_parquet <- function(path) {
-  read_dataset(path, format = "parquet")
+read_parquet <- function(path, col_select = NULL, n_max = Inf) {
+  read_dataset(
+    path,
+    format = "parquet",
+    col_select = col_select,
+    n_max = n_max
+  )
 }
 
 .register_codec(

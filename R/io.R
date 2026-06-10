@@ -134,6 +134,16 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
 #'   [vport_formats()]).
+#' @param col_select *Variables to read.* `<character> | NULL`. `NULL`
+#'   (default) reads every column; otherwise a vector of variable names.
+#'   Columns return in file order (not the requested order) and the
+#'   `vport_meta` is filtered to match. Works on every format: parquet narrows
+#'   columns natively, the rest filter after decode.
+#'
+#'   **Note:** an unknown name is a `vport_error_input`, never a silent drop.
+#' @param n_max *Maximum records to read.* `<numeric(1)>: default Inf`. Caps
+#'   the row count; the returned `vport_meta` reports the rows actually read.
+#'   xpt v8 bounds the disk read; the other formats cap after decode.
 #' @param ... *Codec-specific arguments* passed through to the decoder (see
 #'   the per-format wrappers, e.g. [read_xpt()]). An argument the codec does
 #'   not know is an error, never silently ignored.
@@ -162,7 +172,13 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #' @seealso [write_dataset()] for the inverse; [read_rds()] for the
 #'   per-format wrapper.
 #' @export
-read_dataset <- function(path, format = NULL, ...) {
+read_dataset <- function(
+  path,
+  format = NULL,
+  col_select = NULL,
+  n_max = Inf,
+  ...
+) {
   call <- rlang::caller_env()
   .check_path(path, call)
   if (!file.exists(path)) {
@@ -175,10 +191,25 @@ read_dataset <- function(path, format = NULL, ...) {
       call = call
     )
   }
+  # Type-validate before decode: a codec that consumes these natively (xpt)
+  # must not see an invalid value, so the gate runs ahead of dispatch.
+  .validate_partial_args(col_select, n_max, call)
+
   fmt <- .resolve_format(path, format, call)
   codec <- .resolve_codec(fmt, call)
   decode <- .codec_fn(codec$decode)
-  res <- decode(path, ..., call = call)
+  # Forward the partial-read args only to a decoder that declares them; the
+  # rest are narrowed by the generic filter below. Every codec stays correct
+  # even if it does no native push-down.
+  fwd <- intersect(c("col_select", "n_max"), names(formals(decode)))
+  dargs <- list(path)
+  if ("col_select" %in% fwd) {
+    dargs$col_select <- col_select
+  }
+  if ("n_max" %in% fwd) {
+    dargs$n_max <- n_max
+  }
+  res <- do.call(decode, c(dargs, list(...), list(call = call)))
   # Self-describing containers (rds) can hold anything; the read_* contract
   # promises a data frame, so refuse other payloads loudly.
   if (!is.data.frame(res$data)) {
@@ -191,11 +222,83 @@ read_dataset <- function(path, format = NULL, ...) {
     }
     cli::cli_abort(msg, class = "vport_error_codec", call = call)
   }
-  if (is_vport_meta(res$meta)) {
-    set_meta(res$data, res$meta)
+  # The single source of partial-read correctness (which columns, what order,
+  # which error). Idempotent on a frame a codec already narrowed. Runs BEFORE
+  # set_meta so the re-projected label/format.sas attrs land on the kept cols.
+  red <- .apply_partial_read(res$data, res$meta, col_select, n_max, call)
+  if (is_vport_meta(red$meta)) {
+    set_meta(red$data, red$meta)
   } else {
-    res$data
+    red$data
   }
+}
+
+# Type-check the partial-read arguments before any decode runs. col_select is
+# NULL or a non-NA character vector; n_max is a single non-NA numeric, Inf or
+# >= 0. Name validation (unknown column) happens later against the frame.
+#' @noRd
+.validate_partial_args <- function(col_select, n_max, call) {
+  if (!is.null(col_select)) {
+    if (!is.character(col_select) || anyNA(col_select)) {
+      cli::cli_abort(
+        c(
+          "{.arg col_select} must be a character vector of column names.",
+          "x" = "You supplied {.obj_type_friendly {col_select}}."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+  }
+  if (
+    !is.numeric(n_max) ||
+      length(n_max) != 1L ||
+      is.na(n_max) ||
+      n_max < 0
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg n_max} must be a single non-negative number or {.code Inf}.",
+        "x" = "You supplied {.obj_type_friendly {n_max}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  invisible(NULL)
+}
+
+# The single authority for partial-read correctness: narrow the decoded frame
+# (and its meta) to col_select (file order, unknown -> error) and n_max (row
+# cap, records synced). Idempotent: re-narrowing an already-narrowed frame is a
+# no-op, so a codec's native push-down stays observationally invisible.
+#' @noRd
+.apply_partial_read <- function(data, meta, col_select, n_max, call) {
+  if (!is.null(col_select)) {
+    missing_cols <- setdiff(as.character(col_select), names(data))
+    if (length(missing_cols)) {
+      cli::cli_abort(
+        c(
+          "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
+          "i" = "The dataset has {.val {names(data)}}."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+    keep <- names(data)[names(data) %in% col_select] # file order, not requested
+    data <- data[keep]
+    if (is_vport_meta(meta)) {
+      meta <- .meta_select_columns(meta, keep)
+    }
+  }
+  if (is.finite(n_max) && nrow(data) > n_max) {
+    data <- data[seq_len(n_max), , drop = FALSE]
+    if (is_vport_meta(meta)) {
+      meta <- .meta_set_records(meta, nrow(data))
+    }
+  }
+  list(data = data, meta = meta)
 }
 
 #' Report which formats are available

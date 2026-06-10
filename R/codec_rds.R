@@ -17,10 +17,7 @@
   }
   tmp <- tempfile(tmpdir = dirname(path), fileext = ".rds.tmp")
   saveRDS(x, tmp)
-  if (!file.rename(tmp, path)) {
-    file.copy(tmp, path, overwrite = TRUE)
-    unlink(tmp)
-  }
+  .move_into_place(tmp, path, call)
   invisible(path)
 }
 
@@ -78,6 +75,7 @@ write_rds <- function(x, path) {
 #' restored. A thin wrapper over [read_dataset()] with `format = "rds"`.
 #'
 #' @param path *Source `.rds` path.* `<character(1)>: required`.
+#' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded
 #'   it. An rds holding anything other than a data frame is a
@@ -105,8 +103,8 @@ write_rds <- function(x, path) {
 #' @seealso [write_rds()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_rds <- function(path) {
-  read_dataset(path, format = "rds")
+read_rds <- function(path, col_select = NULL, n_max = Inf) {
+  read_dataset(path, format = "rds", col_select = col_select, n_max = n_max)
 }
 
 .register_codec(
