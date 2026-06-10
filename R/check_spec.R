@@ -22,9 +22,11 @@
 #' **Findings, not enforcement.** `check_spec()` never modifies data; it
 #' returns every divergence it finds. [apply_spec()] runs it and decides what
 #' to do via its `on_error` argument (warn, abort, off). The dimensions
-#' checked are: missing variables (spec variable absent from the data), extra
-#' variables (data column the spec does not declare), type mismatch, character
-#' length overflow, codelist membership, and displayFormat validity.
+#' checked are: missing variables (split into mandatory, an error, and
+#' permissible, a warning), extra variables (data column the spec does not
+#' declare), type mismatch, character length overflow, the hard 200-byte XPORT
+#' v5 / FDA character limit, codelist membership, label drift against the spec,
+#' key uniqueness, and displayFormat validity.
 #'
 #' **Decode-aware membership.** `decode` selects which codelist column the
 #' data is checked against, matching [apply_spec()]'s decode step:
@@ -97,15 +99,31 @@ check_spec <- function(
   vars <- spec_variables(spec, dataset)
   found <- list()
 
-  # Missing / extra variables.
-  if (checks$missing_variable) {
+  # Missing variables, split by obligation: a missing mandatory variable (or one
+  # whose mandatory flag is NA, treated conservatively as mandatory) is an error
+  # (missing_variable); a missing permissible variable is a warning
+  # (missing_permissible). Each bucket has its own toggle.
+  if (checks$missing_variable || checks$missing_permissible) {
     miss <- setdiff(vars$variable, names(x))
-    found[[length(found) + 1L]] <- .finding(
-      "missing_variable",
-      dataset,
-      miss,
-      sprintf("Spec variable '%s' is absent from the data.", miss)
-    )
+    mand <- .is_mandatory(vars$mandatory[match(miss, vars$variable)])
+    if (checks$missing_variable) {
+      mv <- miss[mand]
+      found[[length(found) + 1L]] <- .finding(
+        "missing_variable",
+        dataset,
+        mv,
+        sprintf("Spec variable '%s' is absent from the data.", mv)
+      )
+    }
+    if (checks$missing_permissible) {
+      mp <- miss[!mand]
+      found[[length(found) + 1L]] <- .finding(
+        "missing_permissible",
+        dataset,
+        mp,
+        sprintf("Permissible spec variable '%s' is absent from the data.", mp)
+      )
+    }
   }
   if (checks$extra_variable) {
     extra <- setdiff(names(x), vars$variable)
@@ -164,6 +182,46 @@ check_spec <- function(
       }
     }
 
+    # Hard SAS XPORT v5 / FDA cap, independent of the spec's declared length:
+    # a character value may not exceed 200 bytes.
+    if (checks$char_length_limit && is.character(col)) {
+      maxb <- max(nchar(col, type = "bytes"), 0L, na.rm = TRUE)
+      if (maxb > 200L) {
+        found[[length(found) + 1L]] <- .finding(
+          "char_length_limit",
+          dataset,
+          v,
+          sprintf(
+            "'%s' has values up to %d bytes, over the 200-byte XPORT v5 limit.",
+            v,
+            maxb
+          )
+        )
+      }
+    }
+
+    if (checks$label_match) {
+      col_lab <- attr(col, "label", exact = TRUE)
+      spec_lab <- vars$label[i]
+      if (
+        !is.null(col_lab) &&
+          !.blank(spec_lab) &&
+          !identical(as.character(col_lab), as.character(spec_lab))
+      ) {
+        found[[length(found) + 1L]] <- .finding(
+          "label_match",
+          dataset,
+          v,
+          sprintf(
+            "'%s' label '%s' differs from the spec label '%s'.",
+            v,
+            as.character(col_lab),
+            as.character(spec_lab)
+          )
+        )
+      }
+    }
+
     clid <- vars$codelist_id[i]
     if (checks$codelist_membership && !is.na(clid)) {
       clrows <- spec_codelists(spec, clid)
@@ -212,6 +270,30 @@ check_spec <- function(
             dt,
             fmt,
             dt
+          )
+        )
+      }
+    }
+  }
+
+  # Dataset-level: the spec-declared key variables must uniquely identify the
+  # rows. Short-circuit unless every key column is present (an absent key is
+  # missing_variable's job). An all-NA key row pastes to "NA" and a repeated
+  # NA-key counts as a duplicate, which is correct: a key should not be NA.
+  if (checks$key_uniqueness) {
+    keys <- spec_keys(spec, dataset)
+    if (length(keys) && all(keys %in% names(x))) {
+      z <- do.call(paste, c(x[keys], sep = "\x1f"))
+      ndup <- sum(duplicated(z) | duplicated(z, fromLast = TRUE))
+      if (ndup) {
+        found[[length(found) + 1L]] <- .finding(
+          "key_uniqueness",
+          dataset,
+          NA_character_,
+          sprintf(
+            "Key (%s) is not unique: %d row(s) share a duplicate key.",
+            paste(keys, collapse = ", "),
+            ndup
           )
         )
       }

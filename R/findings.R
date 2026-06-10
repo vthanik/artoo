@@ -199,3 +199,20 @@
   ok <- (v %in% allow) | (v_na & !isTRUE(mandatory))
   unique(values[!ok])
 }
+
+# ---- Mandatory / permissible classification ------------------------------
+
+# Whether each spec variable is mandatory. The spec stores `mandatory` as a
+# logical, but a raw frame may carry character flags ("Y"/"N"); both are
+# accepted, vectorized. NA or an unrecognized value is treated as MANDATORY
+# (conservative: an unknown obligation is never silently downgraded to
+# permissible, so a missing such variable stays an error, not a warning).
+#' @noRd
+.is_mandatory <- function(x) {
+  if (is.logical(x)) {
+    return(ifelse(is.na(x), TRUE, x))
+  }
+  s <- toupper(trimws(as.character(x)))
+  permissible <- s %in% c("N", "NO", "FALSE", "0")
+  !permissible
+}

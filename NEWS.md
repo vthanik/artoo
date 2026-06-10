@@ -55,6 +55,20 @@
 * `check_spec()` codelist membership now treats an `NA` in a mandatory
   variable as a violation (and a non-mandatory `NA` as conforming), sharing
   one membership implementation with `validate_spec()`.
+* `check_spec()` gained four submission-readiness data checks, all on by
+  default: `char_length_limit` (a character value over the 200-byte SAS XPORT
+  v5 / FDA cap), `key_uniqueness` (the spec key variables do not uniquely
+  identify the rows), `label_match` (a column label that diverges from the
+  spec), and `missing_permissible` (a missing non-mandatory variable, a
+  warning, split out from the mandatory `missing_variable` error).
+* `vport_checks()` gained the four matching toggles
+  (`char_length_limit`, `key_uniqueness`, `label_match`,
+  `missing_permissible`); each defaults to `TRUE`.
+* `validate_spec()` gained four submission-readiness spec checks:
+  `variable_name_length` (a name over 8 characters), `variable_label_length`
+  (a label over 40 bytes), and, in whole-spec mode, `cross_dataset_label` and
+  `cross_dataset_type` (a variable shared across datasets with inconsistent
+  labels or data types).
 * `as.data.frame()` on a `vport_check` returns its findings data frame.
 * `read_json()` and `write_json()` read and write CDISC Dataset-JSON v1.1
   files through the `vport_meta` spine, with byte-stable output (injectable

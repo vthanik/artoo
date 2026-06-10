@@ -418,6 +418,94 @@
     "engine": "data"
   },
   {
+    "id": "char_length_limit",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A character value exceeds the SAS XPORT v5 / FDA 200-byte limit.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "key_uniqueness",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "The spec-declared key variables do not uniquely identify the data rows.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "label_match",
+    "dimension": "variable",
+    "severity": "note",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A column's label attribute differs from the spec label.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "missing_permissible",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A permissible (non-mandatory) spec variable is absent from the data.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "variable_name_length",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable name exceeds the SAS XPORT v5 8-character limit.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "variable_label_length",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable label exceeds the SAS XPORT v5 / FDA 40-byte limit.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "cross_dataset_label",
+    "dimension": "variable",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A variable shared across datasets carries inconsistent labels.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "cross_dataset_type",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A variable shared across datasets carries inconsistent data types.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
     "id": "arm_result_metadata",
     "dimension": "arm",
     "severity": "error",
@@ -448,17 +536,6 @@
     "status": "deferred",
     "description": "A coded term has no decoded value.",
     "reason": "cannot distinguish enumerated value lists (no decode expected) from coded terms",
-    "engine": "spec"
-  },
-  {
-    "id": "data_composite_key_unique",
-    "dimension": "dataset",
-    "severity": "error",
-    "requires_data": true,
-    "scope": "scoped",
-    "status": "deferred",
-    "description": "No duplicate rows for the spec-declared composite key in data.",
-    "reason": "in-data conformance beyond CT membership",
     "engine": "spec"
   }
 ]

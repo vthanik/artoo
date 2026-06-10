@@ -450,6 +450,96 @@
   )
 }
 
+# Hard SAS XPORT v5 limit: a variable name may not exceed 8 characters.
+#' @noRd
+.chk_variable_name_length <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("variable" %in% names(v))) {
+    return(.empty_findings())
+  }
+  bad <- !is.na(v$variable) & nchar(v$variable) > 8L
+  .finding(
+    "variable_name_length",
+    v$dataset[bad],
+    v$variable[bad],
+    sprintf(
+      "Variable %s.%s name is %d characters, over the 8-character XPORT v5 limit.",
+      v$dataset[bad],
+      v$variable[bad],
+      nchar(v$variable[bad])
+    )
+  )
+}
+
+# Hard SAS XPORT v5 / FDA limit: a variable label may not exceed 40 bytes. A
+# blank label has nchar 0 and never fires (variable_label_present covers it).
+#' @noRd
+.chk_variable_label_length <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("label" %in% names(v))) {
+    return(.empty_findings())
+  }
+  bad <- !is.na(v$label) & nchar(v$label, type = "bytes") > 40L
+  .finding(
+    "variable_label_length",
+    v$dataset[bad],
+    v$variable[bad],
+    sprintf(
+      "Variable %s.%s label is %d bytes, over the 40-byte XPORT v5 limit.",
+      v$dataset[bad],
+      v$variable[bad],
+      nchar(v$label[bad], type = "bytes")
+    )
+  )
+}
+
+# Cross-dataset consistency (whole-spec only): a variable shared by more than
+# one dataset should carry the same label and data type everywhere. One finding
+# per shared variable per dimension, keyed to the variable (dataset = NA).
+#' @noRd
+.chk_cross_dataset <- function(sc) {
+  v <- sc$variables
+  need <- c("variable", "dataset", "label", "data_type")
+  if (!nrow(v) || !all(need %in% names(v))) {
+    return(.empty_findings())
+  }
+  shared <- unique(v$variable[!is.na(v$variable) & duplicated(v$variable)])
+  parts <- list()
+  for (nm in shared) {
+    rows <- v[!is.na(v$variable) & v$variable == nm, , drop = FALSE]
+    dss <- paste(rows$dataset, collapse = ", ")
+    labs <- unique(rows$label[!.blank(rows$label)])
+    if (length(labs) > 1L) {
+      parts[[length(parts) + 1L]] <- .finding(
+        "cross_dataset_label",
+        NA_character_,
+        nm,
+        sprintf(
+          "Variable '%s' has inconsistent labels across %s: %s.",
+          nm,
+          dss,
+          paste(labs, collapse = " | ")
+        )
+      )
+    }
+    types <- unique(rows$data_type[!.blank(rows$data_type)])
+    if (length(types) > 1L) {
+      parts[[length(parts) + 1L]] <- .finding(
+        "cross_dataset_type",
+        NA_character_,
+        nm,
+        sprintf(
+          "Variable '%s' has inconsistent data types across %s: %s.",
+          nm,
+          dss,
+          paste(types, collapse = " | ")
+        )
+      )
+    }
+  }
+  .bind_findings(parts)
+}
+
 # Value-level rows live in the passthrough `values` slot; every check is
 # guarded on the column being present.
 #' @noRd
@@ -686,6 +776,8 @@
     .chk_variable_sigdigits(sc),
     .chk_variable_order(sc),
     .chk_variable_length_for_text(sc),
+    .chk_variable_name_length(sc),
+    .chk_variable_label_length(sc),
     .chk_variable_method_resolves(sc),
     .chk_variable_comment_resolves(sc),
     .chk_variable_derived_has_method(sc),
@@ -755,11 +847,12 @@
       "document_id_unique"
     )
   )
-  # Unreferenced checks only make sense across the whole spec.
+  # Cross-dataset and unreferenced checks only make sense across the whole spec.
   if (isTRUE(sc$whole)) {
     parts <- c(
       parts,
       list(
+        .chk_cross_dataset(sc),
         .chk_unused(
           sc$methods_all,
           "method_id",
@@ -800,6 +893,10 @@
     "variable_sigdigits_nonneg",
     "variable_order_positive",
     "variable_length_for_text",
+    "variable_name_length",
+    "variable_label_length",
+    "cross_dataset_label",
+    "cross_dataset_type",
     "variable_method_resolves",
     "variable_comment_resolves",
     "variable_derived_has_method",

@@ -187,3 +187,204 @@ test_that("apply_spec threads decode so a clean decode does not warn (1d)", {
     apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", on_error = "warn")
   )
 })
+
+# ---- Part A: submission-readiness data checks ------------------------------
+
+test_that("char_length_limit flags over-200-byte values independent of declared length", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "COMMENT",
+      data_type = "string",
+      length = 5000L, # declared length far above 201 -> length_overflow stays quiet
+      stringsAsFactors = FALSE
+    )
+  )
+  over <- check_spec(
+    data.frame(COMMENT = strrep("a", 201L), stringsAsFactors = FALSE),
+    spec,
+    "DM"
+  )
+  hit <- over[over$check == "char_length_limit", , drop = FALSE]
+  expect_identical(hit$variable, "COMMENT")
+  expect_identical(hit$severity, "warning")
+  expect_false(any(over$check == "length_overflow"))
+
+  # 200-byte boundary is clean.
+  ok <- check_spec(
+    data.frame(COMMENT = strrep("a", 200L), stringsAsFactors = FALSE),
+    spec,
+    "DM"
+  )
+  expect_false(any(ok$check == "char_length_limit"))
+
+  # all-NA column is inert (max of an empty byte set is 0).
+  na_only <- check_spec(
+    data.frame(COMMENT = NA_character_, stringsAsFactors = FALSE),
+    spec,
+    "DM"
+  )
+  expect_false(any(na_only$check == "char_length_limit"))
+
+  off <- check_spec(
+    data.frame(COMMENT = strrep("a", 201L), stringsAsFactors = FALSE),
+    spec,
+    "DM",
+    checks = vport_checks(char_length_limit = FALSE)
+  )
+  expect_false(any(off$check == "char_length_limit"))
+})
+
+test_that("key_uniqueness flags duplicate keys and short-circuits on a missing key", {
+  ds <- cdisc_datasets
+  ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
+  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  keys <- spec_keys(spec, "DM")
+  expect_true(length(keys) > 0L) # DM now declares keys
+
+  dup <- rbind(cdisc_dm, cdisc_dm[1L, , drop = FALSE])
+  f <- check_spec(dup, spec, "DM")
+  hit <- f[f$check == "key_uniqueness", , drop = FALSE]
+  expect_identical(nrow(hit), 1L)
+  expect_identical(hit$severity, "error")
+  expect_true(is.na(hit$variable))
+
+  # unique keys -> no finding.
+  expect_false(any(check_spec(cdisc_dm, spec, "DM")$check == "key_uniqueness"))
+
+  # 0-row frame is inert.
+  expect_false(any(
+    check_spec(cdisc_dm[0L, , drop = FALSE], spec, "DM")$check ==
+      "key_uniqueness"
+  ))
+
+  # a missing key column short-circuits (that is missing_variable's job).
+  no_key <- cdisc_dm[, setdiff(names(cdisc_dm), keys[1L]), drop = FALSE]
+  f_mk <- check_spec(no_key, spec, "DM")
+  expect_false(any(f_mk$check == "key_uniqueness"))
+
+  off <- check_spec(
+    dup,
+    spec,
+    "DM",
+    checks = vport_checks(key_uniqueness = FALSE)
+  )
+  expect_false(any(off$check == "key_uniqueness"))
+})
+
+test_that("label_match flags a column label that differs from the spec", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "AGE",
+      data_type = "integer",
+      label = "Age",
+      stringsAsFactors = FALSE
+    )
+  )
+  labelled <- function(lab) {
+    col <- 1:3
+    attr(col, "label") <- lab
+    d <- data.frame(AGE = 1:3)
+    d$AGE <- col
+    d
+  }
+
+  f <- check_spec(labelled("Years Old"), spec, "DM")
+  hit <- f[f$check == "label_match", , drop = FALSE]
+  expect_identical(hit$variable, "AGE")
+  expect_identical(hit$severity, "note")
+
+  # matching label -> clean.
+  expect_false(any(
+    check_spec(labelled("Age"), spec, "DM")$check == "label_match"
+  ))
+
+  # no label attr on the column -> skip (raw frame).
+  expect_false(any(
+    check_spec(data.frame(AGE = 1:3), spec, "DM")$check == "label_match"
+  ))
+
+  # blank spec label -> skip.
+  spec_blank <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "AGE",
+      data_type = "integer",
+      label = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_false(any(
+    check_spec(labelled("Years Old"), spec_blank, "DM")$check == "label_match"
+  ))
+
+  off <- check_spec(
+    labelled("Years Old"),
+    spec,
+    "DM",
+    checks = vport_checks(label_match = FALSE)
+  )
+  expect_false(any(off$check == "label_match"))
+})
+
+test_that("missing_permissible splits missing variables by the mandatory flag", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("USUBJID", "COMMENT"),
+      data_type = c("string", "string"),
+      mandatory = c(TRUE, FALSE),
+      stringsAsFactors = FALSE
+    )
+  )
+  f <- check_spec(data.frame(AGE = 1:2), spec, "DM")
+  mv <- f[f$check == "missing_variable", , drop = FALSE]
+  mp <- f[f$check == "missing_permissible", , drop = FALSE]
+  expect_identical(mv$variable, "USUBJID")
+  expect_identical(mv$severity, "error")
+  expect_identical(mp$variable, "COMMENT")
+  expect_identical(mp$severity, "warning")
+
+  # NA mandatory -> conservatively mandatory (error bucket).
+  spec_na <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "XX",
+      data_type = "string",
+      mandatory = NA,
+      stringsAsFactors = FALSE
+    )
+  )
+  fna <- check_spec(data.frame(AGE = 1:2), spec_na, "DM")
+  expect_true(any(fna$check == "missing_variable" & fna$variable == "XX"))
+  expect_false(any(fna$check == "missing_permissible"))
+
+  # the two buckets toggle independently.
+  off_mv <- check_spec(
+    data.frame(AGE = 1:2),
+    spec,
+    "DM",
+    checks = vport_checks(missing_variable = FALSE)
+  )
+  expect_false(any(off_mv$check == "missing_variable"))
+  expect_true(any(off_mv$check == "missing_permissible"))
+})
+
+test_that(".is_mandatory classifies logical and character flags, NA as mandatory", {
+  expect_identical(
+    vport:::.is_mandatory(c(TRUE, FALSE, NA)),
+    c(TRUE, FALSE, TRUE)
+  )
+  expect_identical(
+    vport:::.is_mandatory(c("Y", "N", "Yes", "No", NA)),
+    c(TRUE, FALSE, TRUE, FALSE, TRUE)
+  )
+  expect_identical(vport:::.is_mandatory(character(0)), logical(0))
+  expect_identical(vport:::.is_mandatory(logical(0)), logical(0))
+})

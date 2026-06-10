@@ -6,16 +6,23 @@
 \usage{
 vport_checks(
   missing_variable = TRUE,
+  missing_permissible = TRUE,
   extra_variable = TRUE,
   type_mismatch = TRUE,
   length_overflow = TRUE,
+  char_length_limit = TRUE,
   codelist_membership = TRUE,
+  label_match = TRUE,
+  key_uniqueness = TRUE,
   display_format = TRUE
 )
 }
 \arguments{
-\item{missing_variable}{\emph{Flag spec variables absent from the data.}
-\verb{<logical(1)>: default TRUE}.}
+\item{missing_variable}{\emph{Flag mandatory spec variables absent from the
+data.} \verb{<logical(1)>: default TRUE}.}
+
+\item{missing_permissible}{\emph{Flag permissible (non-mandatory) spec variables
+absent from the data.} \verb{<logical(1)>: default TRUE}.}
 
 \item{extra_variable}{\emph{Flag data columns the spec does not declare.}
 \verb{<logical(1)>: default TRUE}.}
@@ -26,8 +33,17 @@ dataType.} \verb{<logical(1)>: default TRUE}.}
 \item{length_overflow}{\emph{Flag character values longer than the spec length.}
 \verb{<logical(1)>: default TRUE}.}
 
+\item{char_length_limit}{\emph{Flag character values longer than the SAS XPORT
+v5 / FDA 200-byte limit.} \verb{<logical(1)>: default TRUE}.}
+
 \item{codelist_membership}{\emph{Flag values outside their codelist.}
 \verb{<logical(1)>: default TRUE}.}
+
+\item{label_match}{\emph{Flag a column whose label attribute differs from the
+spec label.} \verb{<logical(1)>: default TRUE}.}
+
+\item{key_uniqueness}{\emph{Flag a dataset whose spec key variables do not
+uniquely identify its rows.} \verb{<logical(1)>: default TRUE}.}
 
 \item{display_format}{\emph{Flag a date/datetime/time variable whose
 displayFormat is not a recognized SAS format of that family.}
@@ -53,7 +69,7 @@ findings frame stays clean.
 \examples{
 # ---- Example 1: the default runs every conformance dimension ----
 #
-# With no arguments, all six conformance dimensions are enabled.
+# With no arguments, every conformance dimension is enabled.
 vport_checks()
 
 # ---- Example 2: silence one dimension for a whole study ----

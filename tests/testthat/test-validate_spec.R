@@ -558,3 +558,101 @@ test_that("vport_check rejects findings missing a column or with a bad severity 
   bad_sev[1, ] <- list("x", "study", "fatal", NA, NA, "m")
   expect_error(vport:::vport_check_class(findings = bad_sev))
 })
+
+# ---- Part A: submission-readiness spec checks ------------------------------
+
+test_that("variable_name_length flags a 9-char name but not an 8-char name", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("EXACTLY8", "NINECHAR9"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  chk <- validate_spec(spec, dataset = "DM")
+  hit <- chk@findings[
+    chk@findings$check == "variable_name_length",
+    ,
+    drop = FALSE
+  ]
+  expect_identical(hit$variable, "NINECHAR9")
+  expect_identical(hit$severity, "warning")
+})
+
+test_that("variable_label_length flags over-40-byte labels, ignores blanks and the boundary", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("A", "B"),
+      data_type = "string",
+      label = c(strrep("x", 41L), NA_character_),
+      stringsAsFactors = FALSE
+    )
+  )
+  ll <- validate_spec(spec, dataset = "DM")@findings
+  hit <- ll[ll$check == "variable_label_length", , drop = FALSE]
+  expect_identical(hit$variable, "A")
+  expect_identical(hit$severity, "warning")
+
+  # 40-byte boundary is clean.
+  spec40 <- vport_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "A",
+      data_type = "string",
+      label = strrep("x", 40L),
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_false(any(
+    validate_spec(spec40, dataset = "DM")@findings$check ==
+      "variable_label_length"
+  ))
+})
+
+test_that("cross_dataset checks fire in whole mode and not in scoped mode", {
+  spec <- vport_spec(
+    data.frame(dataset = c("DM", "ADSL")),
+    data.frame(
+      dataset = c("DM", "ADSL"),
+      variable = c("AGE", "AGE"),
+      data_type = c("integer", "string"),
+      label = c("Age", "Age in Years"),
+      stringsAsFactors = FALSE
+    )
+  )
+  whole <- validate_spec(spec)@findings
+  expect_identical(sum(whole$check == "cross_dataset_label"), 1L)
+  expect_identical(sum(whole$check == "cross_dataset_type"), 1L)
+  cl <- whole[whole$check == "cross_dataset_label", , drop = FALSE]
+  expect_identical(cl$variable, "AGE")
+  expect_identical(cl$severity, "note")
+  expect_true(is.na(cl$dataset))
+  ct <- whole[whole$check == "cross_dataset_type", , drop = FALSE]
+  expect_identical(ct$severity, "warning")
+
+  # scoped to one dataset: cross-dataset checks do not run.
+  scoped <- validate_spec(spec, dataset = "DM")@findings
+  expect_false(any(scoped$check == "cross_dataset_label"))
+  expect_false(any(scoped$check == "cross_dataset_type"))
+})
+
+test_that("cross_dataset is silent when a shared variable is consistent", {
+  spec <- vport_spec(
+    data.frame(dataset = c("DM", "ADSL")),
+    data.frame(
+      dataset = c("DM", "ADSL"),
+      variable = c("AGE", "AGE"),
+      data_type = c("integer", "integer"),
+      label = c("Age", "Age"),
+      stringsAsFactors = FALSE
+    )
+  )
+  whole <- validate_spec(spec)@findings
+  expect_false(any(whole$check == "cross_dataset_label"))
+  expect_false(any(whole$check == "cross_dataset_type"))
+})
