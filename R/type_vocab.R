@@ -116,17 +116,24 @@
 
 #' Coerce a vector to the storage of a CDISC dataType
 #'
-#' Returns a list with `value` (the coerced vector) and `n_na_introduced`
-#' (count of values that became NA but were not NA before) so callers can
-#' warn on lossy coercion.
+#' Returns a list with `value` (the coerced vector), `n_na_introduced`
+#' (count of values that became NA but were not NA before), and `n_lossy`
+#' (count of fractional values truncated by an integer coercion) so callers
+#' can warn on lossy coercion.
 #' @noRd
 .coerce_to_type <- function(x, data_type) {
   mode <- .type_storage(data_type)
   before_na <- is.na(x)
   value <- .coerce_mode(x, mode)
   after_na <- is.na(value)
+  n_lossy <- 0L
+  if (mode == "integer") {
+    xn <- suppressWarnings(as.numeric(x))
+    n_lossy <- sum(!is.na(xn) & !after_na & xn != as.numeric(value))
+  }
   list(
     value = value,
-    n_na_introduced = sum(after_na & !before_na)
+    n_na_introduced = sum(after_na & !before_na),
+    n_lossy = n_lossy
   )
 }

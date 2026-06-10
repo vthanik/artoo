@@ -111,3 +111,24 @@ test_that("arithmetic returns vport_time; unary minus negates", {
 test_that("sum returns the total seconds (not a clock time)", {
   expect_identical(sum(vport_time(c(10, 20, 30))), 60)
 })
+
+# ---- review 2026-06: S3 dispatch must work outside the namespace ------------
+
+test_that("the namespace holds no local print/format bindings (review B1)", {
+  # S7::method(print, ...)<- on a base generic creates a local `print` binding
+  # in the package namespace, which hijacks S3 registration of every plain
+  # *.vport_time method: registerS3methods then registers them into vport's
+  # own methods table instead of base's, and user-facing dispatch dies.
+  ns <- asNamespace("vport")
+  expect_false(exists("print", envir = ns, inherits = FALSE))
+  expect_false(exists("format", envir = ns, inherits = FALSE))
+})
+
+test_that("format/print dispatch for vport_time from outside the namespace (review B1)", {
+  # In-namespace tests find format.vport_time lexically even when registration
+  # is broken; evaluate from an environment that does NOT chain into vport.
+  e <- new.env(parent = baseenv())
+  e$t <- vport_time(c(30600, NA))
+  expect_identical(eval(quote(format(t)), e), c("08:30:00", NA))
+  expect_output(eval(quote(print(t)), e), "<vport_time\\[2\\]>")
+})

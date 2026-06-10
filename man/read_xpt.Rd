@@ -4,13 +4,14 @@
 \alias{read_xpt}
 \title{Read a dataset from SAS XPORT}
 \usage{
-read_xpt(path, ...)
+read_xpt(path, encoding = NULL)
 }
 \arguments{
 \item{path}{\emph{Source \code{.xpt} path.} \verb{<character(1)>: required}.}
 
-\item{...}{\emph{Codec arguments} forwarded to the decoder, e.g. \code{encoding}
-\verb{<character(1)>} to force a source charset instead of auto-detecting.}
+\item{encoding}{\emph{Force a source charset.} \verb{<character(1)> | NULL}. \code{NULL}
+(default) auto-detects (UTF-8 when every character value and label is
+valid UTF-8, else Windows-1252). IANA and SAS names both work.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with

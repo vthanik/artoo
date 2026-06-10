@@ -10,8 +10,11 @@
 .vport_codecs <- new.env(parent = emptyenv())
 
 # Register a codec. `encode` and `decode` are the NAMES of the two contract
-# functions -- `encode(x, meta, path, ...) -> invisible(path)` and
-# `decode(path, ...) -> list(data, meta)` -- resolved with match.fun() at
+# functions -- `encode(x, meta, path, <codec args>, call) -> invisible(path)`
+# and `decode(path, <codec args>, call) -> list(data, meta)`. Codecs take NO
+# `...`: the dispatchers forward user arguments plus `call =` verbatim, so an
+# argument a codec does not declare is a loud "unused argument" error, and
+# `call` lands as the trailing formal. Resolved with match.fun() at
 # dispatch time (storing the names, not the closures, keeps covr's
 # instrumented bindings live and lets a codec be redefined). `extensions`
 # are lowercase, dot-free; `mode` is "rw" or "r".

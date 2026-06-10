@@ -182,9 +182,11 @@ apply_spec <- function(
     attr(out, "vport.conformance") <- findings
     errs <- findings[findings$severity == "error", , drop = FALSE]
     if (nrow(errs)) {
+      # Finding messages embed raw data values; escape so a "{" in the data
+      # renders literally instead of crashing cli interpolation.
       msg <- c(
         "Data does not conform to the spec for {.val {dataset}}.",
-        stats::setNames(errs$message, rep("x", nrow(errs)))
+        stats::setNames(.cli_escape(errs$message), rep("x", nrow(errs)))
       )
       if (check == "strict") {
         cli::cli_abort(msg, class = "vport_error_conformance", call = call)

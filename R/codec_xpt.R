@@ -136,9 +136,13 @@
       80L
     )
   }
-  rec4 <- .str_to_raw(
-    paste0(dt, strrep(" ", 16L), .pad_to(label, 40L), .pad_to("DATA", 8L)),
-    80L
+  # rec4 is assembled byte-wise: `label` arrives transcoded (target bytes) and
+  # boundary-truncated to <= 40 bytes, so character-counted padding would
+  # misalign every record after it for a multibyte label.
+  rec4 <- c(
+    charToRaw(paste0(dt, strrep(" ", 16L))),
+    .str_to_raw_bytes(label, 40L),
+    .str_to_raw("DATA", 8L)
   )
   c(rec1, rec2, rec3, rec4, rec5)
 }
@@ -154,7 +158,7 @@
     .int_to_pib2(r$length),
     .int_to_pib2(varnum),
     .str_to_raw(r$name, 8L),
-    .str_to_raw_bytes(r$label, 40L),
+    .str_to_raw_bytes(r$label_ns %||% r$label, 40L),
     .str_to_raw(r$format_name, 8L),
     .int_to_pib2(r$formatl),
     .int_to_pib2(r$formatd),
@@ -171,7 +175,7 @@
     c(
       buf,
       .str_to_raw(r$name, 32L),
-      .int_to_pib2(nchar(r$label)),
+      .int_to_pib2(length(charToRaw(r$label))),
       .int_to_pib2(nchar(r$format_name)),
       .int_to_pib2(0L),
       raw(14L)
@@ -331,14 +335,17 @@
     )
     vtype <- .xpt_vartype(dt)
     # Labels are metadata; transcode with "replace" so a stray glyph never
-    # aborts a write.
+    # aborts a write. The namestr field holds at most 40 bytes; truncate on a
+    # character boundary so a multibyte character is never split (the full
+    # label still rides the v8 LABELV8 extension).
     label_t <- .to_target(raw_label, target_enc, "replace", call)
+    label_ns <- .trunc_bytes_boundary(label_t, target_enc, 40L)
 
     if (vtype == 1L) {
       tag <- attr(col, "sas_missing", exact = TRUE)
       # The coercion-loss guard below reports failures with a precise message,
       # so suppress base R's generic "NAs introduced by coercion" warning.
-      num <- suppressWarnings(.deflate_temporal(col, dt))
+      num <- suppressWarnings(.deflate_temporal(col, dt, var = nm, call = call))
       # A blank/whitespace-only string in a character-backed numeric (decimal)
       # is an intended missing, not a coercion failure -> write SAS missing.
       blank <- is.character(col) & !is.na(col) & !nzchar(trimws(col))
@@ -431,6 +438,7 @@
     recs[[i]] <- list(
       name = out_name,
       label = label_t,
+      label_ns = label_ns,
       vartype = vtype,
       length = nlng,
       format_name = fmt$name,
@@ -451,7 +459,9 @@
   recs
 }
 
-# encode contract: (x, meta, path, ...) -> invisible(path).
+# encode contract: (x, meta, path, <codec args>, call) -> invisible(path).
+# No `...`: an unknown argument forwarded by write_dataset() is a loud
+# "unused argument" error, never silently swallowed.
 #' @noRd
 .encode_xpt <- function(
   x,
@@ -460,10 +470,10 @@
   version = 5L,
   encoding = NULL,
   on_invalid = "error",
-  created = Sys.time(),
-  call = rlang::caller_env(),
-  ...
+  created = NULL,
+  call = rlang::caller_env()
 ) {
+  created <- created %||% Sys.time()
   version <- as.integer(version)
   if (!version %in% c(5L, 8L)) {
     cli::cli_abort(
@@ -491,6 +501,33 @@
   } else {
     substr(ds_name, 1L, 32L)
   }
+  # SAS member names are ASCII letters/digits/underscore; anything else would
+  # be packed by character count and corrupt the 80-byte header framing.
+  if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", ds_name)) {
+    cli::cli_abort(
+      c(
+        "Dataset name {.val {ds_name}} is not valid for xpt.",
+        "i" = "Member names are ASCII letters, digits, or underscore, not starting with a digit."
+      ),
+      class = "vport_error_codec",
+      call = call
+    )
+  }
+  # The dataset label is metadata: transcode with "replace" (a stray glyph
+  # never aborts a write), then truncate to the 40-byte field on a character
+  # boundary. Unlike variable labels, v8 has no long-label extension for it.
+  ds_label <- .to_target(ds_label, target_enc, "replace", call)
+  ds_label40 <- .trunc_bytes_boundary(ds_label, target_enc, 40L)
+  if (!identical(ds_label40, ds_label)) {
+    cli::cli_warn(
+      c(
+        "Truncated the dataset label to 40 bytes for xpt.",
+        "i" = "XPORT stores at most 40 bytes of dataset label."
+      ),
+      class = "vport_warning_encoding"
+    )
+  }
+  ds_label <- ds_label40
 
   recs <- .xpt_encode_columns(x, meta, target_enc, on_invalid, version, call)
   nvars <- length(recs)
@@ -834,13 +871,12 @@
   .drop_null(col)
 }
 
-# decode contract: (path, ...) -> list(data, meta).
+# decode contract: (path, <codec args>, call) -> list(data, meta).
 #' @noRd
 .decode_xpt <- function(
   path,
   encoding = NULL,
-  call = rlang::caller_env(),
-  ...
+  call = rlang::caller_env()
 ) {
   con <- file(path, "rb")
   on.exit(close(con), add = TRUE)
@@ -869,15 +905,24 @@
   cols <- .xpt_read_obs(con, namestrs, nobs, obs_length, call)
 
   char_idx <- which(vapply(namestrs, function(ns) ns$vartype == 2L, logical(1)))
+  # Header text (dataset label, variable labels) is byte-passthrough until
+  # here; it joins the detection scan -- labels can be the only non-ASCII
+  # content in a file -- and is transcoded below like the data columns.
+  hdr_text <- c(
+    mem$label,
+    vapply(namestrs, function(ns) ns$label, character(1))
+  )
   resolved_enc <- if (!is.null(encoding)) {
     encoding
   } else {
-    valid <- TRUE
-    for (j in char_idx) {
-      v <- cols[[j]]
-      if (length(v) && any(!validUTF8(v))) {
-        valid <- FALSE
-        break
+    valid <- !any(!validUTF8(hdr_text))
+    if (valid) {
+      for (j in char_idx) {
+        v <- cols[[j]]
+        if (length(v) && any(!validUTF8(v))) {
+          valid <- FALSE
+          break
+        }
       }
     }
     if (valid) "UTF-8" else "WINDOWS-1252"
@@ -889,6 +934,10 @@
     v[blanks] <- NA_character_
     cols[[j]] <- v
   }
+  mem$label <- .to_internal(mem$label, resolved_enc)
+  for (j in seq_along(namestrs)) {
+    namestrs[[j]]$label <- .to_internal(namestrs[[j]]$label, resolved_enc)
+  }
 
   cols_meta <- vector("list", length(namestrs))
   for (j in seq_along(namestrs)) {
@@ -896,7 +945,13 @@
     dt <- .xpt_decode_datatype(ns)
     if (ns$vartype == 1L && dt %in% c("date", "datetime", "time")) {
       disp <- .xpt_format_string(ns$format_name, ns$formatl, ns$formatd)
+      # Realizing rebuilds the vector; carry the special-missing tags across
+      # so a second write does not degrade .A-.Z/._ to plain missing.
+      tag <- attr(cols[[j]], "sas_missing", exact = TRUE)
       cols[[j]] <- .realize_temporal(cols[[j]], dt, disp)
+      if (!is.null(tag)) {
+        attr(cols[[j]], "sas_missing") <- tag
+      }
     }
     cols_meta[[j]] <- .meta_col_from_namestr(ns, mem$name, dt)
   }
@@ -945,18 +1000,19 @@
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `vport_meta`.
 #' @param path *Destination `.xpt` path.* `<character(1)>: required`.
-#' @param ... *Codec arguments* forwarded to the encoder:
+#' @param version *XPORT transport version.* `<integer(1)>: default 5`. `5`
+#'   (the FDA standard: names <= 8 characters, labels <= 40 bytes) or `8`
+#'   (names <= 32, long labels).
+#' @param encoding *Target charset.* `<character(1)> | NULL`. `NULL`
+#'   (default) inherits the source encoding recorded in `vport_meta`, else
+#'   UTF-8. IANA and SAS names (`"US-ASCII"`, `"wlatin1"`) both work.
+#' @param on_invalid *Policy for values not representable in `encoding`.*
+#'   `<character(1)>: default "error"`. One of `"error"`, `"replace"`
+#'   (substitute `?` and warn), or `"ignore"` (drop them).
+#' @param created *Header timestamp.* `<POSIXct(1)> | NULL`. `NULL` (default)
+#'   stamps the current time; freeze it for byte-stable output.
 #'
-#'   * `version` `<integer(1)>: default 5`. `5` (FDA standard, names <= 8
-#'     chars and labels <= 40) or `8` (names <= 32, long labels).
-#'   * `encoding` `<character(1)> | NULL`. Target charset; `NULL` (default)
-#'     inherits the source encoding recorded in `vport_meta`, else UTF-8.
-#'   * `on_invalid` `<character(1)>: default "error"`. Policy for values not
-#'     representable in `encoding`: `"error"`, `"replace"`, or `"ignore"`.
-#'   * `created` `<POSIXct(1)>`. Timestamp stamped in the header; freeze it for
-#'     byte-stable output.
-#'
-#' @return *The `path`*, invisibly.
+#' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -980,8 +1036,24 @@
 #' @seealso [read_xpt()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.
 #' @export
-write_xpt <- function(x, path, ...) {
-  write_dataset(x, path, format = "xpt", ...)
+write_xpt <- function(
+  x,
+  path,
+  version = 5,
+  encoding = NULL,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL
+) {
+  on_invalid <- match.arg(on_invalid)
+  write_dataset(
+    x,
+    path,
+    format = "xpt",
+    version = version,
+    encoding = encoding,
+    on_invalid = on_invalid,
+    created = created
+  )
 }
 
 #' Read a dataset from SAS XPORT
@@ -1000,8 +1072,9 @@ write_xpt <- function(x, path, ...) {
 #' heuristic. See [write_xpt()] for what XPORT can and cannot preserve.
 #'
 #' @param path *Source `.xpt` path.* `<character(1)>: required`.
-#' @param ... *Codec arguments* forwarded to the decoder, e.g. `encoding`
-#'   `<character(1)>` to force a source charset instead of auto-detecting.
+#' @param encoding *Force a source charset.* `<character(1)> | NULL`. `NULL`
+#'   (default) auto-detects (UTF-8 when every character value and label is
+#'   valid UTF-8, else Windows-1252). IANA and SAS names both work.
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` (read it with
 #'   [get_meta()]).
@@ -1026,8 +1099,8 @@ write_xpt <- function(x, path, ...) {
 #' @seealso [write_xpt()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_xpt <- function(path, ...) {
-  read_dataset(path, format = "xpt", ...)
+read_xpt <- function(path, encoding = NULL) {
+  read_dataset(path, format = "xpt", encoding = encoding)
 }
 
 .register_codec(

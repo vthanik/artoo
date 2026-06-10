@@ -196,3 +196,38 @@ test_that(".realize_temporal inverts the known SAS-epoch constants", {
     as.Date("1961-01-01")
   )
 })
+
+# ---- review 2026-06: deflate refuses inputs it would corrupt ----------------
+
+test_that(".deflate_temporal refuses character temporals (review B7)", {
+  # A year-only partial date ("2014") coerced fine via as.numeric() and was
+  # silently written as SAS day 2014 = 1965-07-07.
+  expect_error(
+    vport:::.deflate_temporal(c("2014", "2015"), "date", var = "ADT"),
+    class = "vport_error_codec"
+  )
+})
+
+test_that(".deflate_temporal refuses a class/dataType mismatch (review B7)", {
+  expect_error(
+    vport:::.deflate_temporal(
+      as.POSIXct("2014-01-02", tz = "UTC"),
+      "date",
+      var = "ADT"
+    ),
+    class = "vport_error_codec"
+  )
+  expect_error(
+    vport:::.deflate_temporal(as.Date("2014-01-02"), "datetime", var = "ADTM"),
+    class = "vport_error_codec"
+  )
+  expect_error(
+    vport:::.deflate_temporal(vport_time(30600), "date", var = "ADT"),
+    class = "vport_error_codec"
+  )
+})
+
+test_that(".deflate_temporal still passes through SAS-epoch numerics", {
+  expect_identical(vport:::.deflate_temporal(c(2014, NA), "date"), c(2014, NA))
+  expect_identical(vport:::.deflate_temporal(30600L, "time"), 30600)
+})

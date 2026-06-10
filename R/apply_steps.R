@@ -67,11 +67,13 @@
   x[keep]
 }
 
-# 3. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
+# 3. Coerce each column to its CDISC dataType storage; warn on NA-introduction
+# and on fractional values an integer coercion truncated.
 #' @noRd
 .coerce_types <- function(x, info, call = rlang::caller_env()) {
   vars <- info$vars
   introduced <- character(0)
+  truncated <- character(0)
   for (i in seq_len(nrow(vars))) {
     v <- vars$variable[i]
     dt <- vars$data_type[i]
@@ -93,6 +95,9 @@
       x[[v]] <- res$value
       keep_off <- c("class", "levels", "names")
       n_na <- res$n_na_introduced
+      if (res$n_lossy > 0L) {
+        truncated <- c(truncated, sprintf("%s (%d)", v, res$n_lossy))
+      }
     }
     for (a in setdiff(names(old), keep_off)) {
       attr(x[[v]], a) <- old[[a]]
@@ -106,6 +111,17 @@
       c(
         "Coercion introduced NA in {length(introduced)} variable{?s}.",
         "i" = "{introduced}"
+      ),
+      class = "vport_warning_coercion",
+      call = call
+    )
+  }
+  if (length(truncated)) {
+    cli::cli_warn(
+      c(
+        "Integer coercion truncated fractional values in {length(truncated)} variable{?s}.",
+        "i" = "{truncated}",
+        "i" = "Use dataType {.val float} or {.val decimal} to keep fractions."
       ),
       class = "vport_warning_coercion",
       call = call

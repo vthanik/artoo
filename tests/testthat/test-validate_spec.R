@@ -506,3 +506,16 @@ test_that("a zero-variable scoped dataset does not crash (H15)", {
   chk <- expect_no_error(validate_spec(spec, dataset = "AE"))
   expect_identical(chk@scope, "AE")
 })
+
+test_that("a brace in spec content cannot break the strict gate (review B5)", {
+  # Finding messages embed spec values; a "{" must render literally, not be
+  # parsed as cli interpolation (which crashed with a raw glue error and lost
+  # both the report and the documented error class).
+  ds <- cdisc_datasets
+  ds$keys[ds$dataset == "DM"] <- "NOT{AVAR"
+  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  expect_error(
+    validate_spec(spec, dataset = "DM", strict = TRUE),
+    class = "vport_error_validation"
+  )
+})

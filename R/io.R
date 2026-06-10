@@ -60,9 +60,13 @@
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
 #'   [check_formats()]).
-#' @param ... *Codec-specific arguments* passed through to the encoder.
+#' @param ... *Codec-specific arguments* passed through to the encoder (see
+#'   the per-format wrappers, e.g. [write_xpt()], for what each codec
+#'   accepts). An argument the codec does not know is an error, never
+#'   silently ignored.
 #'
-#' @return *The `path`*, invisibly. Called for the side effect of writing.
+#' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
+#'   Called for the side effect of writing `path`.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -110,7 +114,11 @@ write_dataset <- function(x, path, format = NULL, ...) {
     )
   }
   encode <- .codec_fn(codec$encode)
-  encode(x, .maybe_meta(x), path, ...)
+  # `call` is passed explicitly so codec errors attribute to the function the
+  # user actually called (write_xpt, not write_dataset), and so a user-
+  # supplied `call =` in `...` is a loud duplicate-argument error.
+  encode(x, .maybe_meta(x), path, ..., call = call)
+  invisible(x)
 }
 
 #' Read a dataset from any supported format
@@ -126,10 +134,13 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
 #'   [check_formats()]).
-#' @param ... *Codec-specific arguments* passed through to the decoder.
+#' @param ... *Codec-specific arguments* passed through to the decoder (see
+#'   the per-format wrappers, e.g. [read_xpt()]). An argument the codec does
+#'   not know is an error, never silently ignored.
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
-#'   (read it with [get_meta()]).
+#'   (read it with [get_meta()]). A file whose payload is not a data frame is
+#'   a `vport_error_codec`.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -167,7 +178,19 @@ read_dataset <- function(path, format = NULL, ...) {
   fmt <- .resolve_format(path, format, call)
   codec <- .resolve_codec(fmt, call)
   decode <- .codec_fn(codec$decode)
-  res <- decode(path, ...)
+  res <- decode(path, ..., call = call)
+  # Self-describing containers (rds) can hold anything; the read_* contract
+  # promises a data frame, so refuse other payloads loudly.
+  if (!is.data.frame(res$data)) {
+    msg <- c(
+      "{.path {path}} does not contain a dataset.",
+      "x" = "The {.val {fmt}} payload is {.obj_type_friendly {res$data}}, not a data frame."
+    )
+    if (identical(fmt, "rds")) {
+      msg <- c(msg, "i" = "Use {.fn readRDS} for arbitrary R objects.")
+    }
+    cli::cli_abort(msg, class = "vport_error_codec", call = call)
+  }
   if (is_vport_meta(res$meta)) {
     set_meta(res$data, res$meta)
   } else {

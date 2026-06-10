@@ -4,17 +4,15 @@
 \alias{write_rds}
 \title{Write a dataset to rds}
 \usage{
-write_rds(x, path, ...)
+write_rds(x, path)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}.}
 
 \item{path}{\emph{Destination \code{.rds} path.} \verb{<character(1)>: required}.}
-
-\item{...}{\emph{Reserved for codec arguments.} Currently unused.}
 }
 \value{
-\emph{The \code{path}}, invisibly.
+\emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.
 }
 \description{
 Write a data frame to an R \code{.rds} file, preserving its \code{vport_meta}. A thin

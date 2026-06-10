@@ -113,13 +113,22 @@
   )
 }
 
-# ---- S7 print / format (dispatch only in an installed build) ------------
+# ---- print / format ---------------------------------------------------------
+#
+# Plain S3 methods on the qualified S7 class name ("vport::vport_check" is the
+# first entry of class()). NOT S7::method(print, ...)<-: that creates local
+# `print`/`format` bindings in the namespace, which hijack the S3 registration
+# of every plain *.vport_time method at load time (registerS3methods resolves
+# the generic in the package namespace and registers into the local stub's
+# methods table instead of base's), killing user-facing dispatch.
 
-S7::method(print, vport_check_class) <- function(x, ...) {
+#' @exportS3Method print vport::vport_check
+`print.vport::vport_check` <- function(x, ...) {
   cat(.format_check(x), sep = "\n")
   invisible(x)
 }
 
-S7::method(format, vport_check_class) <- function(x, ...) {
+#' @exportS3Method format vport::vport_check
+`format.vport::vport_check` <- function(x, ...) {
   .format_check(x)
 }

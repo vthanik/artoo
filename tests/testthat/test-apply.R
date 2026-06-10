@@ -145,3 +145,30 @@ test_that("apply_spec check = strict aborts on an error finding", {
     class = "vport_error_conformance"
   )
 })
+
+# ---- review 2026-06: strict-gate injection + lossy coercion -----------------
+
+test_that("a brace in a data value cannot break the strict gate (review B5)", {
+  # check_spec findings embed raw data values; a "{" must render literally in
+  # the abort, not be parsed as cli interpolation (which crashed with a raw
+  # glue error and lost the conformance report and error class).
+  spec <- demo_spec()
+  raw <- cdisc_dm
+  raw$SEX[1] <- "Z{oops"
+  expect_error(
+    apply_spec(raw, spec, "DM", check = "strict"),
+    class = "vport_error_conformance"
+  )
+})
+
+test_that("coercion warns when an integer dataType truncates fractions (review B6)", {
+  vars <- cdisc_variables
+  vars$data_type[vars$dataset == "DM" & vars$variable == "AGE"] <- "integer"
+  spec <- vport_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$AGE[1] <- raw$AGE[1] + 0.7
+  expect_warning(
+    apply_spec(raw, spec, "DM", check = "off"),
+    class = "vport_warning_coercion"
+  )
+})

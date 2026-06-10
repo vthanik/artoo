@@ -1,23 +1,28 @@
 # utils.R -- small base-R helpers shared across the package.
 # `%||%` is imported from rlang (see vport-package.R); do not redefine.
 
-# Coerce a vector to a target storage mode, preserving NA. Returns the
-# coerced vector, or signals via `ok = FALSE` when coercion would change
-# values (so callers can warn/abort).
+# Coerce a vector to a target storage mode, preserving NA. Returns the bare
+# coerced vector; lossy-coercion accounting (NA introduction, fractional
+# truncation) lives in .coerce_to_type().
 #' @noRd
 .coerce_mode <- function(x, mode) {
   switch(
     mode,
     character = as.character(x),
-    integer = {
-      out <- suppressWarnings(as.integer(x))
-      out
-    },
+    integer = suppressWarnings(as.integer(x)),
     numeric = ,
     double = suppressWarnings(as.numeric(x)),
     logical = .as_logical(x),
     x
   )
+}
+
+# Escape cli/glue interpolation braces in data-derived text (data values,
+# finding messages) so a literal "{" renders as-is instead of being parsed
+# as an inline-markup format string.
+#' @noRd
+.cli_escape <- function(x) {
+  gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
 }
 
 # Tolerant logical coercion: accepts TRUE/FALSE, "Y"/"N", "Yes"/"No",

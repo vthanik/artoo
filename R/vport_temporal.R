@@ -355,23 +355,62 @@
 
 # ---- deflate: R presentation class -> SAS-epoch numeric --------------------
 
-# Robust to an already-numeric input (pass through), so double-deflate and a
-# never-realized column both behave.
+# A temporal dataType accepts ONLY its presentation class or an
+# already-SAS-epoch bare numeric (double-deflate / never-realized column).
+# Anything else aborts: a character column would coerce a year-only partial
+# date ("2014") to SAS day 2014 = 1965-07-07, and a mismatched temporal class
+# (POSIXct under "date") would write seconds as days -- both silent garbage.
 #' @noRd
-.deflate_temporal <- function(col, data_type) {
+.deflate_temporal_abort <- function(col, data_type, expected, var, call) {
+  headline <- if (is.null(var)) {
+    "Cannot write this column as a SAS {data_type}."
+  } else {
+    "Cannot write column {.var {var}} as a SAS {data_type}."
+  }
+  cli::cli_abort(
+    c(
+      headline,
+      "x" = "It is {.obj_type_friendly {col}}; a {data_type} column must be {expected} or already a SAS-epoch numeric.",
+      "i" = "Character values, e.g. partial ISO dates, are not representable as SAS {data_type} numerics; use dataType {.val string} or complete the values."
+    ),
+    class = "vport_error_codec",
+    call = call
+  )
+}
+
+#' @noRd
+.deflate_temporal <- function(
+  col,
+  data_type,
+  var = NULL,
+  call = rlang::caller_env()
+) {
+  # is.numeric() is FALSE for Date/POSIXct (base S3 methods) but TRUE for
+  # vport_time's bare double, so exclude it explicitly from the passthrough.
+  bare_numeric <- is.numeric(col) && !is_vport_time(col)
   switch(
     data_type,
     date = if (inherits(col, "Date")) {
       as.numeric(col - .sas_epoch_date)
-    } else {
+    } else if (bare_numeric) {
       as.numeric(col)
+    } else {
+      .deflate_temporal_abort(col, data_type, "a Date", var, call)
     },
     datetime = if (inherits(col, "POSIXct")) {
       as.numeric(col) - as.numeric(.sas_epoch_datetime)
-    } else {
+    } else if (bare_numeric) {
       as.numeric(col)
+    } else {
+      .deflate_temporal_abort(col, data_type, "a POSIXct", var, call)
     },
-    time = if (is_vport_time(col)) unclass(col) else as.numeric(col),
+    time = if (is_vport_time(col)) {
+      unclass(col)
+    } else if (bare_numeric) {
+      as.numeric(col)
+    } else {
+      .deflate_temporal_abort(col, data_type, "a vport_time", var, call)
+    },
     as.numeric(col)
   )
 }

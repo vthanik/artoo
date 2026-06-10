@@ -257,6 +257,29 @@
   rt
 }
 
+# Truncate an already-transcoded string to at most `width` bytes, backing off
+# to a character boundary in the target charset. Boundary validity is probed
+# by round-tripping the candidate bytes through iconv (this file owns every
+# iconv call): an NA means the cut split a multibyte character, so back off
+# one byte and retry. Single-byte charsets always cut clean on the first try.
+#' @noRd
+.trunc_bytes_boundary <- function(x, enc, width) {
+  b <- charToRaw(x)
+  if (length(b) <= width) {
+    return(x)
+  }
+  cs <- .resolve_charset(enc)
+  w <- width
+  while (w > 0L) {
+    cand <- rawToChar(b[seq_len(w)])
+    if (!is.na(iconv(cand, from = cs, to = "UTF-8"))) {
+      return(cand)
+    }
+    w <- w - 1L
+  }
+  ""
+}
+
 # FDA Study Data TCG prohibits bytes 160-191 in submission xpt. Runs on the
 # POST-transcode single-byte stream (so it neither false-fires on multibyte
 # UTF-8 nor misses real extended chars). Returns the integer positions of any

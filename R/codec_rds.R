@@ -7,9 +7,11 @@
 # other container. Writes are atomic (temp file + rename) so a crash mid-write
 # never leaves a truncated dataset.
 
-# encode contract: (x, meta, path, ...) -> invisible(path).
+# encode contract: (x, meta, path, <codec args>, call) -> invisible(path).
+# No `...`: an unknown argument forwarded by write_dataset() is a loud
+# "unused argument" error, never silently swallowed.
 #' @noRd
-.encode_rds <- function(x, meta, path, ...) {
+.encode_rds <- function(x, meta, path, call = rlang::caller_env()) {
   if (is_vport_meta(meta)) {
     x <- set_meta(x, meta)
   }
@@ -22,9 +24,9 @@
   invisible(path)
 }
 
-# decode contract: (path, ...) -> list(data, meta).
+# decode contract: (path, <codec args>, call) -> list(data, meta).
 #' @noRd
-.decode_rds <- function(path, ...) {
+.decode_rds <- function(path, call = rlang::caller_env()) {
   obj <- readRDS(path)
   meta <- if (is.character(attr(obj, "metadata_json", exact = TRUE))) {
     get_meta(obj)
@@ -43,9 +45,8 @@
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`.
 #' @param path *Destination `.rds` path.* `<character(1)>: required`.
-#' @param ... *Reserved for codec arguments.* Currently unused.
 #'
-#' @return *The `path`*, invisibly.
+#' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -66,8 +67,8 @@
 #' @seealso [read_rds()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.
 #' @export
-write_rds <- function(x, path, ...) {
-  write_dataset(x, path, format = "rds", ...)
+write_rds <- function(x, path) {
+  write_dataset(x, path, format = "rds")
 }
 
 #' Read a dataset from rds
@@ -77,9 +78,10 @@ write_rds <- function(x, path, ...) {
 #' restored. A thin wrapper over [read_dataset()] with `format = "rds"`.
 #'
 #' @param path *Source `.rds` path.* `<character(1)>: required`.
-#' @param ... *Reserved for codec arguments.* Currently unused.
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it.
+#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded
+#'   it. An rds holding anything other than a data frame is a
+#'   `vport_error_codec`; use `readRDS()` for arbitrary objects.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -103,8 +105,8 @@ write_rds <- function(x, path, ...) {
 #' @seealso [write_rds()] for the inverse; [read_dataset()] for the generic
 #'   dispatcher.
 #' @export
-read_rds <- function(path, ...) {
-  read_dataset(path, format = "rds", ...)
+read_rds <- function(path) {
+  read_dataset(path, format = "rds")
 }
 
 .register_codec(

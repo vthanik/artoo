@@ -71,14 +71,17 @@
   readBin(raw4, what = integer(), size = 4L, n = 1L, endian = "big")
 }
 
-# Raw header bytes to a trimmed ASCII string (drop NULs and trailing spaces).
+# Raw header bytes to a trimmed byte-passthrough string (drop NULs and
+# trailing spaces). useBytes keeps the trim byte-level: label fields may hold
+# any source-charset bytes (transcoded later, once the encoding is resolved),
+# and a character-level regex would error on non-UTF-8 input.
 #' @noRd
 .raw_to_str <- function(raw_vec) {
   raw_vec <- raw_vec[raw_vec != as.raw(0x00)]
   if (length(raw_vec) == 0L) {
     return("")
   }
-  sub(" +$", "", rawToChar(raw_vec))
+  sub(" +$", "", rawToChar(raw_vec), useBytes = TRUE)
 }
 
 # Vectorised raw matrix (var_len x nobs) -> character vector. With an
@@ -107,10 +110,36 @@
 }
 
 # Format a POSIXct as the 16-char SAS header datetime (ddMMMyy:hh:mm:ss, UTC).
-# `time` is required by callers that need byte-stable output.
+# `time` is required by callers that need byte-stable output. The month token
+# table is hardcoded: format(%b) follows LC_TIME, and a non-English locale
+# (e.g. "JANV.") would widen the field and shift every header field after it.
+.sas_month_tokens <- c(
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC"
+)
+
 #' @noRd
 .sas_datetime_str <- function(time) {
-  toupper(format(time, "%d%b%y:%H:%M:%S", tz = "UTC"))
+  lt <- as.POSIXlt(time, tz = "UTC")
+  sprintf(
+    "%02d%s%02d:%02d:%02d:%02d",
+    lt$mday,
+    .sas_month_tokens[lt$mon + 1L],
+    lt$year %% 100L,
+    lt$hour,
+    lt$min,
+    as.integer(lt$sec)
+  )
 }
 
 # Read exactly `n` bytes from a connection, or abort on a short read.

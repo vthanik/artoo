@@ -107,7 +107,9 @@ test_that("Date, POSIXct, and vport_time columns round-trip", {
   back <- read_xpt(p)
 
   expect_s3_class(back$DT, "Date")
-  expect_identical(unclass(back$DT), unclass(df$DT))
+  # Values identical; like every numeric column, a missing day reads back
+  # with a "." sas_missing tag (consistent with the special-missings test).
+  expect_identical(as.numeric(back$DT), as.numeric(df$DT))
   expect_s3_class(back$DTM, "POSIXct")
   expect_equal(as.numeric(back$DTM), as.numeric(df$DTM))
   expect_true(is_vport_time(back$TM))
@@ -587,4 +589,210 @@ test_that("an infinite numeric value aborts loudly (no silent missing)", {
   attr(df, "dataset_name") <- "T"
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_error(write_xpt(df, p), class = "vport_error_codec")
+})
+
+# ---- review 2026-06: header/label text through the encoding SSOT ------------
+
+test_that("a non-ASCII dataset label keeps 80-byte framing and round-trips", {
+  # Review BLOCKER: the member-header label was char-padded, not byte-padded,
+  # so a multibyte label misaligned every following record.
+  df <- data.frame(SUBJ = "A", N = 1, stringsAsFactors = FALSE)
+  ds <- vport:::.assemble_dataset_meta(
+    itemGroupOID = "IG.T",
+    name = "T",
+    label = "Étude de démographie"
+  )
+  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  expect_identical(file.info(p)$size %% 80, 0)
+  back <- read_xpt(p)
+  expect_identical(
+    get_meta(back)@dataset$label,
+    "Étude de démographie"
+  )
+})
+
+test_that("read_xpt survives windows-1252 variable labels (incl. its own output)", {
+  # Review BLOCKER: .raw_to_str regexed header bytes without useBytes, so any
+  # non-UTF-8 label byte crashed the reader with a raw base error.
+  df <- data.frame(SUBJ = "A", PAYS = "FR", stringsAsFactors = FALSE)
+  cols <- list(
+    PAYS = list(
+      itemOID = "IT.T.PAYS",
+      name = "PAYS",
+      dataType = "string",
+      label = "Pays de résidence"
+    )
+  )
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, encoding = "windows-1252", created = frozen)
+  back <- read_xpt(p)
+  expect_identical(
+    get_meta(back)@columns$PAYS$label,
+    "Pays de résidence"
+  )
+})
+
+test_that("v5 label truncation at 40 bytes backs off to a character boundary", {
+  # Review BLOCKER companion: a byte-40 chop split a multibyte character,
+  # leaving invalid UTF-8 on disk and an unreadable file.
+  df <- data.frame(SUBJ = "A", X = 1, stringsAsFactors = FALSE)
+  cols <- list(
+    X = list(
+      itemOID = "IT.T.X",
+      name = "X",
+      dataType = "float",
+      label = paste0(strrep("a", 39L), "étude") # byte 40 = lead byte of e-acute
+    )
+  )
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(df, p, created = frozen),
+    class = "vport_warning_encoding"
+  )
+  back <- read_xpt(p)
+  expect_identical(get_meta(back)@columns$X$label, strrep("a", 39L))
+})
+
+test_that("the header timestamp is locale-independent", {
+  # Review BLOCKER: format(%b) used LC_TIME, so a French locale wrote
+  # "JANV." (18-char datetime) and shifted every header field after it.
+  probe <- tryCatch(
+    withr::with_locale(c(LC_TIME = "fr_FR.UTF-8"), TRUE),
+    condition = function(c) FALSE
+  )
+  skip_if_not(probe, "fr_FR.UTF-8 locale not available")
+  df <- data.frame(SUBJ = "A", N = 1, stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p_c <- withr::local_tempfile(fileext = ".xpt")
+  p_fr <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p_c, created = frozen)
+  withr::with_locale(
+    c(LC_TIME = "fr_FR.UTF-8"),
+    write_xpt(df, p_fr, created = frozen)
+  )
+  expect_identical(
+    readBin(p_c, "raw", n = file.info(p_c)$size),
+    readBin(p_fr, "raw", n = file.info(p_fr)$size)
+  )
+})
+
+test_that("the v8 namestr label-length field counts bytes, not characters", {
+  # Review: a multibyte label wrote nchar() (chars) into the 2-byte length
+  # field, so third-party readers trusting it misread the label.
+  label <- "café™ étude" # 11 chars, 15 UTF-8 bytes
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  cols <- list(
+    SUBJ = list(
+      itemOID = "IT.T.SUBJ",
+      name = "SUBJ",
+      dataType = "string",
+      length = 1L,
+      label = label
+    )
+  )
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, version = 8, created = frozen)
+  bytes <- readBin(p, "raw", n = file.info(p)$size)
+  # 8 header records (3 library + 5 member) = 640 bytes; the v8 namestr holds
+  # the label-length field at offset 120 (after the 88-byte base + 32-byte
+  # long name).
+  label_len_field <- vport:::.pib2_to_int(bytes[(640L + 121L):(640L + 122L)])
+  expect_identical(label_len_field, length(charToRaw(label)))
+})
+
+test_that("a non-ASCII dataset name aborts instead of corrupting the header", {
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "ÉTUDE")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_error(write_xpt(df, p), class = "vport_error_codec")
+})
+
+test_that("a dataset label over 40 bytes truncates with a warning", {
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  ds <- vport:::.assemble_dataset_meta(
+    itemGroupOID = "IG.T",
+    name = "T",
+    label = strrep("L", 50L)
+  )
+  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(df, p, created = frozen),
+    class = "vport_warning_encoding"
+  )
+  back <- read_xpt(p)
+  expect_identical(get_meta(back)@dataset$label, strrep("L", 40L))
+})
+
+test_that("encoding detection considers labels, not just data values", {
+  # Data is pure ASCII but the label is windows-1252; detection must not
+  # default to UTF-8 and mis-decode the label.
+  df <- data.frame(SUBJ = "A", PAYS = "FR", stringsAsFactors = FALSE)
+  cols <- list(
+    PAYS = list(
+      itemOID = "IT.T.PAYS",
+      name = "PAYS",
+      dataType = "string",
+      label = "Résidence"
+    )
+  )
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, encoding = "windows-1252", created = frozen)
+  back <- read_xpt(p)
+  expect_identical(get_meta(back)@columns$PAYS$label, "Résidence")
+})
+
+test_that("a character-backed date column aborts on write, no garbage days (review B7)", {
+  # "2014" used to coerce via as.numeric() and silently write SAS day 2014
+  # (= 1965-07-07); the lost-coercion guard never saw it.
+  df <- data.frame(
+    SUBJ = c("A", "B"),
+    ADT = c("2014", "2015"),
+    stringsAsFactors = FALSE
+  )
+  cols <- list(
+    ADT = list(
+      itemOID = "IT.T.ADT",
+      name = "ADT",
+      dataType = "date",
+      displayFormat = "DATE9."
+    )
+  )
+  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  df <- set_meta(df, meta)
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_error(write_xpt(df, p), class = "vport_error_codec")
+})
+
+test_that("special-missing tags survive a temporal round-trip (review codec C3)", {
+  # .realize_temporal dropped the sas_missing attr on read, so a second write
+  # degraded .A to plain missing.
+  df <- data.frame(SUBJ = c("A", "B"), stringsAsFactors = FALSE)
+  df$ADT <- as.Date(c("2020-01-01", NA))
+  attr(df$ADT, "sas_missing") <- c(NA, ".A")
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p, created = frozen)
+  back <- read_xpt(p)
+  expect_s3_class(back$ADT, "Date")
+  expect_identical(attr(back$ADT, "sas_missing"), c(NA, ".A"))
 })

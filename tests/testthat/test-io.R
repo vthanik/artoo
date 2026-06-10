@@ -152,3 +152,52 @@ test_that("check_formats lists each codec with read/write availability", {
   expect_true(all(c("format", "read", "write") %in% names(cf)))
   expect_true("rds" %in% cf$format)
 })
+
+# ---- review 2026-06: dots hygiene, return convention, payload validation ----
+
+test_that("write_* returns the input data invisibly (review D1)", {
+  # readr/haven convention: a write sits mid-pipeline, so it hands back the
+  # data, not the path.
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  vis <- withVisible(write_xpt(df, p))
+  expect_false(vis$visible)
+  expect_identical(vis$value, df)
+
+  p2 <- withr::local_tempfile(fileext = ".rds")
+  vis2 <- withVisible(write_rds(cdisc_dm, p2))
+  expect_false(vis2$visible)
+  expect_identical(vis2$value, cdisc_dm)
+})
+
+test_that("a misspelled codec argument errors instead of being swallowed (review B8)", {
+  # write_xpt(verison = 8) used to silently write v5.
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_error(write_xpt(df, p, verison = 8), "unused argument")
+  write_xpt(df, p)
+  expect_error(read_xpt(p, encodng = "latin1"), "unused argument")
+  expect_error(write_rds(cdisc_dm, p, compress = "xz"), "unused argument")
+  expect_error(
+    write_dataset(df, p, format = "xpt", verison = 8),
+    "unused argument"
+  )
+})
+
+test_that("`call` cannot be smuggled through write_dataset dots (review B8)", {
+  df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  expect_error(write_dataset(df, p, format = "xpt", call = emptyenv()))
+})
+
+test_that("read_rds refuses a non-data-frame payload (review D2)", {
+  # The docs promise a data frame; an arbitrary serialized object must be a
+  # classed refusal, not a silent passthrough.
+  p <- withr::local_tempfile(fileext = ".rds")
+  saveRDS(list(a = 1), p)
+  expect_error(read_rds(p), class = "vport_error_codec")
+  expect_error(read_dataset(p), class = "vport_error_codec")
+})

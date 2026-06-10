@@ -17,10 +17,14 @@ extension selects the codec unless \code{format} is given.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
 \code{\link[=check_formats]{check_formats()}}).}
 
-\item{...}{\emph{Codec-specific arguments} passed through to the encoder.}
+\item{...}{\emph{Codec-specific arguments} passed through to the encoder (see
+the per-format wrappers, e.g. \code{\link[=write_xpt]{write_xpt()}}, for what each codec
+accepts). An argument the codec does not know is an error, never
+silently ignored.}
 }
 \value{
-\emph{The \code{path}}, invisibly. Called for the side effect of writing.
+\emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.
+Called for the side effect of writing \code{path}.
 }
 \description{
 Serialize a data frame to a clinical file format, preserving its

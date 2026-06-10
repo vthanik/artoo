@@ -75,3 +75,10 @@ test_that(".coerce_to_type does not flag pre-existing NA as introduced", {
   res <- vport:::.coerce_to_type(c("1", NA, "3"), "integer")
   expect_equal(res$n_na_introduced, 0L)
 })
+
+test_that(".coerce_to_type counts fractional values truncated to integer (review B6)", {
+  res <- vport:::.coerce_to_type(c(63.7, 2, NA), "integer")
+  expect_identical(res$value, c(63L, 2L, NA))
+  expect_identical(res$n_lossy, 1L)
+  expect_identical(res$n_na_introduced, 0L)
+})

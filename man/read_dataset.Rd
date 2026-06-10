@@ -14,11 +14,14 @@ selects the codec unless \code{format} is given.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
 \code{\link[=check_formats]{check_formats()}}).}
 
-\item{...}{\emph{Codec-specific arguments} passed through to the decoder.}
+\item{...}{\emph{Codec-specific arguments} passed through to the decoder (see
+the per-format wrappers, e.g. \code{\link[=read_xpt]{read_xpt()}}). An argument the codec does
+not know is an error, never silently ignored.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded it
-(read it with \code{\link[=get_meta]{get_meta()}}).
+(read it with \code{\link[=get_meta]{get_meta()}}). A file whose payload is not a data frame is
+a \code{vport_error_codec}.
 }
 \description{
 Read a clinical file back to a data frame, restoring its \code{vport_meta}. The

@@ -4,7 +4,14 @@
 \alias{write_xpt}
 \title{Write a dataset to SAS XPORT}
 \usage{
-write_xpt(x, path, ...)
+write_xpt(
+  x,
+  path,
+  version = 5,
+  encoding = NULL,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL
+)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
@@ -12,20 +19,23 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 
 \item{path}{\emph{Destination \code{.xpt} path.} \verb{<character(1)>: required}.}
 
-\item{...}{\emph{Codec arguments} forwarded to the encoder:
-\itemize{
-\item \code{version} \verb{<integer(1)>: default 5}. \code{5} (FDA standard, names <= 8
-chars and labels <= 40) or \code{8} (names <= 32, long labels).
-\item \code{encoding} \verb{<character(1)> | NULL}. Target charset; \code{NULL} (default)
-inherits the source encoding recorded in \code{vport_meta}, else UTF-8.
-\item \code{on_invalid} \verb{<character(1)>: default "error"}. Policy for values not
-representable in \code{encoding}: \code{"error"}, \code{"replace"}, or \code{"ignore"}.
-\item \code{created} \verb{<POSIXct(1)>}. Timestamp stamped in the header; freeze it for
-byte-stable output.
-}}
+\item{version}{\emph{XPORT transport version.} \verb{<integer(1)>: default 5}. \code{5}
+(the FDA standard: names <= 8 characters, labels <= 40 bytes) or \code{8}
+(names <= 32, long labels).}
+
+\item{encoding}{\emph{Target charset.} \verb{<character(1)> | NULL}. \code{NULL}
+(default) inherits the source encoding recorded in \code{vport_meta}, else
+UTF-8. IANA and SAS names (\code{"US-ASCII"}, \code{"wlatin1"}) both work.}
+
+\item{on_invalid}{\emph{Policy for values not representable in \code{encoding}.}
+\verb{<character(1)>: default "error"}. One of \code{"error"}, \code{"replace"}
+(substitute \verb{?} and warn), or \code{"ignore"} (drop them).}
+
+\item{created}{\emph{Header timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL} (default)
+stamps the current time; freeze it for byte-stable output.}
 }
 \value{
-\emph{The \code{path}}, invisibly.
+\emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.
 }
 \description{
 Serialize a data frame to a SAS Transport (\code{.xpt}) file in v5 (the FDA

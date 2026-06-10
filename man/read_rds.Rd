@@ -4,15 +4,15 @@
 \alias{read_rds}
 \title{Read a dataset from rds}
 \usage{
-read_rds(path, ...)
+read_rds(path)
 }
 \arguments{
 \item{path}{\emph{Source \code{.rds} path.} \verb{<character(1)>: required}.}
-
-\item{...}{\emph{Reserved for codec arguments.} Currently unused.}
 }
 \value{
-\emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded it.
+\emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded
+it. An rds holding anything other than a data frame is a
+\code{vport_error_codec}; use \code{readRDS()} for arbitrary objects.
 }
 \description{
 Read an R \code{.rds} file written by \code{\link[=write_rds]{write_rds()}} (or any rds carrying a

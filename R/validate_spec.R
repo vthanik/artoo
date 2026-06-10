@@ -1074,10 +1074,12 @@ validate_spec <- function(spec, data = NULL, dataset = NULL, strict = FALSE) {
     nerr <- sum(findings$severity == "error")
     if (nerr) {
       msgs <- utils::head(findings$message[findings$severity == "error"], 3L)
+      # Finding messages embed spec values; escape so a "{" renders literally
+      # instead of crashing cli interpolation.
       cli::cli_abort(
         c(
           "Spec is not submission-ready, {nerr} error-severity finding{?s}.",
-          stats::setNames(msgs, rep("x", length(msgs))),
+          stats::setNames(.cli_escape(msgs), rep("x", length(msgs))),
           "i" = "Inspect every finding in the returned vport_check."
         ),
         class = "vport_error_validation",
