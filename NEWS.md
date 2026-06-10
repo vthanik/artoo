@@ -53,6 +53,20 @@
 * `vport_time` and `vport_check` print/format methods now dispatch in
   installed builds; previously the data viewer and console showed raw
   seconds.
+* `vport_time` gained `[<-`/`[[<-` guards that reject a character right-hand
+  side (`vport_error_input`) instead of silently corrupting the column;
+  `c()` now accepts a bare `NA`; `unique()` and `mean()` keep the class; and
+  `%%`/`%/%` preserve it so a day-wrap (`t %% 86400`) stays a clock time.
+* `vport_time` comparison with a character value (`t == "08:30:00"`) now
+  aborts (`vport_error_input`) instead of silently coercing to a string
+  compare; `format()` renders fractional seconds (`08:30:00.5`).
+* Reading a Dataset-JSON or xpt time/datetime no longer loses data: an ISO
+  datetime with a UTC offset (`+05:30`, `Z`) is read as the correct instant,
+  fractional seconds (`HH:MM:SS.s`) are preserved, and a shape-valid but
+  impossible date (`2014-13-45`) stays character instead of crashing.
+* `write_xpt()` and the other codecs now accept an `hms`/`difftime` column
+  for a `time` variable, converting it via seconds instead of mistyping it
+  as a float.
 * Special-missing tags (`.A`-`.Z`, `._`) survive date/datetime/time
   round-trips; previously a second write degraded them to plain missing.
 * `write_dataset()`, `write_xpt()`, and `write_rds()` return the input data

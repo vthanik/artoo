@@ -9,7 +9,8 @@ vport_time(x = double())
 \arguments{
 \item{x}{\emph{Seconds since midnight.} \verb{<numeric>: default empty}. Coerced to
 double. May exceed 86400 (elapsed times past 24h) or be negative; both
-round-trip losslessly. \code{NA} is preserved.}
+round-trip losslessly. Fractional seconds are kept and render hms-style
+(\code{08:30:00.5}). \code{NA} is preserved.}
 }
 \value{
 \emph{A \verb{<vport_time>}} of the same length as \code{x}.

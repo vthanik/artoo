@@ -197,6 +197,88 @@ test_that(".realize_temporal inverts the known SAS-epoch constants", {
   )
 })
 
+# ---- Wave 2: fractional seconds, UTC offsets, impossible dates, difftime ----
+
+test_that("realize datetime parses fractional seconds", {
+  dt <- vport:::.realize_temporal(
+    "2014-01-02T08:30:00.5",
+    "datetime",
+    "E8601DT."
+  )
+  expect_s3_class(dt, "POSIXct")
+  expect_identical(as.numeric(dt) %% 60, 0.5)
+})
+
+test_that("realize datetime honors a UTC offset as an instant", {
+  # 08:30 at +05:30 is the same instant as 03:00 UTC.
+  off <- vport:::.realize_temporal(
+    "2014-01-02T08:30:00+05:30",
+    "datetime",
+    "E8601DT."
+  )
+  utc <- vport:::.realize_temporal(
+    "2014-01-02T03:00:00",
+    "datetime",
+    "E8601DT."
+  )
+  expect_identical(as.numeric(off), as.numeric(utc))
+  # Z is the zero offset
+  z <- vport:::.realize_temporal(
+    "2014-01-02T03:00:00Z",
+    "datetime",
+    "E8601DT."
+  )
+  expect_identical(as.numeric(z), as.numeric(utc))
+})
+
+test_that("realize datetime leaves an impossible datetime character", {
+  out <- vport:::.realize_temporal(
+    c("2014-01-02T08:30:00", "2014-13-45T08:30:00"),
+    "datetime",
+    "E8601DT."
+  )
+  expect_type(out, "character")
+})
+
+test_that("realize time parses fractional seconds", {
+  t <- vport:::.realize_temporal("08:30:00.5", "time", "TIME8.")
+  expect_true(is_vport_time(t))
+  expect_identical(unclass(t), 30600.5)
+})
+
+test_that("realize date leaves a shape-valid impossible date character", {
+  # 2014-13-45 matches the YYYY-MM-DD shape but as.Date() would crash on it
+  # via charToDate; the realize must not crash and must not silently NA it.
+  out <- vport:::.realize_temporal(
+    c("2014-01-02", "2014-13-45"),
+    "date",
+    "DATE9."
+  )
+  expect_type(out, "character")
+  out2 <- vport:::.realize_temporal(
+    c("2014-01-02", "2014-02-30"),
+    "date",
+    "DATE9."
+  )
+  expect_type(out2, "character")
+})
+
+test_that(".infer_frame_type recognizes difftime/hms columns as time", {
+  d <- as.difftime(30600, units = "secs")
+  expect_identical(vport:::.infer_frame_type(d)$data_type, "time")
+  expect_identical(vport:::.infer_frame_type(d)$display_format, "TIME8.")
+  hms <- structure(30600, class = c("hms", "difftime"), units = "secs")
+  expect_identical(vport:::.infer_frame_type(hms)$data_type, "time")
+})
+
+test_that(".deflate_temporal converts a difftime via seconds", {
+  d <- as.difftime(c(30600, 50400), units = "mins")
+  expect_identical(
+    vport:::.deflate_temporal(d, "time"),
+    c(30600, 50400) * 60
+  )
+})
+
 # ---- review 2026-06: deflate refuses inputs it would corrupt ----------------
 
 test_that(".deflate_temporal refuses character temporals (review B7)", {

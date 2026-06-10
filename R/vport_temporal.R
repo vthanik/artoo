@@ -229,7 +229,8 @@
     list(data_type = "date", display_format = "DATE9.")
   } else if (inherits(col, "POSIXct")) {
     list(data_type = "datetime", display_format = "DATETIME20.")
-  } else if (is_vport_time(col)) {
+  } else if (is_vport_time(col) || inherits(col, "difftime")) {
+    # difftime/hms is haven's actual TIME representation; treat it as time.
     list(data_type = "time", display_format = "TIME8.")
   } else if (is.factor(col) || is.character(col)) {
     list(data_type = "string", display_format = NULL)
@@ -278,6 +279,18 @@
   )
 }
 
+# Never-silent-NA gate: if parsing a character temporal turned any non-NA
+# value into NA (a shape-valid but impossible date like 2014-13-45, an
+# unparseable offset), keep the whole column character so a later deflate
+# fails loud instead of writing garbage.
+#' @noRd
+.keep_if_lossy <- function(col, parsed) {
+  if (any(!is.na(col) & is.na(parsed))) {
+    return(col)
+  }
+  parsed
+}
+
 #' @noRd
 .realize_date <- function(col) {
   if (inherits(col, "Date")) {
@@ -288,9 +301,40 @@
     if (!all(full)) {
       return(col) # partial ISO -> stay character (never silent NA)
     }
-    return(as.Date(col))
+    # Explicit format=: strptime returns NA for an impossible date (the bare
+    # charToDate path errors on 2014-13-45). .keep_if_lossy catches the NA.
+    return(.keep_if_lossy(col, as.Date(col, format = "%Y-%m-%d")))
   }
   as.Date(as.numeric(col), origin = .sas_epoch_date)
+}
+
+# Parse full ISO 8601 datetimes to UTC instants. A trailing zone (Z, or
+# +/-HH:MM, or +/-HHMM) shifts the wall clock to the UTC instant via %z; a
+# value with no zone is read as UTC. Fractional seconds parse via %OS. The
+# offset itself is NOT round-tripped on write -- deflate stores SAS numeric
+# datetimes, which are UTC instants, by design.
+#' @noRd
+.parse_iso_datetime <- function(x) {
+  out <- .POSIXct(rep(NA_real_, length(x)), tz = "UTC")
+  has_zone <- !is.na(x) & grepl("(Z|[+-][0-9]{2}:?[0-9]{2})$", x)
+  if (any(has_zone)) {
+    z <- sub("Z$", "+0000", x[has_zone])
+    z <- sub("([+-][0-9]{2}):([0-9]{2})$", "\\1\\2", z)
+    out[has_zone] <- as.POSIXct(
+      z,
+      format = "%Y-%m-%dT%H:%M:%OS%z",
+      tz = "UTC"
+    )
+  }
+  naive <- !is.na(x) & !has_zone
+  if (any(naive)) {
+    out[naive] <- as.POSIXct(
+      x[naive],
+      format = "%Y-%m-%dT%H:%M:%OS",
+      tz = "UTC"
+    )
+  }
+  out
 }
 
 #' @noRd
@@ -300,12 +344,15 @@
     return(col)
   }
   if (is.character(col)) {
-    full <- is.na(col) |
-      grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}", col)
+    pat <- paste0(
+      "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}",
+      "(\\.[0-9]+)?(Z|[+-][0-9]{2}:?[0-9]{2})?$"
+    )
+    full <- is.na(col) | grepl(pat, col)
     if (!all(full)) {
       return(col)
     }
-    return(as.POSIXct(col, tz = "UTC", format = "%Y-%m-%dT%H:%M:%S"))
+    return(.keep_if_lossy(col, .parse_iso_datetime(col)))
   }
   as.POSIXct(as.numeric(col), origin = .sas_epoch_datetime, tz = "UTC")
 }
@@ -316,11 +363,11 @@
     return(col)
   }
   if (is.character(col)) {
-    full <- is.na(col) | grepl("^[0-9]+:[0-9]{2}:[0-9]{2}$", col)
+    full <- is.na(col) | grepl("^[0-9]+:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?$", col)
     if (!all(full)) {
       return(col)
     }
-    return(vport_time(.hms_to_seconds(col)))
+    return(.keep_if_lossy(col, vport_time(.hms_to_seconds(col))))
   }
   vport_time(as.numeric(col))
 }
@@ -406,6 +453,8 @@
     },
     time = if (is_vport_time(col)) {
       unclass(col)
+    } else if (inherits(col, "difftime")) {
+      as.numeric(col, units = "secs")
     } else if (bare_numeric) {
       as.numeric(col)
     } else {

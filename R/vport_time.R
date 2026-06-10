@@ -16,7 +16,8 @@
 #'
 #' @param x *Seconds since midnight.* `<numeric>: default empty`. Coerced to
 #'   double. May exceed 86400 (elapsed times past 24h) or be negative; both
-#'   round-trip losslessly. `NA` is preserved.
+#'   round-trip losslessly. Fractional seconds are kept and render hms-style
+#'   (`08:30:00.5`). `NA` is preserved.
 #'
 #' @return *A `<vport_time>`* of the same length as `x`.
 #'
@@ -82,8 +83,18 @@ format.vport_time <- function(x, ...) {
     a <- abs(sv)
     hh <- as.integer(a %/% 3600)
     mm <- as.integer((a %% 3600) %/% 60)
-    ss <- as.integer(a %% 60)
-    out[ok] <- sprintf("%s%02d:%02d:%02d", sign, hh, mm, ss)
+    sec <- a %% 60
+    ss <- as.integer(sec)
+    base <- sprintf("%s%02d:%02d:%02d", sign, hh, mm, ss)
+    # Fractional seconds render hms-style: 08:30:00.5, trailing zeros stripped.
+    frac <- sec - ss
+    has_frac <- frac > 0
+    if (any(has_frac)) {
+      fs <- formatC(frac[has_frac], format = "f", digits = 6)
+      fs <- sub("^0", "", sub("0+$", "", fs))
+      base[has_frac] <- paste0(base[has_frac], fs)
+    }
+    out[ok] <- base
   }
   out
 }
@@ -110,18 +121,63 @@ as.character.vport_time <- function(x, ...) {
   vport_time(unclass(x)[[i]])
 }
 
+# A legal right-hand side for assignment into / combination with a vport_time:
+# another vport_time, any numeric, or an all-NA logical (the bare `NA`).
+#' @noRd
+.is_time_rhs <- function(value) {
+  is_vport_time(value) ||
+    is.numeric(value) ||
+    (is.logical(value) && all(is.na(value)))
+}
+
+#' @exportS3Method `[<-` vport_time
+`[<-.vport_time` <- function(x, i, value) {
+  if (!.is_time_rhs(value)) {
+    cli::cli_abort(
+      "Cannot assign {.obj_type_friendly {value}} into a {.cls vport_time}.",
+      class = "vport_error_input"
+    )
+  }
+  v <- unclass(x)
+  v[i] <- if (is_vport_time(value)) unclass(value) else as.double(value)
+  vport_time(v)
+}
+
+#' @exportS3Method `[[<-` vport_time
+`[[<-.vport_time` <- function(x, i, value) {
+  if (!.is_time_rhs(value)) {
+    cli::cli_abort(
+      "Cannot assign {.obj_type_friendly {value}} into a {.cls vport_time}.",
+      class = "vport_error_input"
+    )
+  }
+  v <- unclass(x)
+  v[[i]] <- if (is_vport_time(value)) unclass(value) else as.double(value)
+  vport_time(v)
+}
+
 #' @exportS3Method c vport_time
 c.vport_time <- function(...) {
   parts <- lapply(list(...), function(a) {
-    if (!is_vport_time(a) && !is.numeric(a)) {
+    if (!.is_time_rhs(a)) {
       cli::cli_abort(
         "Cannot combine {.cls vport_time} with {.obj_type_friendly {a}}.",
         class = "vport_error_input"
       )
     }
-    unclass(a)
+    if (is_vport_time(a)) unclass(a) else as.double(a)
   })
   vport_time(do.call(c, parts))
+}
+
+#' @exportS3Method unique vport_time
+unique.vport_time <- function(x, ...) {
+  vport_time(unique(unclass(x), ...))
+}
+
+#' @exportS3Method mean vport_time
+mean.vport_time <- function(x, ...) {
+  vport_time(mean(unclass(x), ...))
 }
 
 #' @exportS3Method rep vport_time
@@ -140,6 +196,18 @@ xtfrm.vport_time <- function(x) {
 
 #' @exportS3Method Ops vport_time
 Ops.vport_time <- function(e1, e2) {
+  comparison <- .Generic %in% c("==", "!=", "<", "<=", ">", ">=")
+  if (comparison && (is.character(e1) || (!missing(e2) && is.character(e2)))) {
+    # t == "08:30:00" used to unclass to numeric, then R coerced both to
+    # character and compared "30600" with "08:30:00" -- silently wrong.
+    cli::cli_abort(
+      c(
+        "Cannot compare a {.cls vport_time} with a character value.",
+        "i" = "Build a {.cls vport_time} with {.fn vport_time}, or compare on seconds."
+      ),
+      class = "vport_error_input"
+    )
+  }
   v1 <- if (is_vport_time(e1)) unclass(e1) else e1
   v2 <- if (missing(e2)) {
     NULL
@@ -149,7 +217,12 @@ Ops.vport_time <- function(e1, e2) {
     e2
   }
   result <- if (is.null(v2)) get(.Generic)(v1) else get(.Generic)(v1, v2)
-  if (.Generic %in% c("+", "-", "*", "/")) vport_time(result) else result
+  # %% / %/% join the additive set: day-wrap (t %% 86400) stays a clock time.
+  if (.Generic %in% c("+", "-", "*", "/", "%%", "%/%")) {
+    vport_time(result)
+  } else {
+    result
+  }
 }
 
 #' @exportS3Method Summary vport_time

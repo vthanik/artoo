@@ -112,6 +112,89 @@ test_that("sum returns the total seconds (not a clock time)", {
   expect_identical(sum(vport_time(c(10, 20, 30))), 60)
 })
 
+# ---- Wave 2: assignment guards, combine, summary, Ops, fractional -----------
+
+test_that("[<- with a numeric or vport_time RHS keeps the class", {
+  t <- vport_time(c(10, 20, 30))
+  t[2] <- 99
+  expect_true(is_vport_time(t))
+  expect_identical(unclass(t), c(10, 99, 30))
+  t[3] <- vport_time(40)
+  expect_identical(unclass(t), c(10, 99, 40))
+})
+
+test_that("[<- accepts a logical NA RHS (blank a slot)", {
+  t <- vport_time(c(10, 20))
+  t[1] <- NA
+  expect_true(is_vport_time(t))
+  expect_identical(is.na(t), c(TRUE, FALSE))
+})
+
+test_that("[<- aborts on a character RHS (no silent corruption)", {
+  t <- vport_time(c(10, 20))
+  expect_error(
+    {
+      t[1] <- "noon"
+    },
+    class = "vport_error_input"
+  )
+})
+
+test_that("[[<- guards the RHS type like [<-", {
+  t <- vport_time(c(10, 20))
+  t[[1]] <- 5
+  expect_identical(unclass(t), c(5, 20))
+  expect_error(
+    {
+      t[[2]] <- "noon"
+    },
+    class = "vport_error_input"
+  )
+})
+
+test_that("c accepts a logical NA element", {
+  out <- c(vport_time(c(1, 2)), NA)
+  expect_true(is_vport_time(out))
+  expect_identical(is.na(out), c(FALSE, FALSE, TRUE))
+})
+
+test_that("unique and mean keep the class", {
+  t <- vport_time(c(10, 10, 20))
+  expect_true(is_vport_time(unique(t)))
+  expect_identical(unclass(unique(t)), c(10, 20))
+  expect_true(is_vport_time(mean(t)))
+  expect_identical(unclass(mean(vport_time(c(10, 20)))), 15)
+})
+
+test_that("modulo and integer-divide preserve the class (day wrap)", {
+  t <- vport_time(90000) # 25:00:00
+  wrapped <- t %% 86400
+  expect_true(is_vport_time(wrapped))
+  expect_identical(unclass(wrapped), 3600)
+  expect_true(is_vport_time(t %/% 2))
+})
+
+test_that("comparison with a character value aborts (review)", {
+  t <- vport_time(30600)
+  expect_error(t == "08:30:00", class = "vport_error_input")
+  expect_error("08:30:00" == t, class = "vport_error_input")
+  # numeric and NA comparisons stay legal
+  expect_true(t == 30600)
+  expect_true(is.na(t == NA))
+})
+
+test_that("format renders fractional seconds (hms convention)", {
+  expect_identical(format(vport_time(30600.5)), "08:30:00.5")
+  expect_identical(
+    format(vport_time(c(30600, 30600.25))),
+    c(
+      "08:30:00",
+      "08:30:00.25"
+    )
+  )
+  expect_identical(format(vport_time(-3600.5)), "-01:00:00.5")
+})
+
 # ---- review 2026-06: S3 dispatch must work outside the namespace ------------
 
 test_that("the namespace holds no local print/format bindings (review B1)", {
