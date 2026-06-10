@@ -15,7 +15,7 @@ extension selects the codec unless \code{format} is given.}
 
 \item{format}{\emph{Force a codec instead of inferring from the extension.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
-\code{\link[=check_formats]{check_formats()}}).}
+\code{\link[=vport_formats]{vport_formats()}}).}
 
 \item{...}{\emph{Codec-specific arguments} passed through to the encoder (see
 the per-format wrappers, e.g. \code{\link[=write_xpt]{write_xpt()}}, for what each codec
@@ -40,7 +40,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() attaches the metadata; write_dataset() carries it into the
 # file so a later read is lossless.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".rds")
 write_dataset(adsl, path)
 
@@ -53,5 +53,5 @@ write_dataset(adsl, alt, format = "rds")
 }
 \seealso{
 \code{\link[=read_dataset]{read_dataset()}} for the inverse; \code{\link[=write_rds]{write_rds()}} for the
-per-format wrapper; \code{\link[=check_formats]{check_formats()}} for what is available.
+per-format wrapper; \code{\link[=vport_formats]{vport_formats()}} for what is available.
 }

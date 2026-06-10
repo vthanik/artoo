@@ -1,154 +1,15 @@
 # validate_spec.R -- dataset-scoped spec validation -> vport_check.
 #
 # Each check is a small vectorized `.chk_*` that returns a 0+ row findings
-# frame via `.finding()`; validate_spec() binds them once. Severity and
-# dimension for every finding come from the open catalog
-# (inst/spec_rules.json), the single source of truth, so code and catalog
-# cannot drift. vport uses its own behavioral check ids only.
-
-# ---- Catalog loader (cached) --------------------------------------------
-
-.spec_rules_env <- new.env(parent = emptyenv())
-
-# The known dimensions/severities a catalog entry may use.
-.spec_dimensions <- c(
-  "study",
-  "dataset",
-  "variable",
-  "value",
-  "codelist",
-  "method",
-  "comment",
-  "document",
-  "ct",
-  "arm"
-)
-.spec_severities <- c("error", "warning", "note")
-
-#' @noRd
-.spec_rules <- function() {
-  if (is.null(.spec_rules_env$rules)) {
-    rlang::check_installed("jsonlite", reason = "to read the rule catalog.")
-    path <- system.file("spec_rules.json", package = "vport")
-    if (!nzchar(path)) {
-      cli::cli_abort(
-        "Rule catalog {.file spec_rules.json} is missing from the install.",
-        class = "vport_error_validation"
-      )
-    }
-    r <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE)
-    .check_rules_df(r)
-    .spec_rules_env$rules <- r
-  }
-  .spec_rules_env$rules
-}
-
-# Validate the catalog shape (H20). Aborts on a malformed catalog.
-#' @noRd
-.check_rules_df <- function(r) {
-  need <- c("id", "dimension", "severity", "requires_data", "scope", "status")
-  miss <- setdiff(need, names(r))
-  if (length(miss)) {
-    cli::cli_abort(
-      "Rule catalog is missing column{?s}: {.val {miss}}.",
-      class = "vport_error_validation"
-    )
-  }
-  if (!all(r$severity %in% .spec_severities)) {
-    cli::cli_abort(
-      "Rule catalog has an unknown severity.",
-      class = "vport_error_validation"
-    )
-  }
-  if (!all(r$dimension %in% .spec_dimensions)) {
-    cli::cli_abort(
-      "Rule catalog has an unknown dimension.",
-      class = "vport_error_validation"
-    )
-  }
-  if (anyDuplicated(r$id)) {
-    cli::cli_abort(
-      "Rule catalog has duplicate ids.",
-      class = "vport_error_validation"
-    )
-  }
-  invisible(r)
-}
-
-#' @noRd
-.spec_rule <- function(id) {
-  r <- .spec_rules()
-  row <- r[r$id == id, , drop = FALSE]
-  if (nrow(row) != 1L) {
-    cli::cli_abort(
-      "Unknown check id {.val {id}} (not in the rule catalog).",
-      class = "vport_error_validation"
-    )
-  }
-  row
-}
-
-# ---- Findings primitives ------------------------------------------------
-
-#' @noRd
-.empty_findings <- function() {
-  data.frame(
-    check = character(0),
-    dimension = character(0),
-    severity = character(0),
-    dataset = character(0),
-    variable = character(0),
-    message = character(0),
-    stringsAsFactors = FALSE
-  )
-}
-
-# Build a findings frame for one check; dimension/severity come from the
-# catalog by check_id. `message` drives the row count; dataset/variable
-# recycle. Zero messages -> zero rows.
-#' @noRd
-.finding <- function(check_id, dataset, variable, message) {
-  if (!length(message)) {
-    return(.empty_findings())
-  }
-  meta <- .spec_rule(check_id)
-  data.frame(
-    check = check_id,
-    dimension = meta$dimension,
-    severity = meta$severity,
-    dataset = dataset,
-    variable = variable,
-    message = message,
-    stringsAsFactors = FALSE
-  )
-}
-
-#' @noRd
-.bind_findings <- function(parts) {
-  parts <- Filter(function(x) !is.null(x) && nrow(x), parts)
-  if (!length(parts)) {
-    return(.empty_findings())
-  }
-  out <- do.call(rbind, parts)
-  rownames(out) <- NULL
-  out
-}
-
-# TRUE where x is NA or empty/whitespace.
-#' @noRd
-.blank <- function(x) {
-  is.na(x) | !nzchar(trimws(as.character(x)))
-}
-
-# Non-blank values of one column, or character(0) when absent.
-#' @noRd
-.refs <- function(df, col) {
-  if (is.null(df) || !is.data.frame(df) || !(col %in% names(df))) {
-    return(character(0))
-  }
-  v <- df[[col]]
-  unique(trimws(as.character(v[!.blank(v)])))
-}
+# frame via `.finding()` (the shared constructor in findings.R); validate_spec()
+# binds them once. Severity and dimension for every finding come from the open
+# catalog (inst/spec_rules.json), the single source of truth, so code and
+# catalog cannot drift. validate_spec() runs the engine == "spec" rules; the
+# data-conformance (engine == "data") rules live in check_spec(). vport uses
+# its own behavioral check ids only.
+#
+# The findings model (catalog loader, .empty_findings/.finding/.bind_findings,
+# .blank/.refs, the shared .codelist_violations) lives in findings.R.
 
 # ---- Scope ---------------------------------------------------------------
 
@@ -730,21 +591,6 @@
   )
 }
 
-# The codelist terms a value is allowed to take, plus NA-acceptability:
-# a mandatory variable's NA is a violation; otherwise NA/"" are allowed
-# (after metatools::get_bad_ct). Returns the offending (bad) data values.
-#' @noRd
-.ct_bad_values <- function(values, terms, mandatory) {
-  allow <- trimws(as.character(terms))
-  if (!isTRUE(mandatory)) {
-    allow <- c(allow, NA_character_, "")
-  }
-  v <- trimws(as.character(values))
-  v_na <- is.na(values)
-  ok <- (v %in% allow) | (v_na & !isTRUE(mandatory))
-  unique(values[!ok])
-}
-
 #' @noRd
 .chk_ct <- function(sc, data, call) {
   v <- sc$variables
@@ -789,7 +635,7 @@
       col <- unique(df[[var]])
       mand <- "mandatory" %in% names(rows) && isTRUE(rows$mandatory[i])
 
-      bad <- .ct_bad_values(col, terms, mand)
+      bad <- .codelist_violations(col, terms, mand)
       if (length(bad)) {
         shown <- ifelse(is.na(bad), "<NA>", as.character(bad))
         parts[[length(parts) + 1L]] <- .finding(
@@ -998,7 +844,7 @@
 #'
 #' **Collect, do not stop.** Every finding is collected and returned;
 #' `validate_spec()` does not abort on an error-severity finding unless
-#' `strict = TRUE`.
+#' `on_error = "abort"`.
 #'
 #' @param spec *The specification to validate.* `<vport_spec>: required`.
 #' @param data *Optional input data for controlled-terminology checks.*
@@ -1009,9 +855,13 @@
 #'   `NULL` (default) validates every dataset.
 #'
 #'   **Restriction:** each name must be a dataset in the spec.
-#' @param strict *Abort on an error-severity finding.* `<logical(1)>:
-#'   default FALSE`. When `TRUE`, all findings are still collected, then
-#'   the call aborts with `vport_error_validation` if any error exists.
+#' @param on_error *What to do with an error-severity finding.*
+#'   `<character(1)>`. One of:
+#'   * `"off"` (default) collect and return every finding; never signal.
+#'   * `"warn"` additionally `cli_warn` (`vport_warning_validation`) with
+#'     the error count.
+#'   * `"abort"` additionally abort with `vport_error_validation`.
+#'   All findings are collected and returned in every case.
 #'
 #' @return *A `vport_check` object.* Its `@findings` data frame has columns
 #'   `check`, `dimension`, `severity`, `dataset`, `variable`, `message`.
@@ -1026,23 +876,29 @@
 #' chk <- validate_spec(spec, dataset = "ADSL")
 #' chk@findings
 #'
-#' # ---- Example 2: gate on errors with strict ----
+#' # ---- Example 2: gate on errors with on_error = "abort" ----
 #' #
-#' # Point a key at a missing variable, then validate strictly and catch
-#' # the resulting error.
+#' # Point a key at a missing variable, then validate with on_error = "abort"
+#' # and catch the resulting error.
 #' bad_ds <- cdisc_datasets
 #' bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
 #' bad <- vport_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
 #' tryCatch(
-#'   validate_spec(bad, dataset = "DM", strict = TRUE),
+#'   validate_spec(bad, dataset = "DM", on_error = "abort"),
 #'   vport_error_validation = function(e) conditionMessage(e)[1]
 #' )
 #'
 #' @seealso [vport_spec()] to build a spec; [spec_methods()] /
 #'   [spec_comments()] for the metadata checked.
 #' @export
-validate_spec <- function(spec, data = NULL, dataset = NULL, strict = FALSE) {
+validate_spec <- function(
+  spec,
+  data = NULL,
+  dataset = NULL,
+  on_error = c("off", "warn", "abort")
+) {
   call <- rlang::caller_env()
+  on_error <- match.arg(on_error)
   .check_spec_arg(spec, call)
   if (!is.null(dataset)) {
     dataset <- unique(trimws(as.character(dataset)))
@@ -1070,21 +926,32 @@ validate_spec <- function(spec, data = NULL, dataset = NULL, strict = FALSE) {
     )
   )
 
-  if (strict) {
+  if (on_error != "off") {
     nerr <- sum(findings$severity == "error")
     if (nerr) {
-      msgs <- utils::head(findings$message[findings$severity == "error"], 3L)
-      # Finding messages embed spec values; escape so a "{" renders literally
-      # instead of crashing cli interpolation.
-      cli::cli_abort(
-        c(
-          "Spec is not submission-ready, {nerr} error-severity finding{?s}.",
-          stats::setNames(.cli_escape(msgs), rep("x", length(msgs))),
-          "i" = "Inspect every finding in the returned vport_check."
-        ),
-        class = "vport_error_validation",
-        call = call
-      )
+      if (on_error == "abort") {
+        msgs <- utils::head(findings$message[findings$severity == "error"], 3L)
+        # Finding messages embed spec values; escape so a "{" renders literally
+        # instead of crashing cli interpolation.
+        cli::cli_abort(
+          c(
+            "Spec is not submission-ready, {nerr} error-severity finding{?s}.",
+            stats::setNames(.cli_escape(msgs), rep("x", length(msgs))),
+            "i" = "Inspect every finding in the returned vport_check."
+          ),
+          class = "vport_error_validation",
+          call = call
+        )
+      } else {
+        cli::cli_warn(
+          c(
+            "Spec has {nerr} error-severity finding{?s}.",
+            "i" = "Inspect every finding in the returned vport_check."
+          ),
+          class = "vport_warning_validation",
+          call = call
+        )
+      }
     }
   }
 

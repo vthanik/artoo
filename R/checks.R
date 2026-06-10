@@ -43,11 +43,6 @@
 #' @param display_format *Flag a date/datetime/time variable whose
 #'   displayFormat is not a recognized SAS format of that family.*
 #'   `<logical(1)>: default TRUE`.
-#' @param encoding_check *Target encoding for the write-time encoding gate.*
-#'   `<character(1)> | NULL`. When `NULL` (default) the encoding is resolved
-#'   from the write target (US-ASCII for xpt, UTF-8 for Dataset-JSON); a name
-#'   such as `"US-ASCII"` forces it. Consumed by the codec write path, not by
-#'   [check_spec()].
 #'
 #' @return *A `<vport_checks>` control object*. Pass it as the `checks`
 #'   argument to [check_spec()] or [apply_spec()].
@@ -55,7 +50,7 @@
 #' @examples
 #' # ---- Example 1: the default runs every conformance dimension ----
 #' #
-#' # With no arguments, all five conformance checks are enabled.
+#' # With no arguments, all six conformance dimensions are enabled.
 #' vport_checks()
 #'
 #' # ---- Example 2: silence one dimension for a whole study ----
@@ -74,8 +69,7 @@ vport_checks <- function(
   type_mismatch = TRUE,
   length_overflow = TRUE,
   codelist_membership = TRUE,
-  display_format = TRUE,
-  encoding_check = NULL
+  display_format = TRUE
 ) {
   call <- rlang::caller_env()
   toggles <- list(
@@ -99,25 +93,7 @@ vport_checks <- function(
       )
     }
   }
-  if (
-    !is.null(encoding_check) &&
-      (!is.character(encoding_check) ||
-        length(encoding_check) != 1L ||
-        is.na(encoding_check))
-  ) {
-    cli::cli_abort(
-      c(
-        "{.arg encoding_check} must be a single string or NULL.",
-        "x" = "You supplied {.obj_type_friendly {encoding_check}}."
-      ),
-      class = "vport_error_input",
-      call = call
-    )
-  }
-  structure(
-    c(toggles, list(encoding_check = encoding_check)),
-    class = "vport_checks"
-  )
+  structure(toggles, class = "vport_checks")
 }
 
 #' Test for a vport_checks control
@@ -145,13 +121,10 @@ is_vport_checks <- function(x) {
 
 #' @export
 print.vport_checks <- function(x, ...) {
-  on <- vapply(.vport_check_dims, function(d) isTRUE(x[[d]]), logical(1))
   cat("<vport_checks>\n")
   for (d in .vport_check_dims) {
     cat(sprintf("  [%s] %s\n", if (x[[d]]) "x" else " ", d))
   }
-  enc <- x$encoding_check %||% "resolve from write target"
-  cat(sprintf("  encoding_check: %s\n", enc))
   invisible(x)
 }
 

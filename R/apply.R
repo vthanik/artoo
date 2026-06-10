@@ -69,11 +69,11 @@
 #' @param spec *The specification to conform to.* `<vport_spec>: required`.
 #' @param dataset *The dataset whose rules apply.* `<character(1)>:
 #'   required`. Must name a dataset in `spec`.
-#' @param check *What to do with conformance findings.* `<character(1)>`.
+#' @param on_error *What to do with conformance findings.* `<character(1)>`.
 #'   One of:
 #'   * `"warn"` (default) run [check_spec()], attach the findings, warn on
 #'     any error-severity finding.
-#'   * `"strict"` abort with `vport_error_conformance` on any error-severity
+#'   * `"abort"` abort with `vport_error_conformance` on any error-severity
 #'     finding.
 #'   * `"off"` skip the check entirely.
 #' @param decode *Codelist translation direction.* `<character(1)>`. One of
@@ -96,10 +96,10 @@
 #' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
 #'   | NULL`. When `NULL` (default) every dimension runs; pass a
 #'   [vport_checks()] control to disable some. Has no effect when
-#'   `check = "off"`.
+#'   `on_error = "off"`.
 #'
 #' @return *A conformed `<data.frame>`* carrying `vport_meta` (read it with
-#'   [get_meta()]) and a `vport.conformance` attribute when `check` ran.
+#'   [get_meta()]) and a `vport.conformance` attribute when `on_error` ran.
 #'   Hand it to any `write_*()` codec.
 #'
 #' @examples
@@ -126,7 +126,7 @@ apply_spec <- function(
   x,
   spec,
   dataset,
-  check = c("warn", "strict", "off"),
+  on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
   na_position = c("first", "last"),
@@ -134,7 +134,7 @@ apply_spec <- function(
   checks = NULL
 ) {
   call <- rlang::caller_env()
-  check <- match.arg(check)
+  on_error <- match.arg(on_error)
   decode <- match.arg(decode)
   no_match <- match.arg(no_match)
   na_position <- match.arg(na_position)
@@ -177,18 +177,20 @@ apply_spec <- function(
     out <- .stamp_meta(out, info, spec, dataset, call)
   }
 
-  if (check != "off") {
-    findings <- check_spec(out, spec, dataset, checks = checks)
+  if (on_error != "off") {
+    findings <- check_spec(out, spec, dataset, decode = decode, checks = checks)
     attr(out, "vport.conformance") <- findings
     errs <- findings[findings$severity == "error", , drop = FALSE]
     if (nrow(errs)) {
       # Finding messages embed raw data values; escape so a "{" in the data
-      # renders literally instead of crashing cli interpolation.
+      # renders literally instead of crashing cli interpolation. Cap the
+      # bullets at 3 so a wide failure does not flood the console.
+      shown <- utils::head(errs$message, 3L)
       msg <- c(
         "Data does not conform to the spec for {.val {dataset}}.",
-        stats::setNames(.cli_escape(errs$message), rep("x", nrow(errs)))
+        stats::setNames(.cli_escape(shown), rep("x", length(shown)))
       )
-      if (check == "strict") {
+      if (on_error == "abort") {
         cli::cli_abort(msg, class = "vport_error_conformance", call = call)
       } else {
         cli::cli_warn(

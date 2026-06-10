@@ -37,7 +37,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: round-trip a conformed dataset through xpt ----
 #
 # Write ADSL, read it back; the variable labels and lengths survive.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".xpt")
 write_xpt(adsl, path)
 back <- read_xpt(path)

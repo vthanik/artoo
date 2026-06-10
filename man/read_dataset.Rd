@@ -12,7 +12,7 @@ selects the codec unless \code{format} is given.}
 
 \item{format}{\emph{Force a codec instead of inferring from the extension.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
-\code{\link[=check_formats]{check_formats()}}).}
+\code{\link[=vport_formats]{vport_formats()}}).}
 
 \item{...}{\emph{Codec-specific arguments} passed through to the decoder (see
 the per-format wrappers, e.g. \code{\link[=read_xpt]{read_xpt()}}). An argument the codec does
@@ -36,7 +36,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: round-trip a dataset through rds ----
 #
 # Write a conformed dataset, then read it back; the metadata survives.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".rds")
 write_dataset(adsl, path)
 back <- read_dataset(path)

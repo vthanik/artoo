@@ -42,6 +42,6 @@ table(spec_variables(spec)$dataset)
 
 }
 \seealso{
-\code{\link[=spec_datasets]{spec_datasets()}} for the dataset names; \code{\link[=spec_codelist]{spec_codelist()}} for a
+\code{\link[=spec_datasets]{spec_datasets()}} for the dataset names; \code{\link[=spec_codelists]{spec_codelists()}} for a
 variable's controlled terminology.
 }

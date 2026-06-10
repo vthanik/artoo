@@ -28,7 +28,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: round-trip a conformed dataset through Dataset-JSON ----
 #
 # The variable labels, types, and keys survive the round-trip.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".json")
 write_json(adsl, path)
 back <- read_json(path)

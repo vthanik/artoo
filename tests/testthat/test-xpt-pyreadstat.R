@@ -31,7 +31,7 @@ test_that("a vport-written xpt reads correctly in pyreadstat", {
     cdisc_variables,
     codelists = cdisc_codelists
   )
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, created = as.POSIXct("2020-01-01", tz = "UTC"))
 

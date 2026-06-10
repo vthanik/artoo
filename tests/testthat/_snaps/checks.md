@@ -10,12 +10,11 @@
         [x] length_overflow
         [x] codelist_membership
         [x] display_format
-        encoding_check: resolve from write target
 
 ---
 
     Code
-      print(vport_checks(length_overflow = FALSE, encoding_check = "US-ASCII"))
+      print(vport_checks(length_overflow = FALSE))
     Output
       <vport_checks>
         [x] missing_variable
@@ -24,5 +23,4 @@
         [ ] length_overflow
         [x] codelist_membership
         [x] display_format
-        encoding_check: US-ASCII
 

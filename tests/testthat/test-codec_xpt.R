@@ -23,7 +23,7 @@ expect_values_equal <- function(back, orig) {
 
 test_that("v5 round-trips DM values and per-column metadata", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, created = frozen)
   back <- read_xpt(p)
@@ -38,7 +38,7 @@ test_that("v5 round-trips DM values and per-column metadata", {
 
 test_that("v5 round-trips ADSL including Date columns", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, p, created = frozen)
   back <- read_xpt(p)
@@ -51,7 +51,7 @@ test_that("v5 round-trips ADSL including Date columns", {
 
 test_that("v8 round-trips DM (extended member format)", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, version = 8, created = frozen)
   back <- read_xpt(p)
@@ -63,7 +63,7 @@ test_that("v8 round-trips DM (extended member format)", {
 
 test_that("two writes with a frozen timestamp are byte-identical", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p1 <- withr::local_tempfile(fileext = ".xpt")
   p2 <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p1, created = frozen)
@@ -361,7 +361,7 @@ test_that("a v5 char column over 200 bytes aborts", {
 
 test_that("a truncated xpt file aborts on read", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, created = frozen)
   raw <- readBin(p, "raw", n = file.info(p)$size)

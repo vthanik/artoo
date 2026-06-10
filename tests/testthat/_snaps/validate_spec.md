@@ -1,7 +1,7 @@
-# validate_spec(strict = TRUE) throws on an error-severity finding
+# validate_spec(on_error = 'abort') throws on an error-severity finding
 
     Code
-      validate_spec(spec, dataset = "DM", strict = TRUE)
+      validate_spec(spec, dataset = "DM", on_error = "abort")
     Condition
       Error:
       ! Spec is not submission-ready, 1 error-severity finding.

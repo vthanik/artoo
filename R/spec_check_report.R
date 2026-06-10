@@ -132,3 +132,11 @@
 `format.vport::vport_check` <- function(x, ...) {
   .format_check(x)
 }
+
+# Hand the findings frame straight back, so as.data.frame(validate_spec(...))
+# is the documented path to the programmatic 6-column table. Plain S3 on the
+# qualified name, same reason as print/format above.
+#' @exportS3Method as.data.frame vport::vport_check
+`as.data.frame.vport::vport_check` <- function(x, ...) {
+  x@findings
+}

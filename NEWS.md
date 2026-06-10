@@ -1,5 +1,27 @@
 # vport 0.0.0.9000
 
+* `apply_spec()` renamed its `check` argument to `on_error`, with values
+  `c("warn", "abort", "off")` (`"strict"` is now `"abort"`); the
+  error-escalation message caps at three findings (breaking).
+* `validate_spec()` replaced `strict` with `on_error = c("off", "warn",
+  "abort")` (default `"off"`); `"warn"` signals a `vport_warning_validation`
+  with the error count, `"abort"` aborts as `strict = TRUE` did. Every
+  finding is still collected and returned in all cases (breaking).
+* `check_formats()` was renamed `vport_formats()` (breaking).
+* `spec_codelist()` was renamed `spec_codelists()` and gained a
+  `codelist_id = NULL` default that returns the whole codelists table,
+  matching the `spec_variables()` filter pattern (breaking).
+* `vport_checks()` dropped its `encoding_check` argument; the submission
+  encoding gate moves to the xpt write path in a later release (breaking).
+* `check_spec()` now returns the same six-column findings frame as
+  `validate_spec()` (`check`, `dimension`, `severity`, `dataset`,
+  `variable`, `message`), built from the shared open rule catalog, and
+  gained a `decode` argument so a decoded column is checked against the
+  matching codelist column rather than wrongly flagged.
+* `check_spec()` codelist membership now treats an `NA` in a mandatory
+  variable as a violation (and a non-mandatory `NA` as conforming), sharing
+  one membership implementation with `validate_spec()`.
+* `as.data.frame()` on a `vport_check` returns its findings data frame.
 * `read_json()` and `write_json()` read and write CDISC Dataset-JSON v1.1
   files through the `vport_meta` spine, with byte-stable output (injectable
   `created`), meta-driven type fidelity (a whole-number double does not drift

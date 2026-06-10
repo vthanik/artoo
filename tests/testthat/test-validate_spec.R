@@ -30,16 +30,16 @@ test_that("validate_spec() does not throw by default, even with errors", {
   expect_true(any(chk@findings$check == "dataset_keys_resolve"))
 })
 
-test_that("validate_spec(strict = TRUE) throws on an error-severity finding", {
+test_that("validate_spec(on_error = 'abort') throws on an error-severity finding", {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
   spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   expect_error(
-    validate_spec(spec, dataset = "DM", strict = TRUE),
+    validate_spec(spec, dataset = "DM", on_error = "abort"),
     class = "vport_error_validation"
   )
   expect_snapshot(
-    validate_spec(spec, dataset = "DM", strict = TRUE),
+    validate_spec(spec, dataset = "DM", on_error = "abort"),
     error = TRUE
   )
 })
@@ -515,7 +515,46 @@ test_that("a brace in spec content cannot break the strict gate (review B5)", {
   ds$keys[ds$dataset == "DM"] <- "NOT{AVAR"
   spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   expect_error(
-    validate_spec(spec, dataset = "DM", strict = TRUE),
+    validate_spec(spec, dataset = "DM", on_error = "abort"),
     class = "vport_error_validation"
   )
+})
+
+test_that("on_error = 'warn' signals a classed warning but still returns (1e)", {
+  ds <- cdisc_datasets
+  ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
+  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  expect_warning(
+    chk <- validate_spec(spec, dataset = "DM", on_error = "warn"),
+    class = "vport_warning_validation"
+  )
+  # The warning does not suppress the report: every finding is still returned.
+  expect_true(any(chk@findings$severity == "error"))
+})
+
+test_that("as.data.frame returns the 6-column findings frame (1f)", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  chk <- validate_spec(spec, dataset = "ADSL")
+  df <- as.data.frame(chk)
+  expect_identical(
+    names(df),
+    c("check", "dimension", "severity", "dataset", "variable", "message")
+  )
+  expect_identical(df, chk@findings)
+})
+
+test_that("vport_check rejects findings missing a column or with a bad severity (1f)", {
+  bad_cols <- data.frame(
+    check = "x",
+    severity = "error",
+    stringsAsFactors = FALSE
+  )
+  expect_error(vport:::vport_check_class(findings = bad_cols))
+  bad_sev <- vport:::.empty_findings()
+  bad_sev[1, ] <- list("x", "study", "fatal", NA, NA, "m")
+  expect_error(vport:::vport_check_class(findings = bad_sev))
 })

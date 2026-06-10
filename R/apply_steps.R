@@ -153,7 +153,7 @@
     if (!(v %in% names(x))) {
       next
     }
-    cl <- spec_codelist(spec, clid)
+    cl <- spec_codelists(spec, clid)
     if (!nrow(cl)) {
       next
     }

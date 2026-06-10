@@ -9,6 +9,10 @@
 
 stopifnot(requireNamespace("jsonlite", quietly = TRUE))
 
+# `engine` says WHICH checker runs the rule: "spec" = validate_spec()
+# (spec integrity), "data" = check_spec() (data conformance). `requires_data`
+# says whether the rule needs a data frame. Every engine=="data" rule
+# requires_data; some engine=="spec" rules (CT-vs-data) also do.
 rule <- function(
   id,
   dimension,
@@ -17,7 +21,8 @@ rule <- function(
   requires_data = FALSE,
   scope = "scoped",
   status = "implemented",
-  reason = NA_character_
+  reason = NA_character_,
+  engine = "spec"
 ) {
   data.frame(
     id = id,
@@ -28,6 +33,7 @@ rule <- function(
     status = status,
     description = description,
     reason = reason,
+    engine = engine,
     stringsAsFactors = FALSE
   )
 }
@@ -250,6 +256,56 @@ rules <- rbind(
     "warning",
     "A spec variable has no column in the supplied data.",
     requires_data = TRUE
+  ),
+
+  # ---- data conformance (check_spec engine; require data) ----
+  rule(
+    "missing_variable",
+    "variable",
+    "error",
+    "A spec variable is absent from the data.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "extra_variable",
+    "variable",
+    "warning",
+    "A data column is not declared in the spec.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "type_mismatch",
+    "variable",
+    "warning",
+    "A column's storage differs from the spec dataType.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "length_overflow",
+    "variable",
+    "warning",
+    "A character value is longer than the spec length.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "codelist_membership",
+    "ct",
+    "error",
+    "A data value is outside its codelist.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "display_format",
+    "variable",
+    "warning",
+    "A date/datetime/time variable has a displayFormat that is not a recognized SAS format of that family.",
+    requires_data = TRUE,
+    engine = "data"
   ),
 
   # ---- deferred (transparent, not silently dropped) ----

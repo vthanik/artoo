@@ -138,7 +138,7 @@ test_that("read_spec() ingests a P21 Excel spec with merged cells", {
 test_that("read_spec() recovers all terms of a merged-id codelist (H4/H5)", {
   skip_if_not_installed("readxl")
   spec <- read_spec(test_path("fixtures", "p21_adam_spec.xlsx"))
-  cl <- spec_codelist(spec, "C66731")
+  cl <- spec_codelists(spec, "C66731")
   expect_setequal(cl$term, c("F", "M", "U"))
   expect_setequal(cl$decode, c("Female", "Male", "Unknown"))
 })

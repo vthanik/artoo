@@ -39,7 +39,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() attaches the metadata; write_parquet() stores the data
 # natively and the metadata as a CDISC-shaped sidecar.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".parquet")
 write_parquet(adsl, path)
 

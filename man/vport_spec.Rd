@@ -101,7 +101,7 @@ head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 
 }
 \seealso{
-\strong{Inspect:} \code{\link[=spec_datasets]{spec_datasets()}}, \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_codelist]{spec_codelist()}},
+\strong{Inspect:} \code{\link[=spec_datasets]{spec_datasets()}}, \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_codelists]{spec_codelists()}},
 \code{\link[=spec_keys]{spec_keys()}}, \code{\link[=spec_study]{spec_study()}}.
 
 \strong{Check:} \code{\link[=validate_spec]{validate_spec()}}. \strong{Predicate:} \code{\link[=is_vport_spec]{is_vport_spec()}}.

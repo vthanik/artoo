@@ -19,7 +19,7 @@ expect_values_equal <- function(back, orig) {
 
 test_that("write_parquet/read_parquet round-trips ADSL values and metadata", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(adsl, p)
   back <- read_parquet(p)
@@ -33,7 +33,7 @@ test_that("write_parquet/read_parquet round-trips ADSL values and metadata", {
 
 test_that("read_parquet realizes Date columns natively", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(adsl, p)
   back <- read_parquet(p)
@@ -44,7 +44,7 @@ test_that("read_parquet realizes Date columns natively", {
 
 test_that("DM round-trips through the generic dispatcher by extension", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_dataset(dm, p)
   back <- read_dataset(p)
@@ -67,7 +67,7 @@ test_that("decimal stays an exact string and time becomes vport_time", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(ap, p)
   back <- read_parquet(p)
@@ -80,7 +80,7 @@ test_that("decimal stays an exact string and time becomes vport_time", {
 
 test_that("the sidecar is embedded under the metadata_json key", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(dm, p)
   kv <- nanoparquet::read_parquet_metadata(
@@ -116,7 +116,7 @@ test_that("encode without meta writes a sidecar-free parquet", {
 
 test_that("xpt -> parquet -> json preserves metadata across the chain", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   px <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, px, created = as.POSIXct("2020-01-01", tz = "UTC"))
   fromx <- read_xpt(px)
@@ -132,10 +132,10 @@ test_that("xpt -> parquet -> json preserves metadata across the chain", {
   expect_identical(get_meta(back_js)@columns, get_meta(fromx)@columns)
 })
 
-# ---- check_formats ----------------------------------------------------------
+# ---- vport_formats ----------------------------------------------------------
 
-test_that("check_formats reports parquet available when nanoparquet is present", {
-  cf <- check_formats()
+test_that("vport_formats reports parquet available when nanoparquet is present", {
+  cf <- vport_formats()
   row <- cf[cf$format == "parquet", ]
   expect_true(row$read)
   expect_true(row$write)
@@ -153,7 +153,7 @@ test_that("a file with KV metadata but no metadata_json key has no sidecar", {
 test_that("a failed encode leaves any prior file untouched (9.A.4)", {
   p <- withr::local_tempfile(fileext = ".parquet")
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   write_parquet(dm, p)
   before <- readBin(p, "raw", file.info(p)$size)
 

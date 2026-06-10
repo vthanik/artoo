@@ -18,16 +18,28 @@ keyed_spec <- function() {
 
 test_that("decode = to_decode maps codes to their decodes", {
   spec <- demo_spec()
-  out <- apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", check = "off")
+  out <- apply_spec(
+    cdisc_dm,
+    spec,
+    "DM",
+    decode = "to_decode",
+    on_error = "off"
+  )
   # F -> Female, M -> Male (codelist C66731).
   expect_setequal(unique(out$SEX), c("Female", "Male"))
 })
 
 test_that("decode = to_code reverses to_decode", {
   spec <- demo_spec()
-  dec <- apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", check = "off")
-  back <- apply_spec(dec, spec, "DM", decode = "to_code", check = "off")
-  plain <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dec <- apply_spec(
+    cdisc_dm,
+    spec,
+    "DM",
+    decode = "to_decode",
+    on_error = "off"
+  )
+  back <- apply_spec(dec, spec, "DM", decode = "to_code", on_error = "off")
+  plain <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   expect_identical(back$SEX, plain$SEX)
 })
 
@@ -51,7 +63,7 @@ test_that("decode no_match = keep retains the unmatched value", {
     "DM",
     decode = "to_decode",
     no_match = "keep",
-    check = "off"
+    on_error = "off"
   )
   expect_identical(out$SEX[1], "Z")
 })
@@ -66,7 +78,7 @@ test_that("decode no_match = na blanks the unmatched value", {
     "DM",
     decode = "to_decode",
     no_match = "na",
-    check = "off"
+    on_error = "off"
   )
   expect_true(is.na(out$SEX[1]))
 })
@@ -79,7 +91,7 @@ test_that("coercion that introduces NA warns with vport_warning_coercion", {
   raw$AGE <- as.character(raw$AGE)
   raw$AGE[1] <- "not-a-number"
   expect_warning(
-    apply_spec(raw, spec, "ADSL", check = "off"),
+    apply_spec(raw, spec, "ADSL", on_error = "off"),
     class = "vport_warning_coercion"
   )
 })
@@ -89,7 +101,7 @@ test_that("coercion that introduces NA warns with vport_warning_coercion", {
 test_that("sort_keys orders rows by the dataset keys and records them", {
   spec <- keyed_spec()
   raw <- cdisc_dm[sample.int(nrow(cdisc_dm)), , drop = FALSE]
-  out <- apply_spec(raw, spec, "DM", check = "off")
+  out <- apply_spec(raw, spec, "DM", on_error = "off")
   expect_identical(attr(out, "vport.sort"), c("STUDYID", "USUBJID"))
   expect_false(is.unsorted(out$USUBJID))
 })
@@ -114,8 +126,8 @@ test_that("apply_spec exposes na_position to the user", {
   spec <- keyed_spec()
   raw <- cdisc_dm
   raw$USUBJID[1] <- NA
-  first <- apply_spec(raw, spec, "DM", check = "off", na_position = "first")
-  last <- apply_spec(raw, spec, "DM", check = "off", na_position = "last")
+  first <- apply_spec(raw, spec, "DM", on_error = "off", na_position = "first")
+  last <- apply_spec(raw, spec, "DM", on_error = "off", na_position = "last")
   expect_true(is.na(first$USUBJID[1])) # missing leads
   expect_true(is.na(last$USUBJID[nrow(last)])) # missing trails
 })
@@ -128,7 +140,7 @@ test_that("a duplicated spec variable aborts with vport_error_spec", {
   vars2 <- rbind(vars, dup)
   spec <- vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
   expect_error(
-    apply_spec(cdisc_dm, spec, "DM", check = "off"),
+    apply_spec(cdisc_dm, spec, "DM", on_error = "off"),
     class = "vport_error_spec"
   )
 })
@@ -172,7 +184,7 @@ test_that("apply_spec check = warn attaches findings and warns on errors", {
       "DM",
       decode = "none",
       no_match = "error",
-      check = "warn"
+      on_error = "warn"
     ),
     class = "vport_warning_conformance"
   )

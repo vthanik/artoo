@@ -393,14 +393,14 @@
 #' #
 #' # apply_spec() attaches the metadata; write_json() serializes the full
 #' # itemGroup plus the data rows.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".json")
 #' write_json(adsl, path)
 #'
 #' # ---- Example 2: a frozen timestamp for reproducible bytes ----
 #' #
 #' # Fixing `created` makes two writes byte-identical.
-#' dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
 #' path2 <- tempfile(fileext = ".json")
 #' write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
 #'
@@ -432,7 +432,7 @@ write_json <- function(x, path, created = NULL) {
 #' # ---- Example 1: round-trip a conformed dataset through Dataset-JSON ----
 #' #
 #' # The variable labels, types, and keys survive the round-trip.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".json")
 #' write_json(adsl, path)
 #' back <- read_json(path)

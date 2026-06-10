@@ -98,7 +98,7 @@ spec_datasets <- function(spec) {
 #' # Omit `dataset` to get the full table, e.g. to count variables per domain.
 #' table(spec_variables(spec)$dataset)
 #'
-#' @seealso [spec_datasets()] for the dataset names; [spec_codelist()] for a
+#' @seealso [spec_datasets()] for the dataset names; [spec_codelists()] for a
 #'   variable's controlled terminology.
 #' @export
 spec_variables <- function(spec, dataset = NULL) {
@@ -111,34 +111,46 @@ spec_variables <- function(spec, dataset = NULL) {
   vars[!is.na(vars$dataset) & vars$dataset == dataset, , drop = FALSE]
 }
 
-#' Terms of one codelist
+#' Codelist terms
 #'
-#' Return the controlled-terminology terms and decodes for a single
-#' codelist. Use it to inspect the values a coded variable is allowed to
-#' take before applying the spec.
+#' Return the controlled-terminology terms and decodes a spec carries: one
+#' codelist's terms when `codelist_id` names it, or the full `codelists` slot
+#' when `codelist_id` is `NULL`. Use it to inspect the values a coded variable
+#' is allowed to take before applying the spec. Mirrors the
+#' [spec_variables()] filter pattern.
 #'
 #' @param spec *The specification to read.* `<vport_spec>: required`.
-#' @param codelist_id *The codelist to return.* `<character(1)>: required`.
+#' @param codelist_id *The codelist to return.* `<character(1)> | NULL`. When
+#'   `NULL` (default) the whole codelists table is returned.
 #'
-#'   **Restriction:** must name a codelist present in the spec's
-#'   `codelists` slot; an unknown id aborts with `vport_error_input`.
+#'   **Restriction:** a non-`NULL` id must name a codelist present in the
+#'   spec's `codelists` slot; an unknown id aborts with `vport_error_input`.
 #'
-#' @return *A data frame of the codelist's terms* (`term`, `decode`,
-#'   `order`, `extended`), one row per term.
+#' @return *A data frame of codelist terms* (`codelist_id`, `term`, `decode`,
+#'   `order`, ...), one row per term: every term when `codelist_id` is `NULL`,
+#'   else the named codelist's terms.
 #'
 #' @examples
 #' # ---- Example 1: the terms behind a coded variable ----
 #' #
-#' # SEX is coded against C66731; spec_codelist() returns the terms and their
+#' # SEX is coded against C66731; spec_codelists() returns the terms and their
 #' # decodes that apply_spec() will enforce or decode.
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-#' spec_codelist(spec, "C66731")
+#' spec_codelists(spec, "C66731")
+#'
+#' # ---- Example 2: the whole codelists table ----
+#' #
+#' # Called with no id, it returns every term across every codelist.
+#' head(spec_codelists(spec))
 #'
 #' @seealso [spec_variables()] for which variables reference a codelist.
 #' @export
-spec_codelist <- function(spec, codelist_id) {
+spec_codelists <- function(spec, codelist_id = NULL) {
   .check_spec_arg(spec)
   cl <- spec@codelists
+  if (is.null(codelist_id)) {
+    return(cl)
+  }
   known <- if ("codelist_id" %in% names(cl)) {
     unique(cl$codelist_id)
   } else {

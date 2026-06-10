@@ -108,7 +108,7 @@
 #' head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 #'
 #' @seealso
-#' **Inspect:** [spec_datasets()], [spec_variables()], [spec_codelist()],
+#' **Inspect:** [spec_datasets()], [spec_variables()], [spec_codelists()],
 #' [spec_keys()], [spec_study()].
 #'
 #' **Check:** [validate_spec()]. **Predicate:** [is_vport_spec()].

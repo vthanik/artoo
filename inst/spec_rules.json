@@ -7,7 +7,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "The study-level metadata carries no study name.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "dataset_label_present",
@@ -17,7 +18,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A dataset has no label.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "dataset_keys_resolve",
@@ -27,7 +29,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A dataset's key variables are not all defined in the spec.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "dataset_comment_resolves",
@@ -37,7 +40,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A dataset references a comment id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_label_present",
@@ -47,7 +51,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable has no label.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_length_positive",
@@ -57,7 +62,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable has a non-positive length.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_sigdigits_nonneg",
@@ -67,7 +73,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable has negative significant digits.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_method_resolves",
@@ -77,7 +84,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable references a method id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_comment_resolves",
@@ -87,7 +95,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable references a comment id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_derived_has_method",
@@ -97,7 +106,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable with Origin='Derived' has no method.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_order_positive",
@@ -107,7 +117,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A variable order is not a positive integer.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_length_for_text",
@@ -117,7 +128,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A string/integer variable has no length.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "value_whereclause_present",
@@ -127,7 +139,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A value-level row has no where-clause.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "value_variable_resolves",
@@ -137,7 +150,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A value-level row names a variable not in the dataset.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "value_method_resolves",
@@ -147,7 +161,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A value-level row references a method id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "value_comment_resolves",
@@ -157,7 +172,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A value-level row references a comment id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "value_codelist_resolves",
@@ -167,7 +183,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A value-level row references a codelist id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "codelist_comment_resolves",
@@ -177,7 +194,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A codelist references a comment id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "codelist_terms_present",
@@ -187,7 +205,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A referenced codelist defines no terms.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "method_id_unique",
@@ -197,7 +216,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A method id is defined more than once.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "method_description_present",
@@ -207,7 +227,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A referenced method has a blank description.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "method_document_resolves",
@@ -217,7 +238,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A method references a document id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "comment_id_unique",
@@ -227,7 +249,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A comment id is defined more than once.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "comment_description_present",
@@ -237,7 +260,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A referenced comment has a blank description.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "comment_document_resolves",
@@ -247,7 +271,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A comment references a document id that is not defined.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "document_id_unique",
@@ -257,7 +282,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A document id is defined more than once.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "method_unused",
@@ -267,7 +293,8 @@
     "scope": "whole-spec",
     "status": "implemented",
     "description": "A method is defined but referenced by nothing.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "comment_unused",
@@ -277,7 +304,8 @@
     "scope": "whole-spec",
     "status": "implemented",
     "description": "A comment is defined but referenced by nothing.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "document_unused",
@@ -287,7 +315,8 @@
     "scope": "whole-spec",
     "status": "implemented",
     "description": "A document is defined but referenced by nothing.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "ct_value_in_codelist",
@@ -297,7 +326,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A data value is not among the codelist's terms.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "ct_term_unused",
@@ -307,7 +337,8 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A codelist term is defined in the spec but absent from the data.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
   },
   {
     "id": "variable_present_in_data",
@@ -317,7 +348,74 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A spec variable has no column in the supplied data.",
-    "reason": null
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "missing_variable",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A spec variable is absent from the data.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "extra_variable",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A data column is not declared in the spec.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "type_mismatch",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A column's storage differs from the spec dataType.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "length_overflow",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A character value is longer than the spec length.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "codelist_membership",
+    "dimension": "ct",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A data value is outside its codelist.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "display_format",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A date/datetime/time variable has a displayFormat that is not a recognized SAS format of that family.",
+    "reason": null,
+    "engine": "data"
   },
   {
     "id": "arm_result_metadata",
@@ -327,7 +425,8 @@
     "scope": "scoped",
     "status": "deferred",
     "description": "Analysis Results Metadata integrity.",
-    "reason": "needs ARM slots vport does not carry"
+    "reason": "needs ARM slots vport does not carry",
+    "engine": "spec"
   },
   {
     "id": "codelist_term_standard_ct",
@@ -337,7 +436,8 @@
     "scope": "scoped",
     "status": "deferred",
     "description": "Codelist term/decode is a valid NCI CT pair.",
-    "reason": "needs a bundled NCI CT library"
+    "reason": "needs a bundled NCI CT library",
+    "engine": "spec"
   },
   {
     "id": "codelist_decode_present",
@@ -347,7 +447,8 @@
     "scope": "scoped",
     "status": "deferred",
     "description": "A coded term has no decoded value.",
-    "reason": "cannot distinguish enumerated value lists (no decode expected) from coded terms"
+    "reason": "cannot distinguish enumerated value lists (no decode expected) from coded terms",
+    "engine": "spec"
   },
   {
     "id": "data_composite_key_unique",
@@ -357,6 +458,7 @@
     "scope": "scoped",
     "status": "deferred",
     "description": "No duplicate rows for the spec-declared composite key in data.",
-    "reason": "in-data conformance beyond CT membership"
+    "reason": "in-data conformance beyond CT membership",
+    "engine": "spec"
   }
 ]

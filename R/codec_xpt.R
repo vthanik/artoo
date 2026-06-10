@@ -1021,7 +1021,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_xpt() carries the label, length,
 #' # and SAS format for each variable into the transport file.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".xpt")
 #' write_xpt(adsl, path)
 #'
@@ -1029,7 +1029,7 @@
 #' #
 #' # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
 #' # reproducible.
-#' dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
 #' path8 <- tempfile(fileext = ".xpt")
 #' write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
 #'
@@ -1085,7 +1085,7 @@ write_xpt <- function(
 #' # ---- Example 1: round-trip a conformed dataset through xpt ----
 #' #
 #' # Write ADSL, read it back; the variable labels and lengths survive.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".xpt")
 #' write_xpt(adsl, path)
 #' back <- read_xpt(path)

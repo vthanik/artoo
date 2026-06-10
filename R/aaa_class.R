@@ -181,5 +181,28 @@ vport_check_class <- S7::new_class(
     scope = S7::new_property(S7::class_character, default = character(0)),
     study = S7::new_property(S7::class_character, default = "(unspecified)"),
     summary = S7::new_property(S7::class_list, default = list())
-  )
+  ),
+  validator = function(self) {
+    need <- c(
+      "check",
+      "dimension",
+      "severity",
+      "dataset",
+      "variable",
+      "message"
+    )
+    miss <- setdiff(need, names(self@findings))
+    if (length(miss)) {
+      return(paste0(
+        "@findings is missing column(s): ",
+        paste(miss, collapse = ", "),
+        "."
+      ))
+    }
+    sev <- self@findings$severity
+    if (length(sev) && !all(sev %in% c("error", "warning", "note"))) {
+      return("@findings$severity must be one of error, warning, note.")
+    }
+    NULL
+  }
 )

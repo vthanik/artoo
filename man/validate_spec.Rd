@@ -4,7 +4,12 @@
 \alias{validate_spec}
 \title{Validate a specification for submission-readiness}
 \usage{
-validate_spec(spec, data = NULL, dataset = NULL, strict = FALSE)
+validate_spec(
+  spec,
+  data = NULL,
+  dataset = NULL,
+  on_error = c("off", "warn", "abort")
+)
 }
 \arguments{
 \item{spec}{\emph{The specification to validate.} \verb{<vport_spec>: required}.}
@@ -19,8 +24,15 @@ a length-1 \code{dataset}. (Wired in a later step.)}
 
 \strong{Restriction:} each name must be a dataset in the spec.}
 
-\item{strict}{\emph{Abort on an error-severity finding.} \verb{<logical(1)>: default FALSE}. When \code{TRUE}, all findings are still collected, then
-the call aborts with \code{vport_error_validation} if any error exists.}
+\item{on_error}{\emph{What to do with an error-severity finding.}
+\verb{<character(1)>}. One of:
+\itemize{
+\item \code{"off"} (default) collect and return every finding; never signal.
+\item \code{"warn"} additionally \code{cli_warn} (\code{vport_warning_validation}) with
+the error count.
+\item \code{"abort"} additionally abort with \code{vport_error_validation}.
+All findings are collected and returned in every case.
+}}
 }
 \value{
 \emph{A \code{vport_check} object.} Its \verb{@findings} data frame has columns
@@ -44,7 +56,7 @@ validates the whole spec.
 
 \strong{Collect, do not stop.} Every finding is collected and returned;
 \code{validate_spec()} does not abort on an error-severity finding unless
-\code{strict = TRUE}.
+\code{on_error = "abort"}.
 }
 \examples{
 # ---- Example 1: validate one dataset ----
@@ -55,15 +67,15 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 chk <- validate_spec(spec, dataset = "ADSL")
 chk@findings
 
-# ---- Example 2: gate on errors with strict ----
+# ---- Example 2: gate on errors with on_error = "abort" ----
 #
-# Point a key at a missing variable, then validate strictly and catch
-# the resulting error.
+# Point a key at a missing variable, then validate with on_error = "abort"
+# and catch the resulting error.
 bad_ds <- cdisc_datasets
 bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
 bad <- vport_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
 tryCatch(
-  validate_spec(bad, dataset = "DM", strict = TRUE),
+  validate_spec(bad, dataset = "DM", on_error = "abort"),
   vport_error_validation = function(e) conditionMessage(e)[1]
 )
 

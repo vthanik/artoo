@@ -8,7 +8,7 @@ apply_spec(
   x,
   spec,
   dataset,
-  check = c("warn", "strict", "off"),
+  on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
   na_position = c("first", "last"),
@@ -23,12 +23,12 @@ apply_spec(
 
 \item{dataset}{\emph{The dataset whose rules apply.} \verb{<character(1)>: required}. Must name a dataset in \code{spec}.}
 
-\item{check}{\emph{What to do with conformance findings.} \verb{<character(1)>}.
+\item{on_error}{\emph{What to do with conformance findings.} \verb{<character(1)>}.
 One of:
 \itemize{
 \item \code{"warn"} (default) run \code{\link[=check_spec]{check_spec()}}, attach the findings, warn on
 any error-severity finding.
-\item \code{"strict"} abort with \code{vport_error_conformance} on any error-severity
+\item \code{"abort"} abort with \code{vport_error_conformance} on any error-severity
 finding.
 \item \code{"off"} skip the check entirely.
 }}
@@ -56,11 +56,11 @@ When \code{NULL} (default) every step runs; otherwise any of
 
 \item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
 \code{\link[=vport_checks]{vport_checks()}} control to disable some. Has no effect when
-\code{check = "off"}.}
+\code{on_error = "off"}.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{vport_meta} (read it with
-\code{\link[=get_meta]{get_meta()}}) and a \code{vport.conformance} attribute when \code{check} ran.
+\code{\link[=get_meta]{get_meta()}}) and a \code{vport.conformance} attribute when \code{on_error} ran.
 Hand it to any \verb{write_*()} codec.
 }
 \description{

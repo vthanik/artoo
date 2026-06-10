@@ -10,7 +10,7 @@ test_that("vport_checks() defaults every conformance dimension on", {
   expect_true(is_vport_checks(ck))
   expect_true(ck$missing_variable)
   expect_true(ck$codelist_membership)
-  expect_null(ck$encoding_check)
+  expect_true(ck$display_format)
 })
 
 test_that("vport_checks() rejects a non-logical toggle", {
@@ -21,11 +21,6 @@ test_that("vport_checks() rejects a non-logical toggle", {
   expect_error(vport_checks(type_mismatch = NA), class = "vport_error_input")
 })
 
-test_that("vport_checks() validates encoding_check", {
-  expect_error(vport_checks(encoding_check = 1L), class = "vport_error_input")
-  expect_silent(vport_checks(encoding_check = "US-ASCII"))
-})
-
 test_that("is_vport_checks is FALSE for other objects", {
   expect_false(is_vport_checks(list()))
   expect_false(is_vport_checks(TRUE))
@@ -33,9 +28,7 @@ test_that("is_vport_checks is FALSE for other objects", {
 
 test_that("print.vport_checks renders the toggle grid", {
   expect_snapshot(print(vport_checks()))
-  expect_snapshot(
-    print(vport_checks(length_overflow = FALSE, encoding_check = "US-ASCII"))
-  )
+  expect_snapshot(print(vport_checks(length_overflow = FALSE)))
 })
 
 test_that("disabling a dimension suppresses its findings", {
@@ -70,7 +63,7 @@ test_that("apply_spec threads checks through to the conformance step", {
       "DM",
       decode = "none",
       no_match = "error",
-      check = "warn",
+      on_error = "warn",
       checks = vport_checks(codelist_membership = FALSE)
     )
   )
@@ -134,5 +127,63 @@ test_that("check_spec rejects a non-vport_checks checks argument", {
   expect_error(
     check_spec(cdisc_dm, spec, "DM", checks = list(missing_variable = TRUE)),
     class = "vport_error_input"
+  )
+})
+
+# ---- 1c: one codelist-membership rule, honoring mandatory -------------------
+
+test_that("codelist_membership treats NA in a mandatory variable as a violation (1c)", {
+  vars <- function(mand) {
+    data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      codelist_id = "C66731",
+      mandatory = mand,
+      stringsAsFactors = FALSE
+    )
+  }
+  dat <- data.frame(SEX = c("M", NA), stringsAsFactors = FALSE)
+
+  mand_spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    vars(TRUE),
+    codelists = cdisc_codelists
+  )
+  f <- check_spec(dat, mand_spec, "DM")
+  expect_true(any(f$check == "codelist_membership"))
+
+  opt_spec <- vport_spec(
+    data.frame(dataset = "DM"),
+    vars(FALSE),
+    codelists = cdisc_codelists
+  )
+  f2 <- check_spec(dat, opt_spec, "DM")
+  expect_false(any(f2$check == "codelist_membership"))
+})
+
+# ---- 1d: decode-aware membership -------------------------------------------
+
+test_that("check_spec(decode=) compares against the matching codelist column (1d)", {
+  spec <- demo_spec()
+  dec <- apply_spec(
+    cdisc_dm,
+    spec,
+    "DM",
+    decode = "to_decode",
+    on_error = "off"
+  )
+  # Checked with the same decode direction: the decoded values are members.
+  f_ok <- check_spec(dec, spec, "DM", decode = "to_decode")
+  expect_false(any(f_ok$check == "codelist_membership"))
+  # Checked as if not decoded: the decode values are no longer terms.
+  f_bad <- check_spec(dec, spec, "DM", decode = "none")
+  expect_true(any(f_bad$check == "codelist_membership"))
+})
+
+test_that("apply_spec threads decode so a clean decode does not warn (1d)", {
+  spec <- demo_spec()
+  expect_silent(
+    apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", on_error = "warn")
   )
 })

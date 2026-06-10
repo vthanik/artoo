@@ -9,7 +9,7 @@ demo_spec <- function() {
 
 test_that("apply_spec conforms ADSL and stamps metadata", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 
   expect_s3_class(adsl, "data.frame")
   # Columns are exactly the spec variables, in spec order.
@@ -23,7 +23,7 @@ test_that("apply_spec conforms ADSL and stamps metadata", {
 test_that("apply_spec scaffolds missing spec variables as typed NA", {
   spec <- demo_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "AGE"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", check = "off")
+  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
 
   expect_true("AGE" %in% names(out))
   expect_true(all(is.na(out$AGE)))
@@ -33,13 +33,13 @@ test_that("apply_spec drops columns the spec does not declare", {
   spec <- demo_spec()
   raw <- cdisc_adsl
   raw$NOTSPEC <- 1
-  out <- apply_spec(raw, spec, "ADSL", check = "off")
+  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
   expect_false("NOTSPEC" %in% names(out))
 })
 
 test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guard)", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 
   expect_s3_class(adsl$TRTSDT, "Date")
   # Deflating to SAS days must use the 1960 epoch, not the R 1970 epoch:
@@ -53,7 +53,7 @@ test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guar
 test_that("a scaffolded date variable realizes to a Date NA", {
   spec <- demo_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", check = "off")
+  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
   expect_s3_class(out$TRTSDT, "Date")
   expect_true(all(is.na(out$TRTSDT)))
 })
@@ -61,7 +61,7 @@ test_that("a scaffolded date variable realizes to a Date NA", {
 test_that("apply_spec does not mutate its input (transactional)", {
   spec <- demo_spec()
   before <- cdisc_adsl
-  apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   expect_identical(cdisc_adsl, before)
 })
 
@@ -94,7 +94,7 @@ test_that("apply_spec validates x and dataset", {
 
 test_that("decode = none leaves coded values untouched", {
   spec <- demo_spec()
-  out <- apply_spec(cdisc_dm, spec, "DM", decode = "none", check = "off")
+  out <- apply_spec(cdisc_dm, spec, "DM", decode = "none", on_error = "off")
   raw_sorted <- apply_spec(
     cdisc_dm,
     spec,
@@ -108,11 +108,11 @@ test_that("decode = none leaves coded values untouched", {
 
 test_that("check_spec returns the canonical empty shape on conformance", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   res <- check_spec(adsl, spec, "ADSL")
   expect_identical(
     names(res),
-    c("check", "variable", "severity", "message")
+    c("check", "dimension", "severity", "dataset", "variable", "message")
   )
 })
 
@@ -141,7 +141,7 @@ test_that("apply_spec check = strict aborts on an error finding", {
   raw <- cdisc_dm
   raw$USUBJID <- NULL # forces a missing_variable error
   expect_error(
-    apply_spec(raw, spec, "DM", check = "strict", steps = c("coerce")),
+    apply_spec(raw, spec, "DM", on_error = "abort", steps = c("coerce")),
     class = "vport_error_conformance"
   )
 })
@@ -156,7 +156,7 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   raw <- cdisc_dm
   raw$SEX[1] <- "Z{oops"
   expect_error(
-    apply_spec(raw, spec, "DM", check = "strict"),
+    apply_spec(raw, spec, "DM", on_error = "abort"),
     class = "vport_error_conformance"
   )
 })
@@ -168,7 +168,7 @@ test_that("coercion warns when an integer dataType truncates fractions (review B
   raw <- cdisc_dm
   raw$AGE[1] <- raw$AGE[1] + 0.7
   expect_warning(
-    apply_spec(raw, spec, "DM", check = "off"),
+    apply_spec(raw, spec, "DM", on_error = "off"),
     class = "vport_warning_coercion"
   )
 })

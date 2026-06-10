@@ -26,14 +26,14 @@ test_that("spec_variables() rejects an unknown dataset", {
   expect_error(spec_variables(demo_spec(), "NOPE"), class = "vport_error_input")
 })
 
-test_that("spec_codelist() returns one codelist's terms", {
-  cl <- spec_codelist(demo_spec(), "C66731")
+test_that("spec_codelists() returns one codelist's terms", {
+  cl <- spec_codelists(demo_spec(), "C66731")
   expect_setequal(cl$term, c("F", "M", "U", "UNDIFFERENTIATED"))
 })
 
-test_that("spec_codelist() rejects an unknown codelist", {
+test_that("spec_codelists() rejects an unknown codelist", {
   expect_error(
-    spec_codelist(demo_spec(), "C00000"),
+    spec_codelists(demo_spec(), "C00000"),
     class = "vport_error_input"
   )
 })

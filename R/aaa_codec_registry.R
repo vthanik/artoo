@@ -19,7 +19,7 @@
 # instrumented bindings live and lets a codec be redefined). `extensions`
 # are lowercase, dot-free; `mode` is "rw" or "r". `engine` names an optional
 # Suggests package the codec needs (e.g. "nanoparquet"); NULL means the codec
-# is pure-R and always available. check_formats() consults it.
+# is pure-R and always available. vport_formats() consults it.
 #' @noRd
 .register_codec <- function(
   format,

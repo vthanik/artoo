@@ -4,7 +4,13 @@
 \alias{check_spec}
 \title{Check a dataset against its spec}
 \usage{
-check_spec(x, spec, dataset, checks = NULL)
+check_spec(
+  x,
+  spec,
+  dataset,
+  decode = c("none", "to_decode", "to_code"),
+  checks = NULL
+)
 }
 \arguments{
 \item{x}{\emph{The data frame to check.} \verb{<data.frame>: required}. Typically
@@ -16,29 +22,40 @@ the output of \code{\link[=apply_spec]{apply_spec()}}, but any frame works.}
 
 \strong{Restriction:} must name a dataset in \code{spec} (see \code{\link[=spec_datasets]{spec_datasets()}}).}
 
+\item{decode}{\emph{Which codelist column membership is checked against.}
+\verb{<character(1)>}. One of \code{"none"} (default), \code{"to_decode"}, or
+\code{"to_code"}.}
+
 \item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; build a control
 with \code{\link[=vport_checks]{vport_checks()}} to disable some.}
 }
 \value{
-\emph{A findings data frame} with columns \code{check}, \code{variable},
-\code{severity} (\code{"error"} or \code{"warning"}), and \code{message}, one row per
-divergence. Zero rows means the data conforms.
+\emph{A findings data frame} with columns \code{check}, \code{dimension},
+\code{severity} (\code{"error"}, \code{"warning"}, or \code{"note"}), \code{dataset}, \code{variable},
+and \code{message}, one row per divergence. Zero rows means the data conforms.
 }
 \description{
 Compare a data frame to one dataset's specification and report where they
-diverge. This is the thin conformance check that sits at the end of the
-vport workflow (spec -> apply_spec -> check_spec): it reuses the metadata
-the spec already carries (variables, types, lengths, codelists, keys), so
-it needs no rule catalog. It is distinct from \code{\link[=validate_spec]{validate_spec()}}, which
-checks the spec's own internal integrity rather than data.
+diverge. This is the data-conformance check at the end of the vport
+workflow (spec -> apply_spec -> check_spec): it reuses the metadata the
+spec already carries (variables, types, lengths, codelists, keys). It is
+distinct from \code{\link[=validate_spec]{validate_spec()}}, which checks the spec's own internal
+integrity rather than the data. Both report findings keyed to the same open
+rule catalog.
 }
 \details{
 \strong{Findings, not enforcement.} \code{check_spec()} never modifies data; it
-returns every divergence it finds. \code{\link[=apply_spec]{apply_spec()}} runs it and decides
-what to do via its \code{check} argument (warn, strict, off). The dimensions
-checked are: missing variables (spec variable absent from the data),
-extra variables (data column the spec does not declare), type mismatch,
-character length overflow, and codelist membership.
+returns every divergence it finds. \code{\link[=apply_spec]{apply_spec()}} runs it and decides what
+to do via its \code{on_error} argument (warn, abort, off). The dimensions
+checked are: missing variables (spec variable absent from the data), extra
+variables (data column the spec does not declare), type mismatch, character
+length overflow, codelist membership, and displayFormat validity.
+
+\strong{Decode-aware membership.} \code{decode} selects which codelist column the
+data is checked against, matching \code{\link[=apply_spec]{apply_spec()}}'s decode step:
+\code{"none"}/\code{"to_code"} check against the codelist \code{term}s, \code{"to_decode"}
+against the \code{decode}s. \code{\link[=apply_spec]{apply_spec()}} threads its own \code{decode} through, so
+a decoded column is not wrongly flagged.
 }
 \examples{
 spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -47,7 +64,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 # against the same spec returns zero rows.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 nrow(check_spec(adsl, spec, "ADSL"))
 
 # ---- Example 2: raw data surfaces divergences ----

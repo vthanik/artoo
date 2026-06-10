@@ -5,19 +5,37 @@ test_that("the rule catalog parses and has the required shape", {
   r <- vport:::.spec_rules()
   expect_s3_class(r, "data.frame")
   expect_true(all(
-    c("id", "dimension", "severity", "requires_data", "scope", "status") %in%
+    c(
+      "id",
+      "dimension",
+      "severity",
+      "requires_data",
+      "scope",
+      "status",
+      "engine"
+    ) %in%
       names(r)
   ))
   expect_true(all(r$severity %in% c("error", "warning", "note")))
+  expect_true(all(r$engine %in% c("spec", "data")))
+  # A data-engine rule cannot run without data.
+  expect_false(any(r$engine == "data" & !r$requires_data))
   expect_false(any(duplicated(r$id)))
 })
 
-test_that("implemented catalog ids exactly match what the engine emits", {
+test_that("implemented spec-engine ids exactly match what validate_spec emits", {
   skip_if_not_installed("jsonlite")
   r <- vport:::.spec_rules()
-  implemented <- r$id[r$status == "implemented"]
+  implemented <- r$id[r$status == "implemented" & r$engine == "spec"]
   emitted <- vport:::.engine_check_ids()
   expect_setequal(implemented, emitted)
+})
+
+test_that("implemented data-engine ids match the vport_checks() dimensions", {
+  skip_if_not_installed("jsonlite")
+  r <- vport:::.spec_rules()
+  data_ids <- r$id[r$status == "implemented" & r$engine == "data"]
+  expect_setequal(data_ids, names(formals(vport_checks)))
 })
 
 test_that("every check the engine emits has a valid catalog entry", {
@@ -44,6 +62,7 @@ test_that(".check_rules_df rejects a malformed catalog", {
     requires_data = FALSE,
     scope = "scoped",
     status = "implemented",
+    engine = "spec",
     stringsAsFactors = FALSE
   )
   expect_invisible(vport:::.check_rules_df(ok))
@@ -61,6 +80,19 @@ test_that(".check_rules_df rejects a malformed catalog", {
   bad_dim$dimension <- "galaxy"
   expect_error(
     vport:::.check_rules_df(bad_dim),
+    class = "vport_error_validation"
+  )
+  bad_engine <- ok
+  bad_engine$engine <- "quantum"
+  expect_error(
+    vport:::.check_rules_df(bad_engine),
+    class = "vport_error_validation"
+  )
+  # A data-engine rule must require data.
+  bad_data <- ok
+  bad_data$engine <- "data"
+  expect_error(
+    vport:::.check_rules_df(bad_data),
     class = "vport_error_validation"
   )
   dup <- rbind(ok, ok)

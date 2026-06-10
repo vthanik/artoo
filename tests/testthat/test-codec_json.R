@@ -20,7 +20,7 @@ expect_values_equal <- function(back, orig) {
 
 test_that("write_json/read_json round-trips ADSL values and metadata", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(adsl, p, created = frozen)
   back <- read_json(p)
@@ -34,7 +34,7 @@ test_that("write_json/read_json round-trips ADSL values and metadata", {
 
 test_that("read_json realizes Date columns from ISO strings", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(adsl, p, created = frozen)
   back <- read_json(p)
@@ -45,7 +45,7 @@ test_that("read_json realizes Date columns from ISO strings", {
 
 test_that("DM round-trips through the generic dispatcher by extension", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_dataset(dm, p, created = frozen)
   back <- read_dataset(p)
@@ -57,7 +57,7 @@ test_that("DM round-trips through the generic dispatcher by extension", {
 
 test_that("a frozen created makes two writes byte-identical", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p1 <- withr::local_tempfile(fileext = ".json")
   p2 <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p1, created = frozen)
@@ -70,7 +70,7 @@ test_that("a frozen created makes two writes byte-identical", {
 
 test_that("the file carries datasetJSONCreationDateTime from created", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
   raw <- jsonlite::fromJSON(p, simplifyVector = FALSE)
@@ -92,7 +92,7 @@ test_that("decimal rides as an exact string end to end", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -111,7 +111,7 @@ test_that("a whole-number double stays double on re-read (C1)", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -132,7 +132,7 @@ test_that("integer, boolean, and time columns round-trip by type", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -156,7 +156,7 @@ test_that("a date with targetDataType integer rides as a number (9.A.5)", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   raw <- jsonlite::fromJSON(p, simplifyVector = FALSE)
@@ -179,7 +179,7 @@ test_that("a partial ISO date stays a character string", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -190,7 +190,7 @@ test_that("a partial ISO date stays a character string", {
 
 test_that("a zero-row dataset round-trips with an empty rows array", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm[0, ], spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm[0, ], spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
   raw <- jsonlite::fromJSON(p, simplifyVector = FALSE)
@@ -257,7 +257,7 @@ test_that("an embedded NUL byte aborts (B5)", {
 
 test_that("a leading UTF-8 BOM is stripped on read (B5)", {
   spec <- demo_spec()
-  dm <- apply_spec(cdisc_dm, spec, "DM", check = "off")
+  dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
   body <- readBin(p, "raw", file.info(p)$size)
@@ -321,7 +321,7 @@ test_that("an end-to-end datetime column round-trips as POSIXct", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", check = "off")
+  ap <- apply_spec(df, vport_spec(dss, vars), "X", on_error = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)

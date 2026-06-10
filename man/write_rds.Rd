@@ -26,7 +26,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: write a conformed dataset to rds ----
 #
 # apply_spec() attaches the metadata; write_rds() carries it into the file.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 path <- tempfile(fileext = ".rds")
 write_rds(adsl, path)
 

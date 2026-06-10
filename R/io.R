@@ -59,7 +59,7 @@
 #'   extension selects the codec unless `format` is given.
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
-#'   [check_formats()]).
+#'   [vport_formats()]).
 #' @param ... *Codec-specific arguments* passed through to the encoder (see
 #'   the per-format wrappers, e.g. [write_xpt()], for what each codec
 #'   accepts). An argument the codec does not know is an error, never
@@ -75,7 +75,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_dataset() carries it into the
 #' # file so a later read is lossless.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_dataset(adsl, path)
 #'
@@ -86,7 +86,7 @@
 #' write_dataset(adsl, alt, format = "rds")
 #'
 #' @seealso [read_dataset()] for the inverse; [write_rds()] for the
-#'   per-format wrapper; [check_formats()] for what is available.
+#'   per-format wrapper; [vport_formats()] for what is available.
 #' @export
 write_dataset <- function(x, path, format = NULL, ...) {
   call <- rlang::caller_env()
@@ -133,7 +133,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #'   selects the codec unless `format` is given.
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
-#'   [check_formats()]).
+#'   [vport_formats()]).
 #' @param ... *Codec-specific arguments* passed through to the decoder (see
 #'   the per-format wrappers, e.g. [read_xpt()]). An argument the codec does
 #'   not know is an error, never silently ignored.
@@ -148,7 +148,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #' # ---- Example 1: round-trip a dataset through rds ----
 #' #
 #' # Write a conformed dataset, then read it back; the metadata survives.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", check = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_dataset(adsl, path)
 #' back <- read_dataset(path)
@@ -213,11 +213,11 @@ read_dataset <- function(path, format = NULL, ...) {
 #' # ---- Example 1: see what this session can read and write ----
 #' #
 #' # rds is always available; the table shows the extensions each codec claims.
-#' check_formats()
+#' vport_formats()
 #'
 #' @seealso [read_dataset()] and [write_dataset()] which use the registry.
 #' @export
-check_formats <- function() {
+vport_formats <- function() {
   fmts <- .registered_formats()
   data.frame(
     format = fmts,

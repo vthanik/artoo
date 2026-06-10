@@ -10,8 +10,7 @@ vport_checks(
   type_mismatch = TRUE,
   length_overflow = TRUE,
   codelist_membership = TRUE,
-  display_format = TRUE,
-  encoding_check = NULL
+  display_format = TRUE
 )
 }
 \arguments{
@@ -33,12 +32,6 @@ dataType.} \verb{<logical(1)>: default TRUE}.}
 \item{display_format}{\emph{Flag a date/datetime/time variable whose
 displayFormat is not a recognized SAS format of that family.}
 \verb{<logical(1)>: default TRUE}.}
-
-\item{encoding_check}{\emph{Target encoding for the write-time encoding gate.}
-\verb{<character(1)> | NULL}. When \code{NULL} (default) the encoding is resolved
-from the write target (US-ASCII for xpt, UTF-8 for Dataset-JSON); a name
-such as \code{"US-ASCII"} forces it. Consumed by the codec write path, not by
-\code{\link[=check_spec]{check_spec()}}.}
 }
 \value{
 \emph{A \verb{<vport_checks>} control object}. Pass it as the \code{checks}
@@ -60,7 +53,7 @@ findings frame stays clean.
 \examples{
 # ---- Example 1: the default runs every conformance dimension ----
 #
-# With no arguments, all five conformance checks are enabled.
+# With no arguments, all six conformance dimensions are enabled.
 vport_checks()
 
 # ---- Example 2: silence one dimension for a whole study ----
