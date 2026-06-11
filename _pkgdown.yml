@@ -68,9 +68,11 @@ reference:
 
 - title: Conform
   desc: >
-    Apply a spec to a raw frame and carry its metadata.
+    Apply a spec to a raw frame, derive through codelists, and carry the
+    metadata.
   contents:
   - apply_spec
+  - decode_column
   - get_meta
   - set_meta
   - sync_meta
@@ -80,6 +82,7 @@ reference:
     Conformance findings for the data, and integrity of the spec itself.
   contents:
   - check_spec
+  - conformance
   - validate_spec
   - vport_checks
 
@@ -125,3 +128,20 @@ articles:
   contents:
   - from-spec-to-submission
   - one-dataset-every-format
+
+- title: Migrate
+  navbar: Migrate
+  contents:
+  - articles/migrate-from-pharmaverse
+
+- title: Deep dives
+  navbar: Deep dives
+  contents:
+  - articles/dtc-and-partial-dates
+  - articles/common-errors
+
+- title: Trust
+  navbar: Trust
+  contents:
+  - articles/why-vport
+  - articles/validation-and-qualification

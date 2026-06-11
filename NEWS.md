@@ -1,5 +1,48 @@
 # vport 0.0.0.9000
 
+* `apply_spec()` renamed `on_error` to `conformance` (`"warn"` / `"abort"` /
+  `"off"`): the argument gates the conformance check, and the old name read
+  as if it suppressed pipeline errors. (`validate_spec()` keeps `on_error`,
+  which is accurate there.) The conformance warning now points at the new
+  `conformance()` accessor.
+* `apply_spec()` gained `on_lossy`: integer coercion that would truncate
+  fractional values or overflow R's 32-bit range now aborts by default
+  (`vport_error_type`) before any value is damaged; `on_lossy = "warn"`
+  restores the old warning behavior. `check_spec()` flags the same
+  conditions pre-flight as the new `integer_fraction` dimension.
+* `apply_spec()` gained `profile = "xportr"`, a steps preset (drop, order,
+  sort, stamp; no scaffold/coerce/decode) for matching legacy
+  metacore + metatools + xportr pipeline output during a migration.
+* Character ISO 8601 date/datetime/time columns (the SDTM `--DTC`
+  convention) are now first-class: a temporal `dataType` with no numeric
+  `targetDataType` is stored as ISO text in every format -- `write_xpt()`
+  writes a character variable with partial dates (`"1951"`, `"1951-12"`)
+  intact, where it previously aborted. Numeric storage is driven by
+  `targetDataType = "integer"` (recorded automatically when the data
+  column is `Date`/`POSIXct`/`vport_time`), and ISO text is never silently
+  promoted to `Date` on read or coerce. A new `iso8601_format` conformance
+  dimension validates character temporal values (CDISC partials and SDTMIG
+  hyphen placeholders pass; `"12NOV2019"` and impossible dates fail).
+* New `conformance()` reads the findings `apply_spec()` attached, as a
+  `vport_findings` frame with a sectioned print; `check_spec()` returns the
+  same classed frame. The raw attribute is no longer the interface.
+* New `decode_column()` derives or translates one variable through its spec
+  codelist (the `metatools::create_var_from_codelist()` shape): the
+  destination's codelist wins, a spec-declared destination is coerced to
+  its dataType and labelled, and the `no_match` / `trim` / `ignore_case`
+  policies match `apply_spec()`'s decode step exactly.
+* `read_spec()` gained `datasets` (scope a multi-domain spec to the
+  datasets you are working on, before validation) and `on_duplicate`
+  (`"error"` / `"first"` / `"warn"`): a variable defined twice is now
+  reported with its source location -- sheet name and Excel row numbers
+  for a P21 workbook -- instead of surfacing as an unlocated abort deep in
+  `apply_spec()`. `vport_spec()` itself now rejects duplicate
+  (dataset, variable) rows at construction, naming the offending rows.
+* `spec_variables()` and `spec_codelists()` now document every column of
+  their return value, and the pkgdown site gained task-oriented articles:
+  migrating from the pharmaverse metadata stack, the `--DTC` / partial-date
+  storage model, common errors, validation and qualification evidence, and
+  a "why vport" comparison.
 * `read_dataset()` now guarantees its contract for every codec: a truncated
   or bit-flipped file aborts with `vport_error_codec` instead of leaking a
   raw error from an external engine (the parquet C++ reader's "invalid

@@ -81,8 +81,30 @@ spec_datasets <- function(spec) {
 #'   (see [spec_datasets()]); an unknown name aborts with
 #'   `vport_error_input`.
 #'
-#' @return *A data frame of variable metadata*, one row per variable. Filter
-#'   or arrange it with ordinary base / `dplyr` verbs.
+#' @return *A data frame of variable metadata*, one row per variable, with
+#'   22 columns (absent ones are filled with typed `NA` at construction):
+#'
+#'   - `dataset`, `variable` -- the identifying pair (unique within a spec).
+#'   - `itemoid` -- the Define-XML / Dataset-JSON item OID, when recorded.
+#'   - `label` -- the variable label (<= 40 bytes for XPORT v5).
+#'   - `data_type` -- canonical CDISC dataType (`string`, `integer`,
+#'     `decimal`, `float`, `double`, `boolean`, `date`, `datetime`, `time`,
+#'     `URI`).
+#'   - `target_data_type` -- `integer`/`decimal` when a temporal variable
+#'     stores as a SAS-epoch numeric; `NA` means ISO 8601 text (`--DTC`).
+#'   - `length` -- declared storage length (bytes for character).
+#'   - `display_format`, `informat` -- SAS format / informat strings.
+#'   - `key_sequence` -- 1-based position in the dataset sort key.
+#'   - `order` -- column position in the dataset.
+#'   - `codelist_id`, `method_id`, `comment_id` -- references into the
+#'     codelists / methods / comments slots.
+#'   - `mandatory` -- logical obligation flag (`NA` is treated as
+#'     mandatory by [check_spec()]).
+#'   - `significant_digits` -- for `decimal` variables.
+#'   - `origin`, `source`, `predecessor`, `assigned_value`, `pages`,
+#'     `role` -- Define-XML provenance fields, carried as-is.
+#'
+#'   Filter or arrange it with ordinary base / `dplyr` verbs.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -126,9 +148,16 @@ spec_variables <- function(spec, dataset = NULL) {
 #'   **Restriction:** a non-`NULL` id must name a codelist present in the
 #'   spec's `codelists` slot; an unknown id aborts with `vport_error_input`.
 #'
-#' @return *A data frame of codelist terms* (`codelist_id`, `term`, `decode`,
-#'   `order`, ...), one row per term: every term when `codelist_id` is `NULL`,
-#'   else the named codelist's terms.
+#' @return *A data frame of codelist terms*, one row per term: every term
+#'   when `codelist_id` is `NULL`, else the named codelist's terms. Columns:
+#'
+#'   - `codelist_id` -- the codelist identifier variables reference.
+#'   - `term` -- the submission value (what conformed data carries).
+#'   - `decode` -- the human-readable decoded value.
+#'   - `order` -- display order within the codelist.
+#'   - `extended` -- `TRUE` marks an extensible codelist (sponsor terms
+#'     allowed; non-members downgrade to notes in [check_spec()]).
+#'   - `comment_id` -- reference into the comments slot.
 #'
 #' @examples
 #' # ---- Example 1: the terms behind a coded variable ----

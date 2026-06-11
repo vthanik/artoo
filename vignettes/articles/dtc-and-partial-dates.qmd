@@ -1,0 +1,125 @@
+---
+title: "ISO dates, --DTC, and partial dates"
+format: html
+---
+
+```{r}
+#| include: false
+library(vport)
+```
+
+Clinical dates come in two storage shapes, and mixing them up corrupts a
+submission. vport encodes the distinction the way CDISC does — in the
+metadata — so every codec agrees and partial dates survive byte for byte.
+
+## The rule: `targetDataType` decides
+
+A `dataType` of `date`, `datetime`, or `time` says what a variable
+*means*. How it is *stored* follows `targetDataType`:
+
+| Spec says | Data column is | Stored as |
+|---|---|---|
+| `date` (no targetDataType) | character | **ISO 8601 text** — the SDTM `--DTC` convention; partials first-class |
+| `date` (no targetDataType) | `Date` / numeric | SAS-epoch numeric; `targetDataType = "integer"` is recorded at stamp time so every format agrees |
+| `date` + `targetDataType = "integer"` | `Date` / numeric | SAS-epoch numeric with a SAS display format — the ADaM numeric-date convention |
+| `date` + `targetDataType = "integer"` | character | **error** — a partial date can never silently become a SAS number |
+
+This mirrors Dataset-JSON v1.1 exactly: no `targetDataType` means the
+values are exchanged as ISO 8601 strings; `targetDataType: "integer"`
+means SAS-epoch numbers.
+
+## SDTM `--DTC`: character ISO text, partials included
+
+`BRTHDTC` typed `date` with no `targetDataType` holds ISO text. Partial
+dates — a known year, a known year-month — are real data, not errors:
+
+```{r}
+spec <- vport_spec(
+  data.frame(dataset = "DM", label = "Demographics"),
+  data.frame(
+    dataset  = "DM",
+    variable  = c("USUBJID", "BRTHDTC"),
+    label     = c("Subject ID", "Birth Date/Time"),
+    data_type = c("string", "date")
+  )
+)
+
+raw <- data.frame(
+  USUBJID = c("01-001", "01-002", "01-003", "01-004"),
+  BRTHDTC = c("1951-12-03", "1951-12", "1951", NA)
+)
+
+dm <- apply_spec(raw, spec, "DM")
+str(dm$BRTHDTC)
+```
+
+The column stays character — vport never silently promotes ISO text to
+`Date` (a promotion would have to destroy `"1951-12"`). And it writes to
+every format, XPT included, with the values intact:
+
+```{r}
+p <- tempfile(fileext = ".xpt")
+write_xpt(dm, p)
+read_xpt(p)$BRTHDTC
+```
+
+In the `.xpt` file `BRTHDTC` is a character variable, which is exactly
+what an SDTM transport file is supposed to contain.
+
+## ADaM numeric dates: `Date` in, SAS number out
+
+The bundled ADSL has R `Date` columns. Conforming records
+`targetDataType = "integer"` on them, so every codec stores SAS-epoch
+numbers and every reader realizes the same `Date` class back:
+
+```{r}
+spec_pilot <- vport_spec(
+  cdisc_datasets, cdisc_variables,
+  codelists = cdisc_codelists
+)
+adsl <- apply_spec(cdisc_adsl, spec_pilot, "ADSL")
+get_meta(adsl)@columns$TRTSDT[c("dataType", "targetDataType")]
+```
+
+```{r}
+pj <- tempfile(fileext = ".json")
+write_json(adsl, pj)
+identical(read_json(pj)$TRTSDT, adsl$TRTSDT)
+```
+
+## Validation: `iso8601_format`
+
+A character temporal column is validated as ISO 8601. Complete values,
+right-truncated partials, and the SDTMIG hyphen placeholders
+(`"2003---15"`: day known, month unknown) all pass; a SAS-style date or
+an impossible calendar date is an error-severity finding:
+
+```{r}
+bad <- raw
+bad$BRTHDTC[1] <- "03DEC1951"
+bad_dm <- apply_spec(bad, spec, "DM", conformance = "off")
+f <- check_spec(bad_dm, spec, "DM")
+f[f$check == "iso8601_format", c("severity", "variable", "message")]
+```
+
+## When the spec demands a number it cannot have
+
+`targetDataType = "integer"` under a column that still holds partial
+text is the one combination with no faithful answer — so it fails loud
+at write time, never silently:
+
+```{r}
+#| error: true
+spec_num <- vport_spec(
+  data.frame(dataset = "DM", label = "Demographics"),
+  data.frame(
+    dataset = "DM", variable = "BRTHDTC", label = "Birth Date/Time",
+    data_type = "date", target_data_type = "integer"
+  )
+)
+dm_num <- apply_spec(raw["BRTHDTC"], spec_num, "DM", conformance = "off")
+write_xpt(dm_num, tempfile(fileext = ".xpt"))
+```
+
+The fix is in the message: drop the `targetDataType` to keep ISO text,
+or complete the values.

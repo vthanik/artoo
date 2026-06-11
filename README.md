@@ -21,7 +21,7 @@ pak::pak("vthanik/vport")
 
 ## Quick start
 
-Build a spec, conform a raw frame into a submission-ready dataset, then write it to the format the FDA expects:
+Build a spec, conform a raw frame into a submission-ready dataset, then write it to the format the FDA expects — one pipeable chain:
 
 ``` r
 library(vport)
@@ -29,17 +29,20 @@ library(vport)
 # A CDISC-shaped spec from the bundled pilot metadata
 spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
-# Scaffold, coerce, order, sort, and stamp metadata in one call
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
-
-# Write SAS XPORT v5
+# Scaffold, coerce, order, sort, stamp metadata, then write -- the writers
+# return their input invisibly, so one conformed frame fans out to every
+# deliverable format.
 path <- tempfile(fileext = ".xpt")
-write_xpt(adsl, path)
+adsl <- cdisc_adsl |>
+  apply_spec(spec, "ADSL") |>
+  write_xpt(path)
 
 # Read it back -- labels, formats, types, and record count intact
 get_meta(read_xpt(path))@dataset$records
 #> [1] 60
 ```
+
+Conformance is data, not console noise: `conformance(adsl)` returns every finding as a frame (`check`, `severity`, `variable`, `message`) with a sectioned print, and `decode_column()` derives coded variables (`RACEN` from `RACE`) straight from the spec’s codelists.
 
 ## Any-to-any, lossless
 
@@ -56,11 +59,12 @@ write_xpt(read_json(json), out)
 
 ## Supported formats
 
-    #>    format read write  extensions
-    #> 1    json TRUE  TRUE        json
-    #> 2 parquet TRUE  TRUE parquet, pq
-    #> 3     rds TRUE  TRUE         rds
-    #> 4     xpt TRUE  TRUE  xpt, xport
+    #>    format read write    extensions
+    #> 1    json TRUE  TRUE          json
+    #> 2  ndjson TRUE  TRUE ndjson, jsonl
+    #> 3 parquet TRUE  TRUE   parquet, pq
+    #> 4     rds TRUE  TRUE           rds
+    #> 5     xpt TRUE  TRUE    xpt, xport
 
 | Format | Reader | Writer | Use |
 |----|----|----|----|
@@ -71,10 +75,14 @@ write_xpt(read_json(json), out)
 
 The generic `read_dataset()` / `write_dataset()` dispatch on the file extension; every reader supports partial reads via `col_select` and `n_max`.
 
+Partial ISO 8601 dates are first-class: a character `--DTC` column typed `date` writes to XPT as ISO text — `"1951-12"` survives byte for byte — while `targetDataType = "integer"` drives the ADaM numeric-date convention. See the [storage model](https://vthanik.github.io/vport/articles/dtc-and-partial-dates.html).
+
 ## Learn more
 
 - `vignette("from-spec-to-submission")` — the spec → apply → check → write workflow.
 - `vignette("one-dataset-every-format")` — lossless any-to-any conversion.
+- [Migrating from metacore, metatools, and xportr](https://vthanik.github.io/vport/articles/migrate-from-pharmaverse.html) — the Rosetta table.
+- [Validation & qualification evidence](https://vthanik.github.io/vport/articles/validation-and-qualification.html) — for validated environments.
 
 ## License
 
