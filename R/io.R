@@ -230,49 +230,57 @@ read_dataset <- function(
   # The decode boundary takes untrusted file bytes. A codec aborts with a
   # vport_error_* on malformed input, but an external engine (the parquet C++
   # reader, readRDS, jsonlite's UTF-8 validator) can raise a raw R error on a
-  # truncated or bit-flipped file. Translate any such non-vport error into a
-  # vport_error_codec so the read contract holds for every codec -- return a
-  # data frame or abort with a vport condition, never leak a foreign error.
-  res <- tryCatch(
-    do.call(decode, c(dargs, list(...), list(call = call))),
+  # truncated or bit-flipped file. The whole read path -- decode AND the
+  # narrowing / meta-reattachment tail -- is translated, because a corrupt
+  # container can also yield a payload that only fails later (an rds whose
+  # bit-flipped bytes decompress to a RAGGED data frame breaks the column
+  # re-projection; an invalid-UTF-8 label breaks the meta serializer). The
+  # contract holds for every codec: return a data frame or abort with a
+  # vport condition, never leak a foreign error.
+  tryCatch(
+    {
+      res <- do.call(decode, c(dargs, list(...), list(call = call)))
+      # Self-describing containers (rds) can hold anything; the read_*
+      # contract promises a data frame, so refuse other payloads loudly.
+      if (!is.data.frame(res$data)) {
+        msg <- c(
+          "{.path {path}} does not contain a dataset.",
+          "x" = "The {.val {fmt}} payload is {.obj_type_friendly {res$data}}, not a data frame."
+        )
+        if (identical(fmt, "rds")) {
+          msg <- c(msg, "i" = "Use {.fn readRDS} for arbitrary R objects.")
+        }
+        cli::cli_abort(msg, class = "vport_error_codec", call = call)
+      }
+      # The single source of partial-read correctness (which columns, what
+      # order, which error). Idempotent on a frame a codec already narrowed.
+      # Runs BEFORE set_meta so the re-projected label/format.sas attrs land
+      # on the kept cols.
+      red <- .apply_partial_read(res$data, res$meta, col_select, n_max, call)
+      if (is_vport_meta(red$meta)) {
+        set_meta(red$data, red$meta)
+      } else {
+        red$data
+      }
+    },
     error = function(e) {
-      # A codec's own vport_error_* (the malformed-input message it crafted)
-      # passes through unchanged; only a foreign error from an external engine
-      # is re-wrapped.
+      # vport's own conditions (the malformed-input message a codec crafted,
+      # an unknown col_select name) pass through unchanged; only a foreign
+      # error from an external engine is re-wrapped.
       if (any(grepl("^vport_error_", class(e)))) {
         stop(e)
       }
+      msg <- .safe_msg(e)
       cli::cli_abort(
         c(
           "Could not read {.path {path}} as {.val {fmt}}.",
-          "x" = "{conditionMessage(e)}"
+          "x" = "{msg}"
         ),
         class = "vport_error_codec",
         call = call
       )
     }
   )
-  # Self-describing containers (rds) can hold anything; the read_* contract
-  # promises a data frame, so refuse other payloads loudly.
-  if (!is.data.frame(res$data)) {
-    msg <- c(
-      "{.path {path}} does not contain a dataset.",
-      "x" = "The {.val {fmt}} payload is {.obj_type_friendly {res$data}}, not a data frame."
-    )
-    if (identical(fmt, "rds")) {
-      msg <- c(msg, "i" = "Use {.fn readRDS} for arbitrary R objects.")
-    }
-    cli::cli_abort(msg, class = "vport_error_codec", call = call)
-  }
-  # The single source of partial-read correctness (which columns, what order,
-  # which error). Idempotent on a frame a codec already narrowed. Runs BEFORE
-  # set_meta so the re-projected label/format.sas attrs land on the kept cols.
-  red <- .apply_partial_read(res$data, res$meta, col_select, n_max, call)
-  if (is_vport_meta(red$meta)) {
-    set_meta(red$data, red$meta)
-  } else {
-    red$data
-  }
 }
 
 # Type-check the partial-read arguments before any decode runs. col_select is

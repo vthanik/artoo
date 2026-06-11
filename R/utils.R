@@ -25,6 +25,18 @@
   gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
 }
 
+# A foreign error's message can quote raw file bytes (jsonlite echoes the
+# offending input), so it may not be valid UTF-8 -- and cli's own message
+# rendering would then error INSIDE the abort handler, leaking an unclassed
+# condition. Substitute invalid bytes (<hh> escapes) so the message is
+# always safe to interpolate.
+#' @noRd
+.safe_msg <- function(e) {
+  msg <- conditionMessage(e)
+  out <- iconv(msg, "UTF-8", "UTF-8", sub = "byte")
+  ifelse(is.na(out), "(unprintable message)", out)
+}
+
 # Tolerant logical coercion: accepts TRUE/FALSE, "Y"/"N", "Yes"/"No",
 # "T"/"F", 1/0. NA stays NA.
 #' @noRd

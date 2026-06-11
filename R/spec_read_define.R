@@ -64,10 +64,11 @@
   doc <- tryCatch(
     xml2::read_xml(path),
     error = function(e) {
+      msg <- .safe_msg(e)
       cli::cli_abort(
         c(
           "{.path {path}} is not parseable XML.",
-          "x" = "{conditionMessage(e)}"
+          "x" = "{msg}"
         ),
         class = "vport_error_input",
         call = call

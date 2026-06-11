@@ -237,7 +237,7 @@
     error = function(e) {
       # The parser message can contain braces; pass it as a value so cli does
       # not treat it as glue markup.
-      msg <- conditionMessage(e)
+      msg <- .safe_msg(e)
       cli::cli_abort(
         c(
           "{.path {path}} is not valid JSON.",

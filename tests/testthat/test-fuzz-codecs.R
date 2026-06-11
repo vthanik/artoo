@@ -148,3 +148,35 @@ test_that("a real SAS file with a flipped interior byte stays bounded", {
     .expect_clean(p, "xpt")
   }
 })
+
+test_that("a corrupt rds payload failing AFTER decode still aborts as vport (CI fuzz regression)", {
+  # A bit-flipped rds can decompress to a payload readRDS accepts but
+  # that only fails in the post-decode tail (the column re-projection, or
+  # cli rendering a foreign message that quotes invalid-UTF-8 file
+  # bytes). The contract: a data frame OR a vport condition -- never a
+  # raw R error. Both shapes the CI fuzzer hit are pinned here.
+  expect_clean_rds <- function(payload) {
+    p <- withr::local_tempfile(fileext = ".rds", .local_envir = parent.frame())
+    saveRDS(payload, p)
+    res <- tryCatch(
+      suppressWarnings(read_dataset(p)),
+      vport_error_codec = function(e) "vport",
+      error = function(e) structure("other", msg = conditionMessage(e))
+    )
+    if (identical(as.vector(res), "other")) {
+      fail(sprintf("non-vport error: %s", attr(res, "msg")))
+    }
+    expect_true(identical(res, "vport") || is.data.frame(res))
+  }
+
+  ragged <- data.frame(A = c("x", "y", "z"), stringsAsFactors = FALSE)
+  attr(ragged$A, "label") <- "ok"
+  attr(ragged, "row.names") <- integer(0) # ragged: 3-long column, 0 rows
+  expect_clean_rds(ragged)
+
+  bad_label <- data.frame(A = 1)
+  lab <- "R\xe9sidence"
+  Encoding(lab) <- "UTF-8" # declared UTF-8, bytes are not
+  attr(bad_label$A, "label") <- lab
+  expect_clean_rds(bad_label)
+})
