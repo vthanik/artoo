@@ -211,6 +211,12 @@ artoo_spec <- function(
     )
   }
 
+  # Derive per-variable key_sequence from the dataset-level keys string when
+  # the source does not provide one (the P21 shape: keys live only on the
+  # Datasets sheet). One canonical model: the meta keySequence -- and so the
+  # Dataset-JSON output -- then carries the keys regardless of source.
+  variables <- .derive_key_sequence(datasets, variables)
+
   # Resolve the one CDISC standard from every place a source can carry it
   # (explicit argument, P21 datasets column, Define-XML study field), then
   # strip those columns -- @standard is the single home.
@@ -246,6 +252,32 @@ artoo_spec <- function(
     documents = documents,
     values = values
   )
+}
+
+# Fill variables$key_sequence from datasets$keys for datasets where the
+# source provided none. Explicit key_sequence values always win (validation
+# checks their consistency with the keys string separately).
+#' @noRd
+.derive_key_sequence <- function(datasets, variables) {
+  if (!nrow(variables) || !nrow(datasets) || !"keys" %in% names(datasets)) {
+    return(variables)
+  }
+  for (i in seq_len(nrow(datasets))) {
+    ds <- datasets$dataset[i]
+    raw <- datasets$keys[i]
+    if (is.na(ds) || is.na(raw) || !nzchar(trimws(raw))) {
+      next
+    }
+    rows <- !is.na(variables$dataset) & variables$dataset == ds
+    if (!any(rows) || !all(is.na(variables$key_sequence[rows]))) {
+      next
+    }
+    keys <- .split_keys(trimws(raw))
+    idx <- match(variables$variable, keys)
+    set <- rows & !is.na(idx)
+    variables$key_sequence[set] <- as.integer(idx[set])
+  }
+  variables
 }
 
 # Resolve the spec's one CDISC standard. Unions the explicit argument, a

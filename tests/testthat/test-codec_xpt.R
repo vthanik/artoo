@@ -1085,3 +1085,22 @@ test_that("a real SAS xpt with no informats still reads cleanly", {
   metas <- get_meta(dm)@columns
   expect_true(all(vapply(metas, function(c) is.null(c$informat), logical(1))))
 })
+
+test_that("a second member hidden in the floored-off v5 tail still aborts", {
+  # With wide records (obs_length > 80), an appended member header is shorter
+  # than one record, so the EOF-derived row count floors it away and the
+  # in-obs signature scan never sees it -- the regression was a silent drop.
+  df <- data.frame(
+    SUBJ = c("A", "B"),
+    COMMENT = c(strrep("x", 200), strrep("y", 200)),
+    stringsAsFactors = FALSE
+  )
+  attr(df, "dataset_name") <- "T"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p)
+  sig <- "HEADER RECORD*******MEMBER  HEADER RECORD!!!!!!!"
+  con <- file(p, "ab")
+  writeBin(charToRaw(sprintf("%-80s", sig)), con)
+  close(con)
+  expect_error(read_xpt(p), class = "artoo_error_codec")
+})

@@ -239,7 +239,15 @@ spec_keys <- function(spec, dataset) {
   if (!length(raw)) {
     return(character(0))
   }
-  keys <- unlist(strsplit(raw[[1]], "[[:space:],]+"))
+  .split_keys(raw[[1]])
+}
+
+# Split a dataset's keys string ("STUDYID USUBJID", commas tolerated) into
+# the ordered key variable names. Shared by spec_keys() and the
+# key_sequence derivation in artoo_spec().
+#' @noRd
+.split_keys <- function(raw) {
+  keys <- unlist(strsplit(raw, "[[:space:],]+"))
   keys[nzchar(keys)]
 }
 

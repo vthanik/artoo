@@ -900,6 +900,20 @@
   }
 }
 
+# The shared multi-member abort: artoo reads one member per call, and a
+# silently dropped second member would be silent truncation.
+#' @noRd
+.xpt_abort_multimember <- function(call) {
+  .artoo_abort(
+    c(
+      "This XPORT file has more than one member.",
+      "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
+    ),
+    kind = "codec",
+    call = call
+  )
+}
+
 # v5 stores no obs count: it is the data section after the OBS header, blank-
 # padded to an 80-byte boundary. Step back from `end` (the next member's
 # offset, or EOF -- the default) over trailing all-0x20 records (the padding)
@@ -909,7 +923,13 @@
 # all-blank), where a genuine trailing all-NA row is indistinguishable from
 # padding -- an inherent v5 limitation (see C4).
 #' @noRd
-.xpt_compute_v5_nobs <- function(con, obs_length, path, end = NULL) {
+.xpt_compute_v5_nobs <- function(
+  con,
+  obs_length,
+  path,
+  end = NULL,
+  call = rlang::caller_env()
+) {
   start <- seek(con, where = NA)
   end <- end %||% file.info(path)$size
   remaining <- end - start
@@ -926,6 +946,25 @@
       r <- r - 1
     } else {
       break
+    }
+  }
+  # The floor() above drops a tail shorter than one record -- and when
+  # records are wide, an ENTIRE small second member can hide inside that
+  # floored-off fragment (the in-obs signature scan never sees it, because
+  # only r * obs_length bytes are read). Scan the fragment's 80-byte-aligned
+  # file offsets for a HEADER signature and abort loud: a silently dropped
+  # member is silent truncation.
+  tail_start <- start + r * as.double(obs_length)
+  if (end > tail_start) {
+    sig <- charToRaw("HEADER RECORD*******")
+    off <- ceiling(tail_start / 80) * 80
+    while (off + length(sig) <= end) {
+      seek(con, where = off)
+      probe <- readBin(con, what = "raw", n = length(sig))
+      if (length(probe) == length(sig) && all(probe == sig)) {
+        .xpt_abort_multimember(call)
+      }
+      off <- off + 80
     }
   }
   seek(con, where = start)
@@ -960,14 +999,7 @@
       length(sig) >= length(expected) &&
         all(sig[seq_along(expected)] == expected)
     ) {
-      .artoo_abort(
-        c(
-          "This XPORT file has more than one member.",
-          "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
-        ),
-        kind = "codec",
-        call = call
-      )
+      .xpt_abort_multimember(call)
     }
   }
   invisible(NULL)
@@ -1019,14 +1051,7 @@
   cand <- starts[all_data[starts] == sig[1L]]
   for (s in cand) {
     if (all(all_data[s:(s + nb - 1L)] == sig)) {
-      .artoo_abort(
-        c(
-          "This XPORT file has more than one member.",
-          "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
-        ),
-        kind = "codec",
-        call = call
-      )
+      .xpt_abort_multimember(call)
     }
   }
   invisible(NULL)
@@ -1367,7 +1392,8 @@
       con,
       obs_length,
       path,
-      end = if (is.na(obs_end)) NULL else obs_end
+      end = if (is.na(obs_end)) NULL else obs_end,
+      call = call
     )
   }
   # Multi-member detection (single-member path only; a known obs_end means
