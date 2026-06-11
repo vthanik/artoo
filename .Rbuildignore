@@ -22,5 +22,4 @@
 ^vignettes/articles$
 ^vignettes/\.quarto$
 ^vignettes/.*_files$
-^codecov\.yml$
 ^bench$
