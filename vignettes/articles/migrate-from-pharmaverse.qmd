@@ -5,27 +5,27 @@ format: html
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
 If you build submission datasets with the pharmaverse metadata stack —
 `metacore` to hold the spec, `metatools` to derive from it, `xportr` to
-stamp and write — vport replaces all three with one object and one
+stamp and write — artoo replaces all three with one object and one
 pipeline. This article is the Rosetta stone: every call you use today,
-and the vport equivalent.
+and the artoo equivalent.
 
 ## The Rosetta table
 
-| You write today | vport equivalent | Notes |
+| You write today | artoo equivalent | Notes |
 |---|---|---|
-| `metacore::spec_to_metacore(path)` | `read_spec(path)` | Reads P21 Excel, Define-XML 2.x, and vport's native JSON through one validated constructor. |
+| `metacore::spec_to_metacore(path)` | `read_spec(path)` | Reads P21 Excel, Define-XML 2.x, and artoo's native JSON through one validated constructor. |
 | `metacore::select_dataset(mc, "ADSL")` | `read_spec(path, datasets = "ADSL")` | Scoped at read time, so a broken sheet elsewhere in the workbook cannot block you. |
 | `metatools::build_from_derived(mc, ds_list)` | `apply_spec(raw, spec, "ADSL")` (scaffold + drop steps) | One call runs the whole conform pipeline; `steps =` selects a subset. |
 | `metatools::create_var_from_codelist(df, mc, RACE, RACEN)` | `decode_column(df, spec, "ADSL", from = "RACE", to = "RACEN", direction = "to_code")` | The destination's codelist wins; a spec-declared destination is coerced to its dataType and labelled. |
 | `metatools::check_variables(df, mc)` | `check_spec(df, spec, "ADSL")` | One findings frame covers variables, types, lengths, codelists, keys, ISO 8601 dates. |
 | `metatools::check_ct_data(df, mc)` | `check_spec()` (codelist dimensions) or `validate_spec(spec, data = df)` | Extensible codelists downgrade non-members to notes automatically. |
 | `metatools::order_cols(df, mc)` + `sort_by_key(df, mc)` | `apply_spec(..., steps = c("order", "sort"))` | Or let the full pipeline do both. |
-| `xportr::xportr_type/length/label/format/order(...)` | `apply_spec(raw, spec, "ADSL")` | The metadata stamp carries label, length, format, and order in one `vport_meta`. |
+| `xportr::xportr_type/length/label/format/order(...)` | `apply_spec(raw, spec, "ADSL")` | The metadata stamp carries label, length, format, and order in one `artoo_meta`. |
 | `xportr::xportr_write(df, path)` | `write_xpt(adsl, "adsl.xpt")` | Plus `write_json()`, `write_parquet()`, `write_rds()` from the same object. |
 
 ## A migration, end to end
@@ -34,7 +34,7 @@ The bundled CDISC pilot data stands in for your study. The whole legacy
 chain collapses to three pipeable calls:
 
 ```{r}
-spec <- vport_spec(
+spec <- artoo_spec(
   cdisc_datasets,
   cdisc_variables,
   codelists = cdisc_codelists
@@ -74,7 +74,7 @@ cls <- rbind(
     decode = c("F", "M"), order = 1:2
   )
 )
-spec_n <- vport_spec(cdisc_datasets, vars, codelists = cls)
+spec_n <- artoo_spec(cdisc_datasets, vars, codelists = cls)
 
 dm <- decode_column(
   cdisc_dm, spec_n, "DM",
@@ -108,7 +108,7 @@ Once the outputs reconcile, drop the profile and let the full pipeline
 
 ## What you gain on the other side
 
-- **One metadata object.** The `vport_meta` stamped by `apply_spec()` is
+- **One metadata object.** The `artoo_meta` stamped by `apply_spec()` is
   exactly what every codec writes and reads back — there is no second
   metadata pass and no drift between formats.
 - **Findings, not console noise.** `conformance(adsl)` returns the full

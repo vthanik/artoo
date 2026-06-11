@@ -2,13 +2,13 @@
 
 <!-- README.md is generated from README.qmd. Please edit that file -->
 
-# vport <a href="https://vthanik.github.io/vport/"><img src="man/figures/logo.png" align="right" height="139" alt="vport website" /></a>
+# artoo <a href="https://vthanik.github.io/artoo/"><img src="man/figures/logo.png" align="right" height="139" alt="artoo website" /></a>
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/vport/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/vport/graph/badge.svg)](https://app.codecov.io/gh/vthanik/vport) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
+[![R-CMD-check](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml) [![Codecov test coverage](https://codecov.io/gh/vthanik/artoo/graph/badge.svg)](https://app.codecov.io/gh/vthanik/artoo) [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) <!-- badges: end -->
 
-**vport** (“versatile port”) is a lightweight, lossless, CDISC-native reader and writer for clinical-trial datasets. It moves data between **SAS XPORT (XPT)**, **CDISC Dataset-JSON v1.1**, **Apache Parquet**, and **RDS** through one canonical metadata model, so converting between any two formats is lossless *by construction* — not by best effort.
+**artoo** is a lightweight, lossless, CDISC-native reader and writer for clinical-trial datasets. It moves data between **SAS XPORT (XPT)**, **CDISC Dataset-JSON v1.1**, **Apache Parquet**, and **RDS** through one canonical metadata model, so converting between any two formats is lossless *by construction* — not by best effort.
 
 It is **pure R and lightweight**: no external SAS or Java runtime, and no heavy I/O dependency. One metadata model carries labels, CDISC data types, lengths, SAS display formats, controlled-terminology references, and sort keys identically across every format.
 
@@ -16,7 +16,7 @@ It is **pure R and lightweight**: no external SAS or Java runtime, and no heavy 
 
 ``` r
 # install.packages("pak")
-pak::pak("vthanik/vport")
+pak::pak("vthanik/artoo")
 ```
 
 ## Quick start
@@ -24,10 +24,10 @@ pak::pak("vthanik/vport")
 Build a spec, conform a raw frame into a submission-ready dataset, then write it to the format the FDA expects — one pipeable chain:
 
 ``` r
-library(vport)
+library(artoo)
 
 # A CDISC-shaped spec from the bundled pilot metadata
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # Scaffold, coerce, order, sort, stamp metadata, then write -- the writers
 # return their input invisibly, so one conformed frame fans out to every
@@ -75,14 +75,14 @@ write_xpt(read_json(json), out)
 
 The generic `read_dataset()` / `write_dataset()` dispatch on the file extension; every reader supports partial reads via `col_select` and `n_max`.
 
-Partial ISO 8601 dates are first-class: a character `--DTC` column typed `date` writes to XPT as ISO text — `"1951-12"` survives byte for byte — while `targetDataType = "integer"` drives the ADaM numeric-date convention. See the [storage model](https://vthanik.github.io/vport/articles/dtc-and-partial-dates.html).
+Partial ISO 8601 dates are first-class: a character `--DTC` column typed `date` writes to XPT as ISO text — `"1951-12"` survives byte for byte — while `targetDataType = "integer"` drives the ADaM numeric-date convention. See the [storage model](https://vthanik.github.io/artoo/articles/dtc-and-partial-dates.html).
 
 ## Learn more
 
 - `vignette("from-spec-to-submission")` — the spec → apply → check → write workflow.
 - `vignette("one-dataset-every-format")` — lossless any-to-any conversion.
-- [Migrating from metacore, metatools, and xportr](https://vthanik.github.io/vport/articles/migrate-from-pharmaverse.html) — the Rosetta table.
-- [Validation & qualification evidence](https://vthanik.github.io/vport/articles/validation-and-qualification.html) — for validated environments.
+- [Migrating from metacore, metatools, and xportr](https://vthanik.github.io/artoo/articles/migrate-from-pharmaverse.html) — the Rosetta table.
+- [Validation & qualification evidence](https://vthanik.github.io/artoo/articles/validation-and-qualification.html) — for validated environments.
 
 ## License
 

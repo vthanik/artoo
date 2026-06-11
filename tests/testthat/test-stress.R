@@ -1,12 +1,12 @@
 # Stress: wide (1000-variable) and tall (200k-row) frames round-trip through
 # every format with identity preserved and bounded memory. The big sizes run
-# only under VPORT_STRESS=1 (and never on CRAN); a smaller default size keeps
+# only under ARTOO_STRESS=1 (and never on CRAN); a smaller default size keeps
 # the everyday suite honest without the wall-clock cost.
 
 skip_on_cran()
 
 .stress_big <- function() {
-  identical(Sys.getenv("VPORT_STRESS"), "1")
+  identical(Sys.getenv("ARTOO_STRESS"), "1")
 }
 
 .full_formats_stress <- function() {
@@ -33,7 +33,7 @@ test_that("a wide frame (1000 variables) round-trips through every format", {
     sprintf("VAR%04d", seq_len(nvar))
   )
   df <- as.data.frame(cols, stringsAsFactors = FALSE)
-  meta <- vport:::.meta_from_frame(df)
+  meta <- artoo:::.meta_from_frame(df)
   df <- set_meta(df, meta)
 
   for (fmt in .full_formats_stress()) {
@@ -60,7 +60,7 @@ test_that("a tall frame round-trips through every format with bounded memory", {
     ADT = as.Date("2020-01-01") + (seq_len(n) %% 365L),
     stringsAsFactors = FALSE
   )
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "LB", label = "Labs"),
     data.frame(
       dataset = "LB",
@@ -103,7 +103,7 @@ test_that("the real LB lab domain round-trips when present", {
 # ---- perf regression (opt-in, vs bench/baseline.json) -----------------------
 
 test_that("write/read timings stay within 5x of the recorded baseline", {
-  skip_if(Sys.getenv("VPORT_BENCH") != "1", "set VPORT_BENCH=1 to run")
+  skip_if(Sys.getenv("ARTOO_BENCH") != "1", "set ARTOO_BENCH=1 to run")
   baseline_path <- test_path("..", "..", "bench", "baseline.json")
   skip_if_not(file.exists(baseline_path), "bench/baseline.json not present")
   baseline <- jsonlite::fromJSON(baseline_path, simplifyVector = FALSE)
@@ -111,8 +111,8 @@ test_that("write/read timings stay within 5x of the recorded baseline", {
   n <- as.integer(baseline$rows)
   set.seed(2026)
   frame <- data.frame(
-    STUDYID = rep("VPORT-001", n),
-    USUBJID = sprintf("VPORT-001-%07d", seq_len(n)),
+    STUDYID = rep("ARTOO-001", n),
+    USUBJID = sprintf("ARTOO-001-%07d", seq_len(n)),
     ARM = sample(c("PLACEBO", "ACTIVE 10MG", NA), n, TRUE),
     AVAL = round(rnorm(n), 6),
     ADT = as.Date("2024-01-01") + sample.int(365L, n, TRUE),

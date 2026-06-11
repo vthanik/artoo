@@ -18,7 +18,7 @@
   encoding = NULL,
   call = rlang::caller_env()
 ) {
-  if (is_vport_meta(meta)) {
+  if (is_artoo_meta(meta)) {
     # rds is R-native and faithful: strings are saved as-is (Encoding marks
     # survive saveRDS), never transcoded. An explicit `encoding` only records
     # the source charset so a later write_xpt() can reproduce the bytes.
@@ -55,7 +55,7 @@
 
 #' Write a dataset to rds
 #'
-#' Write a data frame to an R `.rds` file, preserving its `vport_meta`. A thin
+#' Write a data frame to an R `.rds` file, preserving its `artoo_meta`. A thin
 #' wrapper over [write_dataset()] with `format = "rds"`; the rds carries the
 #' metadata both as live R attributes and as the language-agnostic
 #' `metadata_json` string, so [read_rds()] restores it exactly.
@@ -64,14 +64,14 @@
 #' @param path *Destination `.rds` path.* `<character(1)>: required`.
 #' @param encoding *Source charset to record.* `<character(1)> | NULL`. rds is
 #'   R-native and faithful: strings are saved as-is, never transcoded.
-#'   `encoding` only records the data's original charset in the `vport_meta`,
+#'   `encoding` only records the data's original charset in the `artoo_meta`,
 #'   so a later [write_xpt()] can reproduce the source bytes. `NULL` (default)
 #'   leaves the recorded encoding untouched.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset to rds ----
 #' #
@@ -82,7 +82,7 @@
 #'
 #' # ---- Example 2: round-trip and confirm the metadata survived ----
 #' #
-#' # Reading it back yields an identical vport_meta.
+#' # Reading it back yields an identical artoo_meta.
 #' back <- read_rds(path)
 #' identical(get_meta(back)@columns, get_meta(adsl)@columns)
 #'
@@ -96,7 +96,7 @@ write_rds <- function(x, path, encoding = NULL) {
 #' Read a dataset from rds
 #'
 #' Read an R `.rds` file written by [write_rds()] (or any rds carrying a
-#' `metadata_json` attribute) back to a data frame with its `vport_meta`
+#' `metadata_json` attribute) back to a data frame with its `artoo_meta`
 #' restored. A thin wrapper over [read_dataset()] with `format = "rds"`.
 #'
 #' @param path *Source `.rds` path.* `<character(1)>: required`.
@@ -106,12 +106,12 @@ write_rds <- function(x, path, encoding = NULL) {
 #'   string columns hold that charset's bytes.
 #' @inheritParams read_dataset
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded
+#' @return *A `<data.frame>`* carrying `artoo_meta` when the file recorded
 #'   it. An rds holding anything other than a data frame is a
-#'   `vport_error_codec`; use `readRDS()` for arbitrary objects.
+#'   `artoo_error_codec`; use `readRDS()` for arbitrary objects.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: read a dataset written by write_rds() ----
 #' #
@@ -124,7 +124,7 @@ write_rds <- function(x, path, encoding = NULL) {
 #'
 #' # ---- Example 2: a plain rds still reads as a data frame ----
 #' #
-#' # An rds without vport metadata reads back as an ordinary frame.
+#' # An rds without artoo metadata reads back as an ordinary frame.
 #' bare <- tempfile(fileext = ".rds")
 #' saveRDS(cdisc_dm, bare)
 #' nrow(read_rds(bare))

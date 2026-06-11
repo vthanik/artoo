@@ -1,34 +1,34 @@
-# Tests for the vport_checks() conformance control: construction, validation,
+# Tests for the artoo_checks() conformance control: construction, validation,
 # and its effect on which check_spec() dimensions fire.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
-test_that("vport_checks() defaults every conformance dimension on", {
-  ck <- vport_checks()
-  expect_true(is_vport_checks(ck))
+test_that("artoo_checks() defaults every conformance dimension on", {
+  ck <- artoo_checks()
+  expect_true(is_artoo_checks(ck))
   expect_true(ck$missing_variable)
   expect_true(ck$codelist_membership)
   expect_true(ck$display_format)
 })
 
-test_that("vport_checks() rejects a non-logical toggle", {
+test_that("artoo_checks() rejects a non-logical toggle", {
   expect_error(
-    vport_checks(missing_variable = "yes"),
-    class = "vport_error_input"
+    artoo_checks(missing_variable = "yes"),
+    class = "artoo_error_input"
   )
-  expect_error(vport_checks(type_mismatch = NA), class = "vport_error_input")
+  expect_error(artoo_checks(type_mismatch = NA), class = "artoo_error_input")
 })
 
-test_that("is_vport_checks is FALSE for other objects", {
-  expect_false(is_vport_checks(list()))
-  expect_false(is_vport_checks(TRUE))
+test_that("is_artoo_checks is FALSE for other objects", {
+  expect_false(is_artoo_checks(list()))
+  expect_false(is_artoo_checks(TRUE))
 })
 
-test_that("print.vport_checks renders the toggle grid", {
-  expect_snapshot(print(vport_checks()))
-  expect_snapshot(print(vport_checks(length_overflow = FALSE)))
+test_that("print.artoo_checks renders the toggle grid", {
+  expect_snapshot(print(artoo_checks()))
+  expect_snapshot(print(artoo_checks(length_overflow = FALSE)))
 })
 
 test_that("disabling a dimension suppresses its findings", {
@@ -45,7 +45,7 @@ test_that("disabling a dimension suppresses its findings", {
     raw,
     spec,
     "DM",
-    checks = vport_checks(codelist_membership = FALSE, extra_variable = FALSE)
+    checks = artoo_checks(codelist_membership = FALSE, extra_variable = FALSE)
   )
   expect_false(any(off$check == "codelist_membership"))
   expect_false(any(off$check == "extra_variable"))
@@ -64,24 +64,24 @@ test_that("apply_spec threads checks through to the conformance step", {
       decode = "none",
       no_match = "error",
       conformance = "warn",
-      checks = vport_checks(codelist_membership = FALSE)
+      checks = artoo_checks(codelist_membership = FALSE)
     )
   )
-  findings <- attr(out, "vport.conformance")
+  findings <- attr(out, "artoo.conformance")
   expect_false(any(findings$check == "codelist_membership"))
 })
 
-test_that("vport_checks() includes the display_format dimension", {
-  ck <- vport_checks()
+test_that("artoo_checks() includes the display_format dimension", {
+  ck <- artoo_checks()
   expect_true(ck$display_format)
   expect_error(
-    vport_checks(display_format = NA),
-    class = "vport_error_input"
+    artoo_checks(display_format = NA),
+    class = "artoo_error_input"
   )
 })
 
 test_that("check_spec flags a temporal var with a non-matching format", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -102,13 +102,13 @@ test_that("check_spec flags a temporal var with a non-matching format", {
     dat,
     spec,
     "ADSL",
-    checks = vport_checks(display_format = FALSE)
+    checks = artoo_checks(display_format = FALSE)
   )
   expect_false(any(off$check == "display_format"))
 })
 
 test_that("check_spec does not flag a valid temporal format", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -122,11 +122,11 @@ test_that("check_spec does not flag a valid temporal format", {
   expect_false(any(res$check == "display_format"))
 })
 
-test_that("check_spec rejects a non-vport_checks checks argument", {
+test_that("check_spec rejects a non-artoo_checks checks argument", {
   spec <- demo_spec()
   expect_error(
     check_spec(cdisc_dm, spec, "DM", checks = list(missing_variable = TRUE)),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
@@ -145,7 +145,7 @@ test_that("codelist_membership treats NA in a mandatory variable as a violation 
   }
   dat <- data.frame(SEX = c("M", NA), stringsAsFactors = FALSE)
 
-  mand_spec <- vport_spec(
+  mand_spec <- artoo_spec(
     data.frame(dataset = "DM"),
     vars(TRUE),
     codelists = cdisc_codelists
@@ -153,7 +153,7 @@ test_that("codelist_membership treats NA in a mandatory variable as a violation 
   f <- check_spec(dat, mand_spec, "DM")
   expect_true(any(f$check == "codelist_membership"))
 
-  opt_spec <- vport_spec(
+  opt_spec <- artoo_spec(
     data.frame(dataset = "DM"),
     vars(FALSE),
     codelists = cdisc_codelists
@@ -191,7 +191,7 @@ test_that("apply_spec threads decode so a clean decode does not warn (1d)", {
 # ---- Part A: submission-readiness data checks ------------------------------
 
 test_that("char_length_limit flags over-200-byte values independent of declared length", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -231,7 +231,7 @@ test_that("char_length_limit flags over-200-byte values independent of declared 
     data.frame(COMMENT = strrep("a", 201L), stringsAsFactors = FALSE),
     spec,
     "DM",
-    checks = vport_checks(char_length_limit = FALSE)
+    checks = artoo_checks(char_length_limit = FALSE)
   )
   expect_false(any(off$check == "char_length_limit"))
 })
@@ -239,7 +239,7 @@ test_that("char_length_limit flags over-200-byte values independent of declared 
 test_that("key_uniqueness flags duplicate keys and short-circuits on a missing key", {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   keys <- spec_keys(spec, "DM")
   expect_true(length(keys) > 0L) # DM now declares keys
 
@@ -268,13 +268,13 @@ test_that("key_uniqueness flags duplicate keys and short-circuits on a missing k
     dup,
     spec,
     "DM",
-    checks = vport_checks(key_uniqueness = FALSE)
+    checks = artoo_checks(key_uniqueness = FALSE)
   )
   expect_false(any(off$check == "key_uniqueness"))
 })
 
 test_that("label_match flags a column label that differs from the spec", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -308,7 +308,7 @@ test_that("label_match flags a column label that differs from the spec", {
   ))
 
   # blank spec label -> skip.
-  spec_blank <- vport_spec(
+  spec_blank <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -326,13 +326,13 @@ test_that("label_match flags a column label that differs from the spec", {
     labelled("Years Old"),
     spec,
     "DM",
-    checks = vport_checks(label_match = FALSE)
+    checks = artoo_checks(label_match = FALSE)
   )
   expect_false(any(off$check == "label_match"))
 })
 
 test_that("missing_permissible splits missing variables by the mandatory flag", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -351,7 +351,7 @@ test_that("missing_permissible splits missing variables by the mandatory flag", 
   expect_identical(mp$severity, "warning")
 
   # NA mandatory -> conservatively mandatory (error bucket).
-  spec_na <- vport_spec(
+  spec_na <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -370,7 +370,7 @@ test_that("missing_permissible splits missing variables by the mandatory flag", 
     data.frame(AGE = 1:2),
     spec,
     "DM",
-    checks = vport_checks(missing_variable = FALSE)
+    checks = artoo_checks(missing_variable = FALSE)
   )
   expect_false(any(off_mv$check == "missing_variable"))
   expect_true(any(off_mv$check == "missing_permissible"))
@@ -378,13 +378,13 @@ test_that("missing_permissible splits missing variables by the mandatory flag", 
 
 test_that(".is_mandatory classifies logical and character flags, NA as mandatory", {
   expect_identical(
-    vport:::.is_mandatory(c(TRUE, FALSE, NA)),
+    artoo:::.is_mandatory(c(TRUE, FALSE, NA)),
     c(TRUE, FALSE, TRUE)
   )
   expect_identical(
-    vport:::.is_mandatory(c("Y", "N", "Yes", "No", NA)),
+    artoo:::.is_mandatory(c("Y", "N", "Yes", "No", NA)),
     c(TRUE, FALSE, TRUE, FALSE, TRUE)
   )
-  expect_identical(vport:::.is_mandatory(character(0)), logical(0))
-  expect_identical(vport:::.is_mandatory(logical(0)), logical(0))
+  expect_identical(artoo:::.is_mandatory(character(0)), logical(0))
+  expect_identical(artoo:::.is_mandatory(logical(0)), logical(0))
 })

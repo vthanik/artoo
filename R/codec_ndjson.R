@@ -19,13 +19,13 @@
   strict = FALSE,
   call = rlang::caller_env()
 ) {
-  if (!is_vport_meta(meta)) {
+  if (!is_artoo_meta(meta)) {
     cli::cli_abort(
       c(
         "Cannot write Dataset-JSON NDJSON without metadata.",
         "x" = "The frame carries no columns to describe."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -98,7 +98,7 @@
         "{.path {path}} is not a Dataset-JSON NDJSON file.",
         "x" = why
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -150,7 +150,7 @@
             "{.path {path}} has a malformed row line.",
             "x" = "Rows {total + 1} to {total + length(lines)} did not parse as JSON."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -163,7 +163,7 @@
           "{.path {path}} has a malformed row.",
           "x" = "Row {total + bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -200,7 +200,7 @@
 #'
 #' Serialize a data frame to the newline-delimited variant of CDISC
 #' Dataset-JSON v1.1 (`.ndjson`): line 1 carries the complete metadata block,
-#' every following line one row array. The streaming end of the vport
+#' every following line one row array. The streaming end of the artoo
 #' workflow (spec -> apply_spec -> write_ndjson) for datasets too large for
 #' the array-form `.json` file; a thin wrapper over [write_dataset()] with
 #' `format = "ndjson"`.
@@ -213,20 +213,20 @@
 #' transparently.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
-#'   output of [apply_spec()], carrying `vport_meta`.
+#'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.ndjson` path.* `<character(1)>: required`. A
 #'   `.ndjson.gz` path writes gzip-compressed bytes.
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
 #'   freeze it for byte-stable output.
-#' @param strict *Suppress the `_vport` extension block.* `<logical(1)>:
+#' @param strict *Suppress the `_artoo` extension block.* `<logical(1)>:
 #'   default FALSE`. See [write_json()]: the same extension semantics apply
 #'   to the metadata line.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset as NDJSON ----
 #' #
@@ -254,22 +254,22 @@ write_ndjson <- function(x, path, created = NULL, strict = FALSE) {
 #' Read a dataset from CDISC Dataset-JSON NDJSON
 #'
 #' Read a newline-delimited CDISC Dataset-JSON v1.1 (`.ndjson`) file back to
-#' a data frame, restoring the full `vport_meta` from its metadata line and
+#' a data frame, restoring the full `artoo_meta` from its metadata line and
 #' realizing SAS date/datetime/time variables to R `Date` / `POSIXct` /
-#' `vport_time`. Rows are parsed in bounded slabs, and `n_max` stops the
+#' `artoo_time`. Rows are parsed in bounded slabs, and `n_max` stops the
 #' line loop early, so a partial read of a huge file never parses the tail.
 #' A thin wrapper over [read_dataset()] with `format = "ndjson"`.
 #'
 #' @param path *Source `.ndjson` path.* `<character(1)>: required`. A gzip
 #'   stream (`.ndjson.gz`) is inflated transparently. A file whose first line
-#'   is not the Dataset-JSON metadata object aborts with `vport_error_codec`.
+#'   is not the Dataset-JSON metadata object aborts with `artoo_error_codec`.
 #' @inheritParams read_dataset
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` (read it with
+#' @return *A `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]).
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through NDJSON ----
 #' #

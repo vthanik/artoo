@@ -8,14 +8,14 @@ write_dataset(x, path, format = NULL, ...)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
-output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
+output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination file path.} \verb{<character(1)>: required}. Its
 extension selects the codec unless \code{format} is given.}
 
 \item{format}{\emph{Force a codec instead of inferring from the extension.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
-\code{\link[=vport_formats]{vport_formats()}}).}
+\code{\link[=artoo_formats]{artoo_formats()}}).}
 
 \item{...}{\emph{Codec-specific arguments} passed through to the encoder (see
 the per-format wrappers, e.g. \code{\link[=write_xpt]{write_xpt()}}, for what each codec
@@ -28,13 +28,13 @@ Called for the side effect of writing \code{path}.
 }
 \description{
 Serialize a data frame to a clinical file format, preserving its
-\code{vport_meta} losslessly. The codec is chosen from the file extension (or an
+\code{artoo_meta} losslessly. The codec is chosen from the file extension (or an
 explicit \code{format}), so one call covers xpt, Dataset-JSON, Parquet, and rds.
-This is the emit end of the vport workflow; the per-format wrappers like
+This is the emit end of the artoo workflow; the per-format wrappers like
 \code{\link[=write_rds]{write_rds()}} are thin sugar over it.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset, inferring rds from the path ----
 #
@@ -53,5 +53,5 @@ write_dataset(adsl, alt, format = "rds")
 }
 \seealso{
 \code{\link[=read_dataset]{read_dataset()}} for the inverse; \code{\link[=write_rds]{write_rds()}} for the
-per-format wrapper; \code{\link[=vport_formats]{vport_formats()}} for what is available.
+per-format wrapper; \code{\link[=artoo_formats]{artoo_formats()}} for what is available.
 }

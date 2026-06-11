@@ -7,13 +7,13 @@
 spec_codelists(spec, codelist_id = NULL)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 
 \item{codelist_id}{\emph{The codelist to return.} \verb{<character(1)> | NULL}. When
 \code{NULL} (default) the whole codelists table is returned.
 
 \strong{Restriction:} a non-\code{NULL} id must name a codelist present in the
-spec's \code{codelists} slot; an unknown id aborts with \code{vport_error_input}.}
+spec's \code{codelists} slot; an unknown id aborts with \code{artoo_error_input}.}
 }
 \value{
 \emph{A data frame of codelist terms}, one row per term: every term
@@ -40,7 +40,7 @@ is allowed to take before applying the spec. Mirrors the
 #
 # SEX is coded against C66731; spec_codelists() returns the terms and their
 # decodes that apply_spec() will enforce or decode.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 spec_codelists(spec, "C66731")
 
 # ---- Example 2: the whole codelists table ----

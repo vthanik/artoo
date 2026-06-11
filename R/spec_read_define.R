@@ -1,6 +1,6 @@
 # spec_read_define.R -- read_spec() on a native Define-XML v2.x document.
 #
-# Maps the CDISC Define-XML 2.0/2.1 metadata model onto the vport_spec slots
+# Maps the CDISC Define-XML 2.0/2.1 metadata model onto the artoo_spec slots
 # (the slots are already Define-shaped, so the walk is mostly mechanical):
 #   ItemGroupDef            -> datasets (keys derived from ItemRef KeySequence)
 #   ItemRef + ItemDef       -> variables
@@ -70,7 +70,7 @@
           "{.path {path}} is not parseable XML.",
           "x" = "{msg}"
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -80,10 +80,10 @@
     cli::cli_abort(
       c(
         "{.path {path}} is a Define-XML v1.0 document.",
-        "x" = "vport reads Define-XML 2.0 and 2.1.",
+        "x" = "artoo reads Define-XML 2.0 and 2.1.",
         "i" = "Re-export the define from a 2.x-capable tool."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -94,7 +94,7 @@
         "{.path {path}} is not a Define-XML document.",
         "x" = "No MetaDataVersion in the Define-XML 2.x namespaces was found."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -182,7 +182,7 @@
         "{.path {path}} defines no datasets.",
         "x" = "The MetaDataVersion has no ItemGroupDef."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -222,7 +222,7 @@
             "{.path {path}} is inconsistent.",
             "x" = "ItemRef {.val {ref_oid[j]}} has no ItemDef."
           ),
-          class = "vport_error_input",
+          class = "artoo_error_input",
           call = call
         )
       }
@@ -367,7 +367,7 @@
     call = call
   )
 
-  vport_spec(
+  artoo_spec(
     datasets = scoped$datasets,
     variables = variables,
     codelists = codelists,

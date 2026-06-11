@@ -1,10 +1,10 @@
 # Tests for the json codec (codec_json.R): Dataset-JSON v1.1 round-trips, the
 # meta-driven type fidelity (C1), targetDataType emit (9.A.5), decimal-as-
 # string (9.A.9), vectorized ragged-row guard (C5), and the structural probe
-# (E2). Internals via vport:::; a frozen `created` keeps bytes stable.
+# (E2). Internals via artoo:::; a frozen `created` keeps bytes stable.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 frozen <- as.POSIXct("2020-01-01", tz = "UTC")
@@ -92,7 +92,7 @@ test_that("decimal rides as an exact string end to end", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -111,7 +111,7 @@ test_that("a whole-number double stays double on re-read (C1)", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -123,7 +123,7 @@ test_that("a whole-number double stays double on re-read (C1)", {
 
 test_that("integer, boolean, and time columns round-trip by type", {
   df <- data.frame(I = c(1L, NA, 3L), B = c(TRUE, FALSE, NA))
-  df$TM <- vport_time(c(3600, NA, 7200))
+  df$TM <- artoo_time(c(3600, NA, 7200))
   vars <- data.frame(
     dataset = "X",
     variable = c("I", "B", "TM"),
@@ -134,7 +134,7 @@ test_that("integer, boolean, and time columns round-trip by type", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -144,7 +144,7 @@ test_that("integer, boolean, and time columns round-trip by type", {
     c(TRUE, FALSE, NA),
     ignore_attr = c("label", "format.sas")
   )
-  expect_s3_class(back$TM, "vport_time")
+  expect_s3_class(back$TM, "artoo_time")
   expect_identical(unclass(back$TM), unclass(ap$TM))
 })
 
@@ -162,7 +162,7 @@ test_that("a date with targetDataType integer rides as a number (9.A.5)", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   raw <- jsonlite::fromJSON(p, simplifyVector = FALSE)
@@ -185,7 +185,7 @@ test_that("a partial ISO date stays a character string", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -210,18 +210,18 @@ test_that("a zero-row dataset round-trips with an empty rows array", {
 
 test_that("NaN and Inf abort the write (C2)", {
   df <- data.frame(N = c(1, Inf, 3))
-  df <- set_meta(df, vport:::.meta_from_frame(df))
+  df <- set_meta(df, artoo:::.meta_from_frame(df))
   expect_snapshot(write_json(df, tempfile(fileext = ".json")), error = TRUE)
   expect_error(
     write_json(df, tempfile(fileext = ".json")),
-    class = "vport_error_type"
+    class = "artoo_error_type"
   )
 
   df2 <- data.frame(N = c(1, NaN, 3))
-  df2 <- set_meta(df2, vport:::.meta_from_frame(df2))
+  df2 <- set_meta(df2, artoo:::.meta_from_frame(df2))
   expect_error(
     write_json(df2, tempfile(fileext = ".json")),
-    class = "vport_error_type"
+    class = "artoo_error_type"
   )
 })
 
@@ -238,7 +238,7 @@ test_that("a ragged row aborts at its index (C5)", {
     rows = list(list(1L, 2L), list(3L))
   )
   writeLines(jsonlite::toJSON(obj, auto_unbox = TRUE), p)
-  expect_error(read_json(p), class = "vport_error_codec")
+  expect_error(read_json(p), class = "artoo_error_codec")
 })
 
 test_that("a non-Dataset-JSON file aborts cleanly (E2)", {
@@ -250,19 +250,19 @@ test_that("a non-Dataset-JSON file aborts cleanly (E2)", {
     sub("'[^']*' is not a Dataset-JSON", "'<path>' is not a Dataset-JSON", x)
   }
   expect_snapshot(read_json(p), error = TRUE, transform = scrub)
-  expect_error(read_json(p), class = "vport_error_codec")
+  expect_error(read_json(p), class = "artoo_error_codec")
 })
 
-test_that("malformed JSON aborts with vport_error_codec", {
+test_that("malformed JSON aborts with artoo_error_codec", {
   p <- withr::local_tempfile(fileext = ".json")
   writeLines("{not json", p)
-  expect_error(read_json(p), class = "vport_error_codec")
+  expect_error(read_json(p), class = "artoo_error_codec")
 })
 
 test_that("an embedded NUL byte aborts (B5)", {
   p <- withr::local_tempfile(fileext = ".json")
   writeBin(c(charToRaw('{"a":'), as.raw(0L), charToRaw("1}")), p)
-  expect_error(read_json(p), class = "vport_error_codec")
+  expect_error(read_json(p), class = "artoo_error_codec")
 })
 
 test_that("a leading UTF-8 BOM is stripped on read (B5)", {
@@ -281,7 +281,7 @@ test_that("writing a zero-column frame aborts", {
   df <- data.frame(a = 1:3)[, FALSE, drop = FALSE]
   expect_error(
     write_json(df, tempfile(fileext = ".json")),
-    class = "vport_error_codec"
+    class = "artoo_error_codec"
   )
 })
 
@@ -289,11 +289,11 @@ test_that("writing a zero-column frame aborts", {
 
 test_that(".temporal_to_iso renders each class and keeps partial values", {
   expect_identical(
-    vport:::.temporal_to_iso(as.Date("2021-01-15"), "date", "DATE9."),
+    artoo:::.temporal_to_iso(as.Date("2021-01-15"), "date", "DATE9."),
     "2021-01-15"
   )
   expect_identical(
-    vport:::.temporal_to_iso(
+    artoo:::.temporal_to_iso(
       as.POSIXct("2021-01-15 08:30:00", tz = "UTC"),
       "datetime",
       "DATETIME20."
@@ -301,16 +301,16 @@ test_that(".temporal_to_iso renders each class and keeps partial values", {
     "2021-01-15T08:30:00"
   )
   expect_identical(
-    vport:::.temporal_to_iso(vport_time(3600), "time", "TIME8."),
+    artoo:::.temporal_to_iso(artoo_time(3600), "time", "TIME8."),
     "01:00:00"
   )
   # Partial values that cannot realize stay as character text, never NA.
-  expect_identical(vport:::.temporal_to_iso("2021", "date", "DATE9."), "2021")
+  expect_identical(artoo:::.temporal_to_iso("2021", "date", "DATE9."), "2021")
   expect_identical(
-    vport:::.temporal_to_iso("2021-01", "datetime", "DATETIME20."),
+    artoo:::.temporal_to_iso("2021-01", "datetime", "DATETIME20."),
     "2021-01"
   )
-  expect_identical(vport:::.temporal_to_iso("12:30", "time", "TIME8."), "12:30")
+  expect_identical(artoo:::.temporal_to_iso("12:30", "time", "TIME8."), "12:30")
 })
 
 test_that("an end-to-end datetime column round-trips as POSIXct", {
@@ -331,7 +331,7 @@ test_that("an end-to-end datetime column round-trips as POSIXct", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(ap, p)
   back <- read_json(p)
@@ -342,7 +342,7 @@ test_that("an end-to-end datetime column round-trips as POSIXct", {
 test_that("the encode/decode default branches coerce via character", {
   call <- rlang::current_env()
   expect_identical(
-    vport:::.json_col_literals(
+    artoo:::.json_col_literals(
       c("a", NA),
       list(dataType = "weird"),
       "X",
@@ -351,7 +351,7 @@ test_that("the encode/decode default branches coerce via character", {
     c("\"a\"", "null")
   )
   expect_identical(
-    vport:::.json_decode_column(list("a", NULL), list(dataType = "weird")),
+    artoo:::.json_decode_column(list("a", NULL), list(dataType = "weird")),
     c("a", NA)
   )
 })

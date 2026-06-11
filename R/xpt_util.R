@@ -1,7 +1,7 @@
 # xpt_util.R -- byte-level helpers for the xpt codec.
 #
 # Ported from the herald archive (herald, not v0 -- diff confirmed it the
-# strict superset). vport changes: drop the vctrs dependency (base coercion),
+# strict superset). artoo changes: drop the vctrs dependency (base coercion),
 # dot-prefix internals, and `.sas_datetime_str()` takes an explicit `time` so
 # writes are byte-stable (the codec injects a frozen `created=`, never an
 # inline Sys.time()).
@@ -76,7 +76,7 @@
         "Internal packing error: a value needs {bw[over]} bytes in a {width}-byte field.",
         "i" = "The OBS writer sizes fields to the max byte length; please report this."
       ),
-      class = "vport_error_codec"
+      class = "artoo_error_codec"
     )
   }
   buf <- rep(as.raw(0x20), width * n)
@@ -188,7 +188,7 @@
         "Unexpected end of XPORT file.",
         "x" = "Expected {n} byte{?s}, got {length(raw_vec)}."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }

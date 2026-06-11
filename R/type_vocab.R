@@ -2,7 +2,7 @@
 #
 # Maps any spec/SAS type token to the closed CDISC Dataset-JSON v1.1
 # `dataType` vocabulary (`.cdisc_datatypes`), and from a `dataType` to the
-# R storage mode vport uses to hold and coerce that column. Every codec
+# R storage mode artoo uses to hold and coerce that column. Every codec
 # and apply step routes type questions through here.
 
 # Aliases -> canonical CDISC dataType. Keys are lowercased; values are
@@ -59,7 +59,7 @@
         "Missing variable type{where}.",
         "x" = "A type is required and must be a non-empty string."
       ),
-      class = "vport_error_type",
+      class = "artoo_error_type",
       call = call
     )
   }
@@ -78,10 +78,10 @@
   cli::cli_abort(
     c(
       "Unknown variable type {.val {raw}}{where}.",
-      "x" = "vport maps types to the closed CDISC set: {.val {types}}.",
+      "x" = "artoo maps types to the closed CDISC set: {.val {types}}.",
       "i" = "Edit the spec's {.field type} column, or file an issue if {.val {raw}} is a standard token."
     ),
-    class = "vport_error_type",
+    class = "artoo_error_type",
     call = call
   )
 }

@@ -5,20 +5,20 @@
 #
 # The XPORT framing (LIBRARY/MEMBER/NAMESTR/OBS headers, the 140-byte namestr,
 # and the v8 LABELV8 long-name/long-label extension) is built from the SAS
-# XPORT v5/v8 transport spec. All metadata flows through the vport_meta spine
+# XPORT v5/v8 transport spec. All metadata flows through the artoo_meta spine
 # -- the codec never reads or writes raw column attributes -- and all
 # transcoding goes through encoding.R. The byte/float/temporal mechanics reuse
-# the existing building blocks (xpt_ieee.R, xpt_util.R, vport_temporal.R).
+# the existing building blocks (xpt_ieee.R, xpt_util.R, artoo_temporal.R).
 #
 # Honesty contracts (see write_xpt/read_xpt @details):
 #  - C3: an .xpt file's NAMESTR holds only name/label/length/format. CDISC
 #    metadata beyond that (keySequence, codelist, origin, targetDataType, ...)
 #    and the source encoding are NOT representable in the .xpt bytes; they ride
-#    the live in-session vport_meta (and the sidecar in other containers).
+#    the live in-session artoo_meta (and the sidecar in other containers).
 #  - C4: "" and NA_character_ are physically identical in XPORT (both blanks);
 #    a genuine empty string reads back as NA. Trailing spaces are likewise not
 #    recoverable.
-#  - C5: SAS per-variable transcode=NO has no NAMESTR field, so vport cannot
+#  - C5: SAS per-variable transcode=NO has no NAMESTR field, so artoo cannot
 #    detect it; every character column is transcoded uniformly.
 
 # A stable token in place of the host OS name, so byte output is reproducible
@@ -296,7 +296,7 @@
 ) {
   nms <- names(x)
   nobs <- nrow(x)
-  has_meta <- is_vport_meta(meta)
+  has_meta <- is_artoo_meta(meta)
   label_trunc <- character(0)
   # FDA TCG bytes 160-191 are only meaningful on a single-byte stream; on
   # UTF-8 those values are multibyte continuation bytes and would false-fire.
@@ -315,7 +315,7 @@
           "Column {.var {nm}} is a factor.",
           "i" = "Convert it with {.fn as.character} before writing."
         ),
-        class = "vport_error_type",
+        class = "artoo_error_type",
         call = call
       )
     }
@@ -325,7 +325,7 @@
           "Column {.var {nm}} is a list column.",
           "i" = "xpt cannot store list columns."
         ),
-        class = "vport_error_type",
+        class = "artoo_error_type",
         call = call
       )
     }
@@ -341,7 +341,7 @@
     # is ISO 8601 text -- the CDISC --DTC convention (partial dates like
     # "1951" and "1951-12" included). It stores as a character variable;
     # the SAS-numeric path below is reserved for columns whose metadata
-    # (targetDataType) or R class (Date/POSIXct/vport_time/numeric) is
+    # (targetDataType) or R class (Date/POSIXct/artoo_time/numeric) is
     # numeric-backed.
     tdt <- if (!is.null(cm)) cm$targetDataType else NULL
     iso_text <- dt %in%
@@ -380,7 +380,7 @@
             "Cannot coerce column {.var {nm}} to numeric for xpt.",
             "x" = "Offending value{?s}: {.val {bad}}."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -392,7 +392,7 @@
             "Column {.var {nm}} contains infinite values.",
             "i" = "xpt cannot represent infinity; remove or recode them first."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -403,7 +403,7 @@
             "Column {.var {nm}} exceeds the IBM-370 magnitude limit.",
             "i" = "xpt numerics cap near 7.2e75."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -434,7 +434,7 @@
             "Column {.var {nm}} needs {nlng} bytes, over the v5 limit of 200.",
             "i" = "Use {.code version = 8} or shorten the data."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -450,7 +450,7 @@
             "Variable name {.var {nm}} is not valid for xpt v5.",
             "i" = "v5 names are 1-8 chars of letters, digits, or underscore, not starting with a digit."
           ),
-          class = "vport_error_codec",
+          class = "artoo_error_codec",
           call = call
         )
       }
@@ -485,7 +485,7 @@
         "Truncated {length(label_trunc)} label{?s} to 40 bytes for xpt v5: {.var {label_trunc}}.",
         "i" = "Use {.code version = 8} to keep long labels."
       ),
-      class = "vport_warning_encoding",
+      class = "artoo_warning_encoding",
       call = call
     )
   }
@@ -496,7 +496,7 @@
         "i" = "The FDA Study Data TCG prohibits these bytes in submission xpt; write with {.code encoding = \"US-ASCII\"} for a submission.",
         "i" = "See https://www.fda.gov/media/153632/download."
       ),
-      class = "vport_warning_encoding",
+      class = "artoo_warning_encoding",
       call = call
     )
   }
@@ -525,7 +525,7 @@
         "{.arg version} must be 5 or 8.",
         "x" = "You supplied {.val {version}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -540,13 +540,13 @@
           "Variable names collide when uppercased for xpt v5: {.var {collided}}.",
           "i" = "v5 names are case-insensitive; rename or use {.code version = 8}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
   }
 
-  if (is_vport_meta(meta)) {
+  if (is_artoo_meta(meta)) {
     ds_name <- meta@dataset$name %||% "DATA"
     ds_label <- meta@dataset$label %||% ""
     src_enc <- meta@dataset$encoding
@@ -569,7 +569,7 @@
         "Dataset name {.val {ds_name}} is not valid for xpt.",
         "i" = "Member names are ASCII letters, digits, or underscore, not starting with a digit."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -584,7 +584,7 @@
         "Truncated the dataset label to 40 bytes for xpt.",
         "i" = "XPORT stores at most 40 bytes of dataset label."
       ),
-      class = "vport_warning_encoding",
+      class = "artoo_warning_encoding",
       call = call
     )
   }
@@ -624,7 +624,7 @@
           "x" = "v5 cannot distinguish a trailing blank row from padding; it will not read back.",
           "i" = "Use {.code version = 8}, which records the row count."
         ),
-        class = "vport_warning_encoding",
+        class = "artoo_warning_encoding",
         call = call
       )
     }
@@ -686,7 +686,7 @@
         "Not a valid XPORT transport file.",
         "x" = "Unrecognised library header."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -701,7 +701,7 @@
   if (!grepl("MEMBER", s, fixed = TRUE) && !grepl("MEMBV8", s, fixed = TRUE)) {
     cli::cli_abort(
       c("Not a valid XPORT member.", "x" = "Missing MEMBER header."),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -733,7 +733,7 @@
         "Not a valid XPORT member.",
         "x" = "Could not read the variable count from the NAMESTR header."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -932,7 +932,7 @@
   as.integer(r)
 }
 
-# vport reads single-member transport files only. After the obs section (padded
+# artoo reads single-member transport files only. After the obs section (padded
 # to an 80-byte boundary) anything more is a second member; abort -- but only
 # when the bytes at that boundary carry a real "HEADER RECORD*******" signature,
 # so extra blank padding never triggers a false abort. Leaves con at obs_start.
@@ -965,7 +965,7 @@
           "This XPORT file has more than one member.",
           "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -978,7 +978,7 @@
 # 8 before .ibm_to_ieee (real SAS stores high-order bytes only); they carry the
 # sas_missing tag. Characters are byte-passthrough strings (converted later).
 # Resolve col_select (NULL = all) to variable indices in file order. An
-# unknown name is a loud vport_error_input, never a silent drop.
+# unknown name is a loud artoo_error_input, never a silent drop.
 #' @noRd
 .xpt_resolve_col_select <- function(namestrs, col_select, call) {
   if (is.null(col_select)) {
@@ -993,7 +993,7 @@
         "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
         "i" = "The file has {.val {all_names}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -1024,7 +1024,7 @@
           "This XPORT file has more than one member.",
           "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -1201,7 +1201,7 @@
         "Not a valid XPORT transport file.",
         "x" = "No member header follows the library header."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -1251,7 +1251,7 @@
         "{.arg member} index {.val {i}} is out of range.",
         "i" = "The file has {length(members)} member{?s}: {.val {nms}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -1265,7 +1265,7 @@
         "Unknown member {.val {member}}.",
         "i" = "The file has: {.val {nms}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -1274,7 +1274,7 @@
       "{.arg member} must be a single member name or index.",
       "x" = "You supplied {.obj_type_friendly {member}}."
     ),
-    class = "vport_error_input",
+    class = "artoo_error_input",
     call = call
   )
 }
@@ -1466,7 +1466,7 @@
     encoding = resolved_enc,
     keys = .meta_keys(cols_meta)
   )
-  meta <- vport_meta_class(dataset = ds_meta, columns = cols_meta)
+  meta <- artoo_meta_class(dataset = ds_meta, columns = cols_meta)
   list(data = df, meta = meta)
 }
 
@@ -1476,7 +1476,7 @@
 #'
 #' Serialize a data frame to a SAS Transport (`.xpt`) file in v5 (the FDA
 #' submission standard) or v8 (extended names and labels), preserving the
-#' `vport_meta` a column can hold. The emit end of the vport workflow
+#' `artoo_meta` a column can hold. The emit end of the artoo workflow
 #' (spec -> apply_spec -> write_xpt); a thin wrapper over [write_dataset()]
 #' with `format = "xpt"`.
 #'
@@ -1485,7 +1485,7 @@
 #' name, label, length, and SAS format. CDISC metadata beyond that
 #' (keySequence, codelist, origin, targetDataType, ...) and the source
 #' encoding are not representable in the bytes; they ride the in-session
-#' `vport_meta` and the sidecar in self-describing formats (Dataset-JSON,
+#' `artoo_meta` and the sidecar in self-describing formats (Dataset-JSON,
 #' Parquet, rds). XPORT also cannot distinguish an empty string from `NA`
 #' (both store as blanks) and drops trailing spaces.
 #'
@@ -1494,19 +1494,19 @@
 #' the CDISC ISO 8601 text form -- the SDTM `--DTC` convention -- and stores
 #' as a character variable, partial dates (`"1951"`, `"1951-12"`) included,
 #' byte for byte. The SAS-numeric encoding (with `DATE9.`-style formats) is
-#' used for columns that are R `Date`/`POSIXct`/`vport_time` or whose
+#' used for columns that are R `Date`/`POSIXct`/`artoo_time` or whose
 #' metadata records `targetDataType = "integer"` (the ADaM numeric-date
 #' convention). A character column *under* `targetDataType = "integer"`
 #' aborts loudly -- a partial date can never become a SAS numeric silently.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
-#'   output of [apply_spec()], carrying `vport_meta`.
+#'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.xpt` path.* `<character(1)>: required`.
 #' @param version *XPORT transport version.* `<integer(1)>: default 5`. `5`
 #'   (the FDA standard: names <= 8 characters, labels <= 40 bytes) or `8`
 #'   (names <= 32, long labels).
 #' @param encoding *Target charset.* `<character(1)> | NULL`. `NULL`
-#'   (default) inherits the source encoding recorded in `vport_meta`, else
+#'   (default) inherits the source encoding recorded in `artoo_meta`, else
 #'   UTF-8. IANA and SAS names (`"US-ASCII"`, `"wlatin1"`) both work.
 #' @param on_invalid *Policy for values not representable in `encoding`.*
 #'   `<character(1)>: default "error"`. One of `"error"`, `"replace"`
@@ -1517,7 +1517,7 @@
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset as v5 (FDA standard) ----
 #' #
@@ -1561,15 +1561,15 @@ write_xpt <- function(
 #' Read a dataset from SAS XPORT
 #'
 #' Read a SAS Transport (`.xpt`) file (v5 or v8) back to a data frame,
-#' restoring the `vport_meta` its NAMESTR records carry and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `vport_time`. The
+#' restoring the `artoo_meta` its NAMESTR records carry and realizing SAS
+#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. The
 #' ingest end of the I/O layer; a thin wrapper over [read_dataset()] with
 #' `format = "xpt"`.
 #'
 #' @details
 #' The character encoding is auto-detected (UTF-8 if every character value is
 #' valid UTF-8, else Windows-1252) and recorded on the returned
-#' `vport_meta`, so a later [write_xpt()] reproduces it; pass `encoding` to
+#' `artoo_meta`, so a later [write_xpt()] reproduces it; pass `encoding` to
 #' override. XPORT cannot record its own encoding, so this detection is a
 #' heuristic. See [write_xpt()] for what XPORT can and cannot preserve.
 #'
@@ -1580,11 +1580,11 @@ write_xpt <- function(
 #' @param col_select *Variables to read.* `<character> | NULL`. `NULL`
 #'   (default) reads every column; otherwise a vector of variable names
 #'   (matching the names as stored, uppercase for v5). Columns return in file
-#'   order, and the `vport_meta` is filtered to match.
+#'   order, and the `artoo_meta` is filtered to match.
 #'
-#'   **Note:** an unknown name is a `vport_error_input`, never a silent drop.
+#'   **Note:** an unknown name is a `artoo_error_input`, never a silent drop.
 #' @param n_max *Maximum records to read.* `<numeric(1)>: default Inf`. Caps
-#'   the row count; the returned `vport_meta` reports the rows actually read.
+#'   the row count; the returned `artoo_meta` reports the rows actually read.
 #' @param member *Which member of a multi-member transport file to read.*
 #'   `<character(1) | numeric(1)> | NULL`. A transport file can hold several
 #'   datasets; pass a member name (case-insensitive) or 1-based index to pick
@@ -1593,11 +1593,11 @@ write_xpt <- function(
 #'
 #'   **Tip:** `xpt_members(path)` lists what a file holds before you choose.
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` (read it with
+#' @return *A `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]).
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through xpt ----
 #' #
@@ -1661,14 +1661,14 @@ read_xpt <- function(
 #' see [write_xpt()]).
 #'
 #' @param path *Source `.xpt` path.* `<character(1)>: required`. A file that
-#'   is not a valid XPORT library aborts with `vport_error_codec`.
+#'   is not a valid XPORT library aborts with `artoo_error_codec`.
 #'
 #' @return *A `<data.frame>`* with one row per member and columns `member`
 #'   (1-based index), `name`, `label`, `nvars`, and `nobs`. Pass `member` or
 #'   `name` to [read_xpt()].
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: a single-member file reports one row ----
 #' #
@@ -1705,7 +1705,7 @@ xpt_members <- function(path) {
         "{.arg path} does not exist.",
         "x" = "No file at {.path {path}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }

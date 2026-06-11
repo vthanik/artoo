@@ -5,11 +5,11 @@ format: html
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
 Clinical dates come in two storage shapes, and mixing them up corrupts a
-submission. vport encodes the distinction the way CDISC does — in the
+submission. artoo encodes the distinction the way CDISC does — in the
 metadata — so every codec agrees and partial dates survive byte for byte.
 
 ## The rule: `targetDataType` decides
@@ -34,7 +34,7 @@ means SAS-epoch numbers.
 dates — a known year, a known year-month — are real data, not errors:
 
 ```{r}
-spec <- vport_spec(
+spec <- artoo_spec(
   data.frame(dataset = "DM", label = "Demographics"),
   data.frame(
     dataset  = "DM",
@@ -53,7 +53,7 @@ dm <- apply_spec(raw, spec, "DM")
 str(dm$BRTHDTC)
 ```
 
-The column stays character — vport never silently promotes ISO text to
+The column stays character — artoo never silently promotes ISO text to
 `Date` (a promotion would have to destroy `"1951-12"`). And it writes to
 every format, XPT included, with the values intact:
 
@@ -73,7 +73,7 @@ The bundled ADSL has R `Date` columns. Conforming records
 numbers and every reader realizes the same `Date` class back:
 
 ```{r}
-spec_pilot <- vport_spec(
+spec_pilot <- artoo_spec(
   cdisc_datasets, cdisc_variables,
   codelists = cdisc_codelists
 )
@@ -110,7 +110,7 @@ at write time, never silently:
 
 ```{r}
 #| error: true
-spec_num <- vport_spec(
+spec_num <- artoo_spec(
   data.frame(dataset = "DM", label = "Demographics"),
   data.frame(
     dataset = "DM", variable = "BRTHDTC", label = "Birth Date/Time",

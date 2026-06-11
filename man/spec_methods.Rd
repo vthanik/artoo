@@ -7,7 +7,7 @@
 spec_methods(spec)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 }
 \value{
 \emph{A data frame of method metadata} (\code{method_id}, \code{name}, \code{type},
@@ -24,7 +24,7 @@ complete (has a description).
 # ---- Example 1: the methods a spec defines ----
 #
 # Build a spec with one derivation method and read it back.
-spec <- vport_spec(
+spec <- artoo_spec(
   data.frame(dataset = "ADSL"),
   data.frame(dataset = "ADSL", variable = "AGEGR1", data_type = "string"),
   methods = data.frame(

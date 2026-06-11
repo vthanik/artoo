@@ -12,13 +12,13 @@ read_rds(path, col_select = NULL, n_max = Inf, encoding = NULL)
 \item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
 (default) reads every column; otherwise a vector of variable names.
 Columns return in file order (not the requested order) and the
-\code{vport_meta} is filtered to match. Works on every format: parquet narrows
+\code{artoo_meta} is filtered to match. Works on every format: parquet narrows
 columns natively, the rest filter after decode.
 
-\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+\strong{Note:} an unknown name is a \code{artoo_error_input}, never a silent drop.}
 
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
-the row count; the returned \code{vport_meta} reports the rows actually read.
+the row count; the returned \code{artoo_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) returns the strings exactly as saved (faithful R
@@ -26,17 +26,17 @@ round-trip). Pass a charset name only to transcode a foreign rds whose
 string columns hold that charset's bytes.}
 }
 \value{
-\emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded
+\emph{A \verb{<data.frame>}} carrying \code{artoo_meta} when the file recorded
 it. An rds holding anything other than a data frame is a
-\code{vport_error_codec}; use \code{readRDS()} for arbitrary objects.
+\code{artoo_error_codec}; use \code{readRDS()} for arbitrary objects.
 }
 \description{
 Read an R \code{.rds} file written by \code{\link[=write_rds]{write_rds()}} (or any rds carrying a
-\code{metadata_json} attribute) back to a data frame with its \code{vport_meta}
+\code{metadata_json} attribute) back to a data frame with its \code{artoo_meta}
 restored. A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "rds"}.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: read a dataset written by write_rds() ----
 #
@@ -49,7 +49,7 @@ get_meta(back)@dataset$records
 
 # ---- Example 2: a plain rds still reads as a data frame ----
 #
-# An rds without vport metadata reads back as an ordinary frame.
+# An rds without artoo metadata reads back as an ordinary frame.
 bare <- tempfile(fileext = ".rds")
 saveRDS(cdisc_dm, bare)
 nrow(read_rds(bare))

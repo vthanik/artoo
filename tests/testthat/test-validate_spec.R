@@ -1,9 +1,9 @@
-# Tests for validate_spec() -- dataset-scoped, returns a vport_check.
+# Tests for validate_spec() -- dataset-scoped, returns a artoo_check.
 
 clean_spec <- function() {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  vport_spec(
+  artoo_spec(
     ds,
     cdisc_variables,
     codelists = cdisc_codelists,
@@ -11,9 +11,9 @@ clean_spec <- function() {
   )
 }
 
-test_that("validate_spec() returns a vport_check with a findings data frame", {
+test_that("validate_spec() returns a artoo_check with a findings data frame", {
   chk <- validate_spec(clean_spec(), dataset = "DM")
-  expect_true(S7::S7_inherits(chk, vport:::vport_check_class))
+  expect_true(S7::S7_inherits(chk, artoo:::artoo_check_class))
   expect_s3_class(chk@findings, "data.frame")
   expect_named(
     chk@findings,
@@ -25,7 +25,7 @@ test_that("validate_spec() returns a vport_check with a findings data frame", {
 test_that("validate_spec() does not throw by default, even with errors", {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   chk <- expect_no_error(validate_spec(spec, dataset = "DM"))
   expect_true(any(chk@findings$check == "dataset_keys_resolve"))
 })
@@ -33,10 +33,10 @@ test_that("validate_spec() does not throw by default, even with errors", {
 test_that("validate_spec(on_error = 'abort') throws on an error-severity finding", {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   expect_error(
     validate_spec(spec, dataset = "DM", on_error = "abort"),
-    class = "vport_error_validation"
+    class = "artoo_error_validation"
   )
   expect_snapshot(
     validate_spec(spec, dataset = "DM", on_error = "abort"),
@@ -45,17 +45,17 @@ test_that("validate_spec(on_error = 'abort') throws on an error-severity finding
 })
 
 test_that("validate_spec() rejects a non-spec and an unknown dataset", {
-  expect_error(validate_spec(mtcars), class = "vport_error_input")
+  expect_error(validate_spec(mtcars), class = "artoo_error_input")
   expect_error(
     validate_spec(clean_spec(), dataset = "NOPE"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
 # ---- per-dimension checks fire on a crafted spec ------------------------
 
 test_that("dataset/variable checks fire and carry the right severity", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"), # no label -> warning
     data.frame(
       dataset = "DM",
@@ -75,7 +75,7 @@ test_that("dataset/variable checks fire and carry the right severity", {
 })
 
 test_that("a clean spec yields no findings for the intrinsic checks", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -93,7 +93,7 @@ test_that("a clean spec yields no findings for the intrinsic checks", {
 })
 
 test_that("study_name_present fires when no study name is present (H9)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
   )
@@ -104,7 +104,7 @@ test_that("study_name_present fires when no study name is present (H9)", {
 # ---- method / comment completeness + resolution -------------------------
 
 test_that("method/comment resolution and completeness fire", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -131,7 +131,7 @@ test_that("method/comment resolution and completeness fire", {
 })
 
 test_that("variable_derived_has_method fires, case-insensitively (H6)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -174,7 +174,7 @@ test_that("validation is isolated to the scoped dataset", {
 })
 
 test_that("dataset and codelist comment references must resolve", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(
       dataset = "DM",
       label = "DM",
@@ -207,7 +207,7 @@ test_that("dataset and codelist comment references must resolve", {
 })
 
 test_that("method/comment id-uniqueness, document refs, and completeness fire", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -240,7 +240,7 @@ test_that("method/comment id-uniqueness, document refs, and completeness fire", 
 })
 
 test_that("document_id_unique fires on a duplicate document id", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -261,7 +261,7 @@ test_that("document_id_unique fires on a duplicate document id", {
 })
 
 test_that("study_name_present fires when the study row has a blank name", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -277,7 +277,7 @@ test_that("study_name_present fires when the study row has a blank name", {
 })
 
 test_that("value-level rows are scoped to the dataset", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = c("DM", "AE"), label = c("DM", "AE")),
     data.frame(
       dataset = c("DM", "AE"),
@@ -301,7 +301,7 @@ test_that("value-level rows are scoped to the dataset", {
 # ---- Wave 3 breadth: variable / value-level / codelist / unused ---------
 
 test_that("variable order and text-length checks fire", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -320,7 +320,7 @@ test_that("variable order and text-length checks fire", {
 })
 
 test_that("value-level resolution and where-clause checks fire", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "ADSL", label = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -348,7 +348,7 @@ test_that("value-level resolution and where-clause checks fire", {
 })
 
 test_that("codelist terms-present fires for an empty referenced codelist", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -374,7 +374,7 @@ test_that("codelist terms-present fires for an empty referenced codelist", {
 })
 
 test_that("unused checks fire only in whole-spec mode", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "DM"),
     data.frame(
       dataset = "DM",
@@ -406,7 +406,7 @@ test_that("unused checks fire only in whole-spec mode", {
 # ---- controlled terminology vs input data -------------------------------
 
 ct_spec <- function() {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "ADSL", label = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -443,7 +443,7 @@ test_that("CT checks do not run without data", {
 })
 
 test_that("CT checks run on the bundled cdisc_adsl data", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "ADSL", label = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -473,7 +473,7 @@ test_that("CT checks run on the bundled cdisc_adsl data", {
 })
 
 test_that("a single data frame needs a length-1 dataset (H18)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = c("ADSL", "DM"), label = c("ADSL", "DM")),
     data.frame(
       dataset = c("ADSL", "DM"),
@@ -487,12 +487,12 @@ test_that("a single data frame needs a length-1 dataset (H18)", {
   )
   expect_error(
     validate_spec(spec, data = data.frame(SEX = "M")),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
 test_that("a zero-variable scoped dataset does not crash (H15)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = c("DM", "AE"), label = c("DM", "AE")),
     data.frame(
       dataset = "DM",
@@ -513,27 +513,27 @@ test_that("a brace in spec content cannot break the strict gate (review B5)", {
   # both the report and the documented error class).
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "NOT{AVAR"
-  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   expect_error(
     validate_spec(spec, dataset = "DM", on_error = "abort"),
-    class = "vport_error_validation"
+    class = "artoo_error_validation"
   )
 })
 
 test_that("on_error = 'warn' signals a classed warning but still returns (1e)", {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
   expect_warning(
     chk <- validate_spec(spec, dataset = "DM", on_error = "warn"),
-    class = "vport_warning_validation"
+    class = "artoo_warning_validation"
   )
   # The warning does not suppress the report: every finding is still returned.
   expect_true(any(chk@findings$severity == "error"))
 })
 
 test_that("as.data.frame returns the 6-column findings frame (1f)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -547,22 +547,22 @@ test_that("as.data.frame returns the 6-column findings frame (1f)", {
   expect_identical(df, chk@findings)
 })
 
-test_that("vport_check rejects findings missing a column or with a bad severity (1f)", {
+test_that("artoo_check rejects findings missing a column or with a bad severity (1f)", {
   bad_cols <- data.frame(
     check = "x",
     severity = "error",
     stringsAsFactors = FALSE
   )
-  expect_error(vport:::vport_check_class(findings = bad_cols))
-  bad_sev <- vport:::.empty_findings()
+  expect_error(artoo:::artoo_check_class(findings = bad_cols))
+  bad_sev <- artoo:::.empty_findings()
   bad_sev[1, ] <- list("x", "study", "fatal", NA, NA, "m")
-  expect_error(vport:::vport_check_class(findings = bad_sev))
+  expect_error(artoo:::artoo_check_class(findings = bad_sev))
 })
 
 # ---- Part A: submission-readiness spec checks ------------------------------
 
 test_that("variable_name_length flags a 9-char name but not an 8-char name", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -582,7 +582,7 @@ test_that("variable_name_length flags a 9-char name but not an 8-char name", {
 })
 
 test_that("variable_label_length flags over-40-byte labels, ignores blanks and the boundary", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -598,7 +598,7 @@ test_that("variable_label_length flags over-40-byte labels, ignores blanks and t
   expect_identical(hit$severity, "warning")
 
   # 40-byte boundary is clean.
-  spec40 <- vport_spec(
+  spec40 <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(
       dataset = "DM",
@@ -615,7 +615,7 @@ test_that("variable_label_length flags over-40-byte labels, ignores blanks and t
 })
 
 test_that("cross_dataset checks fire in whole mode and not in scoped mode", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = c("DM", "ADSL")),
     data.frame(
       dataset = c("DM", "ADSL"),
@@ -642,7 +642,7 @@ test_that("cross_dataset checks fire in whole mode and not in scoped mode", {
 })
 
 test_that("cross_dataset is silent when a shared variable is consistent", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = c("DM", "ADSL")),
     data.frame(
       dataset = c("DM", "ADSL"),
@@ -680,7 +680,7 @@ test_that("cross_dataset is silent when a shared variable is consistent", {
   if (!is.null(itemoids)) {
     vars$itemoid <- itemoids
   }
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "DM", label = "Demographics", keys = keys),
     vars
   )

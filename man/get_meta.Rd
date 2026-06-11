@@ -7,20 +7,20 @@
 get_meta(x)
 }
 \arguments{
-\item{x}{\emph{A data frame carrying vport metadata.} \verb{<data.frame>: required}.
+\item{x}{\emph{A data frame carrying artoo metadata.} \verb{<data.frame>: required}.
 Typically the output of \code{\link[=apply_spec]{apply_spec()}} or a \verb{read_*()} codec.
 
 \strong{Requirement:} \code{x} must carry a \code{metadata_json} attribute (set by
 \code{\link[=set_meta]{set_meta()}}, \code{\link[=apply_spec]{apply_spec()}}, or a reader); a bare frame aborts with
-\code{vport_error_input}.}
+\code{artoo_error_input}.}
 }
 \value{
-\emph{A \verb{<vport_meta>}} with dataset-level (\verb{@dataset}) and per-column
+\emph{A \verb{<artoo_meta>}} with dataset-level (\verb{@dataset}) and per-column
 (\verb{@columns}) CDISC attributes. Pass it to \code{\link[=set_meta]{set_meta()}} to re-attach, or
 inspect it directly.
 }
 \description{
-Pull the \code{vport_meta} off a data frame produced by \code{\link[=apply_spec]{apply_spec()}} or read
+Pull the \code{artoo_meta} off a data frame produced by \code{\link[=apply_spec]{apply_spec()}} or read
 back by any \verb{read_*()} codec. The metadata travels as a single
 Dataset-JSON string in the frame's \code{metadata_json} attribute; \code{get_meta()}
 parses it to the S7 object, the form every codec writes from. This is the
@@ -31,7 +31,7 @@ read half of the lossless round-trip.
 #
 # apply_spec() stamps the metadata; get_meta() reads it back as the S7
 # object whose @columns holds one CDISC attribute set per variable.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 meta <- get_meta(adsl)
 meta@columns$STUDYID

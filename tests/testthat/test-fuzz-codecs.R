@@ -1,5 +1,5 @@
 # Fuzz / corruption robustness: a truncated or bit-flipped file must abort
-# with a vport condition, never crash the session, hang, or silently return
+# with a artoo condition, never crash the session, hang, or silently return
 # wrong data. Deterministic seeds keep failures reproducible.
 
 # A clean one-of-each-format set written from a small frame.
@@ -11,7 +11,7 @@
     ADT = as.Date(c("2024-01-01", "2024-02-15", "2024-03-30")),
     stringsAsFactors = FALSE
   )
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -36,25 +36,25 @@
   paths
 }
 
-# Reading must EITHER succeed with a data frame OR throw a vport condition --
+# Reading must EITHER succeed with a data frame OR throw a artoo condition --
 # never any other error, never a crash, never a hang.
 .expect_clean <- function(path, fmt) {
   # A corrupt-but-readable file may legitimately warn (an encoding heuristic,
-  # a coercion); the contract under test is "data frame or clean vport abort",
+  # a coercion); the contract under test is "data frame or clean artoo abort",
   # not warning-freedom, so warnings are suppressed.
   res <- suppressWarnings(tryCatch(
     read_dataset(path, format = fmt),
-    vport_error_codec = function(e) "vport",
-    vport_error_input = function(e) "vport",
-    vport_error_type = function(e) "vport",
+    artoo_error_codec = function(e) "artoo",
+    artoo_error_input = function(e) "artoo",
+    artoo_error_type = function(e) "artoo",
     error = function(e) structure("other", message = conditionMessage(e))
   ))
   if (identical(res, "other")) {
-    fail(sprintf("%s: non-vport error: %s", fmt, attr(res, "message")))
+    fail(sprintf("%s: non-artoo error: %s", fmt, attr(res, "message")))
   } else if (is.data.frame(res)) {
     succeed()
   } else {
-    expect_identical(res, "vport")
+    expect_identical(res, "artoo")
   }
 }
 
@@ -149,24 +149,24 @@ test_that("a real SAS file with a flipped interior byte stays bounded", {
   }
 })
 
-test_that("a corrupt rds payload failing AFTER decode still aborts as vport (CI fuzz regression)", {
+test_that("a corrupt rds payload failing AFTER decode still aborts as artoo (CI fuzz regression)", {
   # A bit-flipped rds can decompress to a payload readRDS accepts but
   # that only fails in the post-decode tail (the column re-projection, or
   # cli rendering a foreign message that quotes invalid-UTF-8 file
-  # bytes). The contract: a data frame OR a vport condition -- never a
+  # bytes). The contract: a data frame OR a artoo condition -- never a
   # raw R error. Both shapes the CI fuzzer hit are pinned here.
   expect_clean_rds <- function(payload) {
     p <- withr::local_tempfile(fileext = ".rds", .local_envir = parent.frame())
     saveRDS(payload, p)
     res <- tryCatch(
       suppressWarnings(read_dataset(p)),
-      vport_error_codec = function(e) "vport",
+      artoo_error_codec = function(e) "artoo",
       error = function(e) structure("other", msg = conditionMessage(e))
     )
     if (identical(as.vector(res), "other")) {
-      fail(sprintf("non-vport error: %s", attr(res, "msg")))
+      fail(sprintf("non-artoo error: %s", attr(res, "msg")))
     }
-    expect_true(identical(res, "vport") || is.data.frame(res))
+    expect_true(identical(res, "artoo") || is.data.frame(res))
   }
 
   ragged <- data.frame(A = c("x", "y", "z"), stringsAsFactors = FALSE)

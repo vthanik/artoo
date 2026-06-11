@@ -34,7 +34,7 @@
 
 test_that("the literal engine reproduces the demo goldens byte for byte", {
   frozen <- as.POSIXct("2024-01-15 10:30:00", tz = "UTC")
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -58,7 +58,7 @@ test_that("the literal engine reproduces the demo goldens byte for byte", {
 # numbers are checked by round-trip equality, not byte-pinned -- jsonlite's
 # 16th/17th significant digit for an extreme magnitude is platform-dependent
 # (correctly-rounded but not identical across libc), and pinning it would
-# test the platform's printf, not vport. Intra-run stability (write twice,
+# test the platform's printf, not artoo. Intra-run stability (write twice,
 # identical bytes) is pinned separately below.
 test_that("the engine escapes adversarial strings correctly (byte-pinned)", {
   frozen <- as.POSIXct("2024-01-15 10:30:00", tz = "UTC")
@@ -124,7 +124,7 @@ test_that("the engine slabs large frames without changing the bytes", {
   p1 <- withr::local_tempfile(fileext = ".json")
   p2 <- withr::local_tempfile(fileext = ".json")
   write_json(df, p1, created = frozen)
-  withr::local_options(vport.json_slab_rows = 4L)
+  withr::local_options(artoo.json_slab_rows = 4L)
   write_json(df, p2, created = frozen)
   expect_identical(
     readBin(p1, "raw", file.info(p1)$size),

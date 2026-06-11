@@ -1,7 +1,7 @@
 # apply.R -- apply_spec(), the transactional conform pipeline.
 #
 # Runs the ordered internal steps (apply_steps.R) over a raw data frame to
-# produce one conformed to its spec and carrying vport_meta, then optionally
+# produce one conformed to its spec and carrying artoo_meta, then optionally
 # runs check_spec(). The original input is never mutated; any step aborting
 # leaves it untouched.
 
@@ -26,7 +26,7 @@
         "{.arg steps} must be a character vector of step names.",
         "i" = "Available: {.val {available}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -37,7 +37,7 @@
         "Unknown {.arg steps} value{?s}: {.val {bad}}.",
         "i" = "Available: {.val {available}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -47,9 +47,9 @@
 
 #' Conform a data frame to its spec
 #'
-#' Run the ordered, transactional vport pipeline that turns a raw analysis
+#' Run the ordered, transactional artoo pipeline that turns a raw analysis
 #' data frame into one conformed to its specification and carrying
-#' `vport_meta`. This is the middle of the workflow (spec -> apply_spec ->
+#' `artoo_meta`. This is the middle of the workflow (spec -> apply_spec ->
 #' read_/write_): the conformed frame is ready for any `write_*()` codec, and
 #' the metadata it now carries makes that write lossless. The input is never
 #' mutated; if any step aborts, the call leaves your data untouched.
@@ -66,14 +66,14 @@
 #' enforced by mutation. Opt in with `decode = "to_decode"` or `"to_code"`.
 #'
 #' @param x *The raw data frame to conform.* `<data.frame>: required`.
-#' @param spec *The specification to conform to.* `<vport_spec>: required`.
+#' @param spec *The specification to conform to.* `<artoo_spec>: required`.
 #' @param dataset *The dataset whose rules apply.* `<character(1)>:
 #'   required`. Must name a dataset in `spec`.
 #' @param conformance *What to do with conformance findings.*
 #'   `<character(1)>`. One of:
 #'   * `"warn"` (default) run [check_spec()], attach the findings (read
 #'     them with [conformance()]), warn on any error-severity finding.
-#'   * `"abort"` abort with `vport_error_conformance` on any error-severity
+#'   * `"abort"` abort with `artoo_error_conformance` on any error-severity
 #'     finding.
 #'   * `"off"` skip the check entirely.
 #'
@@ -93,7 +93,7 @@
 #'     or overflowing R's 32-bit range (values becoming `NA`) is a
 #'     data-integrity event, not a nuisance.
 #'   * `"warn"` apply the lossy coercion and warn
-#'     (`vport_warning_coercion`).
+#'     (`artoo_warning_coercion`).
 #'
 #'   **Tip:** [check_spec()] flags the same conditions before any coercion
 #'   runs (`integer_fraction`, `integer_overflow`), so a pre-flight check
@@ -101,7 +101,7 @@
 #' @param trim *Match codelist values after trimming whitespace.*
 #'   `<logical(1)>: default TRUE`. Real data carries trailing blanks; a value
 #'   that matches only after trimming still decodes, with a
-#'   `vport_warning_codelist` naming the variants. Membership *checking*
+#'   `artoo_warning_codelist` naming the variants. Membership *checking*
 #'   ([check_spec()]) always compares exactly. Has no effect when
 #'   `decode = "none"`.
 #' @param ignore_case *Match codelist values case-insensitively.*
@@ -128,17 +128,17 @@
 #'
 #'   **Interaction:** mutually exclusive with `steps` (a profile *is* a
 #'   steps preset; supplying both aborts).
-#' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
+#' @param checks *Which conformance dimensions to evaluate.* `<artoo_checks>
 #'   | NULL`. When `NULL` (default) every dimension runs; pass a
-#'   [vport_checks()] control to disable some. Has no effect when
+#'   [artoo_checks()] control to disable some. Has no effect when
 #'   `conformance = "off"`.
 #'
-#' @return *A conformed `<data.frame>`* carrying `vport_meta` (read it with
+#' @return *A conformed `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]) and, unless `conformance = "off"`, the findings frame
 #'   [conformance()] reads back. Hand it to any `write_*()` codec.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: conform ADSL, then read its metadata ----
 #' #
@@ -185,7 +185,7 @@ apply_spec <- function(
           "{.arg profile} and {.arg steps} are mutually exclusive.",
           "i" = "A profile is a steps preset; pick one."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -197,7 +197,7 @@ apply_spec <- function(
           "{.arg profile} must be {.val xportr} or NULL.",
           "x" = "You supplied {.obj_type_friendly {profile}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -211,7 +211,7 @@ apply_spec <- function(
           "{.arg {flag}} must be a single TRUE or FALSE.",
           "x" = "You supplied {.obj_type_friendly {fv}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -223,7 +223,7 @@ apply_spec <- function(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -266,7 +266,7 @@ apply_spec <- function(
 
   if (conformance != "off") {
     findings <- check_spec(out, spec, dataset, decode = decode, checks = checks)
-    attr(out, "vport.conformance") <- findings
+    attr(out, "artoo.conformance") <- findings
     errs <- findings[findings$severity == "error", , drop = FALSE]
     if (nrow(errs)) {
       # Finding messages embed raw data values; escape so a "{" in the data
@@ -278,14 +278,14 @@ apply_spec <- function(
         stats::setNames(.cli_escape(shown), rep("x", length(shown)))
       )
       if (conformance == "abort") {
-        cli::cli_abort(msg, class = "vport_error_conformance", call = call)
+        cli::cli_abort(msg, class = "artoo_error_conformance", call = call)
       } else {
         cli::cli_warn(
           c(
             "{nrow(errs)} conformance error{?s} for {.val {dataset}}.",
             "i" = "Run {.code conformance(x)} on the returned frame to see every finding."
           ),
-          class = "vport_warning_conformance",
+          class = "artoo_warning_conformance",
           call = call
         )
       }

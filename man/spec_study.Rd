@@ -7,12 +7,12 @@
 spec_study(spec, field = NULL)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 
 \item{field}{\emph{Return one field instead of the row.} \verb{<character(1)> | NULL}. When \code{NULL} (default) the whole study data frame is returned.
 
 \strong{Restriction:} a non-\code{NULL} \code{field} must be a column of the study
-table; an unknown field aborts with \code{vport_error_input}.}
+table; an unknown field aborts with \code{artoo_error_input}.}
 }
 \value{
 \emph{The study data frame}, or the value of one \code{field}.
@@ -27,7 +27,7 @@ the whole spec.
 #
 # spec_study() with no field returns the study-level table; pass a field
 # name to pull a single value such as the study identifier.
-spec <- vport_spec(
+spec <- artoo_spec(
   cdisc_datasets, cdisc_variables,
   codelists = cdisc_codelists,
   study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")

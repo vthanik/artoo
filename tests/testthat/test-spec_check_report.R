@@ -1,4 +1,4 @@
-# Tests for the vport_check text report (.format_check).
+# Tests for the artoo_check text report (.format_check).
 # The S7 print dispatch only fires in an installed build; the renderer is a
 # plain function, so it is snapshot-tested directly here (H12).
 
@@ -20,7 +20,7 @@ fixed_check <- function() {
     ),
     stringsAsFactors = FALSE
   )
-  vport:::vport_check_class(
+  artoo:::artoo_check_class(
     findings = findings,
     scope = c("ADSL"),
     study = "CDISCPILOT01",
@@ -34,7 +34,7 @@ fixed_check <- function() {
 }
 
 test_that(".format_check renders the sectioned report", {
-  expect_snapshot(cat(vport:::.format_check(fixed_check()), sep = "\n"))
+  expect_snapshot(cat(artoo:::.format_check(fixed_check()), sep = "\n"))
 })
 
 test_that("the S7 print and format methods run", {
@@ -44,7 +44,7 @@ test_that("the S7 print and format methods run", {
 })
 
 test_that(".format_check collapses newlines in a message (H7)", {
-  lines <- vport:::.format_check(fixed_check())
+  lines <- artoo:::.format_check(fixed_check())
   joined <- paste(lines, collapse = "\n")
   # The multi-line description is flattened to one line.
   expect_match(joined, "blank description that spans lines", fixed = TRUE)
@@ -55,12 +55,12 @@ test_that(".format_check collapses newlines in a message (H7)", {
 })
 
 test_that(".format_check reports a clean check as no findings", {
-  chk <- vport:::vport_check_class(
-    findings = vport:::.empty_findings(),
+  chk <- artoo:::artoo_check_class(
+    findings = artoo:::.empty_findings(),
     scope = "ADSL",
     study = "S1"
   )
-  lines <- vport:::.format_check(chk)
+  lines <- artoo:::.format_check(chk)
   expect_true(any(grepl("No findings", lines)))
 })
 
@@ -74,11 +74,11 @@ test_that("a per-section cap truncates with an 'and N more' line", {
     message = sprintf("Variable ADSL.V%02d has no label.", 1:20),
     stringsAsFactors = FALSE
   )
-  chk <- vport:::vport_check_class(
+  chk <- artoo:::artoo_check_class(
     findings = many,
     scope = "ADSL",
     study = "S1"
   )
-  lines <- vport:::.format_check(chk)
+  lines <- artoo:::.format_check(chk)
   expect_true(any(grepl("and 5 more", lines)))
 })

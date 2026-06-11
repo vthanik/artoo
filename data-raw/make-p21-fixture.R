@@ -7,7 +7,7 @@
 #
 # Authoring-time only: uses openxlsx2 to write the workbook (and to MERGE
 # the Dataset / codelist-ID columns). openxlsx2 is NOT a package
-# dependency -- vport ships with no xlsx-writing dependency.
+# dependency -- artoo ships with no xlsx-writing dependency.
 
 stopifnot(requireNamespace("openxlsx2", quietly = TRUE))
 

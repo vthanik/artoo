@@ -8,7 +8,7 @@ xpt_members(path)
 }
 \arguments{
 \item{path}{\emph{Source \code{.xpt} path.} \verb{<character(1)>: required}. A file that
-is not a valid XPORT library aborts with \code{vport_error_codec}.}
+is not a valid XPORT library aborts with \code{artoo_error_codec}.}
 }
 \value{
 \emph{A \verb{<data.frame>}} with one row per member and columns \code{member}
@@ -29,7 +29,7 @@ row is entirely blank reports one row fewer (the documented v5 ambiguity,
 see \code{\link[=write_xpt]{write_xpt()}}).
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: a single-member file reports one row ----
 #

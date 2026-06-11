@@ -12,13 +12,13 @@ read_parquet(path, col_select = NULL, n_max = Inf, encoding = NULL)
 \item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
 (default) reads every column; otherwise a vector of variable names.
 Columns return in file order (not the requested order) and the
-\code{vport_meta} is filtered to match. Works on every format: parquet narrows
+\code{artoo_meta} is filtered to match. Works on every format: parquet narrows
 columns natively, the rest filter after decode.
 
-\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+\strong{Note:} an unknown name is a \code{artoo_error_input}, never a silent drop.}
 
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
-the row count; the returned \code{vport_meta} reports the rows actually read.
+the row count; the returned \code{artoo_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) reads the UTF-8 bytes parquet stores. Pass a
@@ -26,19 +26,19 @@ charset name only to read a foreign file whose string columns hold that
 charset's bytes; they are transcoded to UTF-8 on read.}
 }
 \value{
-\emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded it
+\emph{A \verb{<data.frame>}} carrying \code{artoo_meta} when the file recorded it
 (read it with \code{\link[=get_meta]{get_meta()}}); otherwise a plain data frame.
 }
 \description{
 Read an Apache Parquet (\code{.parquet}) file back to a data frame, restoring the
-\code{vport_meta} from its \code{metadata_json} sidecar and realizing SAS
-date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{vport_time}. A
-parquet written by another tool (with no vport sidecar) reads back as a
+\code{artoo_meta} from its \code{metadata_json} sidecar and realizing SAS
+date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{artoo_time}. A
+parquet written by another tool (with no artoo sidecar) reads back as a
 bare frame. A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "parquet"}.
 Requires the lightweight \code{nanoparquet} package.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a conformed dataset through Parquet ----
 #
@@ -51,11 +51,11 @@ get_meta(back)@columns$STUDYID$label
 
 # ---- Example 2: the metadata names the dataset and row count ----
 #
-# The restored vport_meta exposes the dataset-level attributes.
+# The restored artoo_meta exposes the dataset-level attributes.
 get_meta(back)@dataset$records
 
 }
 \seealso{
-\code{\link[=write_parquet]{write_parquet()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the
+\code{\link[nanoparquet:write_parquet]{write_parquet()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the
 generic dispatcher.
 }

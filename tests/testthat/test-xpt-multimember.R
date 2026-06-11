@@ -1,6 +1,6 @@
 # Multi-member XPORT reads: xpt_members() lists the datasets a transport
 # file holds; read_xpt(member=) seeks to and decodes one of them. Fixtures
-# are built by byte-concatenating vport-written single-member files -- every
+# are built by byte-concatenating artoo-written single-member files -- every
 # member section is 80-byte padded, so the catenation is a valid library.
 
 .mm_frames <- function() {
@@ -83,7 +83,7 @@ for (v in c(5L, 8L)) {
     p <- .mm_fixture(v)
     withr::defer(unlink(p))
     err <- tryCatch(read_xpt(p), error = function(e) e)
-    expect_s3_class(err, "vport_error_codec")
+    expect_s3_class(err, "artoo_error_codec")
     expect_match(conditionMessage(err), "xpt_members|member", all = FALSE)
   })
 
@@ -91,9 +91,9 @@ for (v in c(5L, 8L)) {
     p <- .mm_fixture(v)
     withr::defer(unlink(p))
     err <- tryCatch(read_xpt(p, member = "LB"), error = function(e) e)
-    expect_s3_class(err, "vport_error_input")
+    expect_s3_class(err, "artoo_error_input")
     expect_match(conditionMessage(err), "DM")
-    expect_error(read_xpt(p, member = 9), class = "vport_error_input")
+    expect_error(read_xpt(p, member = 9), class = "artoo_error_input")
   })
 }
 
@@ -108,7 +108,7 @@ test_that("a single-member file still reads with and without member=", {
   expect_identical(as.vector(read_xpt(p, member = 1)$AGE), fr$dm$AGE)
   m <- xpt_members(p)
   expect_identical(nrow(m), 1L)
-  expect_error(read_xpt(p, member = "AE"), class = "vport_error_input")
+  expect_error(read_xpt(p, member = "AE"), class = "artoo_error_input")
 })
 
 test_that("read_dataset forwards member= to the xpt codec", {
@@ -121,13 +121,13 @@ test_that("read_dataset forwards member= to the xpt codec", {
 test_that("xpt_members rejects a non-xpt file", {
   p <- withr::local_tempfile(fileext = ".xpt")
   writeBin(charToRaw(strrep("x", 400)), p)
-  expect_error(xpt_members(p), class = "vport_error_codec")
+  expect_error(xpt_members(p), class = "artoo_error_codec")
 })
 
 test_that("a member read equals the same dataset read single-member", {
-  # The oracle here is vport's own single-member reader (pyreadstat absorbs
+  # The oracle here is artoo's own single-member reader (pyreadstat absorbs
   # a second v5 member as extra rows of the first -- the exact failure mode
-  # vport's boundary-bounded read avoids).
+  # artoo's boundary-bounded read avoids).
   fr <- .mm_frames()
   dm <- fr$dm
   attr(dm, "dataset_name") <- "DM"
@@ -146,10 +146,10 @@ test_that("a member read equals the same dataset read single-member", {
 # ---- edge coverage -----------------------------------------------------------
 
 test_that("xpt_members input guards fire", {
-  expect_error(xpt_members("/nope/missing.xpt"), class = "vport_error_input")
+  expect_error(xpt_members("/nope/missing.xpt"), class = "artoo_error_input")
   p <- .mm_fixture(8L)
   withr::defer(unlink(p))
-  expect_error(read_xpt(p, member = list()), class = "vport_error_input")
+  expect_error(read_xpt(p, member = list()), class = "artoo_error_input")
 })
 
 test_that("a library header with no member aborts", {
@@ -157,7 +157,7 @@ test_that("a library header with no member aborts", {
   src <- .mm_fixture(5L)
   withr::defer(unlink(src))
   writeBin(readBin(src, "raw", 240L), p)
-  expect_error(xpt_members(p), class = "vport_error_codec")
+  expect_error(xpt_members(p), class = "artoo_error_codec")
 })
 
 test_that("trailing blank padding after the last member is not a member", {
@@ -202,7 +202,7 @@ test_that("the scanner handles a v8 member with a long label", {
 })
 
 test_that(".xpt_parse_label_extension reads LABELV9 format/informat strings", {
-  # vport writes LABELV8 only; LABELV9 (10-byte header + name/label/format/
+  # artoo writes LABELV8 only; LABELV9 (10-byte header + name/label/format/
   # informat strings) appears in other writers' files. Build one record by
   # hand and parse it.
   ns <- list(list(
@@ -224,11 +224,11 @@ test_that(".xpt_parse_label_extension reads LABELV9 format/informat strings", {
   fmt <- charToRaw("BEST12.2")
   infmt <- charToRaw("YYMMDD10.")
   rec <- c(
-    vport:::.int_to_pib2(1L),
-    vport:::.int_to_pib2(length(name)),
-    vport:::.int_to_pib2(length(label)),
-    vport:::.int_to_pib2(length(fmt)),
-    vport:::.int_to_pib2(length(infmt)),
+    artoo:::.int_to_pib2(1L),
+    artoo:::.int_to_pib2(length(name)),
+    artoo:::.int_to_pib2(length(label)),
+    artoo:::.int_to_pib2(length(fmt)),
+    artoo:::.int_to_pib2(length(infmt)),
     name,
     label,
     fmt,
@@ -244,7 +244,7 @@ test_that(".xpt_parse_label_extension reads LABELV9 format/informat strings", {
       formatC(1L, width = 30L, flag = " ")
     )
   )
-  out <- vport:::.xpt_parse_label_extension(con, hdr, ns)
+  out <- artoo:::.xpt_parse_label_extension(con, hdr, ns)
   expect_identical(out[[1]]$name, "AVAL")
   expect_identical(out[[1]]$label, "Analysis Value")
   expect_identical(out[[1]]$format_name, "BEST")

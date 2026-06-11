@@ -3,7 +3,7 @@
 # each conformance finding. Driven by bundled CDISC demo data.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 # spec with DM sort keys declared, to exercise .sort_keys().
@@ -11,7 +11,7 @@ keyed_spec <- function() {
   ds <- cdisc_datasets
   ds$keys <- NA_character_
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
 }
 
 # ---- decode_codelists -------------------------------------------------------
@@ -49,7 +49,7 @@ test_that("decode no_match = error aborts on an unknown coded value", {
   raw$SEX[1] <- "Z"
   expect_error(
     apply_spec(raw, spec, "DM", decode = "to_decode", no_match = "error"),
-    class = "vport_error_codelist"
+    class = "artoo_error_codelist"
   )
 })
 
@@ -85,14 +85,14 @@ test_that("decode no_match = na blanks the unmatched value", {
 
 # ---- coerce_types -----------------------------------------------------------
 
-test_that("coercion that introduces NA warns with vport_warning_coercion", {
+test_that("coercion that introduces NA warns with artoo_warning_coercion", {
   spec <- demo_spec()
   raw <- cdisc_adsl
   raw$AGE <- as.character(raw$AGE)
   raw$AGE[1] <- "not-a-number"
   expect_warning(
     apply_spec(raw, spec, "ADSL", conformance = "off"),
-    class = "vport_warning_coercion"
+    class = "artoo_warning_coercion"
   )
 })
 
@@ -102,22 +102,22 @@ test_that("sort_keys orders rows by the dataset keys and records them", {
   spec <- keyed_spec()
   raw <- cdisc_dm[sample.int(nrow(cdisc_dm)), , drop = FALSE]
   out <- apply_spec(raw, spec, "DM", conformance = "off")
-  expect_identical(attr(out, "vport.sort"), c("STUDYID", "USUBJID"))
+  expect_identical(attr(out, "artoo.sort"), c("STUDYID", "USUBJID"))
   expect_false(is.unsorted(out$USUBJID))
 })
 
 test_that("sort_keys na_position controls where missing keys land (C1)", {
   x <- data.frame(K = c("B", NA, "A"), v = 1:3, stringsAsFactors = FALSE)
   # Default / "first": SAS PROC SORT + FDA convention -> NA leads.
-  first <- vport:::.sort_keys(x, list(keys = "K"))
+  first <- artoo:::.sort_keys(x, list(keys = "K"))
   expect_identical(first$K, c(NA, "A", "B"))
   expect_identical(first$v, c(2L, 3L, 1L))
   expect_identical(
-    vport:::.sort_keys(x, list(keys = "K"), "first")$v,
+    artoo:::.sort_keys(x, list(keys = "K"), "first")$v,
     c(2L, 3L, 1L)
   )
   # "last": R / pandas / Polars convention -> NA trails.
-  last <- vport:::.sort_keys(x, list(keys = "K"), "last")
+  last <- artoo:::.sort_keys(x, list(keys = "K"), "last")
   expect_identical(last$K, c("A", "B", NA))
   expect_identical(last$v, c(3L, 1L, 2L))
 })
@@ -144,10 +144,10 @@ test_that("a partial variables$order warns and trails the unnumbered vars", {
   v <- cdisc_variables
   # Blank one DM variable's order so the column is only partially numbered.
   v$order[v$dataset == "DM" & v$variable == "DOMAIN"] <- NA_integer_
-  spec <- vport_spec(cdisc_datasets, v, codelists = cdisc_codelists)
+  spec <- artoo_spec(cdisc_datasets, v, codelists = cdisc_codelists)
   expect_warning(
     out <- apply_spec(cdisc_dm, spec, "DM", conformance = "off"),
-    class = "vport_warning_order"
+    class = "artoo_warning_order"
   )
   # DOMAIN lost its order, so it now trails the still-numbered USUBJID.
   expect_gt(match("DOMAIN", names(out)), match("USUBJID", names(out)))
@@ -160,14 +160,14 @@ test_that("a fully numbered order does not warn", {
   )
 })
 
-test_that("scaffold and drop progress carry class vport_message_apply", {
+test_that("scaffold and drop progress carry class artoo_message_apply", {
   spec <- demo_spec()
   raw <- cdisc_dm
   raw$NOTSPEC <- "x" # not in the spec -> dropped
   raw$AGE <- NULL # in the spec -> scaffolded back
   expect_message(
     apply_spec(raw, spec, "DM", conformance = "off"),
-    class = "vport_message_apply"
+    class = "artoo_message_apply"
   )
 })
 
@@ -179,12 +179,12 @@ test_that("a duplicated spec variable aborts at construction, with the rows", {
   dup <- vars[vars$dataset == "DM" & vars$variable == "SEX", , drop = FALSE]
   vars2 <- rbind(vars, dup)
   expect_error(
-    vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists),
-    class = "vport_error_spec"
+    artoo_spec(cdisc_datasets, vars2, codelists = cdisc_codelists),
+    class = "artoo_error_spec"
   )
   expect_snapshot(
     error = TRUE,
-    vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
+    artoo_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
   )
 })
 
@@ -229,9 +229,9 @@ test_that("apply_spec check = warn attaches findings and warns on errors", {
       no_match = "error",
       conformance = "warn"
     ),
-    class = "vport_warning_conformance"
+    class = "artoo_warning_conformance"
   )
-  findings <- attr(out, "vport.conformance")
+  findings <- attr(out, "artoo.conformance")
   expect_true(any(findings$check == "codelist_membership"))
 })
 
@@ -239,25 +239,25 @@ test_that("apply_spec rejects a non-character steps argument", {
   spec <- demo_spec()
   expect_error(
     apply_spec(cdisc_dm, spec, "DM", steps = 1L),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
 test_that("check_spec rejects a non-data-frame x", {
   spec <- demo_spec()
-  expect_error(check_spec(list(1), spec, "DM"), class = "vport_error_input")
+  expect_error(check_spec(list(1), spec, "DM"), class = "artoo_error_input")
 })
 
 test_that(".storage_of recognises integer and logical columns", {
-  expect_identical(vport:::.storage_of(1L:3L), "integer")
-  expect_identical(vport:::.storage_of(c(TRUE, FALSE)), "logical")
-  expect_identical(vport:::.storage_of(complex(1)), NA_character_)
+  expect_identical(artoo:::.storage_of(1L:3L), "integer")
+  expect_identical(artoo:::.storage_of(c(TRUE, FALSE)), "logical")
+  expect_identical(artoo:::.storage_of(complex(1)), NA_character_)
 })
 
 # ---- decode matching: trim + case options (checks expansion) ----------------
 
 .trim_spec <- function() {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -286,7 +286,7 @@ test_that("decode trims whitespace by default and warns about the variants", {
       decode = "to_decode",
       conformance = "off"
     ),
-    class = "vport_warning_codelist"
+    class = "artoo_warning_codelist"
   )
   expect_identical(as.vector(out$SEX), c("Male", "Female", "Male"))
 })
@@ -302,7 +302,7 @@ test_that("trim = FALSE restores exact matching", {
       trim = FALSE,
       conformance = "off"
     ),
-    class = "vport_error_codelist"
+    class = "artoo_error_codelist"
   )
 })
 
@@ -316,7 +316,7 @@ test_that("ignore_case = TRUE matches case variants and warns", {
       decode = "to_decode",
       conformance = "off"
     ),
-    class = "vport_error_codelist"
+    class = "artoo_error_codelist"
   )
   expect_warning(
     out <- apply_spec(
@@ -327,7 +327,7 @@ test_that("ignore_case = TRUE matches case variants and warns", {
       ignore_case = TRUE,
       conformance = "off"
     ),
-    class = "vport_warning_codelist"
+    class = "artoo_warning_codelist"
   )
   expect_identical(as.vector(out$SEX), c("Male", "Female"))
 })

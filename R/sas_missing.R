@@ -3,7 +3,7 @@
 # In-session canonical form: the row-aligned `sas_missing` character attribute
 # on a column (NA where untagged; values ".", "._", ".A"-".Z"), exactly what
 # the xpt layer produces (.ibm_to_ieee) and consumes (.ieee_to_ibm). On disk,
-# json and parquet carry the tags in the namespaced `_vport.specialMissings`
+# json and parquet carry the tags in the namespaced `_artoo.specialMissings`
 # block of the metadata payload; the data values stay plain nulls, so a
 # foreign reader degrades gracefully to ordinary missings.
 #

@@ -12,18 +12,18 @@ selects the codec unless \code{format} is given.}
 
 \item{format}{\emph{Force a codec instead of inferring from the extension.}
 \verb{<character(1)> | NULL}. One of the registered formats (see
-\code{\link[=vport_formats]{vport_formats()}}).}
+\code{\link[=artoo_formats]{artoo_formats()}}).}
 
 \item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
 (default) reads every column; otherwise a vector of variable names.
 Columns return in file order (not the requested order) and the
-\code{vport_meta} is filtered to match. Works on every format: parquet narrows
+\code{artoo_meta} is filtered to match. Works on every format: parquet narrows
 columns natively, the rest filter after decode.
 
-\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+\strong{Note:} an unknown name is a \code{artoo_error_input}, never a silent drop.}
 
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
-the row count; the returned \code{vport_meta} reports the rows actually read.
+the row count; the returned \code{artoo_meta} reports the rows actually read.
 xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{...}{\emph{Codec-specific arguments} passed through to the decoder (see
@@ -31,19 +31,19 @@ the per-format wrappers, e.g. \code{\link[=read_xpt]{read_xpt()}}). An argument 
 not know is an error, never silently ignored.}
 }
 \value{
-\emph{A \verb{<data.frame>}} carrying \code{vport_meta} when the file recorded it
+\emph{A \verb{<data.frame>}} carrying \code{artoo_meta} when the file recorded it
 (read it with \code{\link[=get_meta]{get_meta()}}). A file whose payload is not a data frame is
-a \code{vport_error_codec}.
+a \code{artoo_error_codec}.
 }
 \description{
-Read a clinical file back to a data frame, restoring its \code{vport_meta}. The
+Read a clinical file back to a data frame, restoring its \code{artoo_meta}. The
 codec is chosen from the file extension (or an explicit \code{format}), and the
 metadata the file carries is re-attached, so a value written by
 \code{\link[=write_dataset]{write_dataset()}} round-trips losslessly. This is the ingest end of the
 I/O layer; the per-format wrappers like \code{\link[=read_rds]{read_rds()}} call it.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a dataset through rds ----
 #
@@ -56,7 +56,7 @@ identical(get_meta(back)@columns, get_meta(adsl)@columns)
 
 # ---- Example 2: the metadata names the dataset and row count ----
 #
-# The restored vport_meta exposes the dataset-level attributes.
+# The restored artoo_meta exposes the dataset-level attributes.
 get_meta(back)@dataset$records
 
 }

@@ -1,29 +1,29 @@
 # Tests for the codec registry, the read_dataset/write_dataset dispatchers,
-# vport_formats(), and the rds codec round-trip (the spine: a conformed
-# frame survives a write/read trip with its vport_meta intact).
+# artoo_formats(), and the rds codec round-trip (the spine: a conformed
+# frame survives a write/read trip with its artoo_meta intact).
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 # ---- registry ---------------------------------------------------------------
 
 test_that("rds is a registered read-write codec", {
-  fmts <- vport:::.registered_formats()
+  fmts <- artoo:::.registered_formats()
   expect_true("rds" %in% fmts)
-  codec <- vport:::.resolve_codec("rds")
+  codec <- artoo:::.resolve_codec("rds")
   expect_identical(codec$mode, "rw")
   expect_type(codec$encode, "character")
-  expect_true(is.function(vport:::.codec_fn(codec$encode)))
+  expect_true(is.function(artoo:::.codec_fn(codec$encode)))
 })
 
 test_that(".resolve_codec aborts on an unknown format", {
-  expect_error(vport:::.resolve_codec("xlsx"), class = "vport_error_codec")
+  expect_error(artoo:::.resolve_codec("xlsx"), class = "artoo_error_codec")
 })
 
 test_that(".codec_for_ext maps extensions to formats", {
-  expect_identical(vport:::.codec_for_ext("rds")$format, "rds")
-  expect_error(vport:::.codec_for_ext("zzz"), class = "vport_error_codec")
+  expect_identical(artoo:::.codec_for_ext("rds")$format, "rds")
+  expect_error(artoo:::.codec_for_ext("zzz"), class = "artoo_error_codec")
 })
 
 # ---- format resolution ------------------------------------------------------
@@ -43,7 +43,7 @@ test_that("an unknown extension with no format aborts", {
   path <- withr::local_tempfile(fileext = ".zzz")
   expect_error(
     write_dataset(cdisc_dm, path),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
@@ -58,7 +58,7 @@ test_that("explicit format overrides the extension", {
 
 # ---- rds codec round-trip (the lossless invariant) --------------------------
 
-test_that("rds round-trip preserves vport_meta exactly", {
+test_that("rds round-trip preserves artoo_meta exactly", {
   spec <- demo_spec()
   for (ds in spec_datasets(spec)) {
     src <- if (ds == "ADSL") cdisc_adsl else cdisc_dm
@@ -97,12 +97,12 @@ test_that("write_rds on a bare frame round-trips data and infers metadata", {
   expect_equal(as.data.frame(back), as.data.frame(cdisc_dm))
   # and a bare frame now carries metadata derived from its columns
   back2 <- read_rds(path)
-  expect_true(is_vport_meta(get_meta(back2)))
+  expect_true(is_artoo_meta(get_meta(back2)))
 })
 
 test_that("write_dataset rejects a non-data-frame x", {
   path <- withr::local_tempfile(fileext = ".rds")
-  expect_error(write_dataset(list(1), path), class = "vport_error_input")
+  expect_error(write_dataset(list(1), path), class = "artoo_error_input")
 })
 
 test_that("read_rds of a plain saveRDS file returns the bare data frame", {
@@ -115,20 +115,20 @@ test_that("read_rds of a plain saveRDS file returns the bare data frame", {
 
 test_that("read_dataset aborts when the file does not exist", {
   gone <- withr::local_tempfile(fileext = ".rds")
-  expect_error(read_dataset(gone), class = "vport_error_input")
+  expect_error(read_dataset(gone), class = "artoo_error_input")
 })
 
 test_that("write_dataset refuses a read-only codec", {
-  vport:::.register_codec(
+  artoo:::.register_codec(
     "rotest",
     encode = ".encode_rds",
     decode = ".decode_rds",
     extensions = "rotest",
     mode = "r"
   )
-  withr::defer(rm("rotest", envir = vport:::.vport_codecs))
+  withr::defer(rm("rotest", envir = artoo:::.artoo_codecs))
   path <- withr::local_tempfile(fileext = ".rotest")
-  expect_error(write_dataset(cdisc_dm, path), class = "vport_error_codec")
+  expect_error(write_dataset(cdisc_dm, path), class = "artoo_error_codec")
 })
 
 test_that("rds write falls back to copy when rename fails", {
@@ -144,10 +144,10 @@ test_that("rds write falls back to copy when rename fails", {
   expect_identical(get_meta(read_rds(path))@columns, get_meta(adsl)@columns)
 })
 
-# ---- vport_formats ----------------------------------------------------------
+# ---- artoo_formats ----------------------------------------------------------
 
-test_that("vport_formats lists each codec with read/write availability", {
-  cf <- vport_formats()
+test_that("artoo_formats lists each codec with read/write availability", {
+  cf <- artoo_formats()
   expect_s3_class(cf, "data.frame")
   expect_true(all(c("format", "read", "write") %in% names(cf)))
   expect_true("rds" %in% cf$format)
@@ -198,20 +198,20 @@ test_that("read_rds refuses a non-data-frame payload (review D2)", {
   # classed refusal, not a silent passthrough.
   p <- withr::local_tempfile(fileext = ".rds")
   saveRDS(list(a = 1), p)
-  expect_error(read_rds(p), class = "vport_error_codec")
-  expect_error(read_dataset(p), class = "vport_error_codec")
+  expect_error(read_rds(p), class = "artoo_error_codec")
+  expect_error(read_dataset(p), class = "artoo_error_codec")
 })
 
 # ---- Wave 3: universal partial reads (the generic filter is the authority) ---
 
 test_that("partial-read args are type-validated before any decode runs", {
   # The payload is not a data frame, so a decode that ran first would raise
-  # vport_error_codec; validation winning proves it runs ahead of decode.
+  # artoo_error_codec; validation winning proves it runs ahead of decode.
   p <- withr::local_tempfile(fileext = ".rds")
   saveRDS(list(a = 1), p)
-  expect_error(read_dataset(p, n_max = -1), class = "vport_error_input")
-  expect_error(read_dataset(p, n_max = NA), class = "vport_error_input")
-  expect_error(read_dataset(p, col_select = 1L), class = "vport_error_input")
+  expect_error(read_dataset(p, n_max = -1), class = "artoo_error_input")
+  expect_error(read_dataset(p, n_max = NA), class = "artoo_error_input")
+  expect_error(read_dataset(p, col_select = 1L), class = "artoo_error_input")
 })
 
 test_that("n_max = 0 returns an empty frame and syncs the record count", {
@@ -230,13 +230,13 @@ test_that("col_select returns file order, not the requested order", {
   expect_identical(names(back), names(cdisc_dm)[1:3]) # file order
 })
 
-test_that("col_select with an unknown name aborts vport_error_input (rds, json)", {
+test_that("col_select with an unknown name aborts artoo_error_input (rds, json)", {
   pr <- withr::local_tempfile(fileext = ".rds")
   write_rds(cdisc_dm, pr)
-  expect_error(read_rds(pr, col_select = "NOPE"), class = "vport_error_input")
+  expect_error(read_rds(pr, col_select = "NOPE"), class = "artoo_error_input")
   pj <- withr::local_tempfile(fileext = ".json")
   write_json(cdisc_dm, pj)
-  expect_error(read_json(pj, col_select = "NOPE"), class = "vport_error_input")
+  expect_error(read_json(pj, col_select = "NOPE"), class = "artoo_error_input")
 })
 
 test_that("selecting every column in file order equals a full read (idempotent)", {
@@ -263,13 +263,13 @@ test_that(".meta_select_columns recomputes keys, dropping removed key columns", 
     ),
     C = list(itemOID = "IT.T.C", name = "C", dataType = "float")
   )
-  ds <- vport:::.assemble_dataset_meta(
+  ds <- artoo:::.assemble_dataset_meta(
     itemGroupOID = "IG.T",
     name = "T",
     keys = c("A", "B")
   )
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
-  red <- vport:::.meta_select_columns(meta, c("B", "C"))
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
+  red <- artoo:::.meta_select_columns(meta, c("B", "C"))
   expect_identical(red@dataset$keys, "B")
   expect_named(red@columns, c("B", "C"))
 })
@@ -291,7 +291,7 @@ test_that("parquet honors col_select (native projection) and n_max", {
   expect_identical(nrow(back), 4L)
 })
 
-test_that("col_select works on a foreign parquet with no vport metadata", {
+test_that("col_select works on a foreign parquet with no artoo metadata", {
   skip_if_not_installed("nanoparquet")
   df <- data.frame(A = 1:3, B = 4:6, C = 7:9)
   p <- withr::local_tempfile(fileext = ".parquet")

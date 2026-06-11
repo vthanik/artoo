@@ -12,7 +12,7 @@ validate_spec(
 )
 }
 \arguments{
-\item{spec}{\emph{The specification to validate.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to validate.} \verb{<artoo_spec>: required}.}
 
 \item{data}{\emph{Optional input data for controlled-terminology checks.}
 \verb{<data.frame> | named list | NULL}. When supplied, data values are
@@ -28,21 +28,21 @@ a length-1 \code{dataset}; pass a named list to validate several at once.}
 \verb{<character(1)>}. One of:
 \itemize{
 \item \code{"off"} (default) collect and return every finding; never signal.
-\item \code{"warn"} additionally \code{cli_warn} (\code{vport_warning_validation}) with
+\item \code{"warn"} additionally \code{cli_warn} (\code{artoo_warning_validation}) with
 the error count.
-\item \code{"abort"} additionally abort with \code{vport_error_validation}.
+\item \code{"abort"} additionally abort with \code{artoo_error_validation}.
 All findings are collected and returned in every case.
 }}
 }
 \value{
-\emph{A \code{vport_check} object.} Its \verb{@findings} data frame has columns
+\emph{A \code{artoo_check} object.} Its \verb{@findings} data frame has columns
 \code{check}, \code{dimension}, \code{severity}, \code{dataset}, \code{variable}, \code{message}.
 Print it for the sectioned report.
 }
 \description{
-Run vport's bundled, self-contained checks over a \code{vport_spec},
+Run artoo's bundled, self-contained checks over a \code{artoo_spec},
 \strong{scoped to the dataset(s) you are working on}, and return a
-\code{vport_check} that prints a sectioned report. Every finding is keyed to
+\code{artoo_check} that prints a sectioned report. Every finding is keyed to
 an open rule in the shipped catalog (see \code{spec_rules.json}); the result
 object keeps the findings as a plain data frame in \verb{@findings} for
 programmatic use.
@@ -63,7 +63,7 @@ validates the whole spec.
 #
 # Build a spec from the bundled tables and validate just ADSL; the
 # result prints a sectioned report and keeps the findings table.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 chk <- validate_spec(spec, dataset = "ADSL")
 chk@findings
 
@@ -73,14 +73,14 @@ chk@findings
 # and catch the resulting error.
 bad_ds <- cdisc_datasets
 bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
-bad <- vport_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
+bad <- artoo_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
 tryCatch(
   validate_spec(bad, dataset = "DM", on_error = "abort"),
-  vport_error_validation = function(e) conditionMessage(e)[1]
+  artoo_error_validation = function(e) conditionMessage(e)[1]
 )
 
 }
 \seealso{
-\code{\link[=vport_spec]{vport_spec()}} to build a spec; \code{\link[=spec_methods]{spec_methods()}} /
+\code{\link[=artoo_spec]{artoo_spec()}} to build a spec; \code{\link[=spec_methods]{spec_methods()}} /
 \code{\link[=spec_comments]{spec_comments()}} for the metadata checked.
 }

@@ -26,26 +26,26 @@ the spec ambiguous; the finding is reported with its source location
 \item \code{"first"} keep the first definition of each, dropping the rest with
 a message.
 \item \code{"warn"} keep the first definition and warn
-(\code{vport_warning_spec}).
+(\code{artoo_warning_spec}).
 }}
 }
 \value{
-\emph{A validated \code{vport_spec}.} Inspect it with \code{\link[=spec_datasets]{spec_datasets()}} /
+\emph{A validated \code{artoo_spec}.} Inspect it with \code{\link[=spec_datasets]{spec_datasets()}} /
 \code{\link[=spec_variables]{spec_variables()}}, check it with \code{\link[=validate_spec]{validate_spec()}}, or persist it
 with \code{\link[=write_spec]{write_spec()}}.
 }
 \description{
-Read a clinical-dataset specification into a validated \code{vport_spec},
-dispatching on the file extension: vport's native JSON (the inverse of
+Read a clinical-dataset specification into a validated \code{artoo_spec},
+dispatching on the file extension: artoo's native JSON (the inverse of
 \code{\link[=write_spec]{write_spec()}}), a Pinnacle 21 (P21) Excel workbook, or a native
 Define-XML 2.0/2.1 document. The returned spec is the lingua franca the
-rest of vport applies and serialises.
+rest of artoo applies and serialises.
 }
 \details{
-\strong{Three formats, one validator.} A \code{.json} file is read as vport native
+\strong{Three formats, one validator.} A \code{.json} file is read as artoo native
 JSON; a \code{.xlsx} / \code{.xls} file is read as a P21 workbook; a \code{.xml} file is
 read as Define-XML 2.x. Either way the result is built through
-\code{\link[=vport_spec]{vport_spec()}}, so type canonicalisation and cross-slot integrity checks
+\code{\link[=artoo_spec]{artoo_spec()}}, so type canonicalisation and cross-slot integrity checks
 are identical regardless of source.
 
 \strong{Define-XML ingestion} (needs the \code{xml2} package). ItemGroupDefs become
@@ -68,14 +68,14 @@ latter becomes the spec's value-level slot). Every cell is read as
 text, then the dataset and codelist foreign keys are forward-filled to
 recover merged cells (which the Excel reader returns as \code{NA} on
 continuation rows). A key that cannot be resolved aborts with
-\code{vport_error_spec} rather than being silently dropped.
+\code{artoo_error_spec} rather than being silently dropped.
 }
 \examples{
 # ---- Example 1: round-trip a spec through native JSON ----
 #
 # write_spec() and read_spec() are inverses on the JSON path: the spec
 # that comes back is identical to the one written.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 path <- tempfile(fileext = ".json")
 write_spec(spec, path)
 back <- read_spec(path)
@@ -94,6 +94,6 @@ head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 \seealso{
 \strong{Inverse:} \code{\link[=write_spec]{write_spec()}} serialises a spec to native JSON.
 
-\strong{Build / inspect:} \code{\link[=vport_spec]{vport_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
+\strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
 \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=validate_spec]{validate_spec()}}.
 }

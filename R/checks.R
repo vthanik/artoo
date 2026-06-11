@@ -1,13 +1,13 @@
-# checks.R -- vport_checks(), the conformance-dimension control.
+# checks.R -- artoo_checks(), the conformance-dimension control.
 #
 # A small validated record toggling which dimensions check_spec() (and
 # therefore apply_spec(check=)) evaluates. One object can be built per study
 # SAP and threaded through every apply_spec()/check_spec() call. A bad toggle
-# name or type errors early (vport_error_input), rather than being silently
+# name or type errors early (artoo_error_input), rather than being silently
 # swallowed the way a loose `...` would.
 
 # The conformance dimensions check_spec() can emit, in report order.
-.vport_check_dims <- c(
+.artoo_check_dims <- c(
   "missing_variable",
   "missing_permissible",
   "extra_variable",
@@ -89,26 +89,26 @@
 #'   SDTMIG hyphen placeholders (`"2003---15"`) all pass, while
 #'   `"12NOV2019"` or an impossible calendar date is flagged.
 #'
-#' @return *A `<vport_checks>` control object*. Pass it as the `checks`
+#' @return *A `<artoo_checks>` control object*. Pass it as the `checks`
 #'   argument to [check_spec()] or [apply_spec()].
 #'
 #' @examples
 #' # ---- Example 1: the default runs every conformance dimension ----
 #' #
 #' # With no arguments, every conformance dimension is enabled.
-#' vport_checks()
+#' artoo_checks()
 #'
 #' # ---- Example 2: silence one dimension for a whole study ----
 #' #
 #' # Turn off the length check (e.g. while a spec's lengths are provisional)
 #' # and reuse the control across every dataset.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-#' ck <- vport_checks(length_overflow = FALSE)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' ck <- artoo_checks(length_overflow = FALSE)
 #' nrow(check_spec(cdisc_dm, spec, "DM", checks = ck))
 #'
 #' @seealso [check_spec()] and [apply_spec()] which consume it.
 #' @export
-vport_checks <- function(
+artoo_checks <- function(
   missing_variable = TRUE,
   missing_permissible = TRUE,
   extra_variable = TRUE,
@@ -155,41 +155,41 @@ vport_checks <- function(
           "{.arg {nm}} must be a single TRUE or FALSE.",
           "x" = "You supplied {.obj_type_friendly {v}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
   }
-  structure(toggles, class = "vport_checks")
+  structure(toggles, class = "artoo_checks")
 }
 
-#' Test for a vport_checks control
+#' Test for a artoo_checks control
 #'
-#' Report whether an object is a `vport_checks` control built by
-#' [vport_checks()]. Use it to guard a `checks` argument before threading it
+#' Report whether an object is a `artoo_checks` control built by
+#' [artoo_checks()]. Use it to guard a `checks` argument before threading it
 #' into [check_spec()] or [apply_spec()].
 #'
 #' @param x *Object to test.* `<any>`.
 #'
-#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `vport_checks`.
+#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `artoo_checks`.
 #'
 #' @examples
 #' # ---- Example 1: confirm a control before reusing it ----
 #' #
-#' # is_vport_checks() distinguishes a real control from a bare list of flags.
-#' is_vport_checks(vport_checks())
-#' is_vport_checks(list(missing_variable = TRUE))
+#' # is_artoo_checks() distinguishes a real control from a bare list of flags.
+#' is_artoo_checks(artoo_checks())
+#' is_artoo_checks(list(missing_variable = TRUE))
 #'
-#' @seealso [vport_checks()] to build one.
+#' @seealso [artoo_checks()] to build one.
 #' @export
-is_vport_checks <- function(x) {
-  inherits(x, "vport_checks")
+is_artoo_checks <- function(x) {
+  inherits(x, "artoo_checks")
 }
 
 #' @export
-print.vport_checks <- function(x, ...) {
-  cat("<vport_checks>\n")
-  for (d in .vport_check_dims) {
+print.artoo_checks <- function(x, ...) {
+  cat("<artoo_checks>\n")
+  for (d in .artoo_check_dims) {
     cat(sprintf("  [%s] %s\n", if (x[[d]]) "x" else " ", d))
   }
   invisible(x)
@@ -199,16 +199,16 @@ print.vport_checks <- function(x, ...) {
 #' @noRd
 .check_checks_arg <- function(checks, call = rlang::caller_env()) {
   if (is.null(checks)) {
-    return(vport_checks())
+    return(artoo_checks())
   }
-  if (!is_vport_checks(checks)) {
+  if (!is_artoo_checks(checks)) {
     cli::cli_abort(
       c(
-        "{.arg checks} must be a {.cls vport_checks} control or NULL.",
+        "{.arg checks} must be a {.cls artoo_checks} control or NULL.",
         "x" = "You supplied {.obj_type_friendly {checks}}.",
-        "i" = "Build one with {.fn vport_checks}."
+        "i" = "Build one with {.fn artoo_checks}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }

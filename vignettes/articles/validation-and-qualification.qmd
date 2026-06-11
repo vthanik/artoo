@@ -5,19 +5,19 @@ format: html
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
 "Can I use this for a submission?" is the first question a validated
 environment asks. Validation is your organisation's process — no package
-can declare itself validated — but vport is engineered to make that
+can declare itself validated — but artoo is engineered to make that
 assessment short. This page collects the evidence and where to verify
 each piece independently.
 
 ## The lossless guarantee, stated precisely
 
-vport's core claim: **a dataset written and read back through any
-supported format preserves the data values and the recorded `vport_meta`
+artoo's core claim: **a dataset written and read back through any
+supported format preserves the data values and the recorded `artoo_meta`
 attributes that the format can carry.** Self-describing formats
 (Dataset-JSON, Parquet, rds) carry the complete metadata; SAS XPORT
 carries what its NAMESTR physically stores (name, label, length, format)
@@ -35,11 +35,11 @@ The guarantee is enforced, not aspirational:
 - **An external oracle** checks the SAS epoch arithmetic against known
   constants (1960-01-01 is SAS day 0) independent of the conversion code
   under test.
-- **Cross-implementation validation**: CI reads vport-written XPT files
+- **Cross-implementation validation**: CI reads artoo-written XPT files
   with `pyreadstat` (a SAS-independent C implementation) and compares
   values, labels, and formats.
 - **Adversarial inputs**: fuzzing and malformed-file tests assert that a
-  truncated, bit-flipped, or hostile file produces a classed vport error,
+  truncated, bit-flipped, or hostile file produces a classed artoo error,
   never silent corruption.
 
 ## Quality system facts
@@ -58,7 +58,7 @@ Each of these is continuously verified in public CI, not asserted here:
   auditable:
 
 ```{r}
-rules <- jsonlite::fromJSON(system.file("spec_rules.json", package = "vport"))
+rules <- jsonlite::fromJSON(system.file("spec_rules.json", package = "artoo"))
 table(rules$engine, rules$severity)
 ```
 
@@ -70,19 +70,19 @@ table(rules$engine, rules$severity)
 
 ## What regulators actually require
 
-- **FDA Study Data Technical Conformance Guide**: vport enforces the
+- **FDA Study Data Technical Conformance Guide**: artoo enforces the
   XPORT v5 constraints (8-character names, 40-byte labels, 200-byte
   character values) as conformance findings, warns on the prohibited
   byte range 160–191 in submission transport files, and defaults XPT
   writes to the v5 standard.
 - **CDISC Dataset-JSON v1.1**: the metadata model *is* the Dataset-JSON
   v1.1 itemGroup vocabulary, verbatim — dataTypes, targetDataType,
-  keySequence, displayFormat. Anything vport needs beyond the closed
-  CDISC vocabulary rides one namespaced `_vport` block, and
+  keySequence, displayFormat. Anything artoo needs beyond the closed
+  CDISC vocabulary rides one namespaced `_artoo` block, and
   `write_json(strict = TRUE)` suppresses even that, with a warning naming
   exactly what was dropped.
 
-## Qualifying vport in your environment
+## Qualifying artoo in your environment
 
 A typical risk-based qualification (R Validation Hub style) needs:
 
@@ -93,7 +93,7 @@ A typical risk-based qualification (R Validation Hub style) needs:
    your environment; the suite is self-contained (bundled demo data, no
    network, no SAS or Java runtime).
 3. **Operational qualification** — run the package test suite in place:
-   `testthat::test_package("vport")`. Every property above is asserted
+   `testthat::test_package("artoo")`. Every property above is asserted
    there.
 4. **Performance qualification** — round-trip one of *your* datasets and
    compare with your existing process. `conformance()` and
@@ -101,5 +101,5 @@ A typical risk-based qualification (R Validation Hub style) needs:
    as evidence.
 
 If your QA group needs anything that is not verifiable from the public
-repository, [open an issue](https://github.com/vthanik/vport/issues) —
+repository, [open an issue](https://github.com/vthanik/artoo/issues) —
 documentation gaps in the evidence trail are treated as bugs.

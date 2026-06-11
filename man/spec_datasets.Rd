@@ -7,7 +7,7 @@
 spec_datasets(spec)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 }
 \value{
 \emph{A character vector of dataset names}, de-duplicated and with
@@ -23,7 +23,7 @@ names you pass as the \code{dataset} argument to the other accessors and to
 #
 # Build the spec from the bundled CDISC-pilot tables and list its
 # datasets -- the names you pass to the other accessors.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 spec_datasets(spec)
 
 }

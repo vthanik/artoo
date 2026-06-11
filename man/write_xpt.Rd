@@ -15,7 +15,7 @@ write_xpt(
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
-output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
+output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.xpt} path.} \verb{<character(1)>: required}.}
 
@@ -24,7 +24,7 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 (names <= 32, long labels).}
 
 \item{encoding}{\emph{Target charset.} \verb{<character(1)> | NULL}. \code{NULL}
-(default) inherits the source encoding recorded in \code{vport_meta}, else
+(default) inherits the source encoding recorded in \code{artoo_meta}, else
 UTF-8. IANA and SAS names (\code{"US-ASCII"}, \code{"wlatin1"}) both work.}
 
 \item{on_invalid}{\emph{Policy for values not representable in \code{encoding}.}
@@ -40,7 +40,7 @@ stamps the current time; freeze it for byte-stable output.}
 \description{
 Serialize a data frame to a SAS Transport (\code{.xpt}) file in v5 (the FDA
 submission standard) or v8 (extended names and labels), preserving the
-\code{vport_meta} a column can hold. The emit end of the vport workflow
+\code{artoo_meta} a column can hold. The emit end of the artoo workflow
 (spec -> apply_spec -> write_xpt); a thin wrapper over \code{\link[=write_dataset]{write_dataset()}}
 with \code{format = "xpt"}.
 }
@@ -49,7 +49,7 @@ with \code{format = "xpt"}.
 name, label, length, and SAS format. CDISC metadata beyond that
 (keySequence, codelist, origin, targetDataType, ...) and the source
 encoding are not representable in the bytes; they ride the in-session
-\code{vport_meta} and the sidecar in self-describing formats (Dataset-JSON,
+\code{artoo_meta} and the sidecar in self-describing formats (Dataset-JSON,
 Parquet, rds). XPORT also cannot distinguish an empty string from \code{NA}
 (both store as blanks) and drops trailing spaces.
 
@@ -58,13 +58,13 @@ Parquet, rds). XPORT also cannot distinguish an empty string from \code{NA}
 the CDISC ISO 8601 text form -- the SDTM \code{--DTC} convention -- and stores
 as a character variable, partial dates (\code{"1951"}, \code{"1951-12"}) included,
 byte for byte. The SAS-numeric encoding (with \code{DATE9.}-style formats) is
-used for columns that are R \code{Date}/\code{POSIXct}/\code{vport_time} or whose
+used for columns that are R \code{Date}/\code{POSIXct}/\code{artoo_time} or whose
 metadata records \code{targetDataType = "integer"} (the ADaM numeric-date
 convention). A character column \emph{under} \code{targetDataType = "integer"}
 aborts loudly -- a partial date can never become a SAS numeric silently.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset as v5 (FDA standard) ----
 #

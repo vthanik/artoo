@@ -1,4 +1,4 @@
-Package: vport
+Package: artoo
 Title: Versatile Lossless Port for Clinical Datasets
 Version: 0.0.0.9000
 Authors@R:
@@ -13,8 +13,8 @@ Description: Reads and writes clinical-trial datasets losslessly across
     two formats is lossless by construction. Pure R and lightweight, with
     no external 'SAS' or 'Java' runtime.
 License: MIT + file LICENSE
-URL: https://vthanik.github.io/vport/, https://github.com/vthanik/vport
-BugReports: https://github.com/vthanik/vport/issues
+URL: https://vthanik.github.io/artoo/, https://github.com/vthanik/artoo
+BugReports: https://github.com/vthanik/artoo/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:

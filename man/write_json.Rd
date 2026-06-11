@@ -8,7 +8,7 @@ write_json(x, path, created = NULL, strict = FALSE)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
-output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
+output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.json} path.} \verb{<character(1)>: required}.}
 
@@ -16,14 +16,14 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};
 freeze it for byte-stable output.}
 
-\item{strict}{\emph{Suppress the \verb{_vport} extension block.} \verb{<logical(1)>: default FALSE}. By default the file carries a single namespaced \verb{_vport}
+\item{strict}{\emph{Suppress the \verb{_artoo} extension block.} \verb{<logical(1)>: default FALSE}. By default the file carries a single namespaced \verb{_artoo}
 object when (and only when) there is content strict CDISC cannot
 express: SAS special-missing tags (\code{.A}-\code{.Z}, \code{._}), the recorded source
 encoding, and informats. Data values stay plain \code{null}s either way, so a
 foreign reader degrades gracefully.
 
 \strong{Note:} \code{strict = TRUE} writes a pure closed-vocabulary file and warns
-(\code{vport_warning_codec}) naming exactly what was dropped; those
+(\code{artoo_warning_codec}) naming exactly what was dropped; those
 attributes will not survive a read-back.}
 }
 \value{
@@ -31,14 +31,14 @@ attributes will not survive a read-back.}
 }
 \description{
 Serialize a data frame to a CDISC Dataset-JSON v1.1 (\code{.json}) file,
-Dataset-JSON being the native home of the \code{vport_meta} shape: the file is
-the metadata block plus a flat \code{rows} array. The emit end of the vport
+Dataset-JSON being the native home of the \code{artoo_meta} shape: the file is
+the metadata block plus a flat \code{rows} array. The emit end of the artoo
 workflow (spec -> apply_spec -> write_json); a thin wrapper over
 \code{\link[=write_dataset]{write_dataset()}} with \code{format = "json"}.
 }
 \details{
 \strong{Full metadata, no loss.} Unlike \code{.xpt}, a \code{.json} file records the
-complete \code{vport_meta}: keySequence, codelist, origin, targetDataType, and
+complete \code{artoo_meta}: keySequence, codelist, origin, targetDataType, and
 significantDigits all survive. Dates, datetimes, and times are exchanged as
 ISO 8601 strings, or as SAS-epoch numbers when their \code{targetDataType} is
 \code{"integer"} (the ADaM numeric-date convention); \code{decimal} rides as a string
@@ -48,12 +48,12 @@ write.
 
 \strong{Streaming write, whole-file read.} The writer streams the \code{rows} array
 in bounded slabs (a \code{.json.gz} path gzips the stream transparently), but
-\code{\link[=read_json]{read_json()}} must parse the whole array at once. For multi-million-row
+\code{\link[jsonlite:read_json]{read_json()}} must parse the whole array at once. For multi-million-row
 datasets prefer the NDJSON variant (\code{\link[=write_ndjson]{write_ndjson()}} / \code{\link[=read_ndjson]{read_ndjson()}}),
 which bounds memory in both directions.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset as Dataset-JSON ----
 #
@@ -72,6 +72,6 @@ write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
 
 }
 \seealso{
-\code{\link[=read_json]{read_json()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the generic
+\code{\link[jsonlite:read_json]{read_json()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the generic
 dispatcher.
 }

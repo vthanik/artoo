@@ -1,5 +1,5 @@
 # utils.R -- small base-R helpers shared across the package.
-# `%||%` is imported from rlang (see vport-package.R); do not redefine.
+# `%||%` is imported from rlang (see artoo-package.R); do not redefine.
 
 # Coerce a vector to a target storage mode, preserving NA. Returns the bare
 # coerced vector; lossy-coercion accounting (NA introduction, fractional
@@ -69,7 +69,7 @@
 }
 
 # Thin wrapper over base file.rename so the move-into-place fallback below is
-# unit-testable: tests mock this vport-namespace binding (base functions
+# unit-testable: tests mock this artoo-namespace binding (base functions
 # called unqualified cannot be mocked by testthat).
 #' @noRd
 .rename_file <- function(from, to) {
@@ -91,7 +91,7 @@
           "Could not move the temporary file into place.",
           "x" = "Failed to write {.path {path}}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -111,7 +111,7 @@
         "{.arg path} must be a single non-empty string.",
         "x" = "You supplied {.obj_type_friendly {path}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }

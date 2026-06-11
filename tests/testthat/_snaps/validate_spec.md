@@ -6,5 +6,5 @@
       Error:
       ! Spec is not submission-ready, 1 error-severity finding.
       x Dataset 'DM' keys reference variables not in the spec: NOTAVAR.
-      i Inspect every finding in the returned vport_check.
+      i Inspect every finding in the returned artoo_check.
 

@@ -48,8 +48,8 @@ cdisc_codelists
 \description{
 The dataset-level (\code{cdisc_datasets}) and variable-level (\code{cdisc_variables})
 metadata for the bundled \code{cdisc_adsl} and \code{cdisc_dm} datasets, in the shape
-\code{\link[=vport_spec]{vport_spec()}} expects. The variable table is \emph{derived from the data}
+\code{\link[=artoo_spec]{artoo_spec()}} expects. The variable table is \emph{derived from the data}
 (names, labels, inferred CDISC types, byte lengths) by \verb{data-raw/}. Pass
-both to \code{\link[=vport_spec]{vport_spec()}} to build a specification for examples and tests.
+both to \code{\link[=artoo_spec]{artoo_spec()}} to build a specification for examples and tests.
 }
 \keyword{datasets}

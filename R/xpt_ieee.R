@@ -2,7 +2,7 @@
 #
 # The byte-level core of the xpt codec, ported from the herald archive
 # (identical float math in both archives; herald chosen per the "latest wins"
-# rule). vport's additions over the port: no vctrs dependency, and an optional
+# rule). artoo's additions over the port: no vctrs dependency, and an optional
 # `missing` tag vector so extended special missings (.A-.Z, ._) survive the
 # WRITE path -- the one place v0 was lossy (it read them but wrote them all
 # back as the standard "." indicator).

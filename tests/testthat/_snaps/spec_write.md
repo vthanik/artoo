@@ -4,7 +4,7 @@
       write_spec(mtcars, p)
     Condition
       Error:
-      ! `spec` must be a <vport_spec>.
+      ! `spec` must be a <artoo_spec>.
       x You supplied a data frame.
-      i Build one with `vport_spec()`.
+      i Build one with `artoo_spec()`.
 

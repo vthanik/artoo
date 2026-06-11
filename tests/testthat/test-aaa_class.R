@@ -1,25 +1,25 @@
 # Tests for the S7 classes and their validators.
 
-test_that("vport_meta accepts CDISC dataTypes and a valid key set", {
-  m <- vport:::vport_meta_class(
+test_that("artoo_meta accepts CDISC dataTypes and a valid key set", {
+  m <- artoo:::artoo_meta_class(
     dataset = list(name = "DM", keys = "USUBJID"),
     columns = list(USUBJID = list(dataType = "string"))
   )
-  expect_true(S7::S7_inherits(m, vport:::vport_meta_class))
+  expect_true(S7::S7_inherits(m, artoo:::artoo_meta_class))
 })
 
-test_that("vport_meta rejects a non-CDISC dataType", {
+test_that("artoo_meta rejects a non-CDISC dataType", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       columns = list(AGE = list(dataType = "widget"))
     ),
     "non-CDISC"
   )
 })
 
-test_that("vport_meta rejects keys that name unknown columns", {
+test_that("artoo_meta rejects keys that name unknown columns", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       dataset = list(keys = "MISSING"),
       columns = list(AGE = list(dataType = "integer"))
     ),
@@ -27,9 +27,9 @@ test_that("vport_meta rejects keys that name unknown columns", {
   )
 })
 
-test_that("vport_meta rejects a non-CDISC targetDataType", {
+test_that("artoo_meta rejects a non-CDISC targetDataType", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       columns = list(
         AGE = list(dataType = "integer", targetDataType = "widget")
       )
@@ -38,24 +38,24 @@ test_that("vport_meta rejects a non-CDISC targetDataType", {
   )
 })
 
-test_that("vport_meta rejects a non-integer length or keySequence", {
+test_that("artoo_meta rejects a non-integer length or keySequence", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       columns = list(AGE = list(dataType = "integer", length = "ten"))
     ),
     "non-integer length"
   )
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       columns = list(AGE = list(dataType = "integer", keySequence = "1"))
     ),
     "non-integer keySequence"
   )
 })
 
-test_that("vport_meta rejects a name field that disagrees with its list key", {
+test_that("artoo_meta rejects a name field that disagrees with its list key", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       columns = list(AGE = list(name = "SEX", dataType = "integer"))
     ),
     "mismatched name"
@@ -64,7 +64,7 @@ test_that("vport_meta rejects a name field that disagrees with its list key", {
 
 test_that("the closed CDISC vocabularies are exactly the spec set", {
   expect_setequal(
-    vport:::.cdisc_datatypes,
+    artoo:::.cdisc_datatypes,
     c(
       "string",
       "integer",
@@ -78,13 +78,13 @@ test_that("the closed CDISC vocabularies are exactly the spec set", {
       "URI"
     )
   )
-  expect_setequal(vport:::.cdisc_targettypes, c("integer", "decimal"))
+  expect_setequal(artoo:::.cdisc_targettypes, c("integer", "decimal"))
 })
 
 # ---- mutation safety: @<- re-validates (pinning test) -----------------------
 
 test_that("property mutation re-runs the validator (no silent corruption)", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists

@@ -3,7 +3,7 @@
 # integer overflow, and the extensible-codelist membership branch.
 
 .w3_spec <- function(extended = FALSE) {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "AE", label = "Adverse Events"),
     data.frame(
       dataset = c("AE", "AE", "AE"),
@@ -45,13 +45,13 @@ test_that("variable_name flags long and malformed data column names", {
     df,
     .w3_spec(),
     "AE",
-    checks = vport_checks(variable_name = FALSE)
+    checks = artoo_checks(variable_name = FALSE)
   )
   expect_false(any(f2$check == "variable_name"))
 })
 
 test_that("dataset_name flags a name over 8 characters", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "AELONGNAME", label = "x"),
     data.frame(
       dataset = "AELONGNAME",
@@ -68,7 +68,7 @@ test_that("dataset_name flags a name over 8 characters", {
     df,
     spec,
     "AELONGNAME",
-    checks = vport_checks(dataset_name = FALSE)
+    checks = artoo_checks(dataset_name = FALSE)
   )
   expect_false(any(f2$check == "dataset_name"))
 })
@@ -86,7 +86,7 @@ test_that("label_length flags a column label attribute over 40 bytes", {
     df,
     .w3_spec(),
     "AE",
-    checks = vport_checks(label_length = FALSE)
+    checks = artoo_checks(label_length = FALSE)
   )
   expect_false(any(f2$check == "label_length"))
 })
@@ -115,7 +115,7 @@ test_that("integer_overflow flags values beyond R's 32-bit range", {
     df,
     .w3_spec(),
     "AE",
-    checks = vport_checks(integer_overflow = FALSE)
+    checks = artoo_checks(integer_overflow = FALSE)
   )
   expect_false(any(f2$check == "integer_overflow"))
 })
@@ -146,7 +146,7 @@ test_that("an extensible codelist downgrades membership to a note", {
     df,
     .w3_spec(extended = TRUE),
     "AE",
-    checks = vport_checks(codelist_membership_extensible = FALSE)
+    checks = artoo_checks(codelist_membership_extensible = FALSE)
   )
   expect_false(any(grepl("codelist_membership", f_off$check)))
 })

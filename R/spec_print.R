@@ -1,10 +1,10 @@
 # spec_print.R -- print/format methods for the two front-door S7 objects,
-# vport_spec and vport_meta.
+# artoo_spec and artoo_meta.
 #
 # The renderers are plain functions (.format_spec / .format_meta) so they are
 # testable under devtools::load_all(); the S7 print/format methods (which only
 # dispatch in an installed build) delegate to them. Plain S3 on the qualified
-# class name ("vport::vport_spec"), NOT S7::method(print, ...)<-, for the same
+# class name ("artoo::artoo_spec"), NOT S7::method(print, ...)<-, for the same
 # dispatch-hijack reason documented in spec_check_report.R.
 
 # Up to `n` names as "A, B, C", with a "(+K more)" tail when truncated. Empty
@@ -40,7 +40,7 @@
 
 #' @noRd
 .format_spec <- function(x) {
-  # A valid vport_spec always carries the schema columns (datasets$dataset,
+  # A valid artoo_spec always carries the schema columns (datasets$dataset,
   # codelists$codelist_id), so no presence guard is needed here.
   ds_names <- x@datasets$dataset
   n_ds <- length(ds_names[!is.na(ds_names)])
@@ -55,7 +55,7 @@
   )
 
   lines <- c(
-    "<vport_spec>",
+    "<artoo_spec>",
     header,
     sprintf("Datasets:  %d", n_ds),
     sprintf("Variables: %d", n_var),
@@ -116,7 +116,7 @@
   records <- ds$records
   keys <- ds$keys
 
-  lines <- c("<vport_meta>", head_line)
+  lines <- c("<artoo_meta>", head_line)
   if (!is.null(records)) {
     lines <- c(lines, sprintf("Records: %d", as.integer(records)))
   }
@@ -132,24 +132,24 @@
 
 # ---- print / format ---------------------------------------------------------
 
-#' @exportS3Method print vport::vport_spec
-`print.vport::vport_spec` <- function(x, ...) {
+#' @exportS3Method print artoo::artoo_spec
+`print.artoo::artoo_spec` <- function(x, ...) {
   cat(.format_spec(x), sep = "\n")
   invisible(x)
 }
 
-#' @exportS3Method format vport::vport_spec
-`format.vport::vport_spec` <- function(x, ...) {
+#' @exportS3Method format artoo::artoo_spec
+`format.artoo::artoo_spec` <- function(x, ...) {
   .format_spec(x)
 }
 
-#' @exportS3Method print vport::vport_meta
-`print.vport::vport_meta` <- function(x, ...) {
+#' @exportS3Method print artoo::artoo_meta
+`print.artoo::artoo_meta` <- function(x, ...) {
   cat(.format_meta(x), sep = "\n")
   invisible(x)
 }
 
-#' @exportS3Method format vport::vport_meta
-`format.vport::vport_meta` <- function(x, ...) {
+#' @exportS3Method format artoo::artoo_meta
+`format.artoo::artoo_meta` <- function(x, ...) {
   .format_meta(x)
 }

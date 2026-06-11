@@ -1,6 +1,6 @@
-# spec_write.R -- write_spec(): serialise a vport_spec to native JSON.
+# spec_write.R -- write_spec(): serialise a artoo_spec to native JSON.
 
-# The vport_spec slots serialised to / read from JSON, in canonical order.
+# The artoo_spec slots serialised to / read from JSON, in canonical order.
 # Shared by write_spec() (payload key order) and read_spec() (slot
 # extraction) so the two surfaces cannot drift.
 #' @noRd
@@ -20,23 +20,23 @@
 #' @noRd
 .spec_json_version <- "1"
 
-#' Write a specification to native vport JSON
+#' Write a specification to native artoo JSON
 #'
-#' Serialise a `vport_spec` to vport's native JSON format: one lossless,
+#' Serialise a `artoo_spec` to artoo's native JSON format: one lossless,
 #' UTF-8 document carrying every slot (study, datasets, variables,
 #' codelists, value-level) verbatim. It is the inverse of [read_spec()]
 #' on the JSON path, and the canonical way to persist a spec or move it
-#' between sessions. vport never writes a spec to xlsx.
+#' between sessions. artoo never writes a spec to xlsx.
 #'
 #' @details
 #' **Lossless by reconstruction.** Each slot is written as an array of row
 #' objects, with `NA` encoded as JSON `null` and numbers at full precision,
-#' so [read_spec()] rebuilds an identical `vport_spec` through
-#' [vport_spec()]. Object keys are emitted in a fixed order, so writing the
+#' so [read_spec()] rebuilds an identical `artoo_spec` through
+#' [artoo_spec()]. Object keys are emitted in a fixed order, so writing the
 #' same spec twice yields byte-identical output.
 #'
-#' @param spec *The specification to serialise.* `<vport_spec>: required`.
-#'   Build one with [vport_spec()] or [read_spec()].
+#' @param spec *The specification to serialise.* `<artoo_spec>: required`.
+#'   Build one with [artoo_spec()] or [read_spec()].
 #' @param path *Destination file.* `<character(1)>: required`. Written as
 #'   UTF-8; conventionally ends in `.json`.
 #'
@@ -47,7 +47,7 @@
 #' #
 #' # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 #' # JSON file, and confirm read_spec() reconstructs it intact.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' path <- tempfile(fileext = ".json")
 #' write_spec(spec, path)
 #' identical(read_spec(path), spec)
@@ -56,7 +56,7 @@
 #' #
 #' # Slice the bundled tables to DM, write, and read back -- the datasets
 #' # accessor reports the same dataset.
-#' dm <- vport_spec(
+#' dm <- artoo_spec(
 #'   cdisc_datasets[cdisc_datasets$dataset == "DM", ],
 #'   cdisc_variables[cdisc_variables$dataset == "DM", ],
 #'   codelists = cdisc_codelists
@@ -67,22 +67,22 @@
 #'
 #' @seealso
 #' **Inverse:** [read_spec()] reads native JSON or a P21 Excel spec back
-#' into a `vport_spec`.
+#' into a `artoo_spec`.
 #'
-#' **Build / inspect:** [vport_spec()], [spec_datasets()],
+#' **Build / inspect:** [artoo_spec()], [spec_datasets()],
 #' [spec_variables()].
 #' @export
 write_spec <- function(spec, path) {
   call <- rlang::caller_env()
   .check_path(path, call = call)
-  if (!is_vport_spec(spec)) {
+  if (!is_artoo_spec(spec)) {
     cli::cli_abort(
       c(
-        "{.arg spec} must be a {.cls vport_spec}.",
+        "{.arg spec} must be a {.cls artoo_spec}.",
         "x" = "You supplied {.obj_type_friendly {spec}}.",
-        "i" = "Build one with {.fn vport_spec}."
+        "i" = "Build one with {.fn artoo_spec}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -90,10 +90,10 @@ write_spec <- function(spec, path) {
   # Fixed key order: version first, then each slot in canonical order. A
   # NULL `values` slot is emitted as JSON null (null = "null").
   payload <- c(
-    list(vport_spec_version = .spec_json_version),
+    list(artoo_spec_version = .spec_json_version),
     lapply(.spec_json_slots, function(s) S7::prop(spec, s))
   )
-  names(payload) <- c("vport_spec_version", .spec_json_slots)
+  names(payload) <- c("artoo_spec_version", .spec_json_slots)
 
   json <- jsonlite::toJSON(
     payload,

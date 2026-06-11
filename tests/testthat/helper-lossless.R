@@ -2,7 +2,7 @@
 #
 # `expect_lossless(a, b)` asserts value identity, class identity, and
 # special-missing tag equivalence per column, and (when both sides carry it)
-# vport_meta column identity. Tag equivalence normalizes the two encodings of
+# artoo_meta column identity. Tag equivalence normalizes the two encodings of
 # an ordinary missing -- a "." tag and an absent tag mean the same on-disk
 # null -- so an xpt leg (which re-tags every missing ".") compares equal to a
 # json/parquet leg (which carries only non-"." tags).
@@ -51,7 +51,7 @@ expect_lossless <- function(a, b, via = "", meta = TRUE) {
 # on a plain numeric and a temporal column, NA in every column. Conformed via
 # its own spec so the metadata carries the full type vocabulary.
 .torture_spec <- function() {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "TT", label = "Torture"),
     data.frame(
       dataset = "TT",
@@ -122,7 +122,7 @@ expect_lossless <- function(a, b, via = "", meta = TRUE) {
       c("2024-03-01 12:34:56", NA, "2024-03-15 23:59:59"),
       tz = "UTC"
     ),
-    ATM = vport_time(c(3600, NA, 86399)),
+    ATM = artoo_time(c(3600, NA, 86399)),
     REFURI = c("https://x.test/a", NA, "https://x.test/b"),
     stringsAsFactors = FALSE
   )

@@ -1,11 +1,11 @@
 # data-raw/bundle-demo.R
-# Build vport's CDISC demo data reproducibly from the PUBLIC PHUSE Test
+# Build artoo's CDISC demo data reproducibly from the PUBLIC PHUSE Test
 # Data Factory (phuse-org/phuse-scripts) -- the canonical open CDISC pilot
 # datasets. The .xpt sources are read at BUILD TIME with haven (a dev-only
 # tool; haven is NOT a package dependency). The shipped .rda files are
 # self-contained base-R data frames.
 #
-# Dogfood: the .xpt sources are read with vport's own read_xpt() -- vport eats
+# Dogfood: the .xpt sources are read with artoo's own read_xpt() -- artoo eats
 # its own cooking, so the demo data exercises the reader it ships.
 #
 # Run from the package root:  Rscript data-raw/bundle-demo.R
@@ -23,9 +23,9 @@ read_phuse_xpt <- function(rel) {
   read_xpt(tf)
 }
 
-# Reduce a vport-read frame to plain base R for shipping: drop the metadata_json
+# Reduce a artoo-read frame to plain base R for shipping: drop the metadata_json
 # frame sidecar and the projected SAS format attr, keep each column's variable
-# label. vport already returns a base data.frame with native temporal classes,
+# label. artoo already returns a base data.frame with native temporal classes,
 # so there is no haven dependency to strip.
 unhaven <- function(df) {
   attr(df, "metadata_json") <- NULL
@@ -123,8 +123,8 @@ cdisc_codelists <- data.frame(
   stringsAsFactors = FALSE
 )
 
-stopifnot(is_vport_spec(
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+stopifnot(is_artoo_spec(
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 ))
 
 usethis::use_data(

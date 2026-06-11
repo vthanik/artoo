@@ -6,7 +6,7 @@
 skip_if_not_installed("nanoparquet")
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 expect_values_equal <- function(back, orig) {
@@ -54,9 +54,9 @@ test_that("DM round-trips through the generic dispatcher by extension", {
 
 # ---- decimal + time fidelity ------------------------------------------------
 
-test_that("decimal stays an exact string and time becomes vport_time", {
+test_that("decimal stays an exact string and time becomes artoo_time", {
   df <- data.frame(D = c("0.10", "100.000", NA), stringsAsFactors = FALSE)
-  df$TM <- vport_time(c(3600, NA, 7200))
+  df$TM <- artoo_time(c(3600, NA, 7200))
   vars <- data.frame(
     dataset = "X",
     variable = c("D", "TM"),
@@ -67,12 +67,12 @@ test_that("decimal stays an exact string and time becomes vport_time", {
     stringsAsFactors = FALSE
   )
   dss <- data.frame(dataset = "X", label = "x", stringsAsFactors = FALSE)
-  ap <- apply_spec(df, vport_spec(dss, vars), "X", conformance = "off")
+  ap <- apply_spec(df, artoo_spec(dss, vars), "X", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(ap, p)
   back <- read_parquet(p)
   expect_identical(as.character(back$D), c("0.10", "100.000", NA))
-  expect_s3_class(back$TM, "vport_time")
+  expect_s3_class(back$TM, "artoo_time")
   expect_identical(unclass(back$TM), unclass(ap$TM))
 })
 
@@ -89,7 +89,7 @@ test_that("the sidecar is embedded under the metadata_json key", {
   expect_true("metadata_json" %in% kv$key)
   json <- kv$value[kv$key == "metadata_json"]
   expect_identical(
-    vport:::.meta_from_datasetjson(json)@columns,
+    artoo:::.meta_from_datasetjson(json)@columns,
     get_meta(dm)@columns
   )
 })
@@ -112,11 +112,11 @@ test_that("a plain nanoparquet file reads with synthesized metadata (9.B)", {
 })
 
 test_that("encode without meta writes a sidecar-free parquet", {
-  # The kv-NULL branch: a frame with no vport_meta still writes its data.
+  # The kv-NULL branch: a frame with no artoo_meta still writes its data.
   df <- data.frame(a = 1:3, b = c("x", "y", "z"))
   p <- withr::local_tempfile(fileext = ".parquet")
-  vport:::.encode_parquet(df, NULL, p)
-  expect_null(vport:::.parquet_sidecar(p))
+  artoo:::.encode_parquet(df, NULL, p)
+  expect_null(artoo:::.parquet_sidecar(p))
   back <- read_parquet(p)
   expect_identical(back$a, 1:3)
 })
@@ -141,10 +141,10 @@ test_that("xpt -> parquet -> json preserves metadata across the chain", {
   expect_identical(get_meta(back_js)@columns, get_meta(fromx)@columns)
 })
 
-# ---- vport_formats ----------------------------------------------------------
+# ---- artoo_formats ----------------------------------------------------------
 
-test_that("vport_formats reports parquet available when nanoparquet is present", {
-  cf <- vport_formats()
+test_that("artoo_formats reports parquet available when nanoparquet is present", {
+  cf <- artoo_formats()
   row <- cf[cf$format == "parquet", ]
   expect_true(row$read)
   expect_true(row$write)
@@ -156,7 +156,7 @@ test_that("vport_formats reports parquet available when nanoparquet is present",
 test_that("a file with KV metadata but no metadata_json key has no sidecar", {
   p <- withr::local_tempfile(fileext = ".parquet")
   nanoparquet::write_parquet(data.frame(a = 1:3), p, metadata = c(other = "v"))
-  expect_null(vport:::.parquet_sidecar(p))
+  expect_null(artoo:::.parquet_sidecar(p))
 })
 
 test_that("a failed encode leaves any prior file untouched (9.A.4)", {
@@ -170,7 +170,7 @@ test_that("a failed encode leaves any prior file untouched (9.A.4)", {
   # the temp file is opened, so the cleanup path runs and the target survives.
   bad <- data.frame(a = 1:2)
   bad$b <- c(1 + 2i, 3 + 4i)
-  bad <- set_meta(bad, vport:::.meta_from_frame(bad))
+  bad <- set_meta(bad, artoo:::.meta_from_frame(bad))
   expect_error(write_parquet(bad, p))
   expect_identical(readBin(p, "raw", file.info(p)$size), before)
 })
@@ -199,7 +199,7 @@ test_that("write_parquet(encoding=) records the source charset; bytes stay UTF-8
       withr::local_tempfile(fileext = ".parquet"),
       encoding = "NOPE"
     ),
-    class = "vport_error_codec"
+    class = "artoo_error_codec"
   )
 })
 
@@ -207,7 +207,7 @@ test_that("read_parquet(encoding=) decodes a foreign (non-UTF-8) byte column", {
   w1252 <- iconv("café", "UTF-8", "windows-1252") # raw byte 0xe9
   df <- data.frame(STUDYID = "S1", SITE = w1252, stringsAsFactors = FALSE)
   p <- withr::local_tempfile(fileext = ".parquet")
-  nanoparquet::write_parquet(df, p) # raw bytes, no vport sidecar
+  nanoparquet::write_parquet(df, p) # raw bytes, no artoo sidecar
   back <- read_parquet(p, encoding = "windows-1252")
   expect_identical(back$SITE, "café")
 })
@@ -235,7 +235,7 @@ test_that("an invalid compression value aborts before writing", {
   p <- withr::local_tempfile(fileext = ".parquet")
   expect_error(
     write_parquet(df, p, compression = "lz77"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_false(file.exists(p))
 })

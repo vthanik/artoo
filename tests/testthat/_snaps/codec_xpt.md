@@ -1,4 +1,4 @@
-# a factor column aborts with vport_error_type
+# a factor column aborts with artoo_error_type
 
     Code
       write_xpt(df, p)

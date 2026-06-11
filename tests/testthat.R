@@ -1,4 +1,4 @@
 library(testthat)
-library(vport)
+library(artoo)
 
-test_check("vport")
+test_check("artoo")

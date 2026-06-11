@@ -9,7 +9,7 @@
 # A one-dataset SDTM-flavoured spec: BRTHDTC is dataType date, RFSTDTC is
 # datetime, neither carries targetDataType -> ISO text storage.
 dtc_spec <- function(target = NA_character_) {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -73,7 +73,7 @@ test_that("targetDataType = integer still demands numeric storage and aborts on 
   # Partials cannot realize -> column stays character; the write must fail
   # loud (never a silent garbage date), with the actionable hint.
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(dm, p), class = "vport_error_codec")
+  expect_error(write_xpt(dm, p), class = "artoo_error_codec")
   expect_snapshot(error = TRUE, write_xpt(dm, p))
 })
 
@@ -131,7 +131,7 @@ test_that("a Date column without spec targetDataType gets integer stamped at app
   # The bundled ADSL dates are R Date and the spec types them "date" with
   # no targetDataType: the truthful exchange form is numeric, and the stamp
   # records it so every codec and sidecar agrees.
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -150,7 +150,7 @@ test_that("a Date column without spec targetDataType gets integer stamped at app
 })
 
 test_that("xpt read records targetDataType = integer for numeric temporals", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -197,7 +197,7 @@ test_that("iso8601_format accepts CDISC partial and placeholder forms", {
     NA,
     ""
   )
-  expect_true(all(vport:::.iso8601_valid(ok, "date")))
+  expect_true(all(artoo:::.iso8601_valid(ok, "date")))
 
   ok_dtm <- c(
     "2003",
@@ -212,10 +212,10 @@ test_that("iso8601_format accepts CDISC partial and placeholder forms", {
     "2003---15T13:14",
     "2003-12-15T-:15"
   )
-  expect_true(all(vport:::.iso8601_valid(ok_dtm, "datetime")))
+  expect_true(all(artoo:::.iso8601_valid(ok_dtm, "datetime")))
 
   ok_time <- c("13", "13:14", "13:14:17", "13:14:17.5", "T13:14", "-:15")
-  expect_true(all(vport:::.iso8601_valid(ok_time, "time")))
+  expect_true(all(artoo:::.iso8601_valid(ok_time, "time")))
 })
 
 test_that("iso8601_format rejects non-ISO and impossible values", {
@@ -228,12 +228,12 @@ test_that("iso8601_format rejects non-ISO and impossible values", {
     "2014-1-2",
     "2014-12T13"
   )
-  expect_false(any(vport:::.iso8601_valid(bad, "date")))
-  expect_false(any(vport:::.iso8601_valid(
+  expect_false(any(artoo:::.iso8601_valid(bad, "date")))
+  expect_false(any(artoo:::.iso8601_valid(
     c("2014-12T13", "2014-12-01T25:00", "2014-12-01T13:75"),
     "datetime"
   )))
-  expect_false(any(vport:::.iso8601_valid(c("25", "13:75", "x"), "time")))
+  expect_false(any(artoo:::.iso8601_valid(c("25", "13:75", "x"), "time")))
 })
 
 test_that("check_spec flags invalid ISO text and passes valid partials", {
@@ -257,7 +257,7 @@ test_that("check_spec flags invalid ISO text and passes valid partials", {
 # ---- integer_fraction + on_lossy --------------------------------------------
 
 frac_spec <- function() {
-  vport_spec(
+  artoo_spec(
     data.frame(dataset = "ADVS"),
     data.frame(
       dataset = "ADVS",
@@ -287,7 +287,7 @@ test_that("check_spec pre-flights fractional values under an integer dataType", 
 test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
   expect_error(
     apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off"),
-    class = "vport_error_type"
+    class = "artoo_error_type"
   )
   expect_snapshot(
     error = TRUE,
@@ -302,19 +302,19 @@ test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
       conformance = "off",
       on_lossy = "warn"
     ),
-    class = "vport_warning_coercion"
+    class = "artoo_warning_coercion"
   )
   expect_identical(out$HEIGHTBL, c(162L, 171L))
 })
 
 test_that("on_lossy = error also covers 32-bit overflow", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "X"),
     data.frame(dataset = "X", variable = "BIGN", data_type = "integer")
   )
   big <- data.frame(BIGN = 3e9)
   expect_error(
     apply_spec(big, spec, "X", conformance = "off"),
-    class = "vport_error_type"
+    class = "artoo_error_type"
   )
 })

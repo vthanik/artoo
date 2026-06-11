@@ -1,15 +1,15 @@
 # conformance.R -- the conformance-findings accessor and the classed
-# findings frame. check_spec() returns a `vport_findings` data frame (the
+# findings frame. check_spec() returns a `artoo_findings` data frame (the
 # 6-column findings shape plus a print method); apply_spec() stores that
-# same object in the `vport.conformance` attribute, and conformance() is
+# same object in the `artoo.conformance` attribute, and conformance() is
 # the documented way to read it back. One object, three surfaces, no
 # attr() spelunking.
 
 # Class a findings frame for printing. A plain data frame subclass: every
 # base/dplyr verb keeps working, only print() changes.
 #' @noRd
-.as_vport_findings <- function(f) {
-  class(f) <- c("vport_findings", "data.frame")
+.as_artoo_findings <- function(f) {
+  class(f) <- c("artoo_findings", "data.frame")
   f
 }
 
@@ -20,7 +20,7 @@
 #' result is the same findings frame [check_spec()] returns (one row per
 #' divergence), with a print method that renders a sectioned report, so
 #' `conformance(adsl)` at the console is the inspection step the
-#' `vport_warning_conformance` warning points you at.
+#' `artoo_warning_conformance` warning points you at.
 #'
 #' @param x *A data frame produced by [apply_spec()].* `<data.frame>:
 #'   required`.
@@ -28,16 +28,16 @@
 #'   **Requirement:** the conformance check must have run: a frame from
 #'   `apply_spec(..., conformance = "off")` (or one rebuilt by a transform
 #'   that dropped attributes) carries no findings and aborts with
-#'   `vport_error_input`.
+#'   `artoo_error_input`.
 #'
-#' @return *A `<vport_findings>` data frame* with columns `check`,
+#' @return *A `<artoo_findings>` data frame* with columns `check`,
 #'   `dimension`, `severity` (`"error"`, `"warning"`, or `"note"`),
 #'   `dataset`, `variable`, and `message`. Zero rows means the data
 #'   conformed. Print it for the sectioned report; treat it as an ordinary
 #'   data frame for programmatic use.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: inspect what the conform step found ----
 #' #
@@ -54,27 +54,27 @@
 #' nrow(f[f$severity == "error", ])
 #'
 #' @seealso [apply_spec()] which attaches the findings; [check_spec()] for
-#'   the same check on demand; [vport_checks()] to select dimensions.
+#'   the same check on demand; [artoo_checks()] to select dimensions.
 #' @export
 conformance <- function(x) {
   call <- rlang::caller_env()
-  f <- attr(x, "vport.conformance", exact = TRUE)
+  f <- attr(x, "artoo.conformance", exact = TRUE)
   if (is.null(f)) {
     cli::cli_abort(
       c(
         "{.arg x} carries no conformance findings.",
-        "x" = "No {.field vport.conformance} attribute was found.",
+        "x" = "No {.field artoo.conformance} attribute was found.",
         "i" = "Run {.fn apply_spec} with {.code conformance = \"warn\"} or {.code \"abort\"}, or call {.fn check_spec} directly."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
-  .as_vport_findings(f)
+  .as_artoo_findings(f)
 }
 
 #' @export
-print.vport_findings <- function(x, ...) {
+print.artoo_findings <- function(x, ...) {
   # A column subset (f[, c("check", "severity")]) keeps the class but not
   # the report shape; print it as the plain data frame it now is.
   need <- c("check", "severity", "dataset", "variable", "message")
@@ -87,7 +87,7 @@ print.vport_findings <- function(x, ...) {
   ds <- unique(x$dataset[!is.na(x$dataset)])
   scope <- if (length(ds)) paste0(" ", paste(ds, collapse = ", ")) else ""
   cat(sprintf(
-    "<vport_findings>%s: %d error%s, %d warning%s, %d note%s\n",
+    "<artoo_findings>%s: %d error%s, %d warning%s, %d note%s\n",
     scope,
     n_err,
     if (n_err == 1L) "" else "s",

@@ -1,10 +1,10 @@
-# vport_temporal.R -- SAS temporal realize/deflate + format classification.
+# artoo_temporal.R -- SAS temporal realize/deflate + format classification.
 #
-# vport presents SAS date/datetime/time columns as native R Date / POSIXct /
-# vport_time so they render correctly in the data viewer, while the codecs
+# artoo presents SAS date/datetime/time columns as native R Date / POSIXct /
+# artoo_time so they render correctly in the data viewer, while the codecs
 # store them as SAS-epoch numerics. `.realize_temporal` (numeric/ISO -> R
 # class) and `.deflate_temporal` (R class -> SAS numeric) are the shared
-# pair every codec calls; the SAS displayFormat rides in vport_meta. The
+# pair every codec calls; the SAS displayFormat rides in artoo_meta. The
 # format-classification table is ported from the herald archive
 # (xpt-encoding.R); the R-Date conversions there are superseded by the
 # epoch-explicit math here.
@@ -202,7 +202,7 @@
     data_type,
     date = "Date",
     datetime = "POSIXct",
-    time = "vport_time",
+    time = "artoo_time",
     .type_storage(data_type)
   )
 }
@@ -229,7 +229,7 @@
     list(data_type = "date", display_format = "DATE9.")
   } else if (inherits(col, "POSIXct")) {
     list(data_type = "datetime", display_format = "DATETIME20.")
-  } else if (is_vport_time(col) || inherits(col, "difftime")) {
+  } else if (is_artoo_time(col) || inherits(col, "difftime")) {
     # difftime/hms is haven's actual TIME representation; treat it as time.
     list(data_type = "time", display_format = "TIME8.")
   } else if (is.factor(col) || is.character(col)) {
@@ -367,7 +367,7 @@
 
 #' @noRd
 .realize_time <- function(col) {
-  if (is_vport_time(col)) {
+  if (is_artoo_time(col)) {
     return(col)
   }
   if (is.character(col)) {
@@ -375,9 +375,9 @@
     if (!all(full)) {
       return(col)
     }
-    return(.keep_if_lossy(col, vport_time(.hms_to_seconds(col))))
+    return(.keep_if_lossy(col, artoo_time(.hms_to_seconds(col))))
   }
-  vport_time(as.numeric(col))
+  artoo_time(as.numeric(col))
 }
 
 # Realize a temporal column to its R class. dataType is authoritative for the
@@ -448,7 +448,7 @@
       "x" = "It is {.obj_type_friendly {col}}; with targetDataType {.val integer} a {data_type} column must be {expected} or already a SAS-epoch numeric.",
       "i" = "Partial ISO 8601 values cannot be SAS numerics. Drop the spec's targetDataType to write them as ISO text, or complete the values."
     ),
-    class = "vport_error_codec",
+    class = "artoo_error_codec",
     call = call
   )
 }
@@ -461,8 +461,8 @@
   call = rlang::caller_env()
 ) {
   # is.numeric() is FALSE for Date/POSIXct (base S3 methods) but TRUE for
-  # vport_time's bare double, so exclude it explicitly from the passthrough.
-  bare_numeric <- is.numeric(col) && !is_vport_time(col)
+  # artoo_time's bare double, so exclude it explicitly from the passthrough.
+  bare_numeric <- is.numeric(col) && !is_artoo_time(col)
   switch(
     data_type,
     date = if (inherits(col, "Date")) {
@@ -479,14 +479,14 @@
     } else {
       .deflate_temporal_abort(col, data_type, "a POSIXct", var, call)
     },
-    time = if (is_vport_time(col)) {
+    time = if (is_artoo_time(col)) {
       unclass(col)
     } else if (inherits(col, "difftime")) {
       as.numeric(col, units = "secs")
     } else if (bare_numeric) {
       as.numeric(col)
     } else {
-      .deflate_temporal_abort(col, data_type, "a vport_time", var, call)
+      .deflate_temporal_abort(col, data_type, "a artoo_time", var, call)
     },
     as.numeric(col)
   )

@@ -1,14 +1,14 @@
 # Tests for the xpt codec (codec_xpt.R): v5/v8 framing, the meta bridge,
 # special missings, temporal + encoding round-trips, and the F1/F2/C4
-# invariants. Internals via vport:::; a frozen `created` keeps bytes stable.
+# invariants. Internals via artoo:::; a frozen `created` keeps bytes stable.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 frozen <- as.POSIXct("2020-01-01", tz = "UTC")
 
-# Compare column VALUES (vport keeps labels in meta, not on columns; the
+# Compare column VALUES (artoo keeps labels in meta, not on columns; the
 # sas_missing tag is a separate concern). Class is preserved by as.character.
 # Honors C4: XPORT stores "" as a blank, which reads back as NA.
 expect_values_equal <- function(back, orig) {
@@ -93,14 +93,14 @@ test_that("special missing tags survive a numeric round-trip (.A-.Z, ._)", {
 
 # ---- temporal ---------------------------------------------------------------
 
-test_that("Date, POSIXct, and vport_time columns round-trip", {
+test_that("Date, POSIXct, and artoo_time columns round-trip", {
   df <- data.frame(SUBJ = c("A", "B", "C"), stringsAsFactors = FALSE)
   df$DT <- as.Date(c("2020-01-01", NA, "2021-06-15"))
   df$DTM <- as.POSIXct(
     c("2020-01-01 08:30:00", "2020-12-31 23:59:59", NA),
     tz = "UTC"
   )
-  df$TM <- vport_time(c(0, 30600, 90061)) # incl. > 86400 (elapsed past 24h)
+  df$TM <- artoo_time(c(0, 30600, 90061)) # incl. > 86400 (elapsed past 24h)
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -112,7 +112,7 @@ test_that("Date, POSIXct, and vport_time columns round-trip", {
   expect_identical(as.numeric(back$DT), as.numeric(df$DT))
   expect_s3_class(back$DTM, "POSIXct")
   expect_equal(as.numeric(back$DTM), as.numeric(df$DTM))
-  expect_true(is_vport_time(back$TM))
+  expect_true(is_artoo_time(back$TM))
   # set_meta() projects the SAS format/label as attrs now; compare seconds.
   expect_identical(as.numeric(back$TM), as.numeric(df$TM))
 })
@@ -153,8 +153,8 @@ test_that("a decimal column (R character) writes as a SAS numeric", {
       displayFormat = "8.3"
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -182,7 +182,7 @@ test_that("encoding = US-ASCII on a non-ASCII value aborts loudly", {
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_error(
     write_xpt(df, p, encoding = "US-ASCII"),
-    class = "vport_error_codec"
+    class = "artoo_error_codec"
   )
 })
 
@@ -204,8 +204,8 @@ test_that("F1: a char value longer than its declared length widens, not truncate
       length = 3L
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -226,8 +226,8 @@ test_that("F2: a spec-declared numeric length < 8 still writes full precision", 
     ),
     PI = list(itemOID = "IT.T.PI", name = "PI", dataType = "float", length = 3L)
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -254,8 +254,8 @@ test_that("v8 round-trips a name > 8 chars and a label > 40 chars", {
       label = long_label
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, version = 8, created = frozen)
@@ -319,34 +319,34 @@ test_that("-0.0 round-trips as 0", {
 
 # ---- error matrix -----------------------------------------------------------
 
-test_that("a factor column aborts with vport_error_type", {
+test_that("a factor column aborts with artoo_error_type", {
   df <- data.frame(SUBJ = "A", F = factor("x"))
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_snapshot(write_xpt(df, p), error = TRUE)
-  expect_error(write_xpt(df, p), class = "vport_error_type")
+  expect_error(write_xpt(df, p), class = "artoo_error_type")
 })
 
-test_that("a list column aborts with vport_error_type", {
+test_that("a list column aborts with artoo_error_type", {
   df <- data.frame(SUBJ = "A")
   df$L <- list(1:3)
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_type")
+  expect_error(write_xpt(df, p), class = "artoo_error_type")
 })
 
 test_that("an invalid v5 variable name aborts", {
   df <- data.frame(SUBJ = "A", `TOOLONGNAME` = 1, check.names = FALSE)
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 test_that("a numeric value over the IBM-370 limit aborts", {
   df <- data.frame(SUBJ = "A", BIG = 1e76)
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 test_that("a v5 char column over 200 bytes aborts", {
@@ -357,7 +357,7 @@ test_that("a v5 char column over 200 bytes aborts", {
   )
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 test_that("a truncated xpt file aborts on read", {
@@ -367,7 +367,7 @@ test_that("a truncated xpt file aborts on read", {
   write_xpt(dm, p, created = frozen)
   raw <- readBin(p, "raw", n = file.info(p)$size)
   writeBin(raw[1:120], p) # chop mid-header
-  expect_error(read_xpt(p), class = "vport_error_codec")
+  expect_error(read_xpt(p), class = "artoo_error_codec")
 })
 
 # ---- coverage: defensive branches ------------------------------------------
@@ -376,7 +376,7 @@ test_that("an invalid version aborts", {
   df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
   attr(df, "dataset_name") <- "T"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p, version = 99), class = "vport_error_input")
+  expect_error(write_xpt(df, p, version = 99), class = "artoo_error_input")
 })
 
 test_that("a 0-column frame writes and reads a valid empty member", {
@@ -402,13 +402,13 @@ test_that("a v5 label over 40 chars truncates with a warning", {
       label = strrep("L", 50L)
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_warning(
     write_xpt(df, p, created = frozen),
-    class = "vport_warning_encoding"
+    class = "artoo_warning_encoding"
   )
 })
 
@@ -423,11 +423,11 @@ test_that("a non-numeric decimal value aborts on write", {
     ),
     AVAL = list(itemOID = "IT.T.AVAL", name = "AVAL", dataType = "decimal")
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 test_that("a column absent from the meta is inferred from the frame", {
@@ -440,8 +440,8 @@ test_that("a column absent from the meta is inferred from the frame", {
       length = 1L
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -473,13 +473,13 @@ test_that("the reader zero-pads numerics narrower than 8 bytes (real SAS)", {
     formatd = 0L,
     bytes = raw(0)
   ))
-  ibm5 <- vport:::.ieee_to_ibm(1.0)[1:5]
+  ibm5 <- artoo:::.ieee_to_ibm(1.0)[1:5]
   bytes <- c(
-    vport:::.xpt_library_header(5L, frozen),
-    vport:::.xpt_member_header("T", "", 1L, 5L, frozen),
-    vport:::.xpt_namestr_block(recs, 5L),
-    vport:::.xpt_obs_header(1L, 5L),
-    vport:::.pad_record(ibm5, 80L)
+    artoo:::.xpt_library_header(5L, frozen),
+    artoo:::.xpt_member_header("T", "", 1L, 5L, frozen),
+    artoo:::.xpt_namestr_block(recs, 5L),
+    artoo:::.xpt_obs_header(1L, 5L),
+    artoo:::.pad_record(ibm5, 80L)
   )
   p <- withr::local_tempfile(fileext = ".xpt")
   writeBin(bytes, p)
@@ -500,32 +500,32 @@ test_that("the reader parses LABELV9 long-name/long-label extension records", {
     formatd = 0L,
     bytes = raw(0)
   ))
-  ext_header <- vport:::.str_to_raw(
+  ext_header <- artoo:::.str_to_raw(
     paste0(
       "HEADER RECORD*******",
-      vport:::.pad_to("LABELV9", 7L),
+      artoo:::.pad_to("LABELV9", 7L),
       " HEADER RECORD!!!!!!!",
       formatC(1L, width = 30L, format = "d", flag = " ")
     ),
     80L
   )
   chunk <- c(
-    vport:::.int_to_pib2(1L),
-    vport:::.int_to_pib2(nchar(name)),
-    vport:::.int_to_pib2(nchar(label)),
-    vport:::.int_to_pib2(0L),
-    vport:::.int_to_pib2(0L),
+    artoo:::.int_to_pib2(1L),
+    artoo:::.int_to_pib2(nchar(name)),
+    artoo:::.int_to_pib2(nchar(label)),
+    artoo:::.int_to_pib2(0L),
+    artoo:::.int_to_pib2(0L),
     charToRaw(name),
     charToRaw(label)
   )
   bytes <- c(
-    vport:::.xpt_library_header(8L, frozen),
-    vport:::.xpt_member_header(name, "", 1L, 8L, frozen),
-    vport:::.xpt_namestr_block(recs, 8L),
+    artoo:::.xpt_library_header(8L, frozen),
+    artoo:::.xpt_member_header(name, "", 1L, 8L, frozen),
+    artoo:::.xpt_namestr_block(recs, 8L),
     ext_header,
-    vport:::.pad_record(chunk, 80L),
-    vport:::.xpt_obs_header(1L, 8L),
-    vport:::.pad_record(charToRaw("abc"), 80L)
+    artoo:::.pad_record(chunk, 80L),
+    artoo:::.xpt_obs_header(1L, 8L),
+    artoo:::.pad_record(charToRaw("abc"), 80L)
   )
   p <- withr::local_tempfile(fileext = ".xpt")
   writeBin(bytes, p)
@@ -541,8 +541,8 @@ test_that("a non-meta column with a label attr and a meta string without length"
   cols <- list(
     SUBJ = list(itemOID = "IT.T.SUBJ", name = "SUBJ", dataType = "string")
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -576,8 +576,8 @@ test_that("a blank string in a decimal column writes as missing, not an abort", 
       displayFormat = "8.1"
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_no_error(write_xpt(df, p, created = frozen))
@@ -591,7 +591,7 @@ test_that("an infinite numeric value aborts loudly (no silent missing)", {
   df <- data.frame(SUBJ = "A", X = Inf)
   attr(df, "dataset_name") <- "T"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 # ---- review 2026-06: header/label text through the encoding SSOT ------------
@@ -600,12 +600,12 @@ test_that("a non-ASCII dataset label keeps 80-byte framing and round-trips", {
   # Review BLOCKER: the member-header label was char-padded, not byte-padded,
   # so a multibyte label misaligned every following record.
   df <- data.frame(SUBJ = "A", N = 1, stringsAsFactors = FALSE)
-  ds <- vport:::.assemble_dataset_meta(
+  ds <- artoo:::.assemble_dataset_meta(
     itemGroupOID = "IG.T",
     name = "T",
     label = "Étude de démographie"
   )
-  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = list())
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -629,8 +629,8 @@ test_that("read_xpt survives windows-1252 variable labels (incl. its own output)
       label = "Pays de résidence"
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, encoding = "windows-1252", created = frozen)
@@ -653,13 +653,13 @@ test_that("v5 label truncation at 40 bytes backs off to a character boundary", {
       label = paste0(strrep("a", 39L), "étude") # byte 40 = lead byte of e-acute
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_warning(
     write_xpt(df, p, created = frozen),
-    class = "vport_warning_encoding"
+    class = "artoo_warning_encoding"
   )
   back <- read_xpt(p)
   expect_identical(get_meta(back)@columns$X$label, strrep("a", 39L))
@@ -702,8 +702,8 @@ test_that("the v8 namestr label-length field counts bytes, not characters", {
       label = label
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, version = 8, created = frozen)
@@ -711,32 +711,32 @@ test_that("the v8 namestr label-length field counts bytes, not characters", {
   # 8 header records (3 library + 5 member) = 640 bytes; the v8 namestr holds
   # the label-length field at offset 120 (after the 88-byte base + 32-byte
   # long name).
-  label_len_field <- vport:::.pib2_to_int(bytes[(640L + 121L):(640L + 122L)])
+  label_len_field <- artoo:::.pib2_to_int(bytes[(640L + 121L):(640L + 122L)])
   expect_identical(label_len_field, length(charToRaw(label)))
 })
 
 test_that("a non-ASCII dataset name aborts instead of corrupting the header", {
   df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "ÉTUDE")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "ÉTUDE")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = list())
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  expect_error(write_xpt(df, p), class = "artoo_error_codec")
 })
 
 test_that("a dataset label over 40 bytes truncates with a warning", {
   df <- data.frame(SUBJ = "A", stringsAsFactors = FALSE)
-  ds <- vport:::.assemble_dataset_meta(
+  ds <- artoo:::.assemble_dataset_meta(
     itemGroupOID = "IG.T",
     name = "T",
     label = strrep("L", 50L)
   )
-  meta <- vport:::vport_meta_class(dataset = ds, columns = list())
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = list())
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_warning(
     write_xpt(df, p, created = frozen),
-    class = "vport_warning_encoding"
+    class = "artoo_warning_encoding"
   )
   back <- read_xpt(p)
   expect_identical(get_meta(back)@dataset$label, strrep("L", 40L))
@@ -754,8 +754,8 @@ test_that("encoding detection considers labels, not just data values", {
       label = "Résidence"
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, encoding = "windows-1252", created = frozen)
@@ -782,8 +782,8 @@ test_that("a character-backed date column writes as ISO text, no garbage days (r
       displayFormat = "DATE9."
     )
   )
-  ds <- vport:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
-  meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
+  ds <- artoo:::.assemble_dataset_meta(itemGroupOID = "IG.T", name = "T")
+  meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p)
@@ -850,7 +850,7 @@ test_that("read_xpt col_select rejects an unknown column", {
   write_xpt(df, p, created = frozen)
   expect_error(
     read_xpt(p, col_select = c("SUBJ", "NOPE")),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
@@ -889,7 +889,7 @@ test_that("write_xpt warns on FDA-forbidden bytes 160-191 in a single-byte strea
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_warning(
     write_xpt(df, p, encoding = "windows-1252", created = frozen),
-    class = "vport_warning_encoding"
+    class = "artoo_warning_encoding"
   )
 })
 
@@ -913,7 +913,7 @@ test_that("write_xpt v5 aborts on a name collision that survives uppercasing", {
   df <- data.frame(age = 1, AGE = 2)
   attr(df, "dataset_name") <- "T"
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p, version = 5), class = "vport_error_codec")
+  expect_error(write_xpt(df, p, version = 5), class = "artoo_error_codec")
   # v8 keeps case, so the same frame writes fine.
   expect_no_error(write_xpt(df, p, version = 8))
 })
@@ -929,7 +929,7 @@ test_that("read_xpt aborts on a multi-member transport file", {
   con <- file(p, "ab")
   writeBin(rec, con)
   close(con)
-  expect_error(read_xpt(p), class = "vport_error_codec")
+  expect_error(read_xpt(p), class = "artoo_error_codec")
 })
 
 test_that("extra blank padding past the obs section does NOT false-abort", {
@@ -945,15 +945,15 @@ test_that("extra blank padding past the obs section does NOT false-abort", {
 
 test_that(".xpt_parse_namestr honors the namestr size for the v8 long name", {
   raw <- as.raw(rep(0L, 140L))
-  raw[1:2] <- vport:::.int_to_pib2(2L) # vartype 2 (char)
-  raw[5:6] <- vport:::.int_to_pib2(8L) # length 8
+  raw[1:2] <- artoo:::.int_to_pib2(2L) # vartype 2 (char)
+  raw[5:6] <- artoo:::.int_to_pib2(8L) # length 8
   raw[9:16] <- charToRaw("SHORT   ") # short name field
   raw[89:120] <- charToRaw(sprintf("%-32s", "LONGNAME")) # v8 extended name
   # 140-byte v8: reads the extended name.
-  v140 <- vport:::.xpt_parse_namestr(raw, 8L, 140L)
+  v140 <- artoo:::.xpt_parse_namestr(raw, 8L, 140L)
   expect_identical(v140$name, "LONGNAME")
   # 136-byte VMS v8: the extended-name slice does not exist; uses the short field.
-  v136 <- vport:::.xpt_parse_namestr(raw[1:136], 8L, 136L)
+  v136 <- artoo:::.xpt_parse_namestr(raw[1:136], 8L, 136L)
   expect_identical(v136$name, "SHORT")
 })
 
@@ -965,7 +965,7 @@ test_that(".xpt_parse_member reads the NAMESTR size field (0136)", {
   nsrec <- charToRaw(sprintf("%-80s", paste0(strrep(" ", 52L), "000001")))
   con <- rawConnection(c(rec1, filler, filler, filler, nsrec), "rb")
   on.exit(close(con))
-  mem <- vport:::.xpt_parse_member(con, 5L)
+  mem <- artoo:::.xpt_parse_member(con, 5L)
   expect_identical(mem$namestr_size, 136L)
   expect_identical(mem$nvars, 1L)
 })
@@ -980,7 +980,7 @@ test_that("write_xpt v5 warns when an all-character frame ends in a blank row", 
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_warning(
     write_xpt(df, p, version = 5, created = frozen),
-    class = "vport_warning_encoding"
+    class = "artoo_warning_encoding"
   )
   # v8 records the count, so it is exempt.
   expect_no_warning(write_xpt(df, p, version = 8, created = frozen))
@@ -988,7 +988,7 @@ test_that("write_xpt v5 warns when an all-character frame ends in a blank row", 
 
 test_that("n_max bounds the v8 disk read (a truncated tail still reads the head)", {
   # Proof that n_max narrows the bytes read: truncate the obs tail so a full
-  # read short-reads (vport_error_codec), but read_xpt(n_max = k) succeeds
+  # read short-reads (artoo_error_codec), but read_xpt(n_max = k) succeeds
   # because it never reaches the missing bytes. The v8 header still says 10.
   df <- data.frame(
     SUBJ = sprintf("S%02d", 1:10),
@@ -1001,7 +1001,7 @@ test_that("n_max bounds the v8 disk read (a truncated tail still reads the head)
   sz <- file.info(p)$size
   raw_all <- readBin(p, "raw", n = sz)
   writeBin(raw_all[seq_len(sz - 80L)], p) # drop the last 80 obs bytes
-  expect_error(read_xpt(p), class = "vport_error_codec")
+  expect_error(read_xpt(p), class = "artoo_error_codec")
   back <- read_xpt(p, n_max = 5)
   expect_identical(nrow(back), 5L)
   expect_identical(as.vector(back$SUBJ), sprintf("S%02d", 1:5))
@@ -1016,7 +1016,7 @@ test_that("read_xpt aborts on a multi-member v8 file (padded-end boundary)", {
   con <- file(p, "ab")
   writeBin(charToRaw(sprintf("%-80s", sig)), con)
   close(con)
-  expect_error(read_xpt(p), class = "vport_error_codec")
+  expect_error(read_xpt(p), class = "artoo_error_codec")
 })
 
 test_that(".xpt_parse_member defaults the NAMESTR size on an invalid field", {
@@ -1027,13 +1027,13 @@ test_that(".xpt_parse_member defaults the NAMESTR size on an invalid field", {
   nsrec <- charToRaw(sprintf("%-80s", paste0(strrep(" ", 52L), "000001")))
   con <- rawConnection(c(rec1, filler, filler, filler, nsrec), "rb")
   on.exit(close(con))
-  expect_identical(vport:::.xpt_parse_member(con, 5L)$namestr_size, 140L)
+  expect_identical(artoo:::.xpt_parse_member(con, 5L)$namestr_size, 140L)
 })
 
 # ---- informats (NAMESTR bytes 73-84) ----------------------------------------
 
 test_that("an informat round-trips through xpt v5 and v8", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = c("DM", "DM"),
@@ -1074,8 +1074,8 @@ test_that("the informat lands in NAMESTR bytes 73-84", {
   # v5 layout: 3 library + 5 member header records, then the NAMESTR record.
   ns <- bytes[(80L * 8L + 1L):(80L * 8L + 140L)]
   expect_identical(rawToChar(ns[73:80]), "BEST    ")
-  expect_identical(vport:::.pib2_to_int(ns[81:82]), 8L)
-  expect_identical(vport:::.pib2_to_int(ns[83:84]), 2L)
+  expect_identical(artoo:::.pib2_to_int(ns[81:82]), 8L)
+  expect_identical(artoo:::.pib2_to_int(ns[83:84]), 2L)
 })
 
 test_that("a real SAS xpt with no informats still reads cleanly", {

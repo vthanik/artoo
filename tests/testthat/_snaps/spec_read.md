@@ -10,7 +10,7 @@
 # .match_p21_sheet informs when several sheets match one role
 
     Code
-      invisible(vport:::.match_p21_sheet(c("Datasets", "datasets "), "datasets"))
+      invisible(artoo:::.match_p21_sheet(c("Datasets", "datasets "), "datasets"))
     Message
       Several sheets match one Pinnacle 21 role.
       i Using "Datasets"; ignoring "datasets ".

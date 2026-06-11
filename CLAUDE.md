@@ -1,10 +1,9 @@
-# CLAUDE.md — vport
+# CLAUDE.md — artoo
 
-**vport** ("versatile port") — a lightweight, lossless, CDISC-native
+**artoo** — a lightweight, lossless, CDISC-native
 clinical-dataset reader/writer (SAS XPORT, CDISC Dataset-JSON v1.1,
 Apache Parquet, RDS). One canonical metadata model; any-to-any lossless
-conversion. Replaces `haven` for clinical work. (Repo dir is still
-`herald/`; package is `vport`.)
+conversion. Replaces `haven` for clinical work.
 
 Global directives load from `~/.claude/CLAUDE.md`. This file holds
 project-specific shared conventions. Deeper working detail and the
@@ -22,7 +21,7 @@ speed. No copying from non-shippable sources, no silent truncation, no
 
 ## Project state
 
-Phase 1 (spec core) in progress: `vport_spec` / `vport_meta` S7 classes,
+Phase 1 (spec core) in progress: `artoo_spec` / `artoo_meta` S7 classes,
 CDISC type vocabulary, spec validation, accessors. See `CLAUDE.local.md`
 for the phase checklist.
 
@@ -31,7 +30,7 @@ for the phase checklist.
 - snake_case; package prefix on exports; dot-prefix internals.
 - Lightweight, base R + targeted deps; no tidyverse in `Imports`.
   `nanoparquet` (Parquet) allowed; `arrow` and `haven` banned.
-- Errors via `cli::cli_abort(class = "vport_error_<kind>")`; ASCII-only
+- Errors via `cli::cli_abort(class = "artoo_error_<kind>")`; ASCII-only
   in message strings.
 - Test-first for new exports; ≥ 95% coverage per file; roxygen2
   examples must run on bundled CDISC demo data (no toy frames).

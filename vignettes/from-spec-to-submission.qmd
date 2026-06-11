@@ -9,27 +9,27 @@ format: html
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
-`vport` turns a raw analysis frame and a dataset specification into a
+`artoo` turns a raw analysis frame and a dataset specification into a
 submission-ready dataset, then writes it to any clinical exchange format
 without losing a single piece of metadata. This vignette walks the core
 workflow on the bundled CDISC pilot data: **spec → apply → check → write**.
 
 ## 1. Build a spec
 
-A `vport_spec` is the canonical, CDISC-shaped description of your datasets:
+A `artoo_spec` is the canonical, CDISC-shaped description of your datasets:
 the variables, their data types and lengths, controlled-terminology
 codelists, sort keys, and labels. You can read one from a Define-XML or
 Pinnacle 21 workbook with `read_spec()`, or assemble it from metadata
-frames with `vport_spec()`.
+frames with `artoo_spec()`.
 
 The package ships the pilot metadata as `cdisc_datasets`, `cdisc_variables`,
 and `cdisc_codelists`:
 
 ```{r}
-spec <- vport_spec(
+spec <- artoo_spec(
   cdisc_datasets,
   cdisc_variables,
   codelists = cdisc_codelists
@@ -49,7 +49,7 @@ adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 dim(adsl)
 ```
 
-The conformed frame carries its `vport_meta`, which `get_meta()` reads back.
+The conformed frame carries its `artoo_meta`, which `get_meta()` reads back.
 This is the single source of truth that every codec preserves:
 
 ```{r}

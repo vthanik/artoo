@@ -1,4 +1,4 @@
-# spec_construct.R -- the friendly vport_spec() constructor.
+# spec_construct.R -- the friendly artoo_spec() constructor.
 
 # Coerce one slot to its schema: drop to a plain data frame, error on a
 # missing required column, coerce known columns to their storage mode, fill
@@ -17,7 +17,7 @@
         "{.arg {slot}} is missing a required column{cli::qty(missing)}{?s}: {.val {missing}}.",
         "i" = "Required: {.val {req}}."
       ),
-      class = "vport_error_spec",
+      class = "artoo_error_spec",
       call = call
     )
   }
@@ -33,12 +33,12 @@
 
 #' Construct a CDISC specification
 #'
-#' Build and validate a `vport_spec` from dataset, variable, and codelist
+#' Build and validate a `artoo_spec` from dataset, variable, and codelist
 #' tables. Each table is coerced to a plain data frame, missing optional
 #' columns are filled with typed `NA`s, every variable type is canonicalised
 #' to the CDISC `dataType` vocabulary, and cross-slot integrity (dataset and
 #' codelist references) is checked before the object is returned. The spec
-#' is the lingua franca the rest of vport reads, applies, and serialises.
+#' is the lingua franca the rest of artoo reads, applies, and serialises.
 #'
 #' @details
 #' **Coerce, then validate.** Each table is first coerced to a plain data
@@ -52,9 +52,9 @@
 #' `float`, `double`, `boolean`, `date`, `datetime`, `time`, `URI`). Common
 #' SAS / P21 spellings resolve automatically (`"text"`, `"Char"`,
 #' `"integer (8)"`, ...); an unrecognised token aborts with
-#' `vport_error_type`.
+#' `artoo_error_type`.
 #'
-#' **Cross-slot integrity.** Construction fails (`vport_error_spec`) if a
+#' **Cross-slot integrity.** Construction fails (`artoo_error_spec`) if a
 #' variable names a dataset absent from `datasets`, or references a
 #' `codelist_id` absent from `codelists`.
 #'
@@ -86,7 +86,7 @@
 #' @param documents *Document references.* `<data.frame> | NULL`. Referenced
 #'   by `document_id`; must carry `document_id` when supplied.
 #'
-#' @return *A validated `vport_spec` object.* Inspect it with
+#' @return *A validated `artoo_spec` object.* Inspect it with
 #'   [spec_datasets()] / [spec_variables()], or check it with
 #'   [validate_spec()].
 #'
@@ -94,9 +94,9 @@
 #' # ---- Example 1: build a spec from the bundled CDISC-pilot tables ----
 #' #
 #' # `cdisc_datasets` and `cdisc_variables` hold the CDISC pilot ADaM
-#' # metadata in the shape vport_spec() expects; the constructor
+#' # metadata in the shape artoo_spec() expects; the constructor
 #' # canonicalises every type and checks cross-slot integrity.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' spec_datasets(spec)
 #'
 #' # ---- Example 2: a focused spec for a single dataset ----
@@ -104,16 +104,16 @@
 #' # Slice the bundled tables to one dataset (DM) to build a smaller spec.
 #' dm_ds <- cdisc_datasets[cdisc_datasets$dataset == "DM", ]
 #' dm_var <- cdisc_variables[cdisc_variables$dataset == "DM", ]
-#' dm_spec <- vport_spec(dm_ds, dm_var, codelists = cdisc_codelists)
+#' dm_spec <- artoo_spec(dm_ds, dm_var, codelists = cdisc_codelists)
 #' head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 #'
 #' @seealso
 #' **Inspect:** [spec_datasets()], [spec_variables()], [spec_codelists()],
 #' [spec_keys()], [spec_study()].
 #'
-#' **Check:** [validate_spec()]. **Predicate:** [is_vport_spec()].
+#' **Check:** [validate_spec()]. **Predicate:** [is_artoo_spec()].
 #' @export
-vport_spec <- function(
+artoo_spec <- function(
   datasets = NULL,
   variables = NULL,
   codelists = NULL,
@@ -130,7 +130,7 @@ vport_spec <- function(
         "Both {.arg datasets} and {.arg variables} are required.",
         "i" = "Pass at least a {.code dataset} table and a variable table."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -210,7 +210,7 @@ vport_spec <- function(
 
   .spec_check_refs(datasets, variables, codelists, call)
 
-  vport_spec_class(
+  artoo_spec_class(
     study = study,
     datasets = datasets,
     variables = variables,
@@ -255,7 +255,7 @@ vport_spec <- function(
           stats::setNames(lines, rep("x", length(lines))),
           "i" = "Remove the duplicate rows, or read the file with {.code read_spec(path, on_duplicate = \"first\")}."
         ),
-        class = "vport_error_spec",
+        class = "artoo_error_spec",
         call = call
       )
     }
@@ -268,7 +268,7 @@ vport_spec <- function(
           "x" = "Unknown dataset{?s}: {.val {orphan}}.",
           "i" = "Add the dataset to {.arg datasets}, or fix {.arg variables}."
         ),
-        class = "vport_error_spec",
+        class = "artoo_error_spec",
         call = call
       )
     }
@@ -288,40 +288,40 @@ vport_spec <- function(
           "x" = "Unresolved codelist_id{?s}: {.val {unresolved}}.",
           "i" = "Add the codelist's terms to {.arg codelists}."
         ),
-        class = "vport_error_spec",
+        class = "artoo_error_spec",
         call = call
       )
     }
   }
 }
 
-#' Test for a vport_spec object
+#' Test for a artoo_spec object
 #'
-#' Report whether an object is a `vport_spec` -- the validated CDISC
-#' specification that drives the vport workflow (spec -> apply_spec ->
-#' read_/write_). [vport_spec()] builds one; this is the type guard before you
+#' Report whether an object is a `artoo_spec` -- the validated CDISC
+#' specification that drives the artoo workflow (spec -> apply_spec ->
+#' read_/write_). [artoo_spec()] builds one; this is the type guard before you
 #' pass it to [apply_spec()] or reach into it with the spec accessors.
 #'
 #' @param x *Object to test.* `<any>`.
 #'
-#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `vport_spec`, else `FALSE`.
+#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `artoo_spec`, else `FALSE`.
 #'
 #' @examples
 #' # ---- Example 1: guard a built specification ----
 #' #
-#' # vport_spec() assembles and validates a spec; is_vport_spec() confirms the
+#' # artoo_spec() assembles and validates a spec; is_artoo_spec() confirms the
 #' # type before you drive apply_spec() with it.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-#' is_vport_spec(spec)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' is_artoo_spec(spec)
 #'
 #' # ---- Example 2: an ordinary object is not a spec ----
 #' #
-#' # Any non-vport_spec value -- a bare data frame, say -- returns FALSE.
-#' is_vport_spec(cdisc_dm)
+#' # Any non-artoo_spec value -- a bare data frame, say -- returns FALSE.
+#' is_artoo_spec(cdisc_dm)
 #'
-#' @seealso [vport_spec()] to build one; [is_vport_meta()] for the metadata
+#' @seealso [artoo_spec()] to build one; [is_artoo_meta()] for the metadata
 #'   guard.
 #' @export
-is_vport_spec <- function(x) {
-  S7::S7_inherits(x, vport_spec_class)
+is_artoo_spec <- function(x) {
+  S7::S7_inherits(x, artoo_spec_class)
 }

@@ -5,9 +5,9 @@
 #'
 #' The dataset-level (`cdisc_datasets`) and variable-level (`cdisc_variables`)
 #' metadata for the bundled `cdisc_adsl` and `cdisc_dm` datasets, in the shape
-#' [vport_spec()] expects. The variable table is *derived from the data*
+#' [artoo_spec()] expects. The variable table is *derived from the data*
 #' (names, labels, inferred CDISC types, byte lengths) by `data-raw/`. Pass
-#' both to [vport_spec()] to build a specification for examples and tests.
+#' both to [artoo_spec()] to build a specification for examples and tests.
 #'
 #' @format
 #' `cdisc_datasets` is a data frame with one row per dataset:

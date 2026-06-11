@@ -44,7 +44,7 @@ test_that("every ordered pair of full-metadata formats chains losslessly", {
 })
 
 test_that("the conformed demo datasets chain through every format pair", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -74,7 +74,7 @@ test_that("xpt legs preserve values, tags, and the carried metadata", {
   xpt_cols <- c("USUBJID", "AVAL", "DVAL", "ADT", "ADTM", "ATM", "REFURI")
   src <- set_meta(
     src[xpt_cols],
-    vport:::.meta_select_columns(get_meta(src), xpt_cols)
+    artoo:::.meta_select_columns(get_meta(src), xpt_cols)
   )
 
   for (mid in .full_formats()) {

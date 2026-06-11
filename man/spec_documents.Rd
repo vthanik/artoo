@@ -7,7 +7,7 @@
 spec_documents(spec)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 }
 \value{
 \emph{A data frame of document metadata} (\code{document_id}, \code{title},
@@ -21,7 +21,7 @@ comments point to these by \code{document_id}.
 # ---- Example 1: the documents a spec defines ----
 #
 # Build a spec with one document reference and read it back.
-spec <- vport_spec(
+spec <- artoo_spec(
   data.frame(dataset = "ADSL"),
   data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
   documents = data.frame(

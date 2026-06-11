@@ -9,21 +9,21 @@ format: html
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
 A single conformed dataset can be written to any clinical exchange format
 and read back without losing metadata. Because every codec carries the same
-canonical `vport_meta`, conversion between any two formats is lossless *by
+canonical `artoo_meta`, conversion between any two formats is lossless *by
 construction* — not by best effort. This vignette demonstrates that with one
 ADSL dataset and all four supported formats.
 
 ## The formats
 
-`vport_formats()` lists what `vport` reads and writes:
+`artoo_formats()` lists what `artoo` reads and writes:
 
 ```{r}
-vport_formats()
+artoo_formats()
 ```
 
 SAS XPORT (XPT) for FDA submission, CDISC Dataset-JSON v1.1 for modern
@@ -35,7 +35,7 @@ storage.
 We conform ADSL exactly as in `vignette("from-spec-to-submission")`:
 
 ```{r}
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 dim(adsl)
 ```

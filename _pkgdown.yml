@@ -1,4 +1,4 @@
-url: https://vthanik.github.io/vport/
+url: https://vthanik.github.io/artoo/
 
 development:
   mode: auto
@@ -51,10 +51,10 @@ home:
 reference:
 - title: Spec
   desc: >
-    Build, read, write, and inspect a vport_spec -- the canonical
+    Build, read, write, and inspect a artoo_spec -- the canonical
     CDISC-shaped description of your datasets.
   contents:
-  - vport_spec
+  - artoo_spec
   - read_spec
   - write_spec
   - spec_datasets
@@ -84,7 +84,7 @@ reference:
   - check_spec
   - conformance
   - validate_spec
-  - vport_checks
+  - artoo_checks
 
 - title: Read and write
   desc: >
@@ -103,16 +103,16 @@ reference:
   - write_parquet
   - read_rds
   - write_rds
-  - vport_formats
+  - artoo_formats
   - xpt_members
 
 - title: Classes and predicates
   contents:
-  - vport_time
-  - is_vport_spec
-  - is_vport_meta
-  - is_vport_checks
-  - is_vport_time
+  - artoo_time
+  - is_artoo_spec
+  - is_artoo_meta
+  - is_artoo_checks
+  - is_artoo_time
 
 - title: Demo data
   desc: >
@@ -143,5 +143,5 @@ articles:
 - title: Trust
   navbar: Trust
   contents:
-  - articles/why-vport
+  - articles/why-artoo
   - articles/validation-and-qualification

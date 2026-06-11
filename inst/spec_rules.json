@@ -612,7 +612,7 @@
     "scope": "scoped",
     "status": "deferred",
     "description": "Analysis Results Metadata integrity.",
-    "reason": "needs ARM slots vport does not carry",
+    "reason": "needs ARM slots artoo does not carry",
     "engine": "spec"
   },
   {

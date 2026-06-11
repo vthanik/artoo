@@ -1,9 +1,9 @@
-# print.vport_checks renders the toggle grid
+# print.artoo_checks renders the toggle grid
 
     Code
-      print(vport_checks())
+      print(artoo_checks())
     Output
-      <vport_checks>
+      <artoo_checks>
         [x] missing_variable
         [x] missing_permissible
         [x] extra_variable
@@ -25,9 +25,9 @@
 ---
 
     Code
-      print(vport_checks(length_overflow = FALSE))
+      print(artoo_checks(length_overflow = FALSE))
     Output
-      <vport_checks>
+      <artoo_checks>
         [x] missing_variable
         [x] missing_permissible
         [x] extra_variable

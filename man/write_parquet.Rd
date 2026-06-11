@@ -8,14 +8,14 @@ write_parquet(x, path, encoding = NULL, compression = "snappy")
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
-output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
+output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.parquet} path.} \verb{<character(1)>: required}.}
 
 \item{encoding}{\emph{Source charset to record.} \verb{<character(1)> | NULL}. The
 parquet bytes are always written as UTF-8 (the format's STRING type is
 UTF-8 by spec); \code{encoding} only records the data's original charset in the
-\code{vport_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes.
+\code{artoo_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes.
 \code{NULL} (default) leaves the recorded encoding untouched.}
 
 \item{compression}{\emph{Column compression codec.} \verb{<character(1)>: default "snappy"}. One of:
@@ -31,8 +31,8 @@ UTF-8 by spec); \code{encoding} only records the data's original charset in the
 }
 \description{
 Serialize a data frame to an Apache Parquet (\code{.parquet}) file, storing the
-data natively while preserving the full \code{vport_meta} as a CDISC-shaped
-sidecar in the file's key-value metadata. The emit end of the vport
+data natively while preserving the full \code{artoo_meta} as a CDISC-shaped
+sidecar in the file's key-value metadata. The emit end of the artoo
 workflow (spec -> apply_spec -> write_parquet); a thin wrapper over
 \code{\link[=write_dataset]{write_dataset()}} with \code{format = "parquet"}. Requires the lightweight
 \code{nanoparquet} package.
@@ -40,14 +40,14 @@ workflow (spec -> apply_spec -> write_parquet); a thin wrapper over
 \details{
 \strong{Metadata where plain Parquet has none.} A bare nanoparquet/arrow file
 drops labels, formats, and codelists; \code{write_parquet()} embeds the complete
-\code{vport_meta} as a single Dataset-JSON-shaped string under the
-\code{metadata_json} key, so \code{\link[=read_parquet]{read_parquet()}} restores every CDISC attribute.
+\code{artoo_meta} as a single Dataset-JSON-shaped string under the
+\code{metadata_json} key, so \code{\link[nanoparquet:read_parquet]{read_parquet()}} restores every CDISC attribute.
 The same string is what a \code{.json} file or an rds carries, so conversion
-between any two formats stays lossless. A reader without vport still opens
+between any two formats stays lossless. A reader without artoo still opens
 the data and can see the \code{metadata_json} block.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset to Parquet ----
 #
@@ -59,12 +59,12 @@ write_parquet(adsl, path)
 
 # ---- Example 2: round-trip and confirm the metadata survived ----
 #
-# Reading it back yields an identical vport_meta.
+# Reading it back yields an identical artoo_meta.
 back <- read_parquet(path)
 identical(get_meta(back)@columns, get_meta(adsl)@columns)
 
 }
 \seealso{
-\code{\link[=read_parquet]{read_parquet()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the
+\code{\link[nanoparquet:read_parquet]{read_parquet()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the
 generic dispatcher.
 }

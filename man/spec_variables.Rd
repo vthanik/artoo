@@ -7,7 +7,7 @@
 spec_variables(spec, dataset = NULL)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 
 \item{dataset}{\emph{Restrict to one dataset.} \verb{<character(1)> | NULL}. When
 \code{NULL} (default) every dataset's variables are returned; otherwise only
@@ -15,7 +15,7 @@ the named dataset's rows.
 
 \strong{Restriction:} a non-\code{NULL} \code{dataset} must name a dataset in the spec
 (see \code{\link[=spec_datasets]{spec_datasets()}}); an unknown name aborts with
-\code{vport_error_input}.}
+\code{artoo_error_input}.}
 }
 \value{
 \emph{A data frame of variable metadata}, one row per variable, with
@@ -50,7 +50,7 @@ spec. Each row carries the variable's CDISC \code{data_type}, label, length,
 display format, key sequence, and codelist reference.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: one dataset's variables ----
 #

@@ -1,15 +1,15 @@
-# spec_read.R -- read_spec(): native JSON + Pinnacle 21 Excel -> vport_spec.
+# spec_read.R -- read_spec(): native JSON + Pinnacle 21 Excel -> artoo_spec.
 #
 # The P21 Excel parser is ported from the herald-v0 archive
-# (R/spec-read.R) and hardened: vport-targeted column maps, alias-set
+# (R/spec-read.R) and hardened: artoo-targeted column maps, alias-set
 # sheet matching, merged-cell forward fill on every foreign-key column,
 # and fail-loud on an unresolvable key. Every path funnels through
-# vport_spec(), which is the single validation surface.
+# artoo_spec(), which is the single validation surface.
 
-# ---- P21 -> vport column maps (spreadsheet header -> vport slot column) ---
+# ---- P21 -> artoo column maps (spreadsheet header -> artoo slot column) ---
 # Headers not listed ride along as extra character columns (no silent
-# drop); vport columns absent from P21 are filled with typed NA by the
-# vport_spec() constructor.
+# drop); artoo columns absent from P21 are filled with typed NA by the
+# artoo_spec() constructor.
 
 #' @noRd
 .p21_ds_map <- c(
@@ -124,17 +124,17 @@
 
 #' Read a specification from JSON, Excel, or Define-XML
 #'
-#' Read a clinical-dataset specification into a validated `vport_spec`,
-#' dispatching on the file extension: vport's native JSON (the inverse of
+#' Read a clinical-dataset specification into a validated `artoo_spec`,
+#' dispatching on the file extension: artoo's native JSON (the inverse of
 #' [write_spec()]), a Pinnacle 21 (P21) Excel workbook, or a native
 #' Define-XML 2.0/2.1 document. The returned spec is the lingua franca the
-#' rest of vport applies and serialises.
+#' rest of artoo applies and serialises.
 #'
 #' @details
-#' **Three formats, one validator.** A `.json` file is read as vport native
+#' **Three formats, one validator.** A `.json` file is read as artoo native
 #' JSON; a `.xlsx` / `.xls` file is read as a P21 workbook; a `.xml` file is
 #' read as Define-XML 2.x. Either way the result is built through
-#' [vport_spec()], so type canonicalisation and cross-slot integrity checks
+#' [artoo_spec()], so type canonicalisation and cross-slot integrity checks
 #' are identical regardless of source.
 #'
 #' **Define-XML ingestion** (needs the `xml2` package). ItemGroupDefs become
@@ -157,7 +157,7 @@
 #' text, then the dataset and codelist foreign keys are forward-filled to
 #' recover merged cells (which the Excel reader returns as `NA` on
 #' continuation rows). A key that cannot be resolved aborts with
-#' `vport_error_spec` rather than being silently dropped.
+#' `artoo_error_spec` rather than being silently dropped.
 #'
 #' @param path *The specification file to read.* `<character(1)>:
 #'   required`. A `.json` (native) or `.xlsx` / `.xls` (P21) file.
@@ -176,9 +176,9 @@
 #'   * `"first"` keep the first definition of each, dropping the rest with
 #'     a message.
 #'   * `"warn"` keep the first definition and warn
-#'     (`vport_warning_spec`).
+#'     (`artoo_warning_spec`).
 #'
-#' @return *A validated `vport_spec`.* Inspect it with [spec_datasets()] /
+#' @return *A validated `artoo_spec`.* Inspect it with [spec_datasets()] /
 #'   [spec_variables()], check it with [validate_spec()], or persist it
 #'   with [write_spec()].
 #'
@@ -187,7 +187,7 @@
 #' #
 #' # write_spec() and read_spec() are inverses on the JSON path: the spec
 #' # that comes back is identical to the one written.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' path <- tempfile(fileext = ".json")
 #' write_spec(spec, path)
 #' back <- read_spec(path)
@@ -205,7 +205,7 @@
 #' @seealso
 #' **Inverse:** [write_spec()] serialises a spec to native JSON.
 #'
-#' **Build / inspect:** [vport_spec()], [spec_datasets()],
+#' **Build / inspect:** [artoo_spec()], [spec_datasets()],
 #' [spec_variables()], [validate_spec()].
 #' @export
 read_spec <- function(
@@ -224,7 +224,7 @@ read_spec <- function(
         "{.arg datasets} must be a character vector of dataset names.",
         "x" = "You supplied {.obj_type_friendly {datasets}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -235,7 +235,7 @@ read_spec <- function(
         "Spec file {.path {path}} does not exist.",
         "i" = "Pass a path to a {.val .json} or {.val .xlsx} spec."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -251,7 +251,7 @@ read_spec <- function(
         "Unsupported spec file type {.val {ext}}.",
         "i" = "read_spec() reads {.val .json}, Pinnacle 21 {.val .xlsx}, and Define-XML 2.x {.val .xml}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   )
@@ -282,7 +282,7 @@ read_spec <- function(
         "Unknown dataset{?s} in {.arg datasets}: {.val {unknown}}.",
         "i" = "The spec defines: {.val {avail}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -347,7 +347,7 @@ read_spec <- function(
         stats::setNames(lines, rep("x", length(lines))),
         "i" = "Fix the source, or keep the first definition of each with {.code on_duplicate = \"first\"}."
       ),
-      class = "vport_error_spec",
+      class = "artoo_error_spec",
       call = call
     )
   }
@@ -357,13 +357,13 @@ read_spec <- function(
         "Keeping the first definition of {length(dup_keys)} duplicated variable{?s}.",
         stats::setNames(lines, rep("x", length(lines)))
       ),
-      class = "vport_warning_spec",
+      class = "artoo_warning_spec",
       call = call
     )
   } else {
     cli::cli_inform(
       "Kept the first definition of {length(dup_keys)} duplicated variable{?s}.",
-      class = "vport_message_spec"
+      class = "artoo_message_spec"
     )
   }
   drop <- keyed & duplicated(key) & key %in% dup_keys
@@ -380,10 +380,10 @@ read_spec <- function(
   call = rlang::caller_env()
 ) {
   raw <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE)
-  .check_spec_json_version(raw[["vport_spec_version"]], call)
+  .check_spec_json_version(raw[["artoo_spec_version"]], call)
 
   # An empty array [] simplifies to an empty list; a JSON null to NULL.
-  # Both mean "no rows" -> NULL, which vport_spec() rebuilds as the typed
+  # Both mean "no rows" -> NULL, which artoo_spec() rebuilds as the typed
   # empty slot.
   pick <- function(nm) {
     x <- raw[[nm]]
@@ -412,7 +412,7 @@ read_spec <- function(
     call = call
   )
 
-  vport_spec(
+  artoo_spec(
     datasets = tables$datasets,
     variables = variables,
     codelists = pick("codelists"),
@@ -437,7 +437,7 @@ read_spec <- function(
         "Spec JSON version {.val {v}} is not the supported version {.val {supported}}.",
         "i" = "Reading anyway; some fields may not be recognised."
       ),
-      class = "vport_warning_spec",
+      class = "artoo_warning_spec",
       call = call
     )
   }
@@ -521,10 +521,10 @@ read_spec <- function(
     scoped$variables,
     on_duplicate,
     where = sprintf("Sheet '%s'", var_sheet),
-    rows = scoped$variables[[".vport_row"]],
+    rows = scoped$variables[[".artoo_row"]],
     call = call
   )
-  variables[[".vport_row"]] <- NULL
+  variables[[".artoo_row"]] <- NULL
 
   # Drop P21 codelist header rows (an id/name but no submission term) and
   # trailing blank-key rows in the supporting-metadata sheets.
@@ -533,7 +533,7 @@ read_spec <- function(
   comments <- .drop_blank_key(comments, "comment_id")
   documents <- .drop_blank_key(documents, "document_id")
 
-  vport_spec(
+  artoo_spec(
     datasets = datasets,
     variables = variables,
     codelists = .nullify_empty(codelists),
@@ -563,7 +563,7 @@ read_spec <- function(
         "Several sheets match one Pinnacle 21 role.",
         "i" = "Using {.val {used}}; ignoring {.val {ignored}}."
       ),
-      class = "vport_message_p21_sheet"
+      class = "artoo_message_p21_sheet"
     )
   }
   used
@@ -572,7 +572,7 @@ read_spec <- function(
 # Read one sheet as text and drop all-blank rows. NULL when the sheet is
 # absent (sheet_name NULL); a 0-row data frame when present but empty.
 # `track_rows = TRUE` records each data row's spreadsheet row number (data
-# index + 1 for the header) in a `.vport_row` column, BEFORE the blank-row
+# index + 1 for the header) in a `.artoo_row` column, BEFORE the blank-row
 # filter, so a later finding can point at the exact Excel row.
 #' @noRd
 .read_p21_tab <- function(path, sheet_name, track_rows = FALSE) {
@@ -592,12 +592,12 @@ read_spec <- function(
     })
     blank <- Reduce(`&`, blank_cols)
     if (track_rows) {
-      df[[".vport_row"]] <- seq_len(nrow(df)) + 1L
+      df[[".artoo_row"]] <- seq_len(nrow(df)) + 1L
     }
     df <- df[!blank, , drop = FALSE]
     rownames(df) <- NULL
   } else if (track_rows && !is.null(df)) {
-    df[[".vport_row"]] <- integer(0)
+    df[[".artoo_row"]] <- integer(0)
   }
   df
 }
@@ -610,14 +610,14 @@ read_spec <- function(
         "Required sheet {.val {label}} is missing or has no data rows.",
         "i" = "Available sheets: {.val {sheets}}."
       ),
-      class = "vport_error_spec",
+      class = "artoo_error_spec",
       call = call
     )
   }
   invisible(df)
 }
 
-# Rename columns via a P21 -> vport map, matching header names
+# Rename columns via a P21 -> artoo map, matching header names
 # case-insensitively and ignoring spaces. Unmapped columns keep their
 # names. (Ported from herald-v0 normalise_p21_cols.)
 #' @noRd
@@ -691,7 +691,7 @@ read_spec <- function(
         "x" = "{cli::qty(bad)}Blank {.field {col}} on row{?s} {.val {bad}}.",
         "i" = "Check {.val {label}} for a blank first row or a broken merge."
       ),
-      class = "vport_error_spec",
+      class = "artoo_error_spec",
       call = call
     )
   }

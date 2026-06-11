@@ -1,6 +1,6 @@
 # encoding.R -- the transcoding single source of truth (SSOT).
 #
-# This file owns EVERY iconv() call in vport; no codec calls iconv directly.
+# This file owns EVERY iconv() call in artoo; no codec calls iconv directly.
 # Read converts source bytes to canonical UTF-8 (NFC); write converts UTF-8
 # to a target charset under an explicit invalid-byte policy. Charset names
 # follow the IANA registry; SAS encoding names (WLATIN1, LATIN1, ...) are
@@ -87,14 +87,14 @@
   "iso-8859-15" = "ISO-8859-15"
 )
 
-# Module-level cache (mirrors vport_temporal.R's .sas_* style). Populated by
+# Module-level cache (mirrors artoo_temporal.R's .sas_* style). Populated by
 # .onLoad and lazily on first use so the resolver works under partial loads.
-.vport_iconv <- new.env(parent = emptyenv())
+.artoo_iconv <- new.env(parent = emptyenv())
 
 #' @noRd
 .encoding_onload <- function() {
-  .vport_iconv$list <- toupper(iconvlist())
-  .vport_iconv$resolved <- new.env(parent = emptyenv())
+  .artoo_iconv$list <- toupper(iconvlist())
+  .artoo_iconv$resolved <- new.env(parent = emptyenv())
   invisible(NULL)
 }
 
@@ -102,10 +102,10 @@
 # run, e.g. an internal called directly in a test before load).
 #' @noRd
 .iconv_names <- function() {
-  if (is.null(.vport_iconv$list)) {
+  if (is.null(.artoo_iconv$list)) {
     .encoding_onload()
   }
-  .vport_iconv$list
+  .artoo_iconv$list
 }
 
 # Candidate spellings to try for an IANA name, since host iconv is
@@ -133,7 +133,7 @@
 }
 
 # Map a SAS/IANA name to an iconv spelling actually present in iconvlist().
-# Memoized. None present -> vport_error_codec (loud, never a silent
+# Memoized. None present -> artoo_error_codec (loud, never a silent
 # mis-transcode).
 #' @noRd
 .resolve_charset <- function(name, call = rlang::caller_env()) {
@@ -145,15 +145,15 @@
         "{.arg encoding} must be a single charset name.",
         "x" = "You supplied {.obj_type_friendly {name}}."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
   key <- tolower(trimws(name))
-  if (is.null(.vport_iconv$resolved)) {
+  if (is.null(.artoo_iconv$resolved)) {
     .encoding_onload()
   }
-  hit <- .vport_iconv$resolved[[key]]
+  hit <- .artoo_iconv$resolved[[key]]
   if (!is.null(hit)) {
     return(hit)
   }
@@ -163,7 +163,7 @@
   avail <- .iconv_names()
   for (cand in .charset_candidates(iana)) {
     if (toupper(cand) %in% avail) {
-      .vport_iconv$resolved[[key]] <- cand
+      .artoo_iconv$resolved[[key]] <- cand
       return(cand)
     }
   }
@@ -172,7 +172,7 @@
       "Encoding {.val {name}} is not available on this system.",
       "i" = "The host {.code iconv} provides no spelling of it or a known alias."
     ),
-    class = "vport_error_codec",
+    class = "artoo_error_codec",
     call = call
   )
 }
@@ -261,7 +261,7 @@
           "x" = "Offending value{?s}: {.val {offenders}}.",
           "i" = "Write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -279,7 +279,7 @@
           "Replaced {n} unencodable value{?s} with {.val ?} for {.val {to}}.",
           "i" = "Use {.code on_invalid = \"error\"} to fail loudly instead."
         ),
-        class = "vport_warning_encoding",
+        class = "artoo_warning_encoding",
         call = call
       )
     }

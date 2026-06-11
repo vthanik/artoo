@@ -1,6 +1,6 @@
-# meta.R -- the vport_meta spine.
+# meta.R -- the artoo_meta spine.
 #
-# vport_meta is the CDISC-shaped metadata a conformed dataset carries: it
+# artoo_meta is the CDISC-shaped metadata a conformed dataset carries: it
 # is built once from a spec by .meta_from_spec(), serialized once to a
 # Dataset-JSON v1.1 itemGroup string by .meta_to_datasetjson() (the SINGLE
 # serializer every codec shares), and re-parsed by .meta_from_datasetjson().
@@ -47,7 +47,7 @@
 }
 .drop_null <- function(x) x[!vapply(x, is.null, logical(1))]
 
-# ---- build vport_meta from a spec ------------------------------------------
+# ---- build artoo_meta from a spec ------------------------------------------
 
 # One column entry (a list of present Dataset-JSON column attributes) from a
 # single-row variable data frame slice. Absent (NA) attributes are dropped,
@@ -112,7 +112,7 @@
   ))
 }
 
-# Build a vport_meta for one dataset from a validated spec. `records` is the
+# Build a artoo_meta for one dataset from a validated spec. `records` is the
 # row count; apply_spec()'s stamp step passes nrow(x), other callers leave it
 # NULL (omitted from the metadata).
 #' @noRd
@@ -154,14 +154,14 @@
     keys = .meta_keys(cols)
   )
 
-  vport_meta_class(dataset = ds_meta, columns = cols)
+  artoo_meta_class(dataset = ds_meta, columns = cols)
 }
 
 # Resolve the storage form of each temporal column where metadata meets
 # data. A spec's date/datetime/time variable with no targetDataType is, by
 # CDISC definition, ISO 8601 text -- correct for a character --DTC column.
 # But when the data column is actually numeric-backed (R Date/POSIXct/
-# vport_time, or a never-realized SAS-epoch numeric), the truthful exchange
+# artoo_time, or a never-realized SAS-epoch numeric), the truthful exchange
 # form is numeric: stamp targetDataType = "integer" so every codec writes a
 # SAS-epoch number and every reader realizes the same R class back
 # (lossless by construction). Character columns are left untouched -- their
@@ -189,10 +189,10 @@
   if (!changed) {
     return(meta)
   }
-  vport_meta_class(dataset = meta@dataset, columns = cols)
+  artoo_meta_class(dataset = meta@dataset, columns = cols)
 }
 
-# ---- build vport_meta from a bare frame (no spec) ---------------------------
+# ---- build artoo_meta from a bare frame (no spec) ---------------------------
 
 # One column entry derived from a data frame column's attributes and R class
 # (the no-spec path). A user/haven `label`/`format.sas` attribute wins;
@@ -242,7 +242,7 @@
   .drop_null(col_meta)
 }
 
-# Build a vport_meta from a data frame that carries no metadata_json -- from
+# Build a artoo_meta from a data frame that carries no metadata_json -- from
 # its per-column attributes and R classes -- so write_*() preserves labels,
 # formats, and types even without a spec. Returns NULL for a 0-column frame.
 #' @noRd
@@ -271,10 +271,10 @@
     records = nrow(x),
     keys = .meta_keys(cols)
   )
-  vport_meta_class(dataset = ds_meta, columns = cols)
+  artoo_meta_class(dataset = ds_meta, columns = cols)
 }
 
-# ---- serializer: vport_meta <-> Dataset-JSON metadata string ----------------
+# ---- serializer: artoo_meta <-> Dataset-JSON metadata string ----------------
 
 # The ONE serializer's structural core. Builds the Dataset-JSON v1.1 itemGroup
 # metadata block as a named list (no `rows` -- the data lives natively in each
@@ -283,14 +283,14 @@
 # codec is what keeps the formats from drifting (plan F4/4.0).
 #
 # Dataset-JSON v1.1 has closed vocabularies at the top level AND inside the
-# `columns` array, so everything vport-specific rides a single namespaced
-# `_vport` object instead of the standard block: `sourceEncoding` (the on-disk
+# `columns` array, so everything artoo-specific rides a single namespaced
+# `_artoo` object instead of the standard block: `sourceEncoding` (the on-disk
 # source-charset record), `informats` (a {variable: "DATE9."} map -- the
 # column entries carry `informat` in-memory but it is stripped from the
 # emitted array), and `specialMissings` (row-aligned .A-.Z/._ tags, passed by
 # codecs as `special=`; see sas_missing.R for why they never enter the
-# set_meta() sidecar). Whenever `_vport` is emitted it is stamped with
-# `vportMetaVersion` for forward compatibility.
+# set_meta() sidecar). Whenever `_artoo` is emitted it is stamped with
+# `artooMetaVersion` for forward compatibility.
 #' @noRd
 .meta_payload <- function(meta, extensions = FALSE, special = NULL) {
   ds <- meta@dataset
@@ -299,7 +299,7 @@
   cols <- lapply(cols, function(c) c[setdiff(names(c), "informat")])
   payload <- c(
     list(datasetJSONVersion = "1.1.0"),
-    # keys derivable from keySequence; encoding is a vport extension. Neither
+    # keys derivable from keySequence; encoding is a artoo extension. Neither
     # is spread into the standard CDISC block.
     ds[setdiff(names(ds), c("keys", "encoding"))],
     list(columns = unname(cols))
@@ -319,7 +319,7 @@
   if (length(ext)) {
     payload <- c(
       payload,
-      list(`_vport` = c(list(vportMetaVersion = "1.0"), ext))
+      list(`_artoo` = c(list(artooMetaVersion = "1.0"), ext))
     )
   }
   payload
@@ -340,7 +340,7 @@
 # to the .apply_special_missings() shape; NULL when the file carries none.
 #' @noRd
 .special_from_parsed <- function(p) {
-  sm <- p[["_vport"]]$specialMissings
+  sm <- p[["_artoo"]]$specialMissings
   if (is.null(sm) || !length(sm)) {
     return(NULL)
   }
@@ -366,7 +366,7 @@
   col
 }
 
-# Rebuild a vport_meta from an ALREADY-parsed Dataset-JSON object (the shape
+# Rebuild a artoo_meta from an ALREADY-parsed Dataset-JSON object (the shape
 # jsonlite::fromJSON(simplifyVector = FALSE) returns). The .json file codec,
 # which parses the file once to also read `rows`, reuses this directly; the
 # string entry point .meta_from_datasetjson() parses then delegates here.
@@ -375,10 +375,10 @@
   cols <- lapply(p$columns, .col_from_parsed)
   names(cols) <- vapply(cols, function(c) c$name, character(1))
 
-  # Informats ride _vport (the CDISC columns vocabulary is closed); merge them
+  # Informats ride _artoo (the CDISC columns vocabulary is closed); merge them
   # back into the column entries, re-ordered to the canonical field order so
   # the round-trip stays an identity.
-  informats <- p[["_vport"]]$informats
+  informats <- p[["_artoo"]]$informats
   if (!is.null(informats) && length(informats)) {
     for (nm in intersect(names(informats), names(cols))) {
       cols[[nm]]$informat <- as.character(informats[[nm]])
@@ -388,9 +388,9 @@
 
   records <- if (!is.null(p$records)) as.integer(p$records) else NULL
   enc <- if (
-    !is.null(p[["_vport"]]) && !is.null(p[["_vport"]]$sourceEncoding)
+    !is.null(p[["_artoo"]]) && !is.null(p[["_artoo"]]$sourceEncoding)
   ) {
-    as.character(p[["_vport"]]$sourceEncoding)
+    as.character(p[["_artoo"]]$sourceEncoding)
   } else {
     NULL
   }
@@ -405,11 +405,11 @@
     keys = .meta_keys(cols)
   )
 
-  vport_meta_class(dataset = ds_meta, columns = cols)
+  artoo_meta_class(dataset = ds_meta, columns = cols)
 }
 
 # Inverse of .meta_to_datasetjson(): parse the metadata string back to a
-# vport_meta, reconstructed in the same canonical orders so the round-trip
+# artoo_meta, reconstructed in the same canonical orders so the round-trip
 # is an identity.
 #' @noRd
 .meta_from_datasetjson <- function(json) {
@@ -418,55 +418,55 @@
 
 # ---- public frame bridge ----------------------------------------------------
 
-#' Test for a vport_meta object
+#' Test for a artoo_meta object
 #'
-#' Report whether an object is a `vport_meta` -- the CDISC-shaped metadata a
-#' conformed dataset carries through the vport workflow (spec -> apply_spec ->
+#' Report whether an object is a `artoo_meta` -- the CDISC-shaped metadata a
+#' conformed dataset carries through the artoo workflow (spec -> apply_spec ->
 #' read_/write_). [get_meta()] returns one; this is the type guard before you
 #' inspect its `@dataset` and `@columns` slots.
 #'
 #' @param x *Object to test.* `<any>`.
 #'
-#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `vport_meta`, else `FALSE`.
+#' @return *A `<logical(1)>`*: `TRUE` when `x` is a `artoo_meta`, else `FALSE`.
 #'
 #' @examples
 #' # ---- Example 1: guard before inspecting metadata ----
 #' #
-#' # get_meta() yields a vport_meta; is_vport_meta() confirms the type before
+#' # get_meta() yields a artoo_meta; is_artoo_meta() confirms the type before
 #' # you reach into its slots.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
-#' is_vport_meta(meta)
+#' is_artoo_meta(meta)
 #'
 #' # ---- Example 2: a bare data frame carries no meta object ----
 #' #
-#' # The raw frame itself is not a vport_meta -- only the object get_meta()
+#' # The raw frame itself is not a artoo_meta -- only the object get_meta()
 #' # returns is.
-#' is_vport_meta(cdisc_adsl)
+#' is_artoo_meta(cdisc_adsl)
 #'
 #' @seealso [get_meta()] and [set_meta()] to read and attach metadata.
 #' @export
-is_vport_meta <- function(x) {
-  S7::S7_inherits(x, vport_meta_class)
+is_artoo_meta <- function(x) {
+  S7::S7_inherits(x, artoo_meta_class)
 }
 
 #' Read the metadata a dataset carries
 #'
-#' Pull the `vport_meta` off a data frame produced by [apply_spec()] or read
+#' Pull the `artoo_meta` off a data frame produced by [apply_spec()] or read
 #' back by any `read_*()` codec. The metadata travels as a single
 #' Dataset-JSON string in the frame's `metadata_json` attribute; `get_meta()`
 #' parses it to the S7 object, the form every codec writes from. This is the
 #' read half of the lossless round-trip.
 #'
-#' @param x *A data frame carrying vport metadata.* `<data.frame>: required`.
+#' @param x *A data frame carrying artoo metadata.* `<data.frame>: required`.
 #'   Typically the output of [apply_spec()] or a `read_*()` codec.
 #'
 #'   **Requirement:** `x` must carry a `metadata_json` attribute (set by
 #'   [set_meta()], [apply_spec()], or a reader); a bare frame aborts with
-#'   `vport_error_input`.
+#'   `artoo_error_input`.
 #'
-#' @return *A `<vport_meta>`* with dataset-level (`@dataset`) and per-column
+#' @return *A `<artoo_meta>`* with dataset-level (`@dataset`) and per-column
 #'   (`@columns`) CDISC attributes. Pass it to [set_meta()] to re-attach, or
 #'   inspect it directly.
 #'
@@ -475,7 +475,7 @@ is_vport_meta <- function(x) {
 #' #
 #' # apply_spec() stamps the metadata; get_meta() reads it back as the S7
 #' # object whose @columns holds one CDISC attribute set per variable.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
 #' meta@columns$STUDYID
@@ -497,11 +497,11 @@ get_meta <- function(x) {
   if (!is.character(json) || length(json) != 1L) {
     cli::cli_abort(
       c(
-        "{.arg x} carries no vport metadata.",
+        "{.arg x} carries no artoo metadata.",
         "x" = "No {.field metadata_json} attribute was found.",
         "i" = "Run {.fn apply_spec} or {.fn set_meta} to attach metadata first."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -510,14 +510,14 @@ get_meta <- function(x) {
 
 #' Attach metadata to a dataset
 #'
-#' Stamp a `vport_meta` onto a data frame as a single Dataset-JSON string in
+#' Stamp a `artoo_meta` onto a data frame as a single Dataset-JSON string in
 #' its `metadata_json` attribute. Every `write_*()` codec reads that string
 #' back with [get_meta()] and embeds it verbatim, so the metadata survives
 #' the trip to any format. Use it to attach metadata to a bare frame before a
 #' write, or to re-stamp after a tidyverse verb has dropped attributes.
 #'
 #' @param x *The data frame to stamp.* `<data.frame>: required`.
-#' @param meta *The metadata to attach.* `<vport_meta>: required`. Usually
+#' @param meta *The metadata to attach.* `<artoo_meta>: required`. Usually
 #'   from [get_meta()] or built by [apply_spec()].
 #'
 #' @return *The data frame `x`*, with its `metadata_json` attribute set. Pass
@@ -528,7 +528,7 @@ get_meta <- function(x) {
 #' #
 #' # Conform a dataset, capture its metadata, then re-attach after an
 #' # attribute-dropping transform so the write stays lossless.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
 #' trimmed <- head(as.data.frame(adsl), 5)
@@ -539,9 +539,9 @@ get_meta <- function(x) {
 #' #
 #' # A writer with a raw frame and no apply step can build metadata from the
 #' # spec and attach it directly.
-#' meta_dm <- vport:::.meta_from_spec(spec, "DM")
+#' meta_dm <- artoo:::.meta_from_spec(spec, "DM")
 #' dm <- set_meta(cdisc_dm, meta_dm)
-#' is_vport_meta(get_meta(dm))
+#' is_artoo_meta(get_meta(dm))
 #'
 #' @seealso [get_meta()] for the read half; [apply_spec()] which stamps it.
 #' @export
@@ -553,18 +553,18 @@ set_meta <- function(x, meta) {
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
-  if (!is_vport_meta(meta)) {
+  if (!is_artoo_meta(meta)) {
     cli::cli_abort(
       c(
-        "{.arg meta} must be a {.cls vport_meta}.",
+        "{.arg meta} must be a {.cls artoo_meta}.",
         "x" = "You supplied {.obj_type_friendly {meta}}.",
         "i" = "Get one from {.fn get_meta} or {.fn apply_spec}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -608,7 +608,7 @@ set_meta <- function(x, meta) {
 
 #' Re-align metadata with a transformed data frame
 #'
-#' Re-attach and reconcile a `vport_meta` after a transformation that dropped
+#' Re-attach and reconcile a `artoo_meta` after a transformation that dropped
 #' or reshaped it: the metadata's columns are narrowed and reordered to the
 #' frame's current columns, the record count is refreshed, the keys are
 #' recomputed, and a column the metadata does not describe gets an entry
@@ -623,18 +623,18 @@ set_meta <- function(x, meta) {
 #' again, so the round trip stays lossless without hand-editing.
 #'
 #' @param x *The transformed data frame.* `<data.frame>: required`.
-#' @param meta *The metadata to reconcile against.* `<vport_meta> | NULL`.
+#' @param meta *The metadata to reconcile against.* `<artoo_meta> | NULL`.
 #'   `NULL` (default) uses the frame's own `metadata_json` attribute.
 #'
 #'   **Requirement:** when the transform dropped the attribute (base `[`
 #'   subsetting does), capture `get_meta()` before the pipeline and pass it
-#'   here; a bare frame with no `meta` aborts with `vport_error_input`.
+#'   here; a bare frame with no `meta` aborts with `artoo_error_input`.
 #'
 #' @return *A `<data.frame>`*: `x` re-stamped with the reconciled
-#'   `vport_meta`. Hand it to any `write_*()` codec.
+#'   `artoo_meta`. Hand it to any `write_*()` codec.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: re-attach after an attribute-dropping subset ----
 #' #
@@ -667,7 +667,7 @@ sync_meta <- function(x, meta = NULL) {
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -679,19 +679,19 @@ sync_meta <- function(x, meta = NULL) {
           "{.arg x} carries no metadata and {.arg meta} was not supplied.",
           "i" = "Capture {.code meta <- get_meta(x)} before the transform, then {.code sync_meta(x, meta)}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
     meta <- .meta_from_datasetjson(json)
   }
-  if (!is_vport_meta(meta)) {
+  if (!is_artoo_meta(meta)) {
     cli::cli_abort(
       c(
-        "{.arg meta} must be a {.cls vport_meta}.",
+        "{.arg meta} must be a {.cls artoo_meta}.",
         "x" = "You supplied {.obj_type_friendly {meta}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -706,7 +706,7 @@ sync_meta <- function(x, meta = NULL) {
     cols <- cols[names(x)] # data order
     ds <- synced@dataset
     ds$keys <- .meta_keys(cols)
-    synced <- vport_meta_class(dataset = ds, columns = cols)
+    synced <- artoo_meta_class(dataset = ds, columns = cols)
     cli::cli_inform(
       c(
         "Synthesized metadata for {length(fresh)} new column{?s}: {.var {fresh}}.",
@@ -727,7 +727,7 @@ sync_meta <- function(x, meta = NULL) {
   cols <- meta@columns[keep]
   ds <- meta@dataset
   ds$keys <- .meta_keys(cols)
-  vport_meta_class(dataset = ds, columns = cols)
+  artoo_meta_class(dataset = ds, columns = cols)
 }
 
 # Sync a meta's record count to the rows actually read (n_max). `records` is
@@ -736,15 +736,15 @@ sync_meta <- function(x, meta = NULL) {
 .meta_set_records <- function(meta, n) {
   ds <- meta@dataset
   ds$records <- as.integer(n)
-  vport_meta_class(dataset = ds, columns = meta@columns)
+  artoo_meta_class(dataset = ds, columns = meta@columns)
 }
 
 # Record a source-encoding name on a meta's dataset block (the on-disk
-# `_vport.sourceEncoding` field). Rebuilt via the constructor (the codebase
+# `_artoo.sourceEncoding` field). Rebuilt via the constructor (the codebase
 # never mutates an S7 meta in place).
 #' @noRd
 .meta_set_encoding <- function(meta, encoding) {
   ds <- meta@dataset
   ds$encoding <- encoding
-  vport_meta_class(dataset = ds, columns = meta@columns)
+  artoo_meta_class(dataset = ds, columns = meta@columns)
 }

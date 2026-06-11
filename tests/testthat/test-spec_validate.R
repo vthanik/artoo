@@ -30,9 +30,9 @@ full_var <- function(
 
 test_that(".validate_slot skips an uninitialised slot", {
   expect_identical(
-    vport:::.validate_slot(
+    artoo:::.validate_slot(
       data.frame(),
-      vport:::.spec_cols_datasets,
+      artoo:::.spec_cols_datasets,
       "dataset",
       "datasets"
     ),
@@ -41,9 +41,9 @@ test_that(".validate_slot skips an uninitialised slot", {
 })
 
 test_that(".validate_slot flags a missing required column", {
-  out <- vport:::.validate_slot(
+  out <- artoo:::.validate_slot(
     data.frame(x = 1),
-    vport:::.spec_cols_datasets,
+    artoo:::.spec_cols_datasets,
     "dataset",
     "datasets"
   )
@@ -51,9 +51,9 @@ test_that(".validate_slot flags a missing required column", {
 })
 
 test_that(".validate_slot flags a wrong-type column", {
-  out <- vport:::.validate_slot(
+  out <- artoo:::.validate_slot(
     data.frame(dataset = "DM", label = 1L),
-    vport:::.spec_cols_datasets,
+    artoo:::.spec_cols_datasets,
     "dataset",
     "datasets"
   )
@@ -62,7 +62,7 @@ test_that(".validate_slot flags a wrong-type column", {
 
 test_that("the S7 validator rejects a non-CDISC data_type (bare class)", {
   expect_error(
-    vport:::vport_spec_class(
+    artoo:::artoo_spec_class(
       datasets = data.frame(dataset = "DM", stringsAsFactors = FALSE),
       variables = full_var(data_type = "widget")
     ),
@@ -72,7 +72,7 @@ test_that("the S7 validator rejects a non-CDISC data_type (bare class)", {
 
 test_that("the S7 validator rejects a bad target_data_type (bare class)", {
   expect_error(
-    vport:::vport_spec_class(
+    artoo:::artoo_spec_class(
       datasets = data.frame(dataset = "DM", stringsAsFactors = FALSE),
       variables = full_var(target_data_type = "bogus")
     ),
@@ -82,7 +82,7 @@ test_that("the S7 validator rejects a bad target_data_type (bare class)", {
 
 test_that("the S7 validator rejects an orphan dataset reference (bare class)", {
   expect_error(
-    vport:::vport_spec_class(
+    artoo:::artoo_spec_class(
       datasets = data.frame(dataset = "OTHER", stringsAsFactors = FALSE),
       variables = full_var(dataset = "DM")
     ),
@@ -92,7 +92,7 @@ test_that("the S7 validator rejects an orphan dataset reference (bare class)", {
 
 test_that("the S7 validator rejects an unresolved codelist (bare class)", {
   expect_error(
-    vport:::vport_spec_class(
+    artoo:::artoo_spec_class(
       datasets = data.frame(dataset = "DM", stringsAsFactors = FALSE),
       variables = full_var(codelist_id = "C9")
     ),
@@ -110,7 +110,7 @@ test_that("the S7 validator rejects duplicate (dataset, variable) rows directly"
     stringsAsFactors = FALSE
   )
   expect_error(
-    vport:::vport_spec_class(
+    artoo:::artoo_spec_class(
       study = data.frame(),
       datasets = data.frame(dataset = "DM", stringsAsFactors = FALSE),
       variables = vars,
@@ -126,7 +126,7 @@ test_that("the S7 validator rejects duplicate (dataset, variable) rows directly"
 
 test_that("the meta validator rejects an unnamed columns list", {
   expect_error(
-    vport:::vport_meta_class(
+    artoo:::artoo_meta_class(
       dataset = list(itemGroupOID = "IG.X", name = "X"),
       columns = list(list(name = "A", dataType = "string"))
     ),

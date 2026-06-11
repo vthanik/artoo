@@ -1,10 +1,10 @@
 # decode_column(): single-variable codelist translation -- the
-# metatools::create_var_from_codelist() shape driven by the vport_spec.
+# metatools::create_var_from_codelist() shape driven by the artoo_spec.
 # Shares .map_codelist_values() with apply_spec()'s decode step, so the
 # policies (no_match, trim, ignore_case) behave identically.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 # Spec extended with a numeric coded variable (the RACEN pattern): SEXN is
@@ -33,7 +33,7 @@ sexn_spec <- function() {
       stringsAsFactors = FALSE
     )
   )
-  vport_spec(cdisc_datasets, vars, codelists = cls)
+  artoo_spec(cdisc_datasets, vars, codelists = cls)
 }
 
 test_that("decode_column decodes into a new column, source untouched", {
@@ -92,7 +92,7 @@ test_that("decode_column honors the no_match policy", {
   spec <- demo_spec()
   expect_error(
     decode_column(raw, spec, "DM", from = "SEX", to = "SEXDECD"),
-    class = "vport_error_codelist"
+    class = "artoo_error_codelist"
   )
   kept <- decode_column(
     raw,
@@ -119,7 +119,7 @@ test_that("decode_column soft-matches after trim and reports the variant", {
   raw$SEX[1] <- "F "
   expect_warning(
     out <- decode_column(raw, demo_spec(), "DM", from = "SEX", to = "SEXDECD"),
-    class = "vport_warning_codelist"
+    class = "artoo_warning_codelist"
   )
   expect_identical(out$SEXDECD[1], "Female")
 })
@@ -128,20 +128,20 @@ test_that("decode_column validates its inputs loudly", {
   spec <- demo_spec()
   expect_error(
     decode_column(1, spec, "DM", from = "SEX"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_error(
     decode_column(cdisc_dm, spec, "DM", from = "NOPE"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_error(
     decode_column(cdisc_dm, spec, "DM", from = "SEX", to = c("A", "B")),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   # No codelist on either end is an explicit error, not a silent no-op.
   expect_error(
     decode_column(cdisc_dm, spec, "DM", from = "USUBJID", to = "USUBJ2"),
-    class = "vport_error_codelist"
+    class = "artoo_error_codelist"
   )
   expect_snapshot(
     error = TRUE,
@@ -188,7 +188,7 @@ test_that("decode_column warns when the spec dataType coercion introduces NA", {
       stringsAsFactors = FALSE
     )
   )
-  spec <- vport_spec(cdisc_datasets, vars, codelists = cls)
+  spec <- artoo_spec(cdisc_datasets, vars, codelists = cls)
   expect_warning(
     out <- decode_column(
       cdisc_dm,
@@ -198,7 +198,7 @@ test_that("decode_column warns when the spec dataType coercion introduces NA", {
       to = "SEXN",
       direction = "to_code"
     ),
-    class = "vport_warning_coercion"
+    class = "artoo_warning_coercion"
   )
   expect_true(all(is.na(out$SEXN)))
 })

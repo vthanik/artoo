@@ -3,7 +3,7 @@
 # same mapper (.map_codelist_values), the same policies, but aimed at the
 # everyday ADaM task of deriving a coded variable from its decode (RACEN
 # from RACE) or vice versa -- the metatools::create_var_from_codelist()
-# shape, driven by the vport_spec instead of a metacore object.
+# shape, driven by the artoo_spec instead of a metacore object.
 
 #' Derive or translate a variable through its codelist
 #'
@@ -25,12 +25,12 @@
 #'
 #' **Soft matches are reported, never silent.** Values that match only
 #' after trimming whitespace (or case-folding, when `ignore_case = TRUE`)
-#' still map, with a `vport_warning_codelist` naming the variants --
+#' still map, with a `artoo_warning_codelist` naming the variants --
 #' [check_spec()] always compares exactly, so clean the source for
 #' submission.
 #'
 #' @param x *The data frame to extend.* `<data.frame>: required`.
-#' @param spec *The specification carrying the codelists.* `<vport_spec>:
+#' @param spec *The specification carrying the codelists.* `<artoo_spec>:
 #'   required`.
 #' @param dataset *The dataset whose variables apply.* `<character(1)>:
 #'   required`. Must name a dataset in `spec`.
@@ -57,7 +57,7 @@
 #'   replaced (in place), ready for the next pipeline step.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: decode a coded variable into a display column ----
 #' #
@@ -86,7 +86,7 @@
 #'     decode = c("F", "M"), order = 1:2
 #'   )
 #' )
-#' spec_n <- vport_spec(cdisc_datasets, vars, codelists = cls)
+#' spec_n <- artoo_spec(cdisc_datasets, vars, codelists = cls)
 #' dm_n <- decode_column(cdisc_dm, spec_n, "DM",
 #'   from = "SEX", to = "SEXN", direction = "to_code"
 #' )
@@ -118,7 +118,7 @@ decode_column <- function(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -132,7 +132,7 @@ decode_column <- function(
           "{.arg {arg}} must be a single variable name.",
           "x" = "You supplied {.obj_type_friendly {val}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -144,7 +144,7 @@ decode_column <- function(
         "x" = "{.val {from}} is not present.",
         "i" = "Columns: {.val {names(x)}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -161,7 +161,7 @@ decode_column <- function(
         "Neither {.val {to}} nor {.val {from}} references a codelist in dataset {.val {dataset}}.",
         "i" = "Add a {.field codelist_id} to one of them in the spec."
       ),
-      class = "vport_error_codelist",
+      class = "artoo_error_codelist",
       call = call
     )
   }
@@ -192,7 +192,7 @@ decode_column <- function(
             "Coercing {.var {to}} to dataType {.val {dt}} introduced {res$n_na_introduced} NA value{?s}.",
             "i" = "Check the codelist terms against the spec dataType."
           ),
-          class = "vport_warning_coercion",
+          class = "artoo_warning_coercion",
           call = call
         )
       }

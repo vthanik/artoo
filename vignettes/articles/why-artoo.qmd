@@ -1,28 +1,28 @@
 ---
-title: "Why vport"
+title: "Why artoo"
 format: html
 ---
 
 ```{r}
 #| include: false
-library(vport)
+library(artoo)
 ```
 
 There are several R packages that read or write one clinical file
-format. vport exists because a submission pipeline never touches just
+format. artoo exists because a submission pipeline never touches just
 one format — and because the metadata (labels, CDISC types, lengths,
 formats, codelists, sort keys) matters as much as the values.
 
 ## One metadata model, every format
 
-vport carries a single CDISC-shaped metadata object — the `vport_meta`,
+artoo carries a single CDISC-shaped metadata object — the `artoo_meta`,
 which is the Dataset-JSON v1.1 itemGroup vocabulary — through every
 codec. Whatever format you write, the same serializer embeds the same
 metadata, so **any-to-any conversion is lossless by construction**, not
 by per-pair effort:
 
 ```{r}
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 
 p_xpt <- tempfile(fileext = ".xpt")
@@ -38,7 +38,7 @@ get_meta(read_parquet(p_parquet))@columns$STUDYID$label
 
 |  | XPT | Dataset-JSON | Parquet | Spec-driven conform | CDISC metadata model | Compiled deps |
 |---|---|---|---|---|---|---|
-| **vport** | read + write, v5 + v8, multi-member | v1.1 read + write (+ NDJSON) | read + write with full metadata sidecar | yes (`apply_spec`) | Dataset-JSON v1.1, verbatim | none in vport itself |
+| **artoo** | read + write, v5 + v8, multi-member | v1.1 read + write (+ NDJSON) | read + write with full metadata sidecar | yes (`apply_spec`) | Dataset-JSON v1.1, verbatim | none in artoo itself |
 | haven | read + write | — | — | — | label/format attributes only | C (ReadStat) |
 | xport | read + write (v5) | — | — | — | minimal | — |
 | datasetjson | — | read + write | — | — | Dataset-JSON | — |
@@ -60,7 +60,7 @@ Two structural differences matter more than any single row:
 
 ## Pure R, by design
 
-vport contains no compiled code and needs no SAS, Java, or C++ toolchain:
+artoo contains no compiled code and needs no SAS, Java, or C++ toolchain:
 the XPORT codec (IBM floating point included) and the Dataset-JSON
 structure are implemented in R, with `jsonlite` doing JSON tokenization
 and the tiny `nanoparquet` engine handling Parquet pages. That keeps
@@ -70,12 +70,12 @@ clinical R actually runs.
 ## Honest about physical limits
 
 Losslessness claims are only credible when the boundaries are explicit.
-vport documents what each container cannot carry instead of hiding it:
+artoo documents what each container cannot carry instead of hiding it:
 XPT cannot distinguish `""` from `NA`, stores at most 40 label bytes, and
 holds no CDISC metadata beyond the NAMESTR fields; v5 cannot record a row
 count. Where a choice would silently damage data — a partial date under a
 numeric targetDataType, an integer coercion that truncates fractions, a
-value outside its codelist — vport errors loudly by default rather than
+value outside its codelist — artoo errors loudly by default rather than
 producing a plausible wrong file.
 
 ## Where to go next

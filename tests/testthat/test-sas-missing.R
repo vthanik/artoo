@@ -2,7 +2,7 @@
 #
 # The sas_missing column attribute is the in-session canonical form (what the
 # xpt layer produces and consumes); on disk the tags ride the namespaced
-# `_vport.specialMissings` block so json/parquet round-trip them while the
+# `_artoo.specialMissings` block so json/parquet round-trip them while the
 # data values stay plain nulls (foreign readers degrade gracefully).
 
 # A small AE-shaped frame with tagged numeric missings: ".A" (not done),
@@ -22,7 +22,7 @@
 
 test_that(".collect_special_missings gathers only non-'.' tags at NA cells", {
   df <- .tagged_frame()
-  sm <- vport:::.collect_special_missings(df)
+  sm <- artoo:::.collect_special_missings(df)
   expect_named(sm, "AENDY")
   expect_identical(sm$AENDY$rows, c(2L, 3L, 5L))
   expect_identical(sm$AENDY$tags, c(".A", "._", ".Z"))
@@ -30,15 +30,15 @@ test_that(".collect_special_missings gathers only non-'.' tags at NA cells", {
   # "." is the default meaning of an on-disk null: never collected.
   plain <- data.frame(AVAL = c(1, NA))
   attr(plain$AVAL, "sas_missing") <- c(NA, ".")
-  expect_null(vport:::.collect_special_missings(plain))
+  expect_null(artoo:::.collect_special_missings(plain))
 
   # A tag on a non-NA cell is stale; it is ignored, not carried.
   stale <- data.frame(AVAL = c(1, 2))
   attr(stale$AVAL, "sas_missing") <- c(".A", NA)
-  expect_null(vport:::.collect_special_missings(stale))
+  expect_null(artoo:::.collect_special_missings(stale))
 
   # No tags anywhere -> NULL, so codecs can test emptiness cheaply.
-  expect_null(vport:::.collect_special_missings(data.frame(AVAL = c(1, NA))))
+  expect_null(artoo:::.collect_special_missings(data.frame(AVAL = c(1, NA))))
 })
 
 test_that(".apply_special_missings reattaches tags and skips unknown columns", {
@@ -47,7 +47,7 @@ test_that(".apply_special_missings reattaches tags and skips unknown columns", {
     AENDY = list(rows = c(2L, 5L), tags = c(".A", ".Z")),
     GHOST = list(rows = 1L, tags = ".B")
   )
-  out <- vport:::.apply_special_missings(df, sm)
+  out <- artoo:::.apply_special_missings(df, sm)
   expect_identical(
     attr(out$AENDY, "sas_missing"),
     c(NA, ".A", NA, NA, ".Z")
@@ -58,10 +58,10 @@ test_that(".apply_special_missings reattaches tags and skips unknown columns", {
 test_that(".subset_special_missings aligns tags to a row subset", {
   tags <- c(NA, ".A", "._", NA, ".Z")
   expect_identical(
-    vport:::.subset_special_missings(tags, 1:3),
+    artoo:::.subset_special_missings(tags, 1:3),
     c(NA, ".A", "._")
   )
-  expect_identical(vport:::.subset_special_missings(NULL, 1:3), NULL)
+  expect_identical(artoo:::.subset_special_missings(NULL, 1:3), NULL)
 })
 
 # ---- the losslessness legs --------------------------------------------------
@@ -173,7 +173,7 @@ test_that("tagged temporal columns carry their tags through json", {
 })
 
 test_that("tags survive apply_spec conformance", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "AE", label = "Adverse Events"),
     data.frame(
       dataset = c("AE", "AE", "AE"),
@@ -202,9 +202,9 @@ test_that("the json file stays valid Dataset-JSON with plain nulls", {
   expect_null(p$rows[[2]][[3]])
   expect_null(p$rows[[5]][[3]])
   # The tags ride the namespaced extension, version-stamped.
-  expect_identical(p[["_vport"]]$vportMetaVersion, "1.0")
+  expect_identical(p[["_artoo"]]$artooMetaVersion, "1.0")
   expect_identical(
-    unlist(p[["_vport"]]$specialMissings$AENDY$tags),
+    unlist(p[["_artoo"]]$specialMissings$AENDY$tags),
     c(".A", "._", ".Z")
   )
 })
@@ -214,18 +214,18 @@ test_that("a frame with no extension content writes strict-CDISC json", {
   jsn <- withr::local_tempfile(fileext = ".json")
   write_json(df, jsn)
   p <- jsonlite::fromJSON(jsn, simplifyVector = FALSE)
-  expect_false("_vport" %in% names(p))
+  expect_false("_artoo" %in% names(p))
 })
 
-test_that("write_json(strict = TRUE) suppresses _vport with a loss warning", {
+test_that("write_json(strict = TRUE) suppresses _artoo with a loss warning", {
   df <- .tagged_frame()
   jsn <- withr::local_tempfile(fileext = ".json")
   expect_warning(
     write_json(df, jsn, strict = TRUE),
-    class = "vport_warning_codec"
+    class = "artoo_warning_codec"
   )
   p <- jsonlite::fromJSON(jsn, simplifyVector = FALSE)
-  expect_false("_vport" %in% names(p))
+  expect_false("_artoo" %in% names(p))
   back <- suppressWarnings({
     write_json(df, jsn, strict = TRUE)
     read_json(jsn)

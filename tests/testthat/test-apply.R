@@ -2,7 +2,7 @@
 # pipeline and the thin conformance check, on bundled CDISC demo data.
 
 demo_spec <- function() {
-  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
 # ---- apply_spec core --------------------------------------------------------
@@ -16,7 +16,7 @@ test_that("apply_spec conforms ADSL and stamps metadata", {
   expect_identical(names(adsl), spec_variables(spec, "ADSL")$variable)
   # Metadata is attached and records the row count.
   meta <- get_meta(adsl)
-  expect_true(is_vport_meta(meta))
+  expect_true(is_artoo_meta(meta))
   expect_identical(meta@dataset$records, nrow(adsl))
 })
 
@@ -44,7 +44,7 @@ test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guar
   expect_s3_class(adsl$TRTSDT, "Date")
   # Deflating to SAS days must use the 1960 epoch, not the R 1970 epoch:
   # the two differ by 3653 days, the historical bug.
-  sas_days <- vport:::.deflate_temporal(adsl$TRTSDT, "date")
+  sas_days <- artoo:::.deflate_temporal(adsl$TRTSDT, "date")
   r_epoch_days <- as.numeric(unclass(adsl$TRTSDT))
   ok <- !is.na(sas_days)
   expect_equal(sas_days[ok], r_epoch_days[ok] + 3653)
@@ -78,7 +78,7 @@ test_that("apply_spec rejects an unknown step", {
   spec <- demo_spec()
   expect_error(
     apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_snapshot(
     apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
@@ -90,11 +90,11 @@ test_that("apply_spec validates x and dataset", {
   spec <- demo_spec()
   expect_error(
     apply_spec(list(1), spec, "ADSL"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_error(
     apply_spec(cdisc_adsl, spec, "NOPE"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_snapshot(apply_spec(list(1), spec, "ADSL"), error = TRUE)
   expect_snapshot(apply_spec(cdisc_adsl, spec, "NOPE"), error = TRUE)
@@ -150,7 +150,7 @@ test_that("apply_spec check = strict aborts on an error finding", {
   raw$USUBJID <- NULL # forces a missing_variable error
   expect_error(
     apply_spec(raw, spec, "DM", conformance = "abort", steps = c("coerce")),
-    class = "vport_error_conformance"
+    class = "artoo_error_conformance"
   )
 })
 
@@ -165,30 +165,30 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   raw$SEX[1] <- "Z{oops"
   expect_error(
     apply_spec(raw, spec, "DM", conformance = "abort"),
-    class = "vport_error_conformance"
+    class = "artoo_error_conformance"
   )
 })
 
 test_that("truncating integer coercion aborts by default, warns under on_lossy (review B6)", {
   vars <- cdisc_variables
   vars$data_type[vars$dataset == "DM" & vars$variable == "AGE"] <- "integer"
-  spec <- vport_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
+  spec <- artoo_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
   raw <- cdisc_dm
   raw$AGE[1] <- raw$AGE[1] + 0.7
   expect_error(
     apply_spec(raw, spec, "DM", conformance = "off"),
-    class = "vport_error_type"
+    class = "artoo_error_type"
   )
   expect_warning(
     apply_spec(raw, spec, "DM", conformance = "off", on_lossy = "warn"),
-    class = "vport_warning_coercion"
+    class = "artoo_warning_coercion"
   )
 })
 
 # ---- decode flag validation + overflow warning (checks expansion) -----------
 
 test_that("apply_spec validates trim and ignore_case as single flags", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -201,16 +201,16 @@ test_that("apply_spec validates trim and ignore_case as single flags", {
   df <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
   expect_error(
     apply_spec(df, spec, "DM", trim = "yes"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_error(
     apply_spec(df, spec, "DM", ignore_case = NA),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
 test_that("integer overflow under coercion is named precisely", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
       dataset = "DM",
@@ -224,16 +224,16 @@ test_that("integer overflow under coercion is named precisely", {
   # Overflow is lossy (values become NA): abort by default, named precisely.
   expect_error(
     apply_spec(df, spec, "DM", conformance = "off"),
-    class = "vport_error_type",
+    class = "artoo_error_type",
     regexp = "overflow"
   )
   # Opting out keeps the old two-warning behavior (lossy + NA-introduction).
   expect_warning(
     expect_warning(
       out <- apply_spec(df, spec, "DM", conformance = "off", on_lossy = "warn"),
-      class = "vport_warning_coercion"
+      class = "artoo_warning_coercion"
     ),
-    class = "vport_warning_coercion"
+    class = "artoo_warning_coercion"
   )
   expect_identical(as.vector(out$SUBJN), c(1L, NA))
 })
@@ -249,7 +249,7 @@ test_that("profile = 'xportr' runs drop/order/sort/stamp without coercion", {
   # drop ran; coerce did not; stamp did.
   expect_false("NOTSPEC" %in% names(out))
   expect_type(out$AGE, "character")
-  expect_true(is_vport_meta(get_meta(out)))
+  expect_true(is_artoo_meta(get_meta(out)))
   # scaffold did not run: a spec variable absent from raw stays absent.
   missing_var <- setdiff(spec_variables(spec, "DM")$variable, names(raw))[1]
   expect_false(missing_var %in% names(out))
@@ -259,11 +259,11 @@ test_that("profile and steps are mutually exclusive, unknown profile aborts", {
   spec <- demo_spec()
   expect_error(
     apply_spec(cdisc_dm, spec, "DM", profile = "xportr", steps = "drop"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_error(
     apply_spec(cdisc_dm, spec, "DM", profile = "metacore"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   expect_snapshot(
     error = TRUE,

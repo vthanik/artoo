@@ -47,7 +47,7 @@ test_that("n_max reads only the requested rows", {
   df <- data.frame(ID = sprintf("S-%03d", 1:50), AVAL = as.numeric(1:50))
   p <- withr::local_tempfile(fileext = ".ndjson")
   write_ndjson(df, p)
-  withr::local_options(vport.json_slab_rows = 7L)
+  withr::local_options(artoo.json_slab_rows = 7L)
   part <- read_ndjson(p, n_max = 10)
   expect_identical(nrow(part), 10L)
   expect_identical(part$ID, df$ID[1:10])
@@ -62,7 +62,7 @@ test_that("col_select narrows columns with the generic filter", {
   expect_identical(names(part), c("A", "C"))
   expect_error(
     read_ndjson(p, col_select = "NOPE"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
 })
 
@@ -73,15 +73,15 @@ test_that("a ragged row aborts with the row number", {
   lines <- readLines(p)
   lines[3] <- "[1]" # row 2 loses a cell
   writeLines(lines, p)
-  expect_error(read_ndjson(p), class = "vport_error_codec")
+  expect_error(read_ndjson(p), class = "artoo_error_codec")
 })
 
 test_that("a non-Dataset-JSON first line aborts cleanly", {
   p <- withr::local_tempfile(fileext = ".ndjson")
   writeLines(c("{\"foo\": 1}", "[1,2]"), p)
-  expect_error(read_ndjson(p), class = "vport_error_codec")
+  expect_error(read_ndjson(p), class = "artoo_error_codec")
   writeLines("not json at all", p)
-  expect_error(read_ndjson(p), class = "vport_error_codec")
+  expect_error(read_ndjson(p), class = "artoo_error_codec")
 })
 
 test_that("a 0-row frame round-trips with typed columns", {
@@ -94,30 +94,30 @@ test_that("a 0-row frame round-trips with typed columns", {
   expect_type(back$AVAL, "double")
 })
 
-test_that("special missings and the _vport block ride line 1", {
+test_that("special missings and the _artoo block ride line 1", {
   df <- data.frame(AENDY = c(10, NA, NA))
   attr(df$AENDY, "sas_missing") <- c(NA, ".A", NA)
   p <- withr::local_tempfile(fileext = ".ndjson")
   write_ndjson(df, p)
   meta_line <- jsonlite::fromJSON(readLines(p)[1], simplifyVector = FALSE)
   expect_identical(
-    unlist(meta_line[["_vport"]]$specialMissings$AENDY$tags),
+    unlist(meta_line[["_artoo"]]$specialMissings$AENDY$tags),
     ".A"
   )
   back <- read_ndjson(p)
   expect_identical(attr(back$AENDY, "sas_missing"), c(NA, ".A", NA))
 })
 
-test_that("write_ndjson(strict = TRUE) suppresses _vport with a warning", {
+test_that("write_ndjson(strict = TRUE) suppresses _artoo with a warning", {
   df <- data.frame(AENDY = c(10, NA))
   attr(df$AENDY, "sas_missing") <- c(NA, ".A")
   p <- withr::local_tempfile(fileext = ".ndjson")
   expect_warning(
     write_ndjson(df, p, strict = TRUE),
-    class = "vport_warning_codec"
+    class = "artoo_warning_codec"
   )
   meta_line <- jsonlite::fromJSON(readLines(p)[1], simplifyVector = FALSE)
-  expect_false("_vport" %in% names(meta_line))
+  expect_false("_artoo" %in% names(meta_line))
 })
 
 # ---- gz transparency (json + ndjson) ----------------------------------------
@@ -146,7 +146,7 @@ test_that("a .json.gz round-trips transparently", {
 test_that("gz is refused for formats that do not stream text", {
   df <- data.frame(A = 1)
   p <- withr::local_tempfile(fileext = ".xpt.gz")
-  expect_error(write_dataset(df, p), class = "vport_error_input")
+  expect_error(write_dataset(df, p), class = "artoo_error_input")
 })
 
 # ---- coverage of the guard branches -----------------------------------------
@@ -154,13 +154,13 @@ test_that("gz is refused for formats that do not stream text", {
 test_that("encode without metadata aborts (0-column frame)", {
   df <- data.frame()
   p <- withr::local_tempfile(fileext = ".ndjson")
-  expect_error(write_ndjson(df, p), class = "vport_error_codec")
+  expect_error(write_ndjson(df, p), class = "artoo_error_codec")
 })
 
 test_that("an empty file and a BOM-prefixed file are handled", {
   p <- withr::local_tempfile(fileext = ".ndjson")
   file.create(p)
-  expect_error(read_ndjson(p), class = "vport_error_codec")
+  expect_error(read_ndjson(p), class = "artoo_error_codec")
 
   # A BOM before the metadata line is stripped, not a parse error.
   df <- data.frame(A = 1:2)
@@ -189,7 +189,7 @@ test_that("a row line that is not JSON aborts with the row range", {
   lines <- readLines(p)
   lines[3] <- "[1,}garbage"
   writeLines(lines, p)
-  expect_error(read_ndjson(p), class = "vport_error_codec")
+  expect_error(read_ndjson(p), class = "artoo_error_codec")
 })
 
 test_that("n_max larger than the file reads everything", {
@@ -205,7 +205,7 @@ test_that("interior blank lines are tolerated", {
   write_ndjson(df, p)
   lines <- readLines(p)
   writeLines(c(lines[1], lines[2], "", lines[3], lines[4], ""), p)
-  withr::local_options(vport.json_slab_rows = 2L)
+  withr::local_options(artoo.json_slab_rows = 2L)
   back <- read_ndjson(p)
   expect_identical(back$A, 1:3)
 })
@@ -216,7 +216,7 @@ test_that("a failed encode leaves any prior ndjson untouched", {
   write_ndjson(df, p)
   before <- readBin(p, "raw", file.info(p)$size)
   bad <- data.frame(AVAL = c(1, NaN))
-  expect_error(write_ndjson(bad, p), class = "vport_error_type")
+  expect_error(write_ndjson(bad, p), class = "artoo_error_type")
   expect_identical(readBin(p, "raw", file.info(p)$size), before)
 })
 

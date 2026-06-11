@@ -13,7 +13,7 @@ write_rds(x, path, encoding = NULL)
 
 \item{encoding}{\emph{Source charset to record.} \verb{<character(1)> | NULL}. rds is
 R-native and faithful: strings are saved as-is, never transcoded.
-\code{encoding} only records the data's original charset in the \code{vport_meta},
+\code{encoding} only records the data's original charset in the \code{artoo_meta},
 so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes. \code{NULL} (default)
 leaves the recorded encoding untouched.}
 }
@@ -21,13 +21,13 @@ leaves the recorded encoding untouched.}
 \emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.
 }
 \description{
-Write a data frame to an R \code{.rds} file, preserving its \code{vport_meta}. A thin
+Write a data frame to an R \code{.rds} file, preserving its \code{artoo_meta}. A thin
 wrapper over \code{\link[=write_dataset]{write_dataset()}} with \code{format = "rds"}; the rds carries the
 metadata both as live R attributes and as the language-agnostic
 \code{metadata_json} string, so \code{\link[=read_rds]{read_rds()}} restores it exactly.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset to rds ----
 #
@@ -38,7 +38,7 @@ write_rds(adsl, path)
 
 # ---- Example 2: round-trip and confirm the metadata survived ----
 #
-# Reading it back yields an identical vport_meta.
+# Reading it back yields an identical artoo_meta.
 back <- read_rds(path)
 identical(get_meta(back)@columns, get_meta(adsl)@columns)
 

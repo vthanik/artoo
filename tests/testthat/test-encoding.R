@@ -1,24 +1,24 @@
-# Tests for the encoding SSOT (encoding.R). Internals via vport:::.
+# Tests for the encoding SSOT (encoding.R). Internals via artoo:::.
 
 test_that(".resolve_charset maps SAS aliases and IANA names", {
   # wlatin1 resolves to a Windows-1252 spelling the host iconv ships.
   expect_true(
-    toupper(vport:::.resolve_charset("wlatin1")) %in%
+    toupper(artoo:::.resolve_charset("wlatin1")) %in%
       c("WINDOWS-1252", "CP1252")
   )
   # latin1 is a DIFFERENT charset (ISO-8859-1), not 1252.
   expect_true(
-    toupper(vport:::.resolve_charset("latin1")) %in%
+    toupper(artoo:::.resolve_charset("latin1")) %in%
       c("ISO-8859-1", "ISO8859-1", "ISO8859_1", "LATIN1")
   )
   # IANA name passes through.
-  expect_identical(toupper(vport:::.resolve_charset("UTF-8")), "UTF-8")
+  expect_identical(toupper(artoo:::.resolve_charset("UTF-8")), "UTF-8")
 })
 
 test_that(".resolve_charset uses the candidate ladder when a spelling is absent", {
   # Host iconv ships only CP1252, not WINDOWS-1252: the ladder still resolves.
   # Mutate the cache env in place (do not reassign the namespace binding).
-  e <- vport:::.vport_iconv
+  e <- artoo:::.artoo_iconv
   old_list <- e$list
   old_resolved <- e$resolved
   withr::defer({
@@ -27,18 +27,18 @@ test_that(".resolve_charset uses the candidate ladder when a spelling is absent"
   })
   e$list <- c("CP1252", "UTF-8", "ASCII")
   e$resolved <- new.env(parent = emptyenv())
-  expect_identical(vport:::.resolve_charset("wlatin1"), "CP1252")
-  expect_identical(vport:::.resolve_charset("us-ascii"), "ASCII")
+  expect_identical(artoo:::.resolve_charset("wlatin1"), "CP1252")
+  expect_identical(artoo:::.resolve_charset("us-ascii"), "ASCII")
 })
 
 test_that(".resolve_charset aborts on an unavailable charset", {
   expect_snapshot(
-    vport:::.resolve_charset("not-a-real-charset-zzz"),
+    artoo:::.resolve_charset("not-a-real-charset-zzz"),
     error = TRUE
   )
   expect_error(
-    vport:::.resolve_charset("not-a-real-charset-zzz"),
-    class = "vport_error_codec"
+    artoo:::.resolve_charset("not-a-real-charset-zzz"),
+    class = "artoo_error_codec"
   )
 })
 
@@ -47,7 +47,7 @@ test_that(".to_internal decodes Windows-1252 bytes to UTF-8 (proves cp1252, not 
   # trademark (0x99), curly quotes (0x93/0x94), plus e-acute (0xE9).
   b <- as.raw(c(0x80, 0x99, 0x93, 0x94, 0xE9))
   x <- rawToChar(b)
-  got <- vport:::.to_internal(x, "wlatin1")
+  got <- artoo:::.to_internal(x, "wlatin1")
   expect_identical(
     got,
     intToUtf8(c(0x20AC, 0x2122, 0x201C, 0x201D, 0x00E9))
@@ -57,19 +57,19 @@ test_that(".to_internal decodes Windows-1252 bytes to UTF-8 (proves cp1252, not 
 
 test_that(".to_internal NFC-normalises decomposed UTF-8", {
   decomposed <- intToUtf8(c(0x65, 0x0301)) # e + combining acute
-  got <- vport:::.to_internal(decomposed, "UTF-8")
+  got <- artoo:::.to_internal(decomposed, "UTF-8")
   expect_identical(got, intToUtf8(0x00E9)) # precomposed e-acute
 })
 
 test_that(".to_internal passes NA and empty through", {
-  expect_identical(vport:::.to_internal(character(0), "wlatin1"), character(0))
-  expect_true(is.na(vport:::.to_internal(c(NA, "A"), "wlatin1")[1]))
+  expect_identical(artoo:::.to_internal(character(0), "wlatin1"), character(0))
+  expect_true(is.na(artoo:::.to_internal(c(NA, "A"), "wlatin1")[1]))
 })
 
 test_that("wlatin1 <-> UTF-8 round-trips byte-for-byte (the fidelity invariant)", {
   b <- as.raw(c(0x80, 0x99, 0x93, 0x94, 0xE9))
-  internal <- vport:::.to_internal(rawToChar(b), "wlatin1")
-  back <- vport:::.to_target(internal, "wlatin1", "error")
+  internal <- artoo:::.to_internal(rawToChar(b), "wlatin1")
+  back <- artoo:::.to_target(internal, "wlatin1", "error")
   expect_identical(charToRaw(back), b)
 })
 
@@ -89,18 +89,18 @@ test_that("read/write round-trips byte-for-byte for ANY single-byte encoding", {
   for (enc in names(cases)) {
     available <- tryCatch(
       {
-        vport:::.resolve_charset(enc)
+        artoo:::.resolve_charset(enc)
         TRUE
       },
-      vport_error_codec = function(e) FALSE
+      artoo_error_codec = function(e) FALSE
     )
     if (!available) {
       next
     }
     b <- cases[[enc]]
-    internal <- vport:::.to_internal(rawToChar(b), enc)
+    internal <- artoo:::.to_internal(rawToChar(b), enc)
     expect_identical(Encoding(internal), "UTF-8")
-    back <- vport:::.to_target(internal, enc, "error")
+    back <- artoo:::.to_target(internal, enc, "error")
     expect_identical(charToRaw(back), b)
     tested <- tested + 1L
   }
@@ -109,54 +109,54 @@ test_that("read/write round-trips byte-for-byte for ANY single-byte encoding", {
 
 test_that(".to_target fast-paths UTF-8 and honours on_invalid policies", {
   x <- intToUtf8(c(0x2122)) # trademark, not in ASCII
-  expect_identical(vport:::.to_target(x, "UTF-8", "error"), x)
+  expect_identical(artoo:::.to_target(x, "UTF-8", "error"), x)
   # error: trademark is not encodable in US-ASCII.
   expect_error(
-    vport:::.to_target(x, "US-ASCII", "error"),
-    class = "vport_error_codec"
+    artoo:::.to_target(x, "US-ASCII", "error"),
+    class = "artoo_error_codec"
   )
-  expect_snapshot(vport:::.to_target(x, "US-ASCII", "error"), error = TRUE)
+  expect_snapshot(artoo:::.to_target(x, "US-ASCII", "error"), error = TRUE)
   # replace: substitutes (iconv replaces per byte) and warns; result is ASCII.
   expect_warning(
-    out <- vport:::.to_target(x, "US-ASCII", "replace"),
-    class = "vport_warning_encoding"
+    out <- artoo:::.to_target(x, "US-ASCII", "replace"),
+    class = "artoo_warning_encoding"
   )
   expect_false(is.na(out))
   expect_match(out, "^[?]+$")
   # ignore: drops the unencodable char silently.
-  expect_identical(vport:::.to_target(x, "US-ASCII", "ignore"), "")
+  expect_identical(artoo:::.to_target(x, "US-ASCII", "ignore"), "")
 })
 
 test_that(".to_target latin1 cannot encode Euro/trademark (proves wlatin1 != latin1)", {
   x <- intToUtf8(c(0x20AC, 0x2122)) # Euro + trademark
   expect_error(
-    vport:::.to_target(x, "latin1", "error"),
-    class = "vport_error_codec"
+    artoo:::.to_target(x, "latin1", "error"),
+    class = "artoo_error_codec"
   )
 })
 
 test_that(".fda_forbidden_bytes flags bytes 160-191 on a single-byte stream", {
   expect_identical(
-    vport:::.fda_forbidden_bytes(as.raw(c(0x41, 0xA9, 0x42, 0xBF))),
+    artoo:::.fda_forbidden_bytes(as.raw(c(0x41, 0xA9, 0x42, 0xBF))),
     c(2L, 4L)
   )
   expect_identical(
-    vport:::.fda_forbidden_bytes(charToRaw("PLAIN ASCII")),
+    artoo:::.fda_forbidden_bytes(charToRaw("PLAIN ASCII")),
     integer(0)
   )
-  expect_identical(vport:::.fda_forbidden_bytes(raw(0)), integer(0))
+  expect_identical(artoo:::.fda_forbidden_bytes(raw(0)), integer(0))
 })
 
 test_that(".resolve_charset rejects a non-string name", {
   expect_error(
-    vport:::.resolve_charset(NA_character_),
-    class = "vport_error_codec"
+    artoo:::.resolve_charset(NA_character_),
+    class = "artoo_error_codec"
   )
-  expect_error(vport:::.resolve_charset(123), class = "vport_error_codec")
+  expect_error(artoo:::.resolve_charset(123), class = "artoo_error_codec")
 })
 
 test_that(".resolve_charset repopulates a cleared cache lazily", {
-  e <- vport:::.vport_iconv
+  e <- artoo:::.artoo_iconv
   old_list <- e$list
   old_resolved <- e$resolved
   withr::defer({
@@ -166,7 +166,7 @@ test_that(".resolve_charset repopulates a cleared cache lazily", {
   e$list <- NULL
   e$resolved <- NULL
   # Both NULL: .resolve_charset must repopulate via .encoding_onload.
-  expect_identical(toupper(vport:::.resolve_charset("UTF-8")), "UTF-8")
+  expect_identical(toupper(artoo:::.resolve_charset("UTF-8")), "UTF-8")
   expect_false(is.null(e$list))
 })
 
@@ -176,19 +176,19 @@ test_that(".nfc canonicalizes to NFC and is a no-op on ASCII / non-character", {
   decomposed <- "café" # cafe + combining acute accent (NFD)
   precomposed <- "café" # cafe with a precomposed e-acute (NFC)
   expect_false(identical(decomposed, precomposed)) # genuinely different bytes
-  expect_identical(vport:::.nfc(decomposed), precomposed)
-  expect_identical(vport:::.nfc("plain ascii"), "plain ascii")
-  expect_identical(vport:::.nfc(character(0)), character(0))
-  expect_identical(vport:::.nfc(1:3), 1:3) # non-character passthrough
+  expect_identical(artoo:::.nfc(decomposed), precomposed)
+  expect_identical(artoo:::.nfc("plain ascii"), "plain ascii")
+  expect_identical(artoo:::.nfc(character(0)), character(0))
+  expect_identical(artoo:::.nfc(1:3), 1:3) # non-character passthrough
 })
 
 test_that(".recode_col transcodes a character column and preserves its attributes", {
   col <- iconv("café", "UTF-8", "windows-1252") # single byte 0xe9
   attr(col, "label") <- "City"
-  out <- vport:::.recode_col(col, "windows-1252")
+  out <- artoo:::.recode_col(col, "windows-1252")
   expect_identical(as.character(out), "café")
   expect_identical(attr(out, "label"), "City")
   expect_identical(Encoding(out), "UTF-8")
   # a non-character column passes through untouched.
-  expect_identical(vport:::.recode_col(1:3, "windows-1252"), 1:3)
+  expect_identical(artoo:::.recode_col(1:3, "windows-1252"), 1:3)
 })

@@ -1,12 +1,12 @@
 # codec_parquet.R -- the Apache Parquet codec (nanoparquet engine + sidecar).
 #
 # Parquet stores the data natively via nanoparquet (a lightweight, zero-R-dep
-# engine -- arrow is banned), and vport's full CDISC metadata rides alongside
+# engine -- arrow is banned), and artoo's full CDISC metadata rides alongside
 # as the universal `metadata_json` sidecar (plan 4.0/4.1): the single
 # Dataset-JSON-shaped string set_meta() stamps, embedded verbatim in the
 # parquet file's key-value metadata under the key "metadata_json". This is
-# exactly where vport beats plain nanoparquet/arrow, which drop
-# labels/formats/codelists -- vport round-trips the complete vport_meta.
+# exactly where artoo beats plain nanoparquet/arrow, which drop
+# labels/formats/codelists -- artoo round-trips the complete artoo_meta.
 #
 # Read precedence is META-FIRST (plan D1): types are reconstructed from the
 # sidecar, with nanoparquet's native column types advisory. A parquet written
@@ -56,7 +56,7 @@
         "{.arg compression} must be one of {.val {valid_comp}}.",
         "x" = "You supplied {.val {compression}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -64,17 +64,17 @@
   # Parquet bytes stay UTF-8 (the format's STRING type is UTF-8 by spec); an
   # explicit `encoding` is recorded as the source-charset metadata so a later
   # write_xpt() can reproduce the original bytes. Validate the name loudly.
-  if (!is.null(encoding) && is_vport_meta(meta)) {
+  if (!is.null(encoding) && is_artoo_meta(meta)) {
     .resolve_charset(encoding, call)
     meta <- .meta_set_encoding(meta, encoding)
   }
 
-  # vport_time is a classed double with no native parquet type; store the bare
+  # artoo_time is a classed double with no native parquet type; store the bare
   # seconds (the read path realizes it back from the sidecar dataType). Date
   # and POSIXct have native parquet types, so they pass through untouched.
   # Character columns are NFC-canonicalised (a no-op on ASCII / single-byte).
   for (nm in names(x)) {
-    if (is_vport_time(x[[nm]])) {
+    if (is_artoo_time(x[[nm]])) {
       x[[nm]] <- unclass(x[[nm]])
     } else if (is.character(x[[nm]])) {
       x[[nm]] <- .nfc(x[[nm]])
@@ -84,7 +84,7 @@
   # so it never leaks into the parquet schema. The sidecar below is the home.
   attr(x, "metadata_json") <- NULL
 
-  kv <- if (is_vport_meta(meta)) {
+  kv <- if (is_artoo_meta(meta)) {
     stats::setNames(
       .meta_to_datasetjson(
         meta,
@@ -187,7 +187,7 @@
   # Realize temporal columns from the meta dataType (plan D1: meta-first).
   # Date/POSIXct survive nanoparquet natively and realize idempotently (the
   # integer-backed DATE arrival is canonicalized to double); a time column
-  # comes back a bare double and becomes vport_time here. A character ISO
+  # comes back a bare double and becomes artoo_time here. A character ISO
   # 8601 column (the no-targetDataType --DTC form) stays text -- realize is
   # for numeric storage, and text is already readable.
   for (nm in names(meta@columns)) {
@@ -215,8 +215,8 @@
 #' Write a dataset to Apache Parquet
 #'
 #' Serialize a data frame to an Apache Parquet (`.parquet`) file, storing the
-#' data natively while preserving the full `vport_meta` as a CDISC-shaped
-#' sidecar in the file's key-value metadata. The emit end of the vport
+#' data natively while preserving the full `artoo_meta` as a CDISC-shaped
+#' sidecar in the file's key-value metadata. The emit end of the artoo
 #' workflow (spec -> apply_spec -> write_parquet); a thin wrapper over
 #' [write_dataset()] with `format = "parquet"`. Requires the lightweight
 #' `nanoparquet` package.
@@ -224,19 +224,19 @@
 #' @details
 #' **Metadata where plain Parquet has none.** A bare nanoparquet/arrow file
 #' drops labels, formats, and codelists; `write_parquet()` embeds the complete
-#' `vport_meta` as a single Dataset-JSON-shaped string under the
+#' `artoo_meta` as a single Dataset-JSON-shaped string under the
 #' `metadata_json` key, so [read_parquet()] restores every CDISC attribute.
 #' The same string is what a `.json` file or an rds carries, so conversion
-#' between any two formats stays lossless. A reader without vport still opens
+#' between any two formats stays lossless. A reader without artoo still opens
 #' the data and can see the `metadata_json` block.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
-#'   output of [apply_spec()], carrying `vport_meta`.
+#'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.parquet` path.* `<character(1)>: required`.
 #' @param encoding *Source charset to record.* `<character(1)> | NULL`. The
 #'   parquet bytes are always written as UTF-8 (the format's STRING type is
 #'   UTF-8 by spec); `encoding` only records the data's original charset in the
-#'   `vport_meta`, so a later [write_xpt()] can reproduce the source bytes.
+#'   `artoo_meta`, so a later [write_xpt()] can reproduce the source bytes.
 #'   `NULL` (default) leaves the recorded encoding untouched.
 #' @param compression *Column compression codec.* `<character(1)>: default
 #'   "snappy"`. One of:
@@ -249,7 +249,7 @@
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset to Parquet ----
 #' #
@@ -261,7 +261,7 @@
 #'
 #' # ---- Example 2: round-trip and confirm the metadata survived ----
 #' #
-#' # Reading it back yields an identical vport_meta.
+#' # Reading it back yields an identical artoo_meta.
 #' back <- read_parquet(path)
 #' identical(get_meta(back)@columns, get_meta(adsl)@columns)
 #'
@@ -281,9 +281,9 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #' Read a dataset from Apache Parquet
 #'
 #' Read an Apache Parquet (`.parquet`) file back to a data frame, restoring the
-#' `vport_meta` from its `metadata_json` sidecar and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `vport_time`. A
-#' parquet written by another tool (with no vport sidecar) reads back as a
+#' `artoo_meta` from its `metadata_json` sidecar and realizing SAS
+#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. A
+#' parquet written by another tool (with no artoo sidecar) reads back as a
 #' bare frame. A thin wrapper over [read_dataset()] with `format = "parquet"`.
 #' Requires the lightweight `nanoparquet` package.
 #'
@@ -294,11 +294,11 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #'   charset's bytes; they are transcoded to UTF-8 on read.
 #' @inheritParams read_dataset
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
+#' @return *A `<data.frame>`* carrying `artoo_meta` when the file recorded it
 #'   (read it with [get_meta()]); otherwise a plain data frame.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through Parquet ----
 #' #
@@ -311,7 +311,7 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #'
 #' # ---- Example 2: the metadata names the dataset and row count ----
 #' #
-#' # The restored vport_meta exposes the dataset-level attributes.
+#' # The restored artoo_meta exposes the dataset-level attributes.
 #' get_meta(back)@dataset$records
 #'
 #' @seealso [write_parquet()] for the inverse; [read_dataset()] for the

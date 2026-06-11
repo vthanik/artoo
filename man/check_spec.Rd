@@ -16,7 +16,7 @@ check_spec(
 \item{x}{\emph{The data frame to check.} \verb{<data.frame>: required}. Typically
 the output of \code{\link[=apply_spec]{apply_spec()}}, but any frame works.}
 
-\item{spec}{\emph{The specification to check against.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to check against.} \verb{<artoo_spec>: required}.}
 
 \item{dataset}{\emph{The dataset whose rules apply.} \verb{<character(1)>: required}.
 
@@ -26,8 +26,8 @@ the output of \code{\link[=apply_spec]{apply_spec()}}, but any frame works.}
 \verb{<character(1)>}. One of \code{"none"} (default), \code{"to_decode"}, or
 \code{"to_code"}.}
 
-\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; build a control
-with \code{\link[=vport_checks]{vport_checks()}} to disable some.}
+\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<artoo_checks> | NULL}. When \code{NULL} (default) every dimension runs; build a control
+with \code{\link[=artoo_checks]{artoo_checks()}} to disable some.}
 }
 \value{
 \emph{A findings data frame} with columns \code{check}, \code{dimension},
@@ -36,7 +36,7 @@ and \code{message}, one row per divergence. Zero rows means the data conforms.
 }
 \description{
 Compare a data frame to one dataset's specification and report where they
-diverge. This is the data-conformance check at the end of the vport
+diverge. This is the data-conformance check at the end of the artoo
 workflow (spec -> apply_spec -> check_spec): it reuses the metadata the
 spec already carries (variables, types, lengths, codelists, keys). It is
 distinct from \code{\link[=validate_spec]{validate_spec()}}, which checks the spec's own internal
@@ -63,7 +63,7 @@ against the \code{decode}s. \code{\link[=apply_spec]{apply_spec()}} threads its 
 a decoded column is not wrongly flagged.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: a conformed dataset has no findings ----
 #
@@ -81,6 +81,6 @@ check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
 
 }
 \seealso{
-\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=vport_checks]{vport_checks()}} to select
+\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=artoo_checks]{artoo_checks()}} to select
 dimensions; \code{\link[=validate_spec]{validate_spec()}} for spec integrity.
 }

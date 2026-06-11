@@ -16,12 +16,12 @@ valid UTF-8, else Windows-1252). IANA and SAS names both work.}
 \item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
 (default) reads every column; otherwise a vector of variable names
 (matching the names as stored, uppercase for v5). Columns return in file
-order, and the \code{vport_meta} is filtered to match.
+order, and the \code{artoo_meta} is filtered to match.
 
-\strong{Note:} an unknown name is a \code{vport_error_input}, never a silent drop.}
+\strong{Note:} an unknown name is a \code{artoo_error_input}, never a silent drop.}
 
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
-the row count; the returned \code{vport_meta} reports the rows actually read.}
+the row count; the returned \code{artoo_meta} reports the rows actually read.}
 
 \item{member}{\emph{Which member of a multi-member transport file to read.}
 \verb{<character(1) | numeric(1)> | NULL}. A transport file can hold several
@@ -32,25 +32,25 @@ a multi-member file, pointing at \code{\link[=xpt_members]{xpt_members()}}.
 \strong{Tip:} \code{xpt_members(path)} lists what a file holds before you choose.}
 }
 \value{
-\emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with
+\emph{A \verb{<data.frame>}} carrying \code{artoo_meta} (read it with
 \code{\link[=get_meta]{get_meta()}}).
 }
 \description{
 Read a SAS Transport (\code{.xpt}) file (v5 or v8) back to a data frame,
-restoring the \code{vport_meta} its NAMESTR records carry and realizing SAS
-date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{vport_time}. The
+restoring the \code{artoo_meta} its NAMESTR records carry and realizing SAS
+date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{artoo_time}. The
 ingest end of the I/O layer; a thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with
 \code{format = "xpt"}.
 }
 \details{
 The character encoding is auto-detected (UTF-8 if every character value is
 valid UTF-8, else Windows-1252) and recorded on the returned
-\code{vport_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} reproduces it; pass \code{encoding} to
+\code{artoo_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} reproduces it; pass \code{encoding} to
 override. XPORT cannot record its own encoding, so this detection is a
 heuristic. See \code{\link[=write_xpt]{write_xpt()}} for what XPORT can and cannot preserve.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a conformed dataset through xpt ----
 #

@@ -9,7 +9,7 @@
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort
-# keys. Mirrors v0's spec_for_dataset(), adapted to the vport spec shape.
+# keys. Mirrors v0's spec_for_dataset(), adapted to the artoo spec shape.
 #' @noRd
 .apply_info <- function(spec, dataset, call = rlang::caller_env()) {
   vars <- spec_variables(spec, dataset)
@@ -25,7 +25,7 @@
           "{n_missing} variable{?s} in dataset {.val {dataset}} {?has/have} no {.field order}.",
           "i" = "Ordering the numbered variables first; unnumbered ones trail in spec order."
         ),
-        class = "vport_warning_order",
+        class = "artoo_warning_order",
         call = call
       )
       vars <- vars[order(ord, na.last = TRUE), , drop = FALSE]
@@ -35,7 +35,7 @@
   }
   rownames(vars) <- NULL
 
-  # Duplicate (dataset, variable) rows are rejected at vport_spec()
+  # Duplicate (dataset, variable) rows are rejected at artoo_spec()
   # construction (with row locations), so the slices here are unambiguous.
   list(
     vars = vars,
@@ -73,7 +73,7 @@
   }
   cli::cli_inform(
     "Scaffolded {length(missing)} variable{?s}: {.var {missing}}",
-    class = "vport_message_apply"
+    class = "artoo_message_apply"
   )
   x
 }
@@ -85,7 +85,7 @@
   if (length(to_drop)) {
     cli::cli_inform(
       "Dropped {length(to_drop)} variable{?s}: {.var {to_drop}}",
-      class = "vport_message_apply"
+      class = "artoo_message_apply"
     )
   }
   keep <- info$spec_vars[info$spec_vars %in% names(x)]
@@ -115,7 +115,7 @@
     }
     old <- attributes(x[[v]])
     if (dt %in% c("date", "datetime", "time")) {
-      # Realize to the R presentation class (Date/POSIXct/vport_time) using
+      # Realize to the R presentation class (Date/POSIXct/artoo_time) using
       # the spec displayFormat (default by dataType when absent). dataType
       # drives the class. Character ISO text realizes ONLY when the spec's
       # targetDataType demands numeric storage; without one, ISO text is
@@ -187,7 +187,7 @@
           stats::setNames(lossy, rep("x", length(lossy))),
           "i" = "Fix the spec (dataType {.val float} or {.val decimal} keeps fractions), or accept the loss with {.code on_lossy = \"warn\"}."
         ),
-        class = "vport_error_type",
+        class = "artoo_error_type",
         call = call
       )
     }
@@ -197,7 +197,7 @@
         stats::setNames(lossy, rep("x", length(lossy))),
         "i" = "Use dataType {.val float} or {.val decimal} to keep these values."
       ),
-      class = "vport_warning_coercion",
+      class = "artoo_warning_coercion",
       call = call
     )
   }
@@ -207,7 +207,7 @@
         "Coercion introduced NA in {length(introduced)} variable{?s}.",
         "i" = "{introduced}"
       ),
-      class = "vport_warning_coercion",
+      class = "artoo_warning_coercion",
       call = call
     )
   }
@@ -238,7 +238,7 @@
   # Real data carries trailing whitespace (trim = TRUE, the default) and
   # sometimes case variants (ignore_case, opt-in). A value that matches
   # only after normalization maps, but the variants are reported
-  # (vport_warning_codelist) -- a normalized match is still a CT finding
+  # (artoo_warning_codelist) -- a normalized match is still a CT finding
   # for check_spec(), which always compares exactly.
   norm <- function(s) {
     if (trim) {
@@ -262,7 +262,7 @@
           "i" = "Variant{?s}: {.val {variants}}.",
           "i" = "check_spec() still compares exactly; clean the source values for submission."
         ),
-        class = "vport_warning_codelist",
+        class = "artoo_warning_codelist",
         call = call
       )
     }
@@ -278,7 +278,7 @@
           "x" = "Unmatched: {.val {bad[seq_len(min(5L, length(bad)))]}}.",
           "i" = "Set {.code no_match = \"keep\"} or {.code \"na\"} to allow them."
         ),
-        class = "vport_error_codelist",
+        class = "artoo_error_codelist",
         call = call
       )
     } else if (no_match == "keep") {
@@ -346,7 +346,7 @@
   x[c(ordered, setdiff(names(x), ordered))]
 }
 
-# 6. Sort rows by the dataset's keys; record the keys used in `vport.sort`.
+# 6. Sort rows by the dataset's keys; record the keys used in `artoo.sort`.
 # `na_position` controls where missing key values land: "first" (SAS PROC
 # SORT / FDA convention, the default) or "last" (R / pandas / Polars).
 #' @noRd
@@ -364,11 +364,11 @@
   ord <- do.call(order, c(unname(as.list(x[keys])), list(na.last = na_last)))
   x <- x[ord, , drop = FALSE]
   rownames(x) <- NULL
-  attr(x, "vport.sort") <- keys
+  attr(x, "artoo.sort") <- keys
   x
 }
 
-# 7. Build the vport_meta from the spec, stamp records, attach it. Temporal
+# 7. Build the artoo_meta from the spec, stamp records, attach it. Temporal
 # storage forms are resolved here, where the metadata meets the data: a
 # numeric-backed date/datetime/time column with no spec targetDataType gets
 # targetDataType = "integer" recorded (see .meta_resolve_temporal_targets),

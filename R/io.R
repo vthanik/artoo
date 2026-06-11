@@ -2,11 +2,11 @@
 #
 # write_dataset()/read_dataset() select a codec by explicit `format=` or file
 # extension, then delegate to its encode/decode. write_dataset() pulls the
-# vport_meta off the frame once (get_meta) and hands it to the codec;
+# artoo_meta off the frame once (get_meta) and hands it to the codec;
 # read_dataset() re-attaches whatever meta the codec recovers. Codecs never
 # touch raw attributes -- the meta spine is the only metadata path.
 
-# The vport_meta to write with: the frame's own metadata_json when present,
+# The artoo_meta to write with: the frame's own metadata_json when present,
 # else one derived from its column attributes + R classes (so a bare or
 # haven-shaped frame still writes with labels/formats/types). NULL only for a
 # 0-column frame.
@@ -21,7 +21,7 @@
 
 # Resolve a path + optional format to a registered format name. Explicit
 # `format` wins (validated); otherwise the file extension decides. An
-# unresolvable path is a vport_error_input (the user can pass `format`).
+# unresolvable path is a artoo_error_input (the user can pass `format`).
 #' @noRd
 .resolve_format <- function(path, format, call = rlang::caller_env()) {
   if (!is.null(format)) {
@@ -39,13 +39,13 @@
   }
   codec <- tryCatch(
     .codec_for_ext(ext, call),
-    vport_error_codec = function(e) {
+    artoo_error_codec = function(e) {
       cli::cli_abort(
         c(
           "Cannot determine the dataset format from {.path {path}}.",
           "i" = "Pass {.arg format} explicitly, one of {.val {known}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -56,7 +56,7 @@
         "gz compression is not supported for the {.val {codec$format}} format.",
         "i" = "Only {.val json} and {.val ndjson} stream through gzip."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -66,18 +66,18 @@
 #' Write a dataset to any supported format
 #'
 #' Serialize a data frame to a clinical file format, preserving its
-#' `vport_meta` losslessly. The codec is chosen from the file extension (or an
+#' `artoo_meta` losslessly. The codec is chosen from the file extension (or an
 #' explicit `format`), so one call covers xpt, Dataset-JSON, Parquet, and rds.
-#' This is the emit end of the vport workflow; the per-format wrappers like
+#' This is the emit end of the artoo workflow; the per-format wrappers like
 #' [write_rds()] are thin sugar over it.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
-#'   output of [apply_spec()], carrying `vport_meta`.
+#'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination file path.* `<character(1)>: required`. Its
 #'   extension selects the codec unless `format` is given.
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
-#'   [vport_formats()]).
+#'   [artoo_formats()]).
 #' @param ... *Codec-specific arguments* passed through to the encoder (see
 #'   the per-format wrappers, e.g. [write_xpt()], for what each codec
 #'   accepts). An argument the codec does not know is an error, never
@@ -87,7 +87,7 @@
 #'   Called for the side effect of writing `path`.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset, inferring rds from the path ----
 #' #
@@ -104,7 +104,7 @@
 #' write_dataset(adsl, alt, format = "rds")
 #'
 #' @seealso [read_dataset()] for the inverse; [write_rds()] for the
-#'   per-format wrapper; [vport_formats()] for what is available.
+#'   per-format wrapper; [artoo_formats()] for what is available.
 #' @export
 write_dataset <- function(x, path, format = NULL, ...) {
   call <- rlang::caller_env()
@@ -114,7 +114,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -127,7 +127,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
         "Format {.val {fmt}} is read-only.",
         "i" = "It cannot be written."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -141,7 +141,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 
 #' Read a dataset from any supported format
 #'
-#' Read a clinical file back to a data frame, restoring its `vport_meta`. The
+#' Read a clinical file back to a data frame, restoring its `artoo_meta`. The
 #' codec is chosen from the file extension (or an explicit `format`), and the
 #' metadata the file carries is re-attached, so a value written by
 #' [write_dataset()] round-trips losslessly. This is the ingest end of the
@@ -151,27 +151,27 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #'   selects the codec unless `format` is given.
 #' @param format *Force a codec instead of inferring from the extension.*
 #'   `<character(1)> | NULL`. One of the registered formats (see
-#'   [vport_formats()]).
+#'   [artoo_formats()]).
 #' @param col_select *Variables to read.* `<character> | NULL`. `NULL`
 #'   (default) reads every column; otherwise a vector of variable names.
 #'   Columns return in file order (not the requested order) and the
-#'   `vport_meta` is filtered to match. Works on every format: parquet narrows
+#'   `artoo_meta` is filtered to match. Works on every format: parquet narrows
 #'   columns natively, the rest filter after decode.
 #'
-#'   **Note:** an unknown name is a `vport_error_input`, never a silent drop.
+#'   **Note:** an unknown name is a `artoo_error_input`, never a silent drop.
 #' @param n_max *Maximum records to read.* `<numeric(1)>: default Inf`. Caps
-#'   the row count; the returned `vport_meta` reports the rows actually read.
+#'   the row count; the returned `artoo_meta` reports the rows actually read.
 #'   xpt v8 bounds the disk read; the other formats cap after decode.
 #' @param ... *Codec-specific arguments* passed through to the decoder (see
 #'   the per-format wrappers, e.g. [read_xpt()]). An argument the codec does
 #'   not know is an error, never silently ignored.
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` when the file recorded it
+#' @return *A `<data.frame>`* carrying `artoo_meta` when the file recorded it
 #'   (read it with [get_meta()]). A file whose payload is not a data frame is
-#'   a `vport_error_codec`.
+#'   a `artoo_error_codec`.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a dataset through rds ----
 #' #
@@ -184,7 +184,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #'
 #' # ---- Example 2: the metadata names the dataset and row count ----
 #' #
-#' # The restored vport_meta exposes the dataset-level attributes.
+#' # The restored artoo_meta exposes the dataset-level attributes.
 #' get_meta(back)@dataset$records
 #'
 #' @seealso [write_dataset()] for the inverse; [read_rds()] for the
@@ -205,7 +205,7 @@ read_dataset <- function(
         "{.arg path} does not exist.",
         "x" = "No file at {.path {path}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -228,7 +228,7 @@ read_dataset <- function(
     dargs$n_max <- n_max
   }
   # The decode boundary takes untrusted file bytes. A codec aborts with a
-  # vport_error_* on malformed input, but an external engine (the parquet C++
+  # artoo_error_* on malformed input, but an external engine (the parquet C++
   # reader, readRDS, jsonlite's UTF-8 validator) can raise a raw R error on a
   # truncated or bit-flipped file. The whole read path -- decode AND the
   # narrowing / meta-reattachment tail -- is translated, because a corrupt
@@ -236,7 +236,7 @@ read_dataset <- function(
   # bit-flipped bytes decompress to a RAGGED data frame breaks the column
   # re-projection; an invalid-UTF-8 label breaks the meta serializer). The
   # contract holds for every codec: return a data frame or abort with a
-  # vport condition, never leak a foreign error.
+  # artoo condition, never leak a foreign error.
   tryCatch(
     {
       res <- do.call(decode, c(dargs, list(...), list(call = call)))
@@ -250,24 +250,24 @@ read_dataset <- function(
         if (identical(fmt, "rds")) {
           msg <- c(msg, "i" = "Use {.fn readRDS} for arbitrary R objects.")
         }
-        cli::cli_abort(msg, class = "vport_error_codec", call = call)
+        cli::cli_abort(msg, class = "artoo_error_codec", call = call)
       }
       # The single source of partial-read correctness (which columns, what
       # order, which error). Idempotent on a frame a codec already narrowed.
       # Runs BEFORE set_meta so the re-projected label/format.sas attrs land
       # on the kept cols.
       red <- .apply_partial_read(res$data, res$meta, col_select, n_max, call)
-      if (is_vport_meta(red$meta)) {
+      if (is_artoo_meta(red$meta)) {
         set_meta(red$data, red$meta)
       } else {
         red$data
       }
     },
     error = function(e) {
-      # vport's own conditions (the malformed-input message a codec crafted,
+      # artoo's own conditions (the malformed-input message a codec crafted,
       # an unknown col_select name) pass through unchanged; only a foreign
       # error from an external engine is re-wrapped.
-      if (any(grepl("^vport_error_", class(e)))) {
+      if (any(grepl("^artoo_error_", class(e)))) {
         stop(e)
       }
       msg <- .safe_msg(e)
@@ -276,7 +276,7 @@ read_dataset <- function(
           "Could not read {.path {path}} as {.val {fmt}}.",
           "x" = "{msg}"
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -295,7 +295,7 @@ read_dataset <- function(
           "{.arg col_select} must be a character vector of column names.",
           "x" = "You supplied {.obj_type_friendly {col_select}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -311,7 +311,7 @@ read_dataset <- function(
         "{.arg n_max} must be a single non-negative number or {.code Inf}.",
         "x" = "You supplied {.obj_type_friendly {n_max}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -332,13 +332,13 @@ read_dataset <- function(
           "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
           "i" = "The dataset has {.val {names(data)}}."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
     keep <- names(data)[names(data) %in% col_select] # file order, not requested
     data <- data[keep]
-    if (is_vport_meta(meta)) {
+    if (is_artoo_meta(meta)) {
       meta <- .meta_select_columns(meta, keep)
     }
   }
@@ -355,7 +355,7 @@ read_dataset <- function(
         attr(data[[nm]], "sas_missing") <- tags
       }
     }
-    if (is_vport_meta(meta)) {
+    if (is_artoo_meta(meta)) {
       meta <- .meta_set_records(meta, nrow(data))
     }
   }
@@ -377,18 +377,18 @@ read_dataset <- function(
 #' # ---- Example 1: see what this session can read and write ----
 #' #
 #' # rds is always available; the table shows the extensions each codec claims.
-#' vport_formats()
+#' artoo_formats()
 #'
 #' @seealso [read_dataset()] and [write_dataset()] which use the registry.
 #' @export
-vport_formats <- function() {
+artoo_formats <- function() {
   fmts <- .registered_formats()
   data.frame(
     format = fmts,
     read = vapply(
       fmts,
       function(f) {
-        codec <- .vport_codecs[[f]]
+        codec <- .artoo_codecs[[f]]
         codec$mode %in% c("rw", "r") && .codec_available(codec)
       },
       logical(1)
@@ -396,14 +396,14 @@ vport_formats <- function() {
     write = vapply(
       fmts,
       function(f) {
-        codec <- .vport_codecs[[f]]
+        codec <- .artoo_codecs[[f]]
         codec$mode == "rw" && .codec_available(codec)
       },
       logical(1)
     ),
     extensions = vapply(
       fmts,
-      function(f) paste(.vport_codecs[[f]]$extensions, collapse = ", "),
+      function(f) paste(.artoo_codecs[[f]]$extensions, collapse = ", "),
       character(1)
     ),
     stringsAsFactors = FALSE,

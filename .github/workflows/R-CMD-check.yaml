@@ -51,9 +51,9 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # Install the package itself (local::.) so the quarto vignette
-          # engine and `library(vport)` resolve while R CMD build/check
+          # engine and `library(artoo)` resolve while R CMD build/check
           # re-renders the .qmd vignettes. Without it, the quarto child R
-          # process aborts with "no package called 'vport'" (the fix used
+          # process aborts with "no package called 'artoo'" (the fix used
           # by quarto-dev/quarto-r itself).
           extra-packages: any::rcmdcheck, local::.
           needs: check

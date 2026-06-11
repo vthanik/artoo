@@ -8,7 +8,7 @@ write_ndjson(x, path, created = NULL, strict = FALSE)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
-output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
+output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.ndjson} path.} \verb{<character(1)>: required}. A
 \code{.ndjson.gz} path writes gzip-compressed bytes.}
@@ -17,7 +17,7 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};
 freeze it for byte-stable output.}
 
-\item{strict}{\emph{Suppress the \verb{_vport} extension block.} \verb{<logical(1)>: default FALSE}. See \code{\link[=write_json]{write_json()}}: the same extension semantics apply
+\item{strict}{\emph{Suppress the \verb{_artoo} extension block.} \verb{<logical(1)>: default FALSE}. See \code{\link[jsonlite:write_json]{write_json()}}: the same extension semantics apply
 to the metadata line.}
 }
 \value{
@@ -26,7 +26,7 @@ to the metadata line.}
 \description{
 Serialize a data frame to the newline-delimited variant of CDISC
 Dataset-JSON v1.1 (\code{.ndjson}): line 1 carries the complete metadata block,
-every following line one row array. The streaming end of the vport
+every following line one row array. The streaming end of the artoo
 workflow (spec -> apply_spec -> write_ndjson) for datasets too large for
 the array-form \code{.json} file; a thin wrapper over \code{\link[=write_dataset]{write_dataset()}} with
 \code{format = "ndjson"}.
@@ -39,7 +39,7 @@ array the way the \code{.json} codec must. A \code{.ndjson.gz} path gzips the st
 transparently.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset as NDJSON ----
 #
@@ -59,6 +59,6 @@ nrow(read_ndjson(gz))
 
 }
 \seealso{
-\code{\link[=read_ndjson]{read_ndjson()}} for the inverse; \code{\link[=write_json]{write_json()}} for the
+\code{\link[=read_ndjson]{read_ndjson()}} for the inverse; \code{\link[jsonlite:write_json]{write_json()}} for the
 array-form file; \code{\link[=write_dataset]{write_dataset()}} for the generic dispatcher.
 }

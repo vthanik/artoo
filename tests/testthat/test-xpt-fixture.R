@@ -1,12 +1,12 @@
 # Real-SAS fixture: a genuine SAS-written xpt (CDISC pilot DM, committed under
-# fixtures/) proves vport reads real SAS bytes, not just its own round-trips.
+# fixtures/) proves artoo reads real SAS bytes, not just its own round-trips.
 # Provenance + SHA pin: data-raw/download-fixtures.R.
 
 fixture_dm <- function() {
   test_path("fixtures", "sas-dm.xpt")
 }
 
-test_that("vport reads a real SAS-written xpt (values + labels)", {
+test_that("artoo reads a real SAS-written xpt (values + labels)", {
   skip_if_not(file.exists(fixture_dm()), "SAS fixture not present")
   dm <- read_xpt(fixture_dm())
 
@@ -31,7 +31,7 @@ test_that("partial reads work on the real SAS fixture", {
   expect_identical(get_meta(head5)@dataset$records, 5L)
 })
 
-test_that("pyreadstat agrees with vport on the real SAS fixture", {
+test_that("pyreadstat agrees with artoo on the real SAS fixture", {
   skip_on_cran()
   skip_if_not(file.exists(fixture_dm()), "SAS fixture not present")
   py <- py_with_pyreadstat()

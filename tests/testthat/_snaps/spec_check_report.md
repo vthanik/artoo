@@ -1,9 +1,9 @@
 # .format_check renders the sectioned report
 
     Code
-      cat(vport:::.format_check(fixed_check()), sep = "\n")
+      cat(artoo:::.format_check(fixed_check()), sep = "\n")
     Output
-      vport Spec Check
+      artoo Spec Check
       ================
       
       Spec Summary

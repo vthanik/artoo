@@ -1,17 +1,17 @@
 # codec_json.R -- the CDISC Dataset-JSON v1.1 codec.
 #
-# Dataset-JSON is the native home of vport's metadata shape: the file IS the
-# serialized vport_meta plus a flat `rows` array (array-of-arrays, row-major).
+# Dataset-JSON is the native home of artoo's metadata shape: the file IS the
+# serialized artoo_meta plus a flat `rows` array (array-of-arrays, row-major).
 # The metadata block is built by the SINGLE serializer .meta_payload() that
 # every container's sidecar also uses (plan F4/4.0), so the columns/dataset
 # attributes a .json file carries are byte-identical to what a parquet/rds
 # sidecar would embed; the file codec only appends `datasetJSONCreationDateTime`
-# and `rows`. jsonlite owns tokenizing/escaping/unicode; vport owns the v1.1
+# and `rows`. jsonlite owns tokenizing/escaping/unicode; artoo owns the v1.1
 # structure, the CDISC type mapping, and the schema. The file is always UTF-8
 # (RFC 8259 / CDISC v1.1).
 #
 # Type fidelity is META-DRIVEN, never inferred from JSON tokens (plan C1): the
-# writer emits each value per its vport_meta dataType/targetDataType, and the
+# writer emits each value per its artoo_meta dataType/targetDataType, and the
 # reader reconstructs each column from the same meta, so a whole-number double
 # does not drift to integer on the round-trip. date/datetime/time are exchanged
 # as ISO 8601 strings, OR as SAS-epoch numbers when targetDataType = "integer"
@@ -48,7 +48,7 @@
       as.character(realized)
     }
   } else {
-    if (is_vport_time(realized)) {
+    if (is_artoo_time(realized)) {
       format(realized)
     } else {
       as.character(realized)
@@ -66,19 +66,19 @@
   strict = FALSE,
   call = rlang::caller_env()
 ) {
-  if (!is_vport_meta(meta)) {
+  if (!is_artoo_meta(meta)) {
     cli::cli_abort(
       c(
         "Cannot write Dataset-JSON without metadata.",
         "x" = "The frame carries no columns to describe."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
   created <- created %||% Sys.time()
 
-  # The namespaced `_vport` block carries what strict CDISC cannot: special
+  # The namespaced `_artoo` block carries what strict CDISC cannot: special
   # missing tags, the recorded source encoding, informats. It appears only
   # when there is content; `strict = TRUE` suppresses it with a loss warning.
   special <- .json_prepare_special(x, meta, strict, path, call)
@@ -221,7 +221,7 @@
         "{.path {path}} is not a valid Dataset-JSON file.",
         "x" = "It contains an embedded NUL byte."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -243,7 +243,7 @@
           "{.path {path}} is not valid JSON.",
           "x" = "{msg}"
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -260,7 +260,7 @@
         "{.path {path}} is not a Dataset-JSON v1.1 file.",
         "x" = "It lacks the {.field datasetJSONVersion} and {.field columns} keys."
       ),
-      class = "vport_error_codec",
+      class = "artoo_error_codec",
       call = call
     )
   }
@@ -281,7 +281,7 @@
           "{.path {path}} has a malformed row.",
           "x" = "Row {bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}."
         ),
-        class = "vport_error_codec",
+        class = "artoo_error_codec",
         call = call
       )
     }
@@ -314,14 +314,14 @@
 #' Write a dataset to CDISC Dataset-JSON
 #'
 #' Serialize a data frame to a CDISC Dataset-JSON v1.1 (`.json`) file,
-#' Dataset-JSON being the native home of the `vport_meta` shape: the file is
-#' the metadata block plus a flat `rows` array. The emit end of the vport
+#' Dataset-JSON being the native home of the `artoo_meta` shape: the file is
+#' the metadata block plus a flat `rows` array. The emit end of the artoo
 #' workflow (spec -> apply_spec -> write_json); a thin wrapper over
 #' [write_dataset()] with `format = "json"`.
 #'
 #' @details
 #' **Full metadata, no loss.** Unlike `.xpt`, a `.json` file records the
-#' complete `vport_meta`: keySequence, codelist, origin, targetDataType, and
+#' complete `artoo_meta`: keySequence, codelist, origin, targetDataType, and
 #' significantDigits all survive. Dates, datetimes, and times are exchanged as
 #' ISO 8601 strings, or as SAS-epoch numbers when their `targetDataType` is
 #' `"integer"` (the ADaM numeric-date convention); `decimal` rides as a string
@@ -336,26 +336,26 @@
 #' which bounds memory in both directions.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
-#'   output of [apply_spec()], carrying `vport_meta`.
+#'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.json` path.* `<character(1)>: required`.
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
 #'   freeze it for byte-stable output.
-#' @param strict *Suppress the `_vport` extension block.* `<logical(1)>:
-#'   default FALSE`. By default the file carries a single namespaced `_vport`
+#' @param strict *Suppress the `_artoo` extension block.* `<logical(1)>:
+#'   default FALSE`. By default the file carries a single namespaced `_artoo`
 #'   object when (and only when) there is content strict CDISC cannot
 #'   express: SAS special-missing tags (`.A`-`.Z`, `._`), the recorded source
 #'   encoding, and informats. Data values stay plain `null`s either way, so a
 #'   foreign reader degrades gracefully.
 #'
 #'   **Note:** `strict = TRUE` writes a pure closed-vocabulary file and warns
-#'   (`vport_warning_codec`) naming exactly what was dropped; those
+#'   (`artoo_warning_codec`) naming exactly what was dropped; those
 #'   attributes will not survive a read-back.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset as Dataset-JSON ----
 #' #
@@ -382,14 +382,14 @@ write_json <- function(x, path, created = NULL, strict = FALSE) {
 #' Read a dataset from CDISC Dataset-JSON
 #'
 #' Read a CDISC Dataset-JSON v1.1 (`.json`) file back to a data frame,
-#' restoring the full `vport_meta` it carries and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `vport_time`. Column
+#' restoring the full `artoo_meta` it carries and realizing SAS
+#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. Column
 #' types are reconstructed from the recorded metadata, not guessed from the
 #' JSON tokens, so the round-trip is lossless. The ingest end of the I/O layer;
 #' a thin wrapper over [read_dataset()] with `format = "json"`.
 #'
 #' @param path *Source `.json` path.* `<character(1)>: required`. A JSON file
-#'   that is not Dataset-JSON v1.1 aborts with `vport_error_codec`.
+#'   that is not Dataset-JSON v1.1 aborts with `artoo_error_codec`.
 #' @param encoding *Source charset of the file bytes.* `<character(1)> |
 #'   NULL`. `NULL` (default) reads UTF-8, as Dataset-JSON requires. Pass an
 #'   IANA or SAS charset name (e.g. `"windows-1252"`) only to read a
@@ -397,11 +397,11 @@ write_json <- function(x, path, created = NULL, strict = FALSE) {
 #'   transcoded to UTF-8 on read.
 #' @inheritParams read_dataset
 #'
-#' @return *A `<data.frame>`* carrying `vport_meta` (read it with
+#' @return *A `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]).
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through Dataset-JSON ----
 #' #
@@ -414,7 +414,7 @@ write_json <- function(x, path, created = NULL, strict = FALSE) {
 #'
 #' # ---- Example 2: the metadata names the dataset and row count ----
 #' #
-#' # The restored vport_meta exposes the dataset-level attributes.
+#' # The restored artoo_meta exposes the dataset-level attributes.
 #' get_meta(back)@dataset$records
 #'
 #' @seealso [write_json()] for the inverse; [read_dataset()] for the generic

@@ -9,7 +9,7 @@ set_meta(x, meta)
 \arguments{
 \item{x}{\emph{The data frame to stamp.} \verb{<data.frame>: required}.}
 
-\item{meta}{\emph{The metadata to attach.} \verb{<vport_meta>: required}. Usually
+\item{meta}{\emph{The metadata to attach.} \verb{<artoo_meta>: required}. Usually
 from \code{\link[=get_meta]{get_meta()}} or built by \code{\link[=apply_spec]{apply_spec()}}.}
 }
 \value{
@@ -17,7 +17,7 @@ from \code{\link[=get_meta]{get_meta()}} or built by \code{\link[=apply_spec]{ap
 it on to a \verb{write_*()} codec or back through \code{\link[=get_meta]{get_meta()}}.
 }
 \description{
-Stamp a \code{vport_meta} onto a data frame as a single Dataset-JSON string in
+Stamp a \code{artoo_meta} onto a data frame as a single Dataset-JSON string in
 its \code{metadata_json} attribute. Every \verb{write_*()} codec reads that string
 back with \code{\link[=get_meta]{get_meta()}} and embeds it verbatim, so the metadata survives
 the trip to any format. Use it to attach metadata to a bare frame before a
@@ -28,7 +28,7 @@ write, or to re-stamp after a tidyverse verb has dropped attributes.
 #
 # Conform a dataset, capture its metadata, then re-attach after an
 # attribute-dropping transform so the write stays lossless.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 meta <- get_meta(adsl)
 trimmed <- head(as.data.frame(adsl), 5)
@@ -39,9 +39,9 @@ set_meta(trimmed, meta)
 #
 # A writer with a raw frame and no apply step can build metadata from the
 # spec and attach it directly.
-meta_dm <- vport:::.meta_from_spec(spec, "DM")
+meta_dm <- artoo:::.meta_from_spec(spec, "DM")
 dm <- set_meta(cdisc_dm, meta_dm)
-is_vport_meta(get_meta(dm))
+is_artoo_meta(get_meta(dm))
 
 }
 \seealso{

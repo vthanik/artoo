@@ -1,16 +1,16 @@
-# spec_accessors.R -- pure, total accessors onto a vport_spec.
+# spec_accessors.R -- pure, total accessors onto a artoo_spec.
 
-# Abort unless `spec` is a vport_spec.
+# Abort unless `spec` is a artoo_spec.
 #' @noRd
 .check_spec_arg <- function(spec, call = rlang::caller_env()) {
-  if (!is_vport_spec(spec)) {
+  if (!is_artoo_spec(spec)) {
     cli::cli_abort(
       c(
-        "{.arg spec} must be a {.cls vport_spec}.",
+        "{.arg spec} must be a {.cls artoo_spec}.",
         "x" = "You supplied {.obj_type_friendly {spec}}.",
-        "i" = "Build one with {.fn vport_spec}."
+        "i" = "Build one with {.fn artoo_spec}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -28,7 +28,7 @@
         "x" = "{.val {dataset}} is not in the spec.",
         "i" = "Available: {.val {known}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -41,7 +41,7 @@
 #' names you pass as the `dataset` argument to the other accessors and to
 #' `apply_spec()`.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
 #' @return *A character vector of dataset names*, de-duplicated and with
 #'   `NA`s dropped. Empty when the spec has no datasets.
@@ -51,7 +51,7 @@
 #' #
 #' # Build the spec from the bundled CDISC-pilot tables and list its
 #' # datasets -- the names you pass to the other accessors.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' spec_datasets(spec)
 #'
 #' @seealso [spec_variables()] for one dataset's variables; [spec_keys()]
@@ -72,14 +72,14 @@ spec_datasets <- function(spec) {
 #' spec. Each row carries the variable's CDISC `data_type`, label, length,
 #' display format, key sequence, and codelist reference.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param dataset *Restrict to one dataset.* `<character(1)> | NULL`. When
 #'   `NULL` (default) every dataset's variables are returned; otherwise only
 #'   the named dataset's rows.
 #'
 #'   **Restriction:** a non-`NULL` `dataset` must name a dataset in the spec
 #'   (see [spec_datasets()]); an unknown name aborts with
-#'   `vport_error_input`.
+#'   `artoo_error_input`.
 #'
 #' @return *A data frame of variable metadata*, one row per variable, with
 #'   22 columns (absent ones are filled with typed `NA` at construction):
@@ -107,7 +107,7 @@ spec_datasets <- function(spec) {
 #'   Filter or arrange it with ordinary base / `dplyr` verbs.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: one dataset's variables ----
 #' #
@@ -141,12 +141,12 @@ spec_variables <- function(spec, dataset = NULL) {
 #' is allowed to take before applying the spec. Mirrors the
 #' [spec_variables()] filter pattern.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param codelist_id *The codelist to return.* `<character(1)> | NULL`. When
 #'   `NULL` (default) the whole codelists table is returned.
 #'
 #'   **Restriction:** a non-`NULL` id must name a codelist present in the
-#'   spec's `codelists` slot; an unknown id aborts with `vport_error_input`.
+#'   spec's `codelists` slot; an unknown id aborts with `artoo_error_input`.
 #'
 #' @return *A data frame of codelist terms*, one row per term: every term
 #'   when `codelist_id` is `NULL`, else the named codelist's terms. Columns:
@@ -164,7 +164,7 @@ spec_variables <- function(spec, dataset = NULL) {
 #' #
 #' # SEX is coded against C66731; spec_codelists() returns the terms and their
 #' # decodes that apply_spec() will enforce or decode.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' spec_codelists(spec, "C66731")
 #'
 #' # ---- Example 2: the whole codelists table ----
@@ -194,7 +194,7 @@ spec_codelists <- function(spec, codelist_id = NULL) {
         "x" = "{.val {codelist_id}} is not present.",
         "i" = "Available: {.val {known}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = rlang::caller_env()
     )
   }
@@ -207,7 +207,7 @@ spec_codelists <- function(spec, codelist_id = NULL) {
 #' These keys drive the sort step of `apply_spec()` and the `keySequence`
 #' written to each output format.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param dataset *The dataset whose keys to parse.* `<character(1)>:
 #'   required`.
 #'
@@ -224,7 +224,7 @@ spec_codelists <- function(spec, codelist_id = NULL) {
 #' # sorts by. (STUDYID and USUBJID are real DM variables in the demo data.)
 #' ds <- cdisc_datasets
 #' ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-#' spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
 #' spec_keys(spec, "DM")
 #'
 #' @seealso [spec_datasets()] for the dataset names; [spec_variables()] for
@@ -249,12 +249,12 @@ spec_keys <- function(spec, dataset) {
 #' study identifier, standard, and implementation-guide version that scope
 #' the whole spec.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param field *Return one field instead of the row.* `<character(1)> |
 #'   NULL`. When `NULL` (default) the whole study data frame is returned.
 #'
 #'   **Restriction:** a non-`NULL` `field` must be a column of the study
-#'   table; an unknown field aborts with `vport_error_input`.
+#'   table; an unknown field aborts with `artoo_error_input`.
 #'
 #' @return *The study data frame*, or the value of one `field`.
 #'
@@ -263,7 +263,7 @@ spec_keys <- function(spec, dataset) {
 #' #
 #' # spec_study() with no field returns the study-level table; pass a field
 #' # name to pull a single value such as the study identifier.
-#' spec <- vport_spec(
+#' spec <- artoo_spec(
 #'   cdisc_datasets, cdisc_variables,
 #'   codelists = cdisc_codelists,
 #'   study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
@@ -286,7 +286,7 @@ spec_study <- function(spec, field = NULL) {
         "x" = "{.val {field}} is not present.",
         "i" = "Available: {.val {names(study)}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = rlang::caller_env()
     )
   }
@@ -300,7 +300,7 @@ spec_study <- function(spec, field = NULL) {
 #' that every reference resolves and that each referenced method is
 #' complete (has a description).
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
 #' @return *A data frame of method metadata* (`method_id`, `name`, `type`,
 #'   `description`, ...), one row per method. Empty when the spec defines no
@@ -310,7 +310,7 @@ spec_study <- function(spec, field = NULL) {
 #' # ---- Example 1: the methods a spec defines ----
 #' #
 #' # Build a spec with one derivation method and read it back.
-#' spec <- vport_spec(
+#' spec <- artoo_spec(
 #'   data.frame(dataset = "ADSL"),
 #'   data.frame(dataset = "ADSL", variable = "AGEGR1", data_type = "string"),
 #'   methods = data.frame(
@@ -335,7 +335,7 @@ spec_methods <- function(spec) {
 #' `comment_id`; [validate_spec()] checks the references resolve and each
 #' referenced comment has a body.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
 #' @return *A data frame of comment metadata* (`comment_id`, `description`,
 #'   ...), one row per comment. Empty when the spec defines no comments.
@@ -344,7 +344,7 @@ spec_methods <- function(spec) {
 #' # ---- Example 1: the comments a spec defines ----
 #' #
 #' # Build a spec with one comment and read it back.
-#' spec <- vport_spec(
+#' spec <- artoo_spec(
 #'   data.frame(dataset = "ADSL"),
 #'   data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
 #'   comments = data.frame(
@@ -367,7 +367,7 @@ spec_comments <- function(spec) {
 #' Return the document references a specification carries. Methods and
 #' comments point to these by `document_id`.
 #'
-#' @param spec *The specification to read.* `<vport_spec>: required`.
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
 #' @return *A data frame of document metadata* (`document_id`, `title`,
 #'   `href`), one row per document. Empty when the spec defines none.
@@ -376,7 +376,7 @@ spec_comments <- function(spec) {
 #' # ---- Example 1: the documents a spec defines ----
 #' #
 #' # Build a spec with one document reference and read it back.
-#' spec <- vport_spec(
+#' spec <- artoo_spec(
 #'   data.frame(dataset = "ADSL"),
 #'   data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
 #'   documents = data.frame(

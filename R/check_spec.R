@@ -11,7 +11,7 @@
 #' Check a dataset against its spec
 #'
 #' Compare a data frame to one dataset's specification and report where they
-#' diverge. This is the data-conformance check at the end of the vport
+#' diverge. This is the data-conformance check at the end of the artoo
 #' workflow (spec -> apply_spec -> check_spec): it reuses the metadata the
 #' spec already carries (variables, types, lengths, codelists, keys). It is
 #' distinct from [validate_spec()], which checks the spec's own internal
@@ -39,7 +39,7 @@
 #'
 #' @param x *The data frame to check.* `<data.frame>: required`. Typically
 #'   the output of [apply_spec()], but any frame works.
-#' @param spec *The specification to check against.* `<vport_spec>:
+#' @param spec *The specification to check against.* `<artoo_spec>:
 #'   required`.
 #' @param dataset *The dataset whose rules apply.* `<character(1)>:
 #'   required`.
@@ -48,16 +48,16 @@
 #' @param decode *Which codelist column membership is checked against.*
 #'   `<character(1)>`. One of `"none"` (default), `"to_decode"`, or
 #'   `"to_code"`.
-#' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
+#' @param checks *Which conformance dimensions to evaluate.* `<artoo_checks>
 #'   | NULL`. When `NULL` (default) every dimension runs; build a control
-#'   with [vport_checks()] to disable some.
+#'   with [artoo_checks()] to disable some.
 #'
 #' @return *A findings data frame* with columns `check`, `dimension`,
 #'   `severity` (`"error"`, `"warning"`, or `"note"`), `dataset`, `variable`,
 #'   and `message`, one row per divergence. Zero rows means the data conforms.
 #'
 #' @examples
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: a conformed dataset has no findings ----
 #' #
@@ -73,7 +73,7 @@
 #' raw$NOTASPEC <- 1
 #' check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
 #'
-#' @seealso [apply_spec()] which runs this; [vport_checks()] to select
+#' @seealso [apply_spec()] which runs this; [artoo_checks()] to select
 #'   dimensions; [validate_spec()] for spec integrity.
 #' @export
 check_spec <- function(
@@ -92,7 +92,7 @@ check_spec <- function(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "vport_error_input",
+      class = "artoo_error_input",
       call = call
     )
   }
@@ -438,7 +438,7 @@ check_spec <- function(
     }
   }
 
-  .as_vport_findings(.bind_findings(found))
+  .as_artoo_findings(.bind_findings(found))
 }
 
 # XPORT naming problems for a vector of names: returns a named character
@@ -470,7 +470,7 @@ check_spec <- function(
   out
 }
 
-# The vport storage mode of a column ("character"/"integer"/"double"/
+# The artoo storage mode of a column ("character"/"integer"/"double"/
 # "logical"), matching .type_storage()'s vocabulary. Factors read as
 # character; NA for anything exotic.
 #' @noRd

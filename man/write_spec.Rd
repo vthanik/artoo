@@ -2,13 +2,13 @@
 % Please edit documentation in R/spec_write.R
 \name{write_spec}
 \alias{write_spec}
-\title{Write a specification to native vport JSON}
+\title{Write a specification to native artoo JSON}
 \usage{
 write_spec(spec, path)
 }
 \arguments{
-\item{spec}{\emph{The specification to serialise.} \verb{<vport_spec>: required}.
-Build one with \code{\link[=vport_spec]{vport_spec()}} or \code{\link[=read_spec]{read_spec()}}.}
+\item{spec}{\emph{The specification to serialise.} \verb{<artoo_spec>: required}.
+Build one with \code{\link[=artoo_spec]{artoo_spec()}} or \code{\link[=read_spec]{read_spec()}}.}
 
 \item{path}{\emph{Destination file.} \verb{<character(1)>: required}. Written as
 UTF-8; conventionally ends in \code{.json}.}
@@ -17,17 +17,17 @@ UTF-8; conventionally ends in \code{.json}.}
 \emph{The output \code{path}, invisibly.} Read it back with \code{\link[=read_spec]{read_spec()}}.
 }
 \description{
-Serialise a \code{vport_spec} to vport's native JSON format: one lossless,
+Serialise a \code{artoo_spec} to artoo's native JSON format: one lossless,
 UTF-8 document carrying every slot (study, datasets, variables,
 codelists, value-level) verbatim. It is the inverse of \code{\link[=read_spec]{read_spec()}}
 on the JSON path, and the canonical way to persist a spec or move it
-between sessions. vport never writes a spec to xlsx.
+between sessions. artoo never writes a spec to xlsx.
 }
 \details{
 \strong{Lossless by reconstruction.} Each slot is written as an array of row
 objects, with \code{NA} encoded as JSON \code{null} and numbers at full precision,
-so \code{\link[=read_spec]{read_spec()}} rebuilds an identical \code{vport_spec} through
-\code{\link[=vport_spec]{vport_spec()}}. Object keys are emitted in a fixed order, so writing the
+so \code{\link[=read_spec]{read_spec()}} rebuilds an identical \code{artoo_spec} through
+\code{\link[=artoo_spec]{artoo_spec()}}. Object keys are emitted in a fixed order, so writing the
 same spec twice yields byte-identical output.
 }
 \examples{
@@ -35,7 +35,7 @@ same spec twice yields byte-identical output.
 #
 # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 # JSON file, and confirm read_spec() reconstructs it intact.
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 path <- tempfile(fileext = ".json")
 write_spec(spec, path)
 identical(read_spec(path), spec)
@@ -44,7 +44,7 @@ identical(read_spec(path), spec)
 #
 # Slice the bundled tables to DM, write, and read back -- the datasets
 # accessor reports the same dataset.
-dm <- vport_spec(
+dm <- artoo_spec(
   cdisc_datasets[cdisc_datasets$dataset == "DM", ],
   cdisc_variables[cdisc_variables$dataset == "DM", ],
   codelists = cdisc_codelists
@@ -56,8 +56,8 @@ spec_datasets(read_spec(dm_path))
 }
 \seealso{
 \strong{Inverse:} \code{\link[=read_spec]{read_spec()}} reads native JSON or a P21 Excel spec back
-into a \code{vport_spec}.
+into a \code{artoo_spec}.
 
-\strong{Build / inspect:} \code{\link[=vport_spec]{vport_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
+\strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
 \code{\link[=spec_variables]{spec_variables()}}.
 }

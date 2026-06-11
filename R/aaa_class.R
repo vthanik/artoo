@@ -1,6 +1,6 @@
 # aaa_class.R -- S7 class definitions, loaded first (aaa_ prefix).
 #
-# Two classes: `vport_spec` (the CDISC specification) and `vport_meta`
+# Two classes: `artoo_spec` (the CDISC specification) and `artoo_meta`
 # (the metadata a dataset carries -- the codec contract). Both validate
 # at construction. The per-slot column schemas and closed vocabularies
 # below are the single source of truth; adding a column is a one-line
@@ -9,7 +9,7 @@
 # ---- Closed vocabularies (CDISC Dataset-JSON v1.1) -----------------------
 
 # Canonical variable types == Dataset-JSON `dataType` (verified against
-# the CDISC spec; do not invent a vport-private set).
+# the CDISC spec; do not invent a artoo-private set).
 .cdisc_datatypes <- c(
   "string",
   "integer",
@@ -112,14 +112,14 @@
 
 # ---- S7 classes ----------------------------------------------------------
 
-# The S7 vport_spec class. Internal: the public face is vport_spec()
-# (constructor) and is_vport_spec() (predicate). Slots: study, datasets,
+# The S7 artoo_spec class. Internal: the public face is artoo_spec()
+# (constructor) and is_artoo_spec() (predicate). Slots: study, datasets,
 # variables, codelists (plain data frames so they stay dplyr/base-friendly)
 # and values (optional VLM). Validated by .spec_validate().
 #' @noRd
-vport_spec_class <- S7::new_class(
-  "vport_spec",
-  package = "vport",
+artoo_spec_class <- S7::new_class(
+  "artoo_spec",
+  package = "artoo",
   properties = list(
     study = S7::class_data.frame,
     datasets = S7::class_data.frame,
@@ -135,14 +135,14 @@ vport_spec_class <- S7::new_class(
   }
 )
 
-# The S7 vport_meta class (the codec contract): dataset-level fields plus
+# The S7 artoo_meta class (the codec contract): dataset-level fields plus
 # one entry per column, in the CDISC Dataset-JSON vocabulary. Internal;
 # bridged to a data frame's attributes by get_meta()/set_meta() (Phase 2).
 # Validated by .meta_validate().
 #' @noRd
-vport_meta_class <- S7::new_class(
-  "vport_meta",
-  package = "vport",
+artoo_meta_class <- S7::new_class(
+  "artoo_meta",
+  package = "artoo",
   properties = list(
     # dataset-level: itemGroupOID, name, label, records, studyOID, ...
     dataset = S7::new_property(S7::class_list, default = list()),
@@ -155,15 +155,15 @@ vport_meta_class <- S7::new_class(
   }
 )
 
-# The S7 vport_check class: the result of validate_spec(). Stores the
+# The S7 artoo_check class: the result of validate_spec(). Stores the
 # findings table, the validated scope (dataset names), and a short study
 # label for the report header. Printed as a sectioned text report by the
 # print/format methods (see validate_spec.R); @findings stays a plain data
 # frame for programmatic use.
 #' @noRd
-vport_check_class <- S7::new_class(
-  "vport_check",
-  package = "vport",
+artoo_check_class <- S7::new_class(
+  "artoo_check",
+  package = "artoo",
   properties = list(
     findings = S7::class_data.frame,
     scope = S7::new_property(S7::class_character, default = character(0)),

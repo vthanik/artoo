@@ -9,19 +9,19 @@ sync_meta(x, meta = NULL)
 \arguments{
 \item{x}{\emph{The transformed data frame.} \verb{<data.frame>: required}.}
 
-\item{meta}{\emph{The metadata to reconcile against.} \verb{<vport_meta> | NULL}.
+\item{meta}{\emph{The metadata to reconcile against.} \verb{<artoo_meta> | NULL}.
 \code{NULL} (default) uses the frame's own \code{metadata_json} attribute.
 
 \strong{Requirement:} when the transform dropped the attribute (base \code{[}
 subsetting does), capture \code{get_meta()} before the pipeline and pass it
-here; a bare frame with no \code{meta} aborts with \code{vport_error_input}.}
+here; a bare frame with no \code{meta} aborts with \code{artoo_error_input}.}
 }
 \value{
 \emph{A \verb{<data.frame>}}: \code{x} re-stamped with the reconciled
-\code{vport_meta}. Hand it to any \verb{write_*()} codec.
+\code{artoo_meta}. Hand it to any \verb{write_*()} codec.
 }
 \description{
-Re-attach and reconcile a \code{vport_meta} after a transformation that dropped
+Re-attach and reconcile a \code{artoo_meta} after a transformation that dropped
 or reshaped it: the metadata's columns are narrowed and reordered to the
 frame's current columns, the record count is refreshed, the keys are
 recomputed, and a column the metadata does not describe gets an entry
@@ -36,7 +36,7 @@ when it survived, or an explicit \code{meta}) and makes it agree with the data
 again, so the round trip stays lossless without hand-editing.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: re-attach after an attribute-dropping subset ----
 #

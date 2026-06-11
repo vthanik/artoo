@@ -4,7 +4,7 @@
       get_meta(cdisc_adsl)
     Condition
       Error:
-      ! `x` carries no vport metadata.
+      ! `x` carries no artoo metadata.
       x No metadata_json attribute was found.
       i Run `apply_spec()` or `set_meta()` to attach metadata first.
 

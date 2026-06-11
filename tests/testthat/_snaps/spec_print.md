@@ -1,9 +1,9 @@
 # .format_spec renders counts and a dataset preview
 
     Code
-      cat(vport:::.format_spec(demo_spec()), sep = "\n")
+      cat(artoo:::.format_spec(demo_spec()), sep = "\n")
     Output
-      <vport_spec>
+      <artoo_spec>
       Study: (unspecified)
       Datasets:  2
       Variables: 73
@@ -13,9 +13,9 @@
 # .format_meta renders dataset, records, columns, keys, preview
 
     Code
-      cat(vport:::.format_meta(get_meta(adsl)), sep = "\n")
+      cat(artoo:::.format_meta(get_meta(adsl)), sep = "\n")
     Output
-      <vport_meta>
+      <artoo_meta>
       Dataset: ADSL (Subject-Level Analysis Dataset)
       Records: 60
       Columns: 48

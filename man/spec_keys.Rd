@@ -7,7 +7,7 @@
 spec_keys(spec, dataset)
 }
 \arguments{
-\item{spec}{\emph{The specification to read.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 
 \item{dataset}{\emph{The dataset whose keys to parse.} \verb{<character(1)>: required}.
 
@@ -30,7 +30,7 @@ written to each output format.
 # sorts by. (STUDYID and USUBJID are real DM variables in the demo data.)
 ds <- cdisc_datasets
 ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-spec <- vport_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
 spec_keys(spec, "DM")
 
 }

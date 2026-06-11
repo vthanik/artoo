@@ -4,7 +4,7 @@
 # extended special missings (.A-.Z, ._), and overflow.
 
 rt <- function(x, missing = NULL) {
-  vport:::.ibm_to_ieee(vport:::.ieee_to_ibm(x, missing = missing))
+  artoo:::.ibm_to_ieee(artoo:::.ieee_to_ibm(x, missing = missing))
 }
 
 test_that("integers and SAS dates round-trip exactly", {
@@ -44,18 +44,18 @@ test_that("untagged NA with a missing vector still yields standard missing", {
 })
 
 test_that("the encoded length is 8 bytes per value", {
-  expect_length(vport:::.ieee_to_ibm(c(1, 2, 3)), 24L)
-  expect_length(vport:::.ieee_to_ibm(numeric(0)), 0L)
+  expect_length(artoo:::.ieee_to_ibm(c(1, 2, 3)), 24L)
+  expect_length(artoo:::.ieee_to_ibm(numeric(0)), 0L)
 })
 
 test_that("empty input decodes to numeric(0)", {
-  expect_equal(vport:::.ibm_to_ieee(raw(0)), numeric(0))
+  expect_equal(artoo:::.ibm_to_ieee(raw(0)), numeric(0))
 })
 
 test_that(".is_sas_missing recognises the indicator byte patterns", {
-  expect_true(vport:::.is_sas_missing(as.raw(c(0x2E, rep(0, 7)))))
-  expect_true(vport:::.is_sas_missing(as.raw(c(0x41, rep(0, 7))))) # .A
-  expect_false(vport:::.is_sas_missing(as.raw(c(0x2E, 1, rep(0, 6)))))
+  expect_true(artoo:::.is_sas_missing(as.raw(c(0x2E, rep(0, 7)))))
+  expect_true(artoo:::.is_sas_missing(as.raw(c(0x41, rep(0, 7))))) # .A
+  expect_false(artoo:::.is_sas_missing(as.raw(c(0x2E, 1, rep(0, 6)))))
 })
 
 test_that("values beyond the IBM range overflow to SAS missing", {
@@ -66,14 +66,14 @@ test_that("values beyond the IBM range overflow to SAS missing", {
 })
 
 test_that("all-missing input encodes and decodes without a regular branch", {
-  enc <- vport:::.ieee_to_ibm(c(NA, NA, NaN))
+  enc <- artoo:::.ieee_to_ibm(c(NA, NA, NaN))
   expect_length(enc, 24L)
-  dec <- vport:::.ibm_to_ieee(enc)
+  dec <- artoo:::.ibm_to_ieee(enc)
   expect_true(all(is.na(dec)))
 })
 
 test_that(".sas_indicator_byte handles an empty tag vector", {
-  expect_equal(vport:::.sas_indicator_byte(character(0)), integer(0))
+  expect_equal(artoo:::.sas_indicator_byte(character(0)), integer(0))
 })
 
 test_that("a large vector with mixed values round-trips", {
@@ -84,7 +84,7 @@ test_that("a large vector with mixed values round-trips", {
 })
 
 # ---- external oracle: published IBM System/370 hex-float constants ----------
-# Big-endian 8-byte IBM-370 representations, independent of vport's code -- a
+# Big-endian 8-byte IBM-370 representations, independent of artoo's code -- a
 # symmetric encode/decode bug cannot satisfy these fixed bytes.
 
 test_that(".ieee_to_ibm matches the published IBM-370 hex constants", {
@@ -97,17 +97,17 @@ test_that(".ieee_to_ibm matches the published IBM-370 hex constants", {
   )
   for (k in names(golden)) {
     v <- as.numeric(k)
-    expect_identical(vport:::.ieee_to_ibm(v), golden[[k]], info = k)
-    expect_equal(vport:::.ibm_to_ieee(golden[[k]]), v, info = k)
+    expect_identical(artoo:::.ieee_to_ibm(v), golden[[k]], info = k)
+    expect_equal(artoo:::.ibm_to_ieee(golden[[k]]), v, info = k)
   }
 })
 
 test_that("-0.0 encodes to the zero pattern and an integer > 2^53 loses precision predictably", {
   expect_identical(
-    vport:::.ieee_to_ibm(-0.0),
+    artoo:::.ieee_to_ibm(-0.0),
     as.raw(c(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00))
   )
   # 2^53 + 1 is not representable as a double; document the IEEE limit.
   big <- 2^53
-  expect_equal(vport:::.ibm_to_ieee(vport:::.ieee_to_ibm(big)), big)
+  expect_equal(artoo:::.ibm_to_ieee(artoo:::.ieee_to_ibm(big)), big)
 })

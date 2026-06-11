@@ -41,7 +41,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          # local::. installs vport so `library(vport)` + the live demo-data
+          # local::. installs artoo so `library(artoo)` + the live demo-data
           # output resolve while pkgdown renders the .qmd articles.
           extra-packages: any::pkgdown, local::.
           needs: website

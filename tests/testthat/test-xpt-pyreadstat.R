@@ -1,15 +1,15 @@
-# External-oracle cross-check: prove vport's xpt bytes are real SAS XPORT by
+# External-oracle cross-check: prove artoo's xpt bytes are real SAS XPORT by
 # reading them with pyreadstat (a third-party readstat-based reader), not just
-# round-tripping against vport itself. Skipped on CRAN and wherever python /
+# round-tripping against artoo itself. Skipped on CRAN and wherever python /
 # pyreadstat is absent (haven is banned, so this is the only real-SAS oracle).
 # py_with_pyreadstat() lives in helper-pyreadstat.R (shared with the fixture).
 
-test_that("a vport-written xpt reads correctly in pyreadstat", {
+test_that("a artoo-written xpt reads correctly in pyreadstat", {
   skip_on_cran()
   py <- py_with_pyreadstat()
   skip_if(py == "", "python3 + pyreadstat not available")
 
-  spec <- vport_spec(
+  spec <- artoo_spec(
     cdisc_datasets,
     cdisc_variables,
     codelists = cdisc_codelists
@@ -44,7 +44,7 @@ test_that("a vport-written xpt reads correctly in pyreadstat", {
   expect_identical(parsed$studyid_label, "Study Identifier")
 })
 
-test_that("a pyreadstat-written xpt reads correctly in vport", {
+test_that("a pyreadstat-written xpt reads correctly in artoo", {
   skip_on_cran()
   py <- py_with_pyreadstat()
   skip_if(py == "", "python3 + pyreadstat not available")

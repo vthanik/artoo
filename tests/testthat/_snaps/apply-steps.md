@@ -1,7 +1,7 @@
 # a duplicated spec variable aborts at construction, with the rows
 
     Code
-      vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
+      artoo_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
     Condition
       Error:
       ! `variables` defines 1 variable more than once.

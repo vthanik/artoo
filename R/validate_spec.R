@@ -1,11 +1,11 @@
-# validate_spec.R -- dataset-scoped spec validation -> vport_check.
+# validate_spec.R -- dataset-scoped spec validation -> artoo_check.
 #
 # Each check is a small vectorized `.chk_*` that returns a 0+ row findings
 # frame via `.finding()` (the shared constructor in findings.R); validate_spec()
 # binds them once. Severity and dimension for every finding come from the open
 # catalog (inst/spec_rules.json), the single source of truth, so code and
 # catalog cannot drift. validate_spec() runs the engine == "spec" rules; the
-# data-conformance (engine == "data") rules live in check_spec(). vport uses
+# data-conformance (engine == "data") rules live in check_spec(). artoo uses
 # its own behavioral check ids only.
 #
 # The findings model (catalog loader, .empty_findings/.finding/.bind_findings,
@@ -795,7 +795,7 @@
           "x" = "Got {length(scope)} datasets in scope.",
           "i" = "Name the dataset, or pass a named list of data frames."
         ),
-        class = "vport_error_input",
+        class = "artoo_error_input",
         call = call
       )
     }
@@ -809,7 +809,7 @@
       "{.arg data} must be a data frame or a named list of data frames.",
       "x" = "You supplied {.obj_type_friendly {data}}."
     ),
-    class = "vport_error_input",
+    class = "artoo_error_input",
     call = call
   )
 }
@@ -1066,9 +1066,9 @@
 
 #' Validate a specification for submission-readiness
 #'
-#' Run vport's bundled, self-contained checks over a `vport_spec`,
+#' Run artoo's bundled, self-contained checks over a `artoo_spec`,
 #' **scoped to the dataset(s) you are working on**, and return a
-#' `vport_check` that prints a sectioned report. Every finding is keyed to
+#' `artoo_check` that prints a sectioned report. Every finding is keyed to
 #' an open rule in the shipped catalog (see `spec_rules.json`); the result
 #' object keeps the findings as a plain data frame in `@findings` for
 #' programmatic use.
@@ -1084,7 +1084,7 @@
 #' `validate_spec()` does not abort on an error-severity finding unless
 #' `on_error = "abort"`.
 #'
-#' @param spec *The specification to validate.* `<vport_spec>: required`.
+#' @param spec *The specification to validate.* `<artoo_spec>: required`.
 #' @param data *Optional input data for controlled-terminology checks.*
 #'   `<data.frame> | named list | NULL`. When supplied, data values are
 #'   cross-checked against the spec codelists. A single data frame requires
@@ -1096,12 +1096,12 @@
 #' @param on_error *What to do with an error-severity finding.*
 #'   `<character(1)>`. One of:
 #'   * `"off"` (default) collect and return every finding; never signal.
-#'   * `"warn"` additionally `cli_warn` (`vport_warning_validation`) with
+#'   * `"warn"` additionally `cli_warn` (`artoo_warning_validation`) with
 #'     the error count.
-#'   * `"abort"` additionally abort with `vport_error_validation`.
+#'   * `"abort"` additionally abort with `artoo_error_validation`.
 #'   All findings are collected and returned in every case.
 #'
-#' @return *A `vport_check` object.* Its `@findings` data frame has columns
+#' @return *A `artoo_check` object.* Its `@findings` data frame has columns
 #'   `check`, `dimension`, `severity`, `dataset`, `variable`, `message`.
 #'   Print it for the sectioned report.
 #'
@@ -1110,7 +1110,7 @@
 #' #
 #' # Build a spec from the bundled tables and validate just ADSL; the
 #' # result prints a sectioned report and keeps the findings table.
-#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #' chk <- validate_spec(spec, dataset = "ADSL")
 #' chk@findings
 #'
@@ -1120,13 +1120,13 @@
 #' # and catch the resulting error.
 #' bad_ds <- cdisc_datasets
 #' bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
-#' bad <- vport_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
+#' bad <- artoo_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
 #' tryCatch(
 #'   validate_spec(bad, dataset = "DM", on_error = "abort"),
-#'   vport_error_validation = function(e) conditionMessage(e)[1]
+#'   artoo_error_validation = function(e) conditionMessage(e)[1]
 #' )
 #'
-#' @seealso [vport_spec()] to build a spec; [spec_methods()] /
+#' @seealso [artoo_spec()] to build a spec; [spec_methods()] /
 #'   [spec_comments()] for the metadata checked.
 #' @export
 validate_spec <- function(
@@ -1152,7 +1152,7 @@ validate_spec <- function(
   }
   rownames(findings) <- NULL
 
-  chk <- vport_check_class(
+  chk <- artoo_check_class(
     findings = findings,
     scope = sc$scope,
     study = .study_label(spec),
@@ -1175,18 +1175,18 @@ validate_spec <- function(
           c(
             "Spec is not submission-ready, {nerr} error-severity finding{?s}.",
             stats::setNames(.cli_escape(msgs), rep("x", length(msgs))),
-            "i" = "Inspect every finding in the returned vport_check."
+            "i" = "Inspect every finding in the returned artoo_check."
           ),
-          class = "vport_error_validation",
+          class = "artoo_error_validation",
           call = call
         )
       } else {
         cli::cli_warn(
           c(
             "Spec has {nerr} error-severity finding{?s}.",
-            "i" = "Inspect every finding in the returned vport_check."
+            "i" = "Inspect every finding in the returned artoo_check."
           ),
-          class = "vport_warning_validation",
+          class = "artoo_warning_validation",
           call = call
         )
       }

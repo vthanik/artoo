@@ -1,4 +1,4 @@
-# spec_check_report.R -- render a vport_check as a sectioned text report
+# spec_check_report.R -- render a artoo_check as a sectioned text report
 # (datacompy `.report()` style) and the S7 print/format methods.
 #
 # The renderer is the plain function `.format_check()` so it is testable
@@ -71,7 +71,7 @@
   num <- function(nm) if (is.null(s[[nm]])) 0L else s[[nm]]
 
   header <- c(
-    "vport Spec Check",
+    "artoo Spec Check",
     strrep("=", 16L),
     "",
     "Spec Summary",
@@ -115,28 +115,28 @@
 
 # ---- print / format ---------------------------------------------------------
 #
-# Plain S3 methods on the qualified S7 class name ("vport::vport_check" is the
+# Plain S3 methods on the qualified S7 class name ("artoo::artoo_check" is the
 # first entry of class()). NOT S7::method(print, ...)<-: that creates local
 # `print`/`format` bindings in the namespace, which hijack the S3 registration
-# of every plain *.vport_time method at load time (registerS3methods resolves
+# of every plain *.artoo_time method at load time (registerS3methods resolves
 # the generic in the package namespace and registers into the local stub's
 # methods table instead of base's), killing user-facing dispatch.
 
-#' @exportS3Method print vport::vport_check
-`print.vport::vport_check` <- function(x, ...) {
+#' @exportS3Method print artoo::artoo_check
+`print.artoo::artoo_check` <- function(x, ...) {
   cat(.format_check(x), sep = "\n")
   invisible(x)
 }
 
-#' @exportS3Method format vport::vport_check
-`format.vport::vport_check` <- function(x, ...) {
+#' @exportS3Method format artoo::artoo_check
+`format.artoo::artoo_check` <- function(x, ...) {
   .format_check(x)
 }
 
 # Hand the findings frame straight back, so as.data.frame(validate_spec(...))
 # is the documented path to the programmatic 6-column table. Plain S3 on the
 # qualified name, same reason as print/format above.
-#' @exportS3Method as.data.frame vport::vport_check
-`as.data.frame.vport::vport_check` <- function(x, ...) {
+#' @exportS3Method as.data.frame artoo::artoo_check
+`as.data.frame.artoo::artoo_check` <- function(x, ...) {
   x@findings
 }

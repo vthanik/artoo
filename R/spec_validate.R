@@ -1,7 +1,7 @@
-# spec_validate.R -- S7 validators for vport_spec and vport_meta.
+# spec_validate.R -- S7 validators for artoo_spec and artoo_meta.
 #
 # These run at construction (the last line of defence behind the friendly
-# vport_spec() constructor). Each returns NULL when valid or a character
+# artoo_spec() constructor). Each returns NULL when valid or a character
 # vector of issues, which S7 reports.
 
 # Check one slot's required columns and storage types. Returns a character
@@ -53,7 +53,7 @@
   issues
 }
 
-#' Validate a vport_spec
+#' Validate a artoo_spec
 #' @noRd
 .spec_validate <- function(self) {
   issues <- character(0)
@@ -203,7 +203,7 @@
   if (length(issues)) issues else NULL
 }
 
-#' Validate a vport_meta
+#' Validate a artoo_meta
 #' @noRd
 .meta_validate <- function(self) {
   issues <- character(0)
@@ -212,7 +212,7 @@
     if (is.null(names(cols)) || any(!nzchar(names(cols)))) {
       issues <- c(
         issues,
-        "vport_meta@columns must be a named list (keyed by variable)."
+        "artoo_meta@columns must be a named list (keyed by variable)."
       )
     }
     for (nm in names(cols)) {
@@ -223,7 +223,7 @@
         issues <- c(
           issues,
           sprintf(
-            "vport_meta column `%s` has a mismatched name field: %s.",
+            "artoo_meta column `%s` has a mismatched name field: %s.",
             nm,
             as.character(col$name)
           )
@@ -234,7 +234,7 @@
         issues <- c(
           issues,
           sprintf(
-            "vport_meta column `%s` has non-CDISC dataType: %s.",
+            "artoo_meta column `%s` has non-CDISC dataType: %s.",
             nm,
             dt
           )
@@ -245,7 +245,7 @@
         issues <- c(
           issues,
           sprintf(
-            "vport_meta column `%s` has non-CDISC targetDataType: %s.",
+            "artoo_meta column `%s` has non-CDISC targetDataType: %s.",
             nm,
             tdt
           )
@@ -257,7 +257,7 @@
           issues <- c(
             issues,
             sprintf(
-              "vport_meta column `%s` has a non-integer %s.",
+              "artoo_meta column `%s` has a non-integer %s.",
               nm,
               fld
             )
@@ -273,7 +273,7 @@
       issues <- c(
         issues,
         sprintf(
-          "vport_meta@dataset$keys reference unknown column%s: %s.",
+          "artoo_meta@dataset$keys reference unknown column%s: %s.",
           if (length(missing) > 1L) "s" else "",
           paste(missing, collapse = ", ")
         )

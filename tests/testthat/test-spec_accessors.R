@@ -3,7 +3,7 @@
 demo_spec <- function() {
   ds <- cdisc_datasets
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  vport_spec(
+  artoo_spec(
     ds,
     cdisc_variables,
     codelists = cdisc_codelists,
@@ -23,7 +23,7 @@ test_that("spec_variables() filters to one dataset or returns all", {
 })
 
 test_that("spec_variables() rejects an unknown dataset", {
-  expect_error(spec_variables(demo_spec(), "NOPE"), class = "vport_error_input")
+  expect_error(spec_variables(demo_spec(), "NOPE"), class = "artoo_error_input")
 })
 
 test_that("spec_codelists() returns one codelist's terms", {
@@ -34,7 +34,7 @@ test_that("spec_codelists() returns one codelist's terms", {
 test_that("spec_codelists() rejects an unknown codelist", {
   expect_error(
     spec_codelists(demo_spec(), "C00000"),
-    class = "vport_error_input"
+    class = "artoo_error_input"
   )
   # Attributes to the user's spec_codelists() call, not an internal frame.
   expect_snapshot(spec_codelists(demo_spec(), "C00000"), error = TRUE)
@@ -55,20 +55,20 @@ test_that("spec_study() returns the row or one field", {
 })
 
 test_that("spec_study() rejects an unknown field", {
-  expect_error(spec_study(demo_spec(), "nope"), class = "vport_error_input")
+  expect_error(spec_study(demo_spec(), "nope"), class = "artoo_error_input")
   expect_snapshot(spec_study(demo_spec(), "nope"), error = TRUE)
 })
 
 test_that("accessors reject a non-spec argument", {
-  expect_error(spec_datasets(mtcars), class = "vport_error_input")
-  expect_error(spec_variables(mtcars), class = "vport_error_input")
-  expect_error(spec_methods(mtcars), class = "vport_error_input")
-  expect_error(spec_comments(mtcars), class = "vport_error_input")
-  expect_error(spec_documents(mtcars), class = "vport_error_input")
+  expect_error(spec_datasets(mtcars), class = "artoo_error_input")
+  expect_error(spec_variables(mtcars), class = "artoo_error_input")
+  expect_error(spec_methods(mtcars), class = "artoo_error_input")
+  expect_error(spec_comments(mtcars), class = "artoo_error_input")
+  expect_error(spec_documents(mtcars), class = "artoo_error_input")
 })
 
 test_that("spec_methods/comments/documents return their slots", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "ADSL"),
     data.frame(
       dataset = "ADSL",
@@ -99,7 +99,7 @@ test_that("spec_methods/comments/documents return their slots", {
 })
 
 test_that("the supporting-metadata slots are empty by default", {
-  spec <- vport_spec(
+  spec <- artoo_spec(
     data.frame(dataset = "DM"),
     data.frame(dataset = "DM", variable = "AGE", data_type = "integer")
   )

@@ -23,7 +23,7 @@ apply_spec(
 \arguments{
 \item{x}{\emph{The raw data frame to conform.} \verb{<data.frame>: required}.}
 
-\item{spec}{\emph{The specification to conform to.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification to conform to.} \verb{<artoo_spec>: required}.}
 
 \item{dataset}{\emph{The dataset whose rules apply.} \verb{<character(1)>: required}. Must name a dataset in \code{spec}.}
 
@@ -32,7 +32,7 @@ apply_spec(
 \itemize{
 \item \code{"warn"} (default) run \code{\link[=check_spec]{check_spec()}}, attach the findings (read
 them with \code{\link[=conformance]{conformance()}}), warn on any error-severity finding.
-\item \code{"abort"} abort with \code{vport_error_conformance} on any error-severity
+\item \code{"abort"} abort with \code{artoo_error_conformance} on any error-severity
 finding.
 \item \code{"off"} skip the check entirely.
 }
@@ -56,7 +56,7 @@ dataType truncating fractional values (a height losing its decimals)
 or overflowing R's 32-bit range (values becoming \code{NA}) is a
 data-integrity event, not a nuisance.
 \item \code{"warn"} apply the lossy coercion and warn
-(\code{vport_warning_coercion}).
+(\code{artoo_warning_coercion}).
 }
 
 \strong{Tip:} \code{\link[=check_spec]{check_spec()}} flags the same conditions before any coercion
@@ -66,7 +66,7 @@ catches them without touching the data.}
 \item{trim}{\emph{Match codelist values after trimming whitespace.}
 \verb{<logical(1)>: default TRUE}. Real data carries trailing blanks; a value
 that matches only after trimming still decodes, with a
-\code{vport_warning_codelist} naming the variants. Membership \emph{checking}
+\code{artoo_warning_codelist} naming the variants. Membership \emph{checking}
 (\code{\link[=check_spec]{check_spec()}}) always compares exactly. Has no effect when
 \code{decode = "none"}.}
 
@@ -97,19 +97,19 @@ matching an existing pipeline's output during migration.
 \strong{Interaction:} mutually exclusive with \code{steps} (a profile \emph{is} a
 steps preset; supplying both aborts).}
 
-\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
-\code{\link[=vport_checks]{vport_checks()}} control to disable some. Has no effect when
+\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<artoo_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
+\code{\link[=artoo_checks]{artoo_checks()}} control to disable some. Has no effect when
 \code{conformance = "off"}.}
 }
 \value{
-\emph{A conformed \verb{<data.frame>}} carrying \code{vport_meta} (read it with
+\emph{A conformed \verb{<data.frame>}} carrying \code{artoo_meta} (read it with
 \code{\link[=get_meta]{get_meta()}}) and, unless \code{conformance = "off"}, the findings frame
 \code{\link[=conformance]{conformance()}} reads back. Hand it to any \verb{write_*()} codec.
 }
 \description{
-Run the ordered, transactional vport pipeline that turns a raw analysis
+Run the ordered, transactional artoo pipeline that turns a raw analysis
 data frame into one conformed to its specification and carrying
-\code{vport_meta}. This is the middle of the workflow (spec -> apply_spec ->
+\code{artoo_meta}. This is the middle of the workflow (spec -> apply_spec ->
 read_/write_): the conformed frame is ready for any \verb{write_*()} codec, and
 the metadata it now carries makes that write lossless. The input is never
 mutated; if any step aborts, the call leaves your data untouched.
@@ -126,7 +126,7 @@ metadata. Use \code{steps} to run a subset for surgical work.
 enforced by mutation. Opt in with \code{decode = "to_decode"} or \code{"to_code"}.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: conform ADSL, then read its metadata ----
 #

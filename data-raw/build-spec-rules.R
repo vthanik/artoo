@@ -1,7 +1,7 @@
 # build-spec-rules.R -- generate inst/spec_rules.json, the open catalog of
-# every spec-validation check vport runs (and the rules it defers).
+# every spec-validation check artoo runs (and the rules it defers).
 #
-# Hand-authored (no external rule catalog is copied or shipped); vport uses
+# Hand-authored (no external rule catalog is copied or shipped); artoo uses
 # its OWN behavioral check ids -- never another tool's rule numbering.
 # Re-run after adding/removing a check:
 #   Rscript data-raw/build-spec-rules.R
@@ -443,7 +443,7 @@ rules <- rbind(
     "error",
     "Analysis Results Metadata integrity.",
     status = "deferred",
-    reason = "needs ARM slots vport does not carry"
+    reason = "needs ARM slots artoo does not carry"
   ),
   rule(
     "codelist_term_standard_ct",

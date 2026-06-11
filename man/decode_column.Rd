@@ -19,7 +19,7 @@ decode_column(
 \arguments{
 \item{x}{\emph{The data frame to extend.} \verb{<data.frame>: required}.}
 
-\item{spec}{\emph{The specification carrying the codelists.} \verb{<vport_spec>: required}.}
+\item{spec}{\emph{The specification carrying the codelists.} \verb{<artoo_spec>: required}.}
 
 \item{dataset}{\emph{The dataset whose variables apply.} \verb{<character(1)>: required}. Must name a dataset in \code{spec}.}
 
@@ -70,12 +70,12 @@ the call aborts -- there is nothing to map through.
 
 \strong{Soft matches are reported, never silent.} Values that match only
 after trimming whitespace (or case-folding, when \code{ignore_case = TRUE})
-still map, with a \code{vport_warning_codelist} naming the variants --
+still map, with a \code{artoo_warning_codelist} naming the variants --
 \code{\link[=check_spec]{check_spec()}} always compares exactly, so clean the source for
 submission.
 }
 \examples{
-spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: decode a coded variable into a display column ----
 #
@@ -104,7 +104,7 @@ cls <- rbind(
     decode = c("F", "M"), order = 1:2
   )
 )
-spec_n <- vport_spec(cdisc_datasets, vars, codelists = cls)
+spec_n <- artoo_spec(cdisc_datasets, vars, codelists = cls)
 dm_n <- decode_column(cdisc_dm, spec_n, "DM",
   from = "SEX", to = "SEXN", direction = "to_code"
 )

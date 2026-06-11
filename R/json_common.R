@@ -104,7 +104,7 @@
             "x" = "NaN and infinite values are not valid in CDISC Dataset-JSON.",
             "i" = "Recode them to NA, or use a string dataType."
           ),
-          class = "vport_error_type",
+          class = "artoo_error_type",
           call = call
         )
       }
@@ -115,7 +115,7 @@
 }
 
 # The shared strict-mode gate of the json/ndjson writers: collect the
-# special-missing tags, and under `strict = TRUE` suppress every `_vport`
+# special-missing tags, and under `strict = TRUE` suppress every `_artoo`
 # extension with one loss warning naming exactly what is dropped. Returns the
 # `special` list to pass to .meta_payload() (NULL under strict).
 #' @noRd
@@ -137,11 +137,11 @@
   if (length(dropped)) {
     cli::cli_warn(
       c(
-        "strict = TRUE drops vport extensions from {.path {path}}.",
+        "strict = TRUE drops artoo extensions from {.path {path}}.",
         "x" = "Not carried: {dropped}.",
-        "i" = "Write with strict = FALSE to keep them in the _vport block."
+        "i" = "Write with strict = FALSE to keep them in the _artoo block."
       ),
-      class = "vport_warning_codec",
+      class = "artoo_warning_codec",
       call = call
     )
   }
@@ -153,7 +153,7 @@
 # tens of MB.
 #' @noRd
 .json_slab_rows <- function() {
-  max(1L, as.integer(getOption("vport.json_slab_rows", 100000L)))
+  max(1L, as.integer(getOption("artoo.json_slab_rows", 100000L)))
 }
 
 # Stream the `rows` of `x` to an open connection, one slab at a time:
@@ -167,7 +167,7 @@
     return(invisible(NULL))
   }
   nms <- names(x)
-  has_meta <- is_vport_meta(meta)
+  has_meta <- is_artoo_meta(meta)
   slab <- .json_slab_rows()
   starts <- seq.int(1L, nr, by = slab)
   pb <- NULL
