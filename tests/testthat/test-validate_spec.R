@@ -656,3 +656,91 @@ test_that("cross_dataset is silent when a shared variable is consistent", {
   expect_false(any(whole$check == "cross_dataset_label"))
   expect_false(any(whole$check == "cross_dataset_type"))
 })
+
+# ---- keySequence / order / itemOID integrity (checks expansion) -------------
+
+.ks_spec <- function(
+  key_sequence,
+  keys = NA_character_,
+  orders = NULL,
+  itemoids = NULL
+) {
+  vars <- data.frame(
+    dataset = "DM",
+    variable = c("STUDYID", "USUBJID", "AGE"),
+    label = c("Study", "Subject", "Age"),
+    data_type = c("string", "string", "integer"),
+    length = c(10L, 12L, 8L),
+    key_sequence = key_sequence,
+    stringsAsFactors = FALSE
+  )
+  if (!is.null(orders)) {
+    vars$order <- orders
+  }
+  if (!is.null(itemoids)) {
+    vars$itemoid <- itemoids
+  }
+  vport_spec(
+    data.frame(dataset = "DM", label = "Demographics", keys = keys),
+    vars
+  )
+}
+
+test_that("key_sequence_contiguous flags gaps and duplicates", {
+  ok <- validate_spec(.ks_spec(c(1L, 2L, NA)))
+  expect_false(any(ok@findings$check == "key_sequence_contiguous"))
+
+  gap <- validate_spec(.ks_spec(c(1L, 3L, NA)))
+  expect_true(any(gap@findings$check == "key_sequence_contiguous"))
+
+  dup <- validate_spec(.ks_spec(c(1L, 1L, NA)))
+  expect_true(any(dup@findings$check == "key_sequence_contiguous"))
+
+  none <- validate_spec(.ks_spec(c(NA_integer_, NA_integer_, NA_integer_)))
+  expect_false(any(none@findings$check == "key_sequence_contiguous"))
+})
+
+test_that("key_sequence_matches_keys flags disagreement with declared keys", {
+  agree <- validate_spec(.ks_spec(c(1L, 2L, NA), keys = "STUDYID USUBJID"))
+  expect_false(any(agree@findings$check == "key_sequence_matches_keys"))
+
+  disagree <- validate_spec(.ks_spec(c(2L, 1L, NA), keys = "STUDYID USUBJID"))
+  expect_true(any(disagree@findings$check == "key_sequence_matches_keys"))
+
+  # keys declared, no keySequence at all -> nothing to compare, no finding.
+  silent <- validate_spec(.ks_spec(
+    c(NA_integer_, NA_integer_, NA_integer_),
+    keys = "STUDYID USUBJID"
+  ))
+  expect_false(any(silent@findings$check == "key_sequence_matches_keys"))
+})
+
+test_that("variable_order_unique flags duplicate order values per dataset", {
+  dup <- validate_spec(.ks_spec(
+    c(NA_integer_, NA_integer_, NA_integer_),
+    orders = c(1L, 1L, 2L)
+  ))
+  expect_true(any(dup@findings$check == "variable_order_unique"))
+
+  ok <- validate_spec(.ks_spec(
+    c(NA_integer_, NA_integer_, NA_integer_),
+    orders = c(1L, 2L, 3L)
+  ))
+  expect_false(any(ok@findings$check == "variable_order_unique"))
+})
+
+test_that("itemoid_unique flags a duplicated itemOID across the spec", {
+  dup <- validate_spec(.ks_spec(
+    c(NA_integer_, NA_integer_, NA_integer_),
+    itemoids = c("IT.DM.A", "IT.DM.A", "IT.DM.AGE")
+  ))
+  io <- dup@findings[dup@findings$check == "itemoid_unique", ]
+  expect_true(nrow(io) >= 1L)
+  expect_identical(unique(io$severity), "error")
+
+  ok <- validate_spec(.ks_spec(
+    c(NA_integer_, NA_integer_, NA_integer_),
+    itemoids = c("IT.DM.STUDYID", "IT.DM.USUBJID", "IT.DM.AGE")
+  ))
+  expect_false(any(ok@findings$check == "itemoid_unique"))
+})

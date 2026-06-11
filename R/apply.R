@@ -82,6 +82,16 @@
 #' @param no_match *Policy for values absent from a codelist when decoding.*
 #'   `<character(1)>`. One of `"error"` (default), `"keep"`, or `"na"`. Has
 #'   no effect when `decode = "none"`.
+#' @param trim *Match codelist values after trimming whitespace.*
+#'   `<logical(1)>: default TRUE`. Real data carries trailing blanks; a value
+#'   that matches only after trimming still decodes, with a
+#'   `vport_warning_codelist` naming the variants. Membership *checking*
+#'   ([check_spec()]) always compares exactly. Has no effect when
+#'   `decode = "none"`.
+#' @param ignore_case *Match codelist values case-insensitively.*
+#'   `<logical(1)>: default FALSE`. Case differences are usually genuine CT
+#'   violations, so this is opt-in; a case-only match warns like `trim`. Has
+#'   no effect when `decode = "none"`.
 #' @param na_position *Where missing key values sort.* `<character(1)>`. One
 #'   of `"first"` (default) or `"last"`. `"first"` matches SAS `PROC SORT`
 #'   (and the FDA submission convention) by ordering missings before present
@@ -129,6 +139,8 @@ apply_spec <- function(
   on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  trim = TRUE,
+  ignore_case = FALSE,
   na_position = c("first", "last"),
   steps = NULL,
   checks = NULL
@@ -138,6 +150,19 @@ apply_spec <- function(
   decode <- match.arg(decode)
   no_match <- match.arg(no_match)
   na_position <- match.arg(na_position)
+  for (flag in c("trim", "ignore_case")) {
+    fv <- get(flag)
+    if (!is.logical(fv) || length(fv) != 1L || is.na(fv)) {
+      cli::cli_abort(
+        c(
+          "{.arg {flag}} must be a single TRUE or FALSE.",
+          "x" = "You supplied {.obj_type_friendly {fv}}."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+  }
 
   if (!is.data.frame(x)) {
     cli::cli_abort(
@@ -165,7 +190,16 @@ apply_spec <- function(
     out <- .coerce_types(out, info, call)
   }
   if ("decode" %in% run) {
-    out <- .decode_codelists(out, info, spec, decode, no_match, call)
+    out <- .decode_codelists(
+      out,
+      info,
+      spec,
+      decode,
+      no_match,
+      trim,
+      ignore_case,
+      call
+    )
   }
   if ("order" %in% run) {
     out <- .order_cols(out, info, call)

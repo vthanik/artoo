@@ -493,6 +493,129 @@
   )
 }
 
+# keySequence integrity: per dataset, the non-NA keySequence values must be
+# exactly 1..k with no gaps or duplicates (a sort cannot be reconstructed
+# from a gapped or ambiguous sequence).
+#' @noRd
+.chk_key_sequence_contiguous <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("key_sequence" %in% names(v))) {
+    return(.empty_findings())
+  }
+  parts <- lapply(sc$scope, function(ds) {
+    ks <- v$key_sequence[!is.na(v$dataset) & v$dataset == ds]
+    ks <- ks[!is.na(ks)]
+    if (!length(ks)) {
+      return(NULL)
+    }
+    if (identical(sort(as.integer(ks)), seq_along(ks))) {
+      return(NULL)
+    }
+    .finding(
+      "key_sequence_contiguous",
+      ds,
+      NA_character_,
+      sprintf(
+        "Dataset '%s' keySequence values are {%s}, not 1..%d.",
+        ds,
+        paste(sort(as.integer(ks)), collapse = ", "),
+        length(ks)
+      )
+    )
+  })
+  .bind_findings(parts)
+}
+
+# keySequence vs declared keys: when a dataset declares BOTH, the variables
+# ordered by keySequence must equal the keys list, in order.
+#' @noRd
+.chk_key_sequence_matches_keys <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("key_sequence" %in% names(v))) {
+    return(.empty_findings())
+  }
+  parts <- lapply(sc$scope, function(ds) {
+    keys <- spec_keys(sc$spec, ds)
+    if (!length(keys)) {
+      return(NULL)
+    }
+    rows <- !is.na(v$dataset) & v$dataset == ds & !is.na(v$key_sequence)
+    if (!any(rows)) {
+      return(NULL)
+    }
+    by_seq <- v$variable[rows][order(v$key_sequence[rows])]
+    if (identical(by_seq, keys)) {
+      return(NULL)
+    }
+    .finding(
+      "key_sequence_matches_keys",
+      ds,
+      NA_character_,
+      sprintf(
+        "Dataset '%s' keySequence orders (%s) but the declared keys are (%s).",
+        ds,
+        paste(by_seq, collapse = ", "),
+        paste(keys, collapse = ", ")
+      )
+    )
+  })
+  .bind_findings(parts)
+}
+
+# Duplicate order values within a dataset make the variable ordering
+# ambiguous (variable_order_positive covers the sign; this covers clashes).
+#' @noRd
+.chk_variable_order_unique <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("order" %in% names(v))) {
+    return(.empty_findings())
+  }
+  parts <- lapply(sc$scope, function(ds) {
+    rows <- !is.na(v$dataset) & v$dataset == ds & !is.na(v$order)
+    if (!any(rows)) {
+      return(NULL)
+    }
+    ord <- v$order[rows]
+    dup <- unique(ord[duplicated(ord)])
+    if (!length(dup)) {
+      return(NULL)
+    }
+    .finding(
+      "variable_order_unique",
+      ds,
+      NA_character_,
+      sprintf(
+        "Dataset '%s' declares duplicate variable order value(s): %s.",
+        ds,
+        paste(sort(dup), collapse = ", ")
+      )
+    )
+  })
+  .bind_findings(parts)
+}
+
+# itemOIDs identify variables across the whole spec (Dataset-JSON requires
+# uniqueness); a duplicate would collide on write.
+#' @noRd
+.chk_itemoid_unique <- function(sc) {
+  v <- sc$variables
+  if (!nrow(v) || !("itemoid" %in% names(v))) {
+    return(.empty_findings())
+  }
+  oid <- trimws(as.character(v$itemoid))
+  keep <- !.blank(v$itemoid)
+  dup <- unique(oid[keep][duplicated(oid[keep])])
+  if (!length(dup)) {
+    return(.empty_findings())
+  }
+  .finding(
+    "itemoid_unique",
+    NA_character_,
+    NA_character_,
+    sprintf("itemOID '%s' is declared more than once across the spec.", dup)
+  )
+}
+
 # Cross-dataset consistency (whole-spec only): a variable shared by more than
 # one dataset should carry the same label and data type everywhere. One finding
 # per shared variable per dimension, keyed to the variable (dataset = NA).
@@ -775,9 +898,13 @@
     .chk_variable_length(sc),
     .chk_variable_sigdigits(sc),
     .chk_variable_order(sc),
+    .chk_variable_order_unique(sc),
     .chk_variable_length_for_text(sc),
     .chk_variable_name_length(sc),
     .chk_variable_label_length(sc),
+    .chk_key_sequence_contiguous(sc),
+    .chk_key_sequence_matches_keys(sc),
+    .chk_itemoid_unique(sc),
     .chk_variable_method_resolves(sc),
     .chk_variable_comment_resolves(sc),
     .chk_variable_derived_has_method(sc),
@@ -892,9 +1019,13 @@
     "variable_length_positive",
     "variable_sigdigits_nonneg",
     "variable_order_positive",
+    "variable_order_unique",
     "variable_length_for_text",
     "variable_name_length",
     "variable_label_length",
+    "key_sequence_contiguous",
+    "key_sequence_matches_keys",
+    "itemoid_unique",
     "cross_dataset_label",
     "cross_dataset_type",
     "variable_method_resolves",

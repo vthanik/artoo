@@ -11,9 +11,14 @@
         [x] length_overflow
         [x] char_length_limit
         [x] codelist_membership
+        [x] codelist_membership_extensible
         [x] label_match
         [x] key_uniqueness
         [x] display_format
+        [x] variable_name
+        [x] dataset_name
+        [x] label_length
+        [x] integer_overflow
 
 ---
 
@@ -28,7 +33,12 @@
         [ ] length_overflow
         [x] char_length_limit
         [x] codelist_membership
+        [x] codelist_membership_extensible
         [x] label_match
         [x] key_uniqueness
         [x] display_format
+        [x] variable_name
+        [x] dataset_name
+        [x] label_length
+        [x] integer_overflow
 

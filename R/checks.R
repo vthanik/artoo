@@ -15,9 +15,14 @@
   "length_overflow",
   "char_length_limit",
   "codelist_membership",
+  "codelist_membership_extensible",
   "label_match",
   "key_uniqueness",
-  "display_format"
+  "display_format",
+  "variable_name",
+  "dataset_name",
+  "label_length",
+  "integer_overflow"
 )
 
 #' Control which conformance checks run
@@ -46,8 +51,13 @@
 #'   `<logical(1)>: default TRUE`.
 #' @param char_length_limit *Flag character values longer than the SAS XPORT
 #'   v5 / FDA 200-byte limit.* `<logical(1)>: default TRUE`.
-#' @param codelist_membership *Flag values outside their codelist.*
+#' @param codelist_membership *Flag values outside their closed codelist.*
 #'   `<logical(1)>: default TRUE`.
+#' @param codelist_membership_extensible *Flag values outside an extensible
+#'   codelist's enumerated terms.* `<logical(1)>: default TRUE`. A codelist
+#'   whose `extended` flag is `TRUE` allows sponsor terms, so a non-member is
+#'   a note, never an error; this toggle silences those notes independently
+#'   of `codelist_membership`.
 #' @param label_match *Flag a column whose label attribute differs from the
 #'   spec label.* `<logical(1)>: default TRUE`.
 #' @param key_uniqueness *Flag a dataset whose spec key variables do not
@@ -55,6 +65,17 @@
 #' @param display_format *Flag a date/datetime/time variable whose
 #'   displayFormat is not a recognized SAS format of that family.*
 #'   `<logical(1)>: default TRUE`.
+#' @param variable_name *Flag a data column name that violates the XPORT
+#'   naming rules.* `<logical(1)>: default TRUE`. Over 8 characters (the v5
+#'   limit), over 32 (the v8 limit), or containing anything but ASCII
+#'   letters, digits, and underscore.
+#' @param dataset_name *Flag a dataset name that violates the XPORT naming
+#'   rules.* `<logical(1)>: default TRUE`. Same limits as `variable_name`.
+#' @param label_length *Flag a column label attribute over the 40-byte XPORT
+#'   v5 / FDA limit.* `<logical(1)>: default TRUE`.
+#' @param integer_overflow *Flag an integer-typed variable holding values
+#'   beyond R's 32-bit integer range.* `<logical(1)>: default TRUE`. Such
+#'   values become `NA` under coercion, so this is an error, not a warning.
 #'
 #' @return *A `<vport_checks>` control object*. Pass it as the `checks`
 #'   argument to [check_spec()] or [apply_spec()].
@@ -83,9 +104,14 @@ vport_checks <- function(
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
+  codelist_membership_extensible = TRUE,
   label_match = TRUE,
   key_uniqueness = TRUE,
-  display_format = TRUE
+  display_format = TRUE,
+  variable_name = TRUE,
+  dataset_name = TRUE,
+  label_length = TRUE,
+  integer_overflow = TRUE
 ) {
   call <- rlang::caller_env()
   toggles <- list(
@@ -96,9 +122,14 @@ vport_checks <- function(
     length_overflow = length_overflow,
     char_length_limit = char_length_limit,
     codelist_membership = codelist_membership,
+    codelist_membership_extensible = codelist_membership_extensible,
     label_match = label_match,
     key_uniqueness = key_uniqueness,
-    display_format = display_format
+    display_format = display_format,
+    variable_name = variable_name,
+    dataset_name = dataset_name,
+    label_length = label_length,
+    integer_overflow = integer_overflow
   )
   for (nm in names(toggles)) {
     v <- toggles[[nm]]

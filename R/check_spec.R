@@ -135,6 +135,28 @@ check_spec <- function(
     )
   }
 
+  # XPORT naming rules on the ACTUAL columns (the spec-side
+  # variable_name_length rule covers declared names; this one also catches
+  # extra/renamed columns and bad characters before a write aborts).
+  if (checks$variable_name) {
+    bad <- .xpt_name_problems(names(x))
+    found[[length(found) + 1L]] <- .finding(
+      "variable_name",
+      dataset,
+      names(bad),
+      sprintf("Column name '%s' %s.", names(bad), unname(bad))
+    )
+  }
+  if (checks$dataset_name) {
+    badds <- .xpt_name_problems(dataset)
+    found[[length(found) + 1L]] <- .finding(
+      "dataset_name",
+      dataset,
+      NA_character_,
+      sprintf("Dataset name '%s' %s.", names(badds), unname(badds))
+    )
+  }
+
   # Per-variable: type mismatch, length overflow, codelist membership,
   # displayFormat validity.
   for (i in seq_len(nrow(vars))) {
@@ -200,6 +222,47 @@ check_spec <- function(
       }
     }
 
+    # 32-bit overflow: an integer-typed variable carried as double (or text)
+    # can hold values R's integer cannot; coercion would turn them NA.
+    if (checks$integer_overflow && identical(dt, "integer")) {
+      nv <- suppressWarnings(as.numeric(col))
+      over <- !is.na(nv) & abs(nv) > .Machine$integer.max
+      if (any(over)) {
+        found[[length(found) + 1L]] <- .finding(
+          "integer_overflow",
+          dataset,
+          v,
+          sprintf(
+            "'%s' has %d value(s) beyond R's 32-bit integer range (max %s); coercion would lose them to NA.",
+            v,
+            sum(over),
+            format(.Machine$integer.max, big.mark = ",")
+          )
+        )
+      }
+    }
+
+    # Label-attribute byte limit (the spec-side variable_label_length rule
+    # covers spec labels; this one catches labels carried only as attributes).
+    if (checks$label_length) {
+      col_lab <- attr(col, "label", exact = TRUE)
+      if (!is.null(col_lab)) {
+        labb <- nchar(as.character(col_lab), type = "bytes")
+        if (labb > 40L) {
+          found[[length(found) + 1L]] <- .finding(
+            "label_length",
+            dataset,
+            v,
+            sprintf(
+              "'%s' label attribute is %d bytes, over the 40-byte XPORT v5 / FDA limit.",
+              v,
+              labb
+            )
+          )
+        }
+      }
+    }
+
     if (checks$label_match) {
       col_lab <- attr(col, "label", exact = TRUE)
       spec_lab <- vars$label[i]
@@ -223,26 +286,47 @@ check_spec <- function(
     }
 
     clid <- vars$codelist_id[i]
-    if (checks$codelist_membership && !is.na(clid)) {
+    if (
+      (checks$codelist_membership || checks$codelist_membership_extensible) &&
+        !is.na(clid)
+    ) {
       clrows <- spec_codelists(spec, clid)
-      terms <- if (decode == "to_decode") clrows$decode else clrows$term
-      terms <- terms[!is.na(terms)]
-      mand <- "mandatory" %in% names(vars) && isTRUE(vars$mandatory[i])
-      bad <- .codelist_violations(col, terms, mand)
-      if (length(bad)) {
-        shown <- ifelse(is.na(bad), "<NA>", as.character(bad))
-        found[[length(found) + 1L]] <- .finding(
-          "codelist_membership",
-          dataset,
-          v,
-          sprintf(
-            "'%s' has %d value(s) outside codelist '%s': %s.",
+      # An extensible codelist (extended = TRUE) enumerates examples, not the
+      # closed universe: a non-member is a note (sponsor term), not an error.
+      extensible <- "extended" %in%
+        names(clrows) &&
+        any(clrows$extended %in% TRUE)
+      check_id <- if (extensible) {
+        "codelist_membership_extensible"
+      } else {
+        "codelist_membership"
+      }
+      run <- if (extensible) {
+        checks$codelist_membership_extensible
+      } else {
+        checks$codelist_membership
+      }
+      if (run) {
+        terms <- if (decode == "to_decode") clrows$decode else clrows$term
+        terms <- terms[!is.na(terms)]
+        mand <- "mandatory" %in% names(vars) && isTRUE(vars$mandatory[i])
+        bad <- .codelist_violations(col, terms, mand)
+        if (length(bad)) {
+          shown <- ifelse(is.na(bad), "<NA>", as.character(bad))
+          found[[length(found) + 1L]] <- .finding(
+            check_id,
+            dataset,
             v,
-            length(bad),
-            clid,
-            paste(shown[seq_len(min(5L, length(shown)))], collapse = ", ")
+            sprintf(
+              "'%s' has %d value(s) outside %scodelist '%s': %s.",
+              v,
+              length(bad),
+              if (extensible) "extensible " else "",
+              clid,
+              paste(shown[seq_len(min(5L, length(shown)))], collapse = ", ")
+            )
           )
-        )
+        }
       }
     }
 
@@ -301,6 +385,35 @@ check_spec <- function(
   }
 
   .bind_findings(found)
+}
+
+# XPORT naming problems for a vector of names: returns a named character
+# vector (name -> problem phrase), empty when all conform. The v5 profile is
+# 1-8 ASCII letters/digits/underscore not starting with a digit; v8 extends
+# the length to 32. One phrase per name (the worst problem wins).
+#' @noRd
+.xpt_name_problems <- function(nms) {
+  out <- character(0)
+  n <- nchar(nms)
+  bad_chars <- !grepl("^[A-Za-z_][A-Za-z0-9_]*$", nms)
+  for (i in seq_along(nms)) {
+    if (bad_chars[i]) {
+      out[nms[
+        i
+      ]] <- "contains characters outside ASCII letters, digits, and underscore"
+    } else if (n[i] > 32L) {
+      out[nms[i]] <- sprintf(
+        "is %d characters, over the 32-character XPORT v8 limit",
+        n[i]
+      )
+    } else if (n[i] > 8L) {
+      out[nms[i]] <- sprintf(
+        "is %d characters, over the 8-character XPORT v5 limit",
+        n[i]
+      )
+    }
+  }
+  out
 }
 
 # The vport storage mode of a column ("character"/"integer"/"double"/

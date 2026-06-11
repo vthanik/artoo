@@ -11,6 +11,8 @@ apply_spec(
   on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  trim = TRUE,
+  ignore_case = FALSE,
   na_position = c("first", "last"),
   steps = NULL,
   checks = NULL
@@ -39,6 +41,18 @@ finding.
 
 \item{no_match}{\emph{Policy for values absent from a codelist when decoding.}
 \verb{<character(1)>}. One of \code{"error"} (default), \code{"keep"}, or \code{"na"}. Has
+no effect when \code{decode = "none"}.}
+
+\item{trim}{\emph{Match codelist values after trimming whitespace.}
+\verb{<logical(1)>: default TRUE}. Real data carries trailing blanks; a value
+that matches only after trimming still decodes, with a
+\code{vport_warning_codelist} naming the variants. Membership \emph{checking}
+(\code{\link[=check_spec]{check_spec()}}) always compares exactly. Has no effect when
+\code{decode = "none"}.}
+
+\item{ignore_case}{\emph{Match codelist values case-insensitively.}
+\verb{<logical(1)>: default FALSE}. Case differences are usually genuine CT
+violations, so this is opt-in; a case-only match warns like \code{trim}. Has
 no effect when \code{decode = "none"}.}
 
 \item{na_position}{\emph{Where missing key values sort.} \verb{<character(1)>}. One

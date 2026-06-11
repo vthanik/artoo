@@ -12,9 +12,14 @@ vport_checks(
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
+  codelist_membership_extensible = TRUE,
   label_match = TRUE,
   key_uniqueness = TRUE,
-  display_format = TRUE
+  display_format = TRUE,
+  variable_name = TRUE,
+  dataset_name = TRUE,
+  label_length = TRUE,
+  integer_overflow = TRUE
 )
 }
 \arguments{
@@ -36,8 +41,14 @@ dataType.} \verb{<logical(1)>: default TRUE}.}
 \item{char_length_limit}{\emph{Flag character values longer than the SAS XPORT
 v5 / FDA 200-byte limit.} \verb{<logical(1)>: default TRUE}.}
 
-\item{codelist_membership}{\emph{Flag values outside their codelist.}
+\item{codelist_membership}{\emph{Flag values outside their closed codelist.}
 \verb{<logical(1)>: default TRUE}.}
+
+\item{codelist_membership_extensible}{\emph{Flag values outside an extensible
+codelist's enumerated terms.} \verb{<logical(1)>: default TRUE}. A codelist
+whose \code{extended} flag is \code{TRUE} allows sponsor terms, so a non-member is
+a note, never an error; this toggle silences those notes independently
+of \code{codelist_membership}.}
 
 \item{label_match}{\emph{Flag a column whose label attribute differs from the
 spec label.} \verb{<logical(1)>: default TRUE}.}
@@ -48,6 +59,21 @@ uniquely identify its rows.} \verb{<logical(1)>: default TRUE}.}
 \item{display_format}{\emph{Flag a date/datetime/time variable whose
 displayFormat is not a recognized SAS format of that family.}
 \verb{<logical(1)>: default TRUE}.}
+
+\item{variable_name}{\emph{Flag a data column name that violates the XPORT
+naming rules.} \verb{<logical(1)>: default TRUE}. Over 8 characters (the v5
+limit), over 32 (the v8 limit), or containing anything but ASCII
+letters, digits, and underscore.}
+
+\item{dataset_name}{\emph{Flag a dataset name that violates the XPORT naming
+rules.} \verb{<logical(1)>: default TRUE}. Same limits as \code{variable_name}.}
+
+\item{label_length}{\emph{Flag a column label attribute over the 40-byte XPORT
+v5 / FDA limit.} \verb{<logical(1)>: default TRUE}.}
+
+\item{integer_overflow}{\emph{Flag an integer-typed variable holding values
+beyond R's 32-bit integer range.} \verb{<logical(1)>: default TRUE}. Such
+values become \code{NA} under coercion, so this is an error, not a warning.}
 }
 \value{
 \emph{A \verb{<vport_checks>} control object}. Pass it as the \code{checks}

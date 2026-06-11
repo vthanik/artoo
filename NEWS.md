@@ -1,5 +1,30 @@
 # vport 0.0.0.9000
 
+* `apply_spec()` decode matching gained `trim` (default `TRUE`: a value that
+  matches a codelist only after whitespace trimming still decodes, with a
+  `vport_warning_codelist` naming the variants) and `ignore_case` (opt-in
+  case-insensitive matching, same warning). Membership *checking* still
+  compares exactly. The coercion warning now names 32-bit integer overflow
+  precisely instead of a generic NA-introduction message.
+* `check_spec()` gained five conformance dimensions, each with a
+  `vport_checks()` toggle: `variable_name` and `dataset_name` (XPORT naming
+  rules on the actual columns and dataset name: 8-character v5 limit,
+  32-character v8 limit, ASCII letters/digits/underscore), `label_length`
+  (a column label attribute over the 40-byte XPORT v5 / FDA limit),
+  `integer_overflow` (an integer-typed variable holding values beyond R's
+  32-bit range, an error since coercion would lose them to NA), and
+  `codelist_membership_extensible` (a non-member of an `extended = TRUE`
+  codelist is a note naming a sponsor term, never an error).
+* `validate_spec()` gained four spec-integrity rules:
+  `key_sequence_contiguous` (keySequence must be 1..k, no gaps or
+  duplicates), `key_sequence_matches_keys` (keySequence must agree with the
+  dataset's declared keys), `variable_order_unique` (no duplicate order
+  values within a dataset), and `itemoid_unique` (itemOIDs unique across the
+  spec).
+* `data-raw/build-spec-rules.R` is again the single source of the shipped
+  rule catalog: eight rules previously hand-added to `inst/spec_rules.json`
+  were folded back into the build script, and the regenerated catalog now
+  has 58 rules.
 * New `read_ndjson()` / `write_ndjson()`: the newline-delimited variant of
   CDISC Dataset-JSON v1.1 (`.ndjson`, `.jsonl`). Line 1 carries the complete
   metadata block; each following line is one row array. Memory stays bounded

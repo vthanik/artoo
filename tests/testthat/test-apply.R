@@ -178,3 +178,50 @@ test_that("coercion warns when an integer dataType truncates fractions (review B
     class = "vport_warning_coercion"
   )
 })
+
+# ---- decode flag validation + overflow warning (checks expansion) -----------
+
+test_that("apply_spec validates trim and ignore_case as single flags", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      label = "Subject",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  df <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
+  expect_error(
+    apply_spec(df, spec, "DM", trim = "yes"),
+    class = "vport_error_input"
+  )
+  expect_error(
+    apply_spec(df, spec, "DM", ignore_case = NA),
+    class = "vport_error_input"
+  )
+})
+
+test_that("integer overflow under coercion is named precisely", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "SUBJN",
+      label = "Subject Number",
+      data_type = "integer",
+      stringsAsFactors = FALSE
+    )
+  )
+  df <- data.frame(SUBJN = c(1, 9999999999))
+  expect_warning(
+    expect_warning(
+      out <- apply_spec(df, spec, "DM", on_error = "off"),
+      class = "vport_warning_coercion",
+      regexp = "overflowed"
+    ),
+    class = "vport_warning_coercion"
+  )
+  expect_identical(as.vector(out$SUBJN), c(1L, NA))
+})

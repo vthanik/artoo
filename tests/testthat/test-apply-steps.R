@@ -241,3 +241,94 @@ test_that(".storage_of recognises integer and logical columns", {
   expect_identical(vport:::.storage_of(c(TRUE, FALSE)), "logical")
   expect_identical(vport:::.storage_of(complex(1)), NA_character_)
 })
+
+# ---- decode matching: trim + case options (checks expansion) ----------------
+
+.trim_spec <- function() {
+  vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      label = "Sex",
+      data_type = "string",
+      codelist_id = "CL.SEX",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.SEX",
+      term = c("M", "F"),
+      decode = c("Male", "Female"),
+      stringsAsFactors = FALSE
+    )
+  )
+}
+
+test_that("decode trims whitespace by default and warns about the variants", {
+  df <- data.frame(SEX = c("M ", " F", "M"), stringsAsFactors = FALSE)
+  expect_warning(
+    out <- apply_spec(
+      df,
+      .trim_spec(),
+      "DM",
+      decode = "to_decode",
+      on_error = "off"
+    ),
+    class = "vport_warning_codelist"
+  )
+  expect_identical(as.vector(out$SEX), c("Male", "Female", "Male"))
+})
+
+test_that("trim = FALSE restores exact matching", {
+  df <- data.frame(SEX = c("M ", "F"), stringsAsFactors = FALSE)
+  expect_error(
+    apply_spec(
+      df,
+      .trim_spec(),
+      "DM",
+      decode = "to_decode",
+      trim = FALSE,
+      on_error = "off"
+    ),
+    class = "vport_error_codelist"
+  )
+})
+
+test_that("ignore_case = TRUE matches case variants and warns", {
+  df <- data.frame(SEX = c("m", "F"), stringsAsFactors = FALSE)
+  expect_error(
+    apply_spec(df, .trim_spec(), "DM", decode = "to_decode", on_error = "off"),
+    class = "vport_error_codelist"
+  )
+  expect_warning(
+    out <- apply_spec(
+      df,
+      .trim_spec(),
+      "DM",
+      decode = "to_decode",
+      ignore_case = TRUE,
+      on_error = "off"
+    ),
+    class = "vport_warning_codelist"
+  )
+  expect_identical(as.vector(out$SEX), c("Male", "Female"))
+})
+
+test_that("exact matches never warn", {
+  df <- data.frame(SEX = c("M", "F"), stringsAsFactors = FALSE)
+  expect_no_warning(
+    apply_spec(df, .trim_spec(), "DM", decode = "to_decode", on_error = "off")
+  )
+})
+
+test_that("decode skips a coded variable absent from the data", {
+  out <- suppressWarnings(apply_spec(
+    data.frame(OTHER = "x", stringsAsFactors = FALSE),
+    .trim_spec(),
+    "DM",
+    decode = "to_decode",
+    steps = c("decode"),
+    on_error = "off"
+  ))
+  expect_identical(out$OTHER, "x")
+})

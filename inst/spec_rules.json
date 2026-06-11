@@ -352,6 +352,94 @@
     "engine": "spec"
   },
   {
+    "id": "variable_name_length",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable name exceeds the SAS XPORT v5 8-character limit.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "variable_label_length",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable label exceeds the SAS XPORT v5 / FDA 40-byte limit.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "cross_dataset_label",
+    "dimension": "variable",
+    "severity": "note",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A variable shared across datasets carries inconsistent labels.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "cross_dataset_type",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A variable shared across datasets carries inconsistent data types.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "key_sequence_contiguous",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset's keySequence values are not 1..k without gaps or duplicates.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "key_sequence_matches_keys",
+    "dimension": "dataset",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset's keySequence disagrees with its declared keys.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "variable_order_unique",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A dataset declares the same order value for more than one variable.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
+    "id": "itemoid_unique",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A variable itemOID is declared more than once across the spec.",
+    "reason": null,
+    "engine": "spec"
+  },
+  {
     "id": "missing_variable",
     "dimension": "variable",
     "severity": "error",
@@ -418,6 +506,17 @@
     "engine": "data"
   },
   {
+    "id": "missing_permissible",
+    "dimension": "variable",
+    "severity": "warning",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A permissible (non-mandatory) spec variable is absent from the data.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
     "id": "char_length_limit",
     "dimension": "variable",
     "severity": "warning",
@@ -425,17 +524,6 @@
     "scope": "scoped",
     "status": "implemented",
     "description": "A character value exceeds the SAS XPORT v5 / FDA 200-byte limit.",
-    "reason": null,
-    "engine": "data"
-  },
-  {
-    "id": "key_uniqueness",
-    "dimension": "dataset",
-    "severity": "error",
-    "requires_data": true,
-    "scope": "scoped",
-    "status": "implemented",
-    "description": "The spec-declared key variables do not uniquely identify the data rows.",
     "reason": null,
     "engine": "data"
   },
@@ -451,59 +539,70 @@
     "engine": "data"
   },
   {
-    "id": "missing_permissible",
+    "id": "key_uniqueness",
+    "dimension": "dataset",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "The spec-declared key variables do not uniquely identify the data rows.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "variable_name",
     "dimension": "variable",
     "severity": "warning",
     "requires_data": true,
     "scope": "scoped",
     "status": "implemented",
-    "description": "A permissible (non-mandatory) spec variable is absent from the data.",
+    "description": "A data column name violates the XPORT naming rules (length or characters).",
     "reason": null,
     "engine": "data"
   },
   {
-    "id": "variable_name_length",
-    "dimension": "variable",
+    "id": "dataset_name",
+    "dimension": "dataset",
     "severity": "warning",
-    "requires_data": false,
+    "requires_data": true,
     "scope": "scoped",
     "status": "implemented",
-    "description": "A variable name exceeds the SAS XPORT v5 8-character limit.",
+    "description": "The dataset name violates the XPORT naming rules (length or characters).",
     "reason": null,
-    "engine": "spec"
+    "engine": "data"
   },
   {
-    "id": "variable_label_length",
+    "id": "label_length",
     "dimension": "variable",
     "severity": "warning",
-    "requires_data": false,
+    "requires_data": true,
     "scope": "scoped",
     "status": "implemented",
-    "description": "A variable label exceeds the SAS XPORT v5 / FDA 40-byte limit.",
+    "description": "A column label attribute exceeds the SAS XPORT v5 / FDA 40-byte limit.",
     "reason": null,
-    "engine": "spec"
+    "engine": "data"
   },
   {
-    "id": "cross_dataset_label",
+    "id": "integer_overflow",
     "dimension": "variable",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "An integer-typed variable holds values beyond R's 32-bit integer range.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "codelist_membership_extensible",
+    "dimension": "ct",
     "severity": "note",
-    "requires_data": false,
-    "scope": "whole-spec",
+    "requires_data": true,
+    "scope": "scoped",
     "status": "implemented",
-    "description": "A variable shared across datasets carries inconsistent labels.",
+    "description": "A value is outside an extensible codelist's enumerated terms.",
     "reason": null,
-    "engine": "spec"
-  },
-  {
-    "id": "cross_dataset_type",
-    "dimension": "variable",
-    "severity": "warning",
-    "requires_data": false,
-    "scope": "whole-spec",
-    "status": "implemented",
-    "description": "A variable shared across datasets carries inconsistent data types.",
-    "reason": null,
-    "engine": "spec"
+    "engine": "data"
   },
   {
     "id": "arm_result_metadata",

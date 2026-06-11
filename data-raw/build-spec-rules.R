@@ -258,6 +258,62 @@ rules <- rbind(
     requires_data = TRUE
   ),
 
+  # ---- variable, XPORT/FDA limits (spec side) ----
+  rule(
+    "variable_name_length",
+    "variable",
+    "warning",
+    "A variable name exceeds the SAS XPORT v5 8-character limit."
+  ),
+  rule(
+    "variable_label_length",
+    "variable",
+    "warning",
+    "A variable label exceeds the SAS XPORT v5 / FDA 40-byte limit."
+  ),
+
+  # ---- cross-dataset consistency (whole-spec) ----
+  rule(
+    "cross_dataset_label",
+    "variable",
+    "note",
+    "A variable shared across datasets carries inconsistent labels.",
+    scope = "whole-spec"
+  ),
+  rule(
+    "cross_dataset_type",
+    "variable",
+    "warning",
+    "A variable shared across datasets carries inconsistent data types.",
+    scope = "whole-spec"
+  ),
+
+  # ---- key sequence / order / OID integrity ----
+  rule(
+    "key_sequence_contiguous",
+    "dataset",
+    "error",
+    "A dataset's keySequence values are not 1..k without gaps or duplicates."
+  ),
+  rule(
+    "key_sequence_matches_keys",
+    "dataset",
+    "warning",
+    "A dataset's keySequence disagrees with its declared keys."
+  ),
+  rule(
+    "variable_order_unique",
+    "variable",
+    "warning",
+    "A dataset declares the same order value for more than one variable."
+  ),
+  rule(
+    "itemoid_unique",
+    "variable",
+    "error",
+    "A variable itemOID is declared more than once across the spec."
+  ),
+
   # ---- data conformance (check_spec engine; require data) ----
   rule(
     "missing_variable",
@@ -307,6 +363,78 @@ rules <- rbind(
     requires_data = TRUE,
     engine = "data"
   ),
+  rule(
+    "missing_permissible",
+    "variable",
+    "warning",
+    "A permissible (non-mandatory) spec variable is absent from the data.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "char_length_limit",
+    "variable",
+    "warning",
+    "A character value exceeds the SAS XPORT v5 / FDA 200-byte limit.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "label_match",
+    "variable",
+    "note",
+    "A column's label attribute differs from the spec label.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "key_uniqueness",
+    "dataset",
+    "error",
+    "The spec-declared key variables do not uniquely identify the data rows.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "variable_name",
+    "variable",
+    "warning",
+    "A data column name violates the XPORT naming rules (length or characters).",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "dataset_name",
+    "dataset",
+    "warning",
+    "The dataset name violates the XPORT naming rules (length or characters).",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "label_length",
+    "variable",
+    "warning",
+    "A column label attribute exceeds the SAS XPORT v5 / FDA 40-byte limit.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "integer_overflow",
+    "variable",
+    "error",
+    "An integer-typed variable holds values beyond R's 32-bit integer range.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
+  rule(
+    "codelist_membership_extensible",
+    "ct",
+    "note",
+    "A value is outside an extensible codelist's enumerated terms.",
+    requires_data = TRUE,
+    engine = "data"
+  ),
 
   # ---- deferred (transparent, not silently dropped) ----
   rule(
@@ -332,15 +460,6 @@ rules <- rbind(
     "A coded term has no decoded value.",
     status = "deferred",
     reason = "cannot distinguish enumerated value lists (no decode expected) from coded terms"
-  ),
-  rule(
-    "data_composite_key_unique",
-    "dataset",
-    "error",
-    "No duplicate rows for the spec-declared composite key in data.",
-    requires_data = TRUE,
-    status = "deferred",
-    reason = "in-data conformance beyond CT membership"
   )
 )
 

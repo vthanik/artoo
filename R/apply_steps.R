@@ -94,6 +94,7 @@
   vars <- info$vars
   introduced <- character(0)
   truncated <- character(0)
+  overflowed <- character(0)
   for (i in seq_len(nrow(vars))) {
     v <- vars$variable[i]
     dt <- vars$data_type[i]
@@ -111,6 +112,15 @@
       keep_off <- c("class", "levels", "names", "tzone")
       n_na <- sum(is.na(x[[v]])) - before_na
     } else {
+      # Name 32-bit overflow precisely BEFORE coercion turns the values NA --
+      # the generic NA-introduction warning would bury the cause.
+      if (identical(dt, "integer")) {
+        nv <- suppressWarnings(as.numeric(x[[v]]))
+        n_over <- sum(!is.na(nv) & abs(nv) > .Machine$integer.max)
+        if (n_over > 0L) {
+          overflowed <- c(overflowed, sprintf("%s (%d)", v, n_over))
+        }
+      }
       res <- .coerce_to_type(x[[v]], dt)
       x[[v]] <- res$value
       keep_off <- c("class", "levels", "names")
@@ -147,6 +157,17 @@
       call = call
     )
   }
+  if (length(overflowed)) {
+    cli::cli_warn(
+      c(
+        "Integer coercion overflowed R's 32-bit range in {length(overflowed)} variable{?s}; those values are now NA.",
+        "i" = "{overflowed}",
+        "i" = "Use dataType {.val float}, {.val double}, or {.val decimal} for values beyond +/-2147483647."
+      ),
+      class = "vport_warning_coercion",
+      call = call
+    )
+  }
   x
 }
 
@@ -161,6 +182,8 @@
   spec,
   decode = "none",
   no_match = "error",
+  trim = TRUE,
+  ignore_case = FALSE,
   call = rlang::caller_env()
 ) {
   if (decode == "none") {
@@ -173,14 +196,45 @@
     if (!(v %in% names(x))) {
       next
     }
+    # spec_codelists() aborts on an unresolved id (and construction already
+    # guarantees resolution), so the rows are always non-empty here.
     cl <- spec_codelists(spec, clid)
-    if (!nrow(cl)) {
-      next
-    }
     from <- if (decode == "to_decode") cl$term else cl$decode
     to <- if (decode == "to_decode") cl$decode else cl$term
     col <- as.character(x[[v]])
     idx <- match(col, from)
+    # Real data carries trailing whitespace (trim = TRUE, the default) and
+    # sometimes case variants (ignore_case, opt-in). A value that matches
+    # only after normalization decodes, but the variants are reported
+    # (vport_warning_codelist) -- a normalized match is still a CT finding
+    # for check_spec(), which always compares exactly.
+    norm <- function(s) {
+      if (trim) {
+        s <- trimws(s)
+      }
+      if (ignore_case) {
+        s <- toupper(s)
+      }
+      s
+    }
+    soft <- is.na(idx) & !is.na(col)
+    if ((trim || ignore_case) && any(soft)) {
+      idx2 <- match(norm(col), norm(from))
+      gained <- soft & !is.na(idx2)
+      if (any(gained)) {
+        idx[gained] <- idx2[gained]
+        variants <- unique(col[gained])
+        cli::cli_warn(
+          c(
+            "Decoded {sum(gained)} value{?s} in {.var {v}} after trim/case normalization.",
+            "i" = "Variant{?s}: {.val {variants}}.",
+            "i" = "check_spec() still compares exactly; clean the source values for submission."
+          ),
+          class = "vport_warning_codelist",
+          call = call
+        )
+      }
+    }
     out <- to[idx]
     unmatched <- !is.na(col) & is.na(idx)
     if (any(unmatched)) {
