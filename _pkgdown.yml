@@ -49,55 +49,65 @@ home:
     href: https://github.com/phuse-org/phuse-scripts/tree/master/data/adam
 
 reference:
-- title: Spec
+- title: Specification
   desc: >
-    Build, read, write, and inspect a artoo_spec -- the canonical
-    CDISC-shaped description of your datasets, one CDISC standard each.
+    Build a artoo_spec — the canonical CDISC-shaped description of your
+    datasets, one CDISC standard each — or read one from native JSON, a
+    Pinnacle 21 workbook, or Define-XML, and write it back out.
   contents:
   - artoo_spec
   - read_spec
   - write_spec
+  - is_artoo_spec
+
+- title: Spec accessors
+  desc: >
+    One slot each from the spec — the standard, the study block, and the
+    per-dataset metadata tables.
+  contents:
   - spec_standard
+  - spec_study
   - spec_datasets
   - spec_variables
   - spec_codelists
   - spec_keys
-  - spec_study
   - spec_methods
   - spec_comments
   - spec_documents
 
 - title: Conform
   desc: >
-    Apply a spec to a raw frame, derive through codelists, and carry the
-    metadata.
+    Apply the spec to a raw frame — scaffold, coerce, order, sort, stamp
+    metadata — and derive single variables through spec codelists.
   contents:
   - apply_spec
   - decode_column
+
+- title: Metadata
+  desc: >
+    The artoo_meta every conformed frame carries: read it, replace it,
+    and keep it in step with the data.
+  contents:
   - get_meta
   - set_meta
   - sync_meta
+  - is_artoo_meta
 
 - title: Check
   desc: >
-    Conformance findings for the data, and integrity of the spec itself.
+    Conformance findings for the data, integrity findings for the spec
+    itself, and the control object that scopes both.
   contents:
   - check_spec
   - conformance
-  - validate_spec
   - artoo_checks
-
-- title: Columns
-  desc: >
-    The SAS-viewer-style variable pane, on a frame or a file.
-  contents:
-  - columns
-  - xpt_members
+  - is_artoo_checks
+  - validate_spec
 
 - title: Read and write
   desc: >
-    Lossless I/O across every supported format. Generic dispatch on the
-    file extension, plus a short wrapper per format.
+    Lossless dataset I/O across every supported format. Generic dispatch
+    on the file extension, plus a short wrapper per format.
   contents:
   - read_dataset
   - write_dataset
@@ -111,19 +121,26 @@ reference:
   - write_parquet
   - read_rds
   - write_rds
+
+- title: Inspect
+  desc: >
+    The SAS-viewer-style variable pane, on a frame or a file.
+  contents:
+  - columns
+  - xpt_members
+
+- title: Formats and encodings
+  desc: >
+    Reference tables: which codecs this session can read and write, and
+    the encoding names R, SAS, and Python use for the same bytes.
+  contents:
   - artoo_formats
   - artoo_encodings
-
-- title: Classes and predicates
-  contents:
-  - is_artoo_spec
-  - is_artoo_meta
-  - is_artoo_checks
 
 - title: Demo data
   desc: >
     Bundled CDISC pilot specs, metadata tables, and datasets used
-    throughout the docs -- all rebuilt from public sources.
+    throughout the docs — all rebuilt from public sources.
   contents:
   - cdisc_specs
   - cdisc_spec

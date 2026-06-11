@@ -1,4 +1,4 @@
-# encoding.R -- the transcoding single source of truth (SSOT).
+# encoding.R — the transcoding single source of truth (SSOT).
 #
 # This file owns EVERY iconv() call in artoo; no codec calls iconv directly.
 # Read converts source bytes to canonical UTF-8 (NFC); write converts UTF-8
@@ -13,12 +13,12 @@
 # reproduces the source bytes EXACTLY. NFC is a no-op on single-byte content
 # (every character is already precomposed), so the read-side normalise cannot
 # perturb a wlatin1 round-trip. The one case where on-disk bytes legitimately
-# change is a decomposed-multibyte-UTF-8 source -- intended normalisation,
+# change is a decomposed-multibyte-UTF-8 source — intended normalisation,
 # not loss.
 
 # SAS encoding name -> IANA/code-page name (lowercase keys). Seeded from the
 # SAS NLS encoding-values table. Two traps avoided: (1) the SAS name for
-# ISO-8859-9 is `turkish` and for ISO-8859-5 is `cyrillic` -- `latinN` does
+# ISO-8859-9 is `turkish` and for ISO-8859-5 is `cyrillic` — `latinN` does
 # NOT line up with ISO-8859-N (`latin7`->8859-13, `latin9`->8859-15); (2)
 # wlatin1 (WINDOWS-1252) differs from latin1 (ISO-8859-1) in 0x80-0x9F (Euro,
 # trademark, curly quotes). Anything not here falls through to
@@ -323,26 +323,26 @@
   which(v >= 160L & v <= 191L)
 }
 
-#' Encodings for clinical datasets, across SAS, R, and Python
+#' Encodings for clinical datasets, across R, SAS, and Python
 #'
 #' List the character encodings clinical data actually travels in, with
-#' the name each ecosystem uses for the same thing: the SAS
-#' session-encoding name, the R name (the standard IANA name, which
-#' `iconv()` and the wider R ecosystem use), and the Python codec. Any
-#' spelling from the `sas` or `r` column works as the `encoding` argument
-#' of every artoo reader and writer.
+#' the name each ecosystem uses for the same thing: the R name (the
+#' standard IANA name, which `iconv()` and the wider R ecosystem use),
+#' the SAS session-encoding name, and the Python codec. Any spelling
+#' from the `r` or `sas` column works as the `encoding` argument of
+#' every artoo reader and writer.
 #'
 #' @details
 #' **What an encoding is.** Text is stored as bytes; an encoding is the
 #' rule that maps those bytes to characters. Plain A-Z digits and
-#' punctuation are the same bytes in every encoding listed here -- the
+#' punctuation are the same bytes in every encoding listed here — the
 #' differences only show in accented letters (a-umlaut, e-acute), special
 #' symbols (micro, degree), and non-Latin scripts. Reading bytes with the
 #' wrong rule is what turns a degree sign into garbage.
 #'
 #' **Which one do I have?** In SAS, run `PROC OPTIONS OPTION=ENCODING; RUN;`
 #' and look up the reported name in the `sas` column. Most US/EU Windows
-#' SAS installs report `WLATIN1` -- that is `windows-1252` here.
+#' SAS installs report `WLATIN1` — that is `windows-1252` here.
 #'
 #' **Which one should I write?** Usually none: `write_*(encoding = NULL)`
 #' (the default) inherits the encoding recorded when the data was read, so
@@ -350,14 +350,14 @@
 #' when nothing is recorded: SAS XPORT writes `US-ASCII` (the FDA Study
 #' Data Technical Conformance Guide expectation) and Dataset-JSON / NDJSON
 #' write `UTF-8` (required by CDISC and RFC 8259). A value that cannot be
-#' represented in the target encoding aborts loudly -- see `on_invalid` on
+#' represented in the target encoding aborts loudly — see `on_invalid` on
 #' the writers.
 #'
-#' **Note:** in memory, artoo text is always UTF-8 (NFC-normalised) --
+#' **Note:** in memory, artoo text is always UTF-8 (NFC-normalised) —
 #' encodings only matter at the file boundary, exactly as in Python 3.
 #'
 #' @return *A `<data.frame>`* with one row per encoding and columns
-#'   `r` (the R name -- the standard IANA name `iconv()` uses, and what
+#'   `r` (the R name — the standard IANA name `iconv()` uses, and what
 #'   artoo records in the metadata), `sas` (the SAS session-encoding
 #'   name), `python` (the Python codec name), and `description`.
 #'
