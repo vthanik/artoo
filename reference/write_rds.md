@@ -34,6 +34,10 @@ write_rds(x, path, encoding = NULL)
   can reproduce the source bytes. `NULL` (default) leaves the recorded
   encoding untouched.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 ## Value
 
 *The input `x`*, invisibly, so a write can sit mid-pipeline.

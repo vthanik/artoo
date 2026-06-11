@@ -88,7 +88,9 @@ xpt v8 bounds the disk read; the other formats cap after decode.</p></dd>
 <dd><p><em>Source charset of the file bytes.</em> <code>&lt;character(1)&gt; | NULL</code>. <code>NULL</code> (default) reads UTF-8, as Dataset-JSON requires. Pass an
 IANA or SAS charset name (e.g. <code>"windows-1252"</code>) only to read a
 non-conformant file a producer wrote in that charset; the bytes are
-transcoded to UTF-8 on read.</p></dd>
+transcoded to UTF-8 on read.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 </dl></div>
     <div class="section level2">

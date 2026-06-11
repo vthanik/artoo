@@ -38,6 +38,10 @@ write_parquet(x, path, encoding = NULL, compression = "snappy")
   can reproduce the source bytes. `NULL` (default) leaves the recorded
   encoding untouched.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 - compression:
 
   *Column compression codec.* `<character(1)>: default "snappy"`. One

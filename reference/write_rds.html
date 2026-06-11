@@ -71,7 +71,9 @@ metadata both as live R attributes and as the language-agnostic
 R-native and faithful: strings are saved as-is, never transcoded.
 <code>encoding</code> only records the data's original charset in the <code>artoo_meta</code>,
 so a later <code><a href="write_xpt.html">write_xpt()</a></code> can reproduce the source bytes. <code>NULL</code> (default)
-leaves the recorded encoding untouched.</p></dd>
+leaves the recorded encoding untouched.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 </dl></div>
     <div class="section level2">

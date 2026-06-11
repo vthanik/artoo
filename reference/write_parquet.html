@@ -78,7 +78,9 @@ output of <code><a href="apply_spec.html">apply_spec()</a></code>, carrying <cod
 parquet bytes are always written as UTF-8 (the format's STRING type is
 UTF-8 by spec); <code>encoding</code> only records the data's original charset in the
 <code>artoo_meta</code>, so a later <code><a href="write_xpt.html">write_xpt()</a></code> can reproduce the source bytes.
-<code>NULL</code> (default) leaves the recorded encoding untouched.</p></dd>
+<code>NULL</code> (default) leaves the recorded encoding untouched.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 
 <dt id="arg-compression">compression<a class="anchor" aria-label="anchor" href="#arg-compression"></a></dt>

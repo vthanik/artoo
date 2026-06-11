@@ -26,6 +26,10 @@ read_xpt(path, encoding = NULL, col_select = NULL, n_max = Inf, member = NULL)
   auto-detects (UTF-8 when every character value and label is valid
   UTF-8, else Windows-1252). IANA and SAS names both work.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 - col_select:
 
   *Variables to read.* `<character> | NULL`. `NULL` (default) reads

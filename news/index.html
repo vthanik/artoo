@@ -63,7 +63,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="inspect-0-0-0-9000">Inspect<a class="anchor" aria-label="anchor" href="#inspect-0-0-0-9000"></a></h3>
-<ul><li>New <code><a href="../reference/columns.html">columns()</a></code>: the SAS <code>PROC CONTENTS</code> / Universal Viewer variable pane (<code>#</code>, Variable, Type, Len, Format, Informat, Label, plus the CDISC Key sequence), polymorphic over a stamped frame, any plain data frame (attributes inferred), or a file path dispatched through the codec registry. A multi-member XPORT path without <code>member =</code> points at <code><a href="../reference/xpt_members.html">xpt_members()</a></code>.</li>
+<ul><li><p>New <code><a href="../reference/artoo_encodings.html">artoo_encodings()</a></code>: the encodings clinical data travels in, one row per encoding with the SAS session-encoding name, the standard IANA name R uses, and the Python codec – written for SAS programmers who have never had to think about encodings. Every reader/writer <code>encoding</code> argument accepts any spelling from the table.</p></li>
+<li><p>New <code><a href="../reference/columns.html">columns()</a></code>: the SAS <code>PROC CONTENTS</code> / Universal Viewer variable pane (<code>#</code>, Variable, Type, Len, Format, Informat, Label, plus the CDISC Key sequence), polymorphic over a stamped frame, any plain data frame (attributes inferred), or a file path dispatched through the codec registry. A multi-member XPORT path without <code>member =</code> points at <code><a href="../reference/xpt_members.html">xpt_members()</a></code>.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="data-0-0-0-9000">Data<a class="anchor" aria-label="anchor" href="#data-0-0-0-9000"></a></h3>

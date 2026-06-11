@@ -77,7 +77,9 @@ xpt v8 bounds the disk read; the other formats cap after decode.</p></dd>
 <dt id="arg-encoding">encoding<a class="anchor" aria-label="anchor" href="#arg-encoding"></a></dt>
 <dd><p><em>Source charset of the string columns.</em> <code>&lt;character(1)&gt; | NULL</code>. <code>NULL</code> (default) returns the strings exactly as saved (faithful R
 round-trip). Pass a charset name only to transcode a foreign rds whose
-string columns hold that charset's bytes.</p></dd>
+string columns hold that charset's bytes.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 </dl></div>
     <div class="section level2">

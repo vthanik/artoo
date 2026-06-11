@@ -301,6 +301,8 @@ extension, plus a short wrapper per format.
   : Write a dataset to rds
 - [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
   : Report which formats are available
+- [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  : Encodings for clinical datasets, across SAS, R, and Python
 
 ## Classes and predicates
 

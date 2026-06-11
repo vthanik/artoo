@@ -43,6 +43,10 @@ read_rds(path, col_select = NULL, n_max = Inf, encoding = NULL)
   round-trip). Pass a charset name only to transcode a foreign rds whose
   string columns hold that charset's bytes.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 ## Value
 
 *A `<data.frame>`* carrying `artoo_meta` when the file recorded it. An

@@ -68,7 +68,9 @@ ingest end of the I/O layer; a thin wrapper over <code><a href="read_dataset.htm
 <dt id="arg-encoding">encoding<a class="anchor" aria-label="anchor" href="#arg-encoding"></a></dt>
 <dd><p><em>Force a source charset.</em> <code>&lt;character(1)&gt; | NULL</code>. <code>NULL</code>
 (default) auto-detects (UTF-8 when every character value and label is
-valid UTF-8, else Windows-1252). IANA and SAS names both work.</p></dd>
+valid UTF-8, else Windows-1252). IANA and SAS names both work.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 
 <dt id="arg-col-select">col_select<a class="anchor" aria-label="anchor" href="#arg-col-select"></a></dt>

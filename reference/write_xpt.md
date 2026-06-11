@@ -45,6 +45,10 @@ write_xpt(
   the source encoding recorded in `artoo_meta`, else UTF-8. IANA and SAS
   names (`"US-ASCII"`, `"wlatin1"`) both work.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 - on_invalid:
 
   *Policy for values not representable in `encoding`.*

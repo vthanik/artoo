@@ -48,6 +48,10 @@ read_json(path, col_select = NULL, n_max = Inf, encoding = NULL)
   file a producer wrote in that charset; the bytes are transcoded to
   UTF-8 on read.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 ## Value
 
 *A `<data.frame>`* carrying `artoo_meta` (read it with

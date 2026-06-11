@@ -46,6 +46,10 @@ read_parquet(path, col_select = NULL, n_max = Inf, encoding = NULL)
   name only to read a foreign file whose string columns hold that
   charset's bytes; they are transcoded to UTF-8 on read.
 
+  **Tip:** any SAS or IANA spelling listed by
+  [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  is accepted.
+
 ## Value
 
 *A `<data.frame>`* carrying `artoo_meta` when the file recorded it (read

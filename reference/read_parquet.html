@@ -86,7 +86,9 @@ xpt v8 bounds the disk read; the other formats cap after decode.</p></dd>
 <dt id="arg-encoding">encoding<a class="anchor" aria-label="anchor" href="#arg-encoding"></a></dt>
 <dd><p><em>Source charset of the string columns.</em> <code>&lt;character(1)&gt; | NULL</code>. <code>NULL</code> (default) reads the UTF-8 bytes parquet stores. Pass a
 charset name only to read a foreign file whose string columns hold that
-charset's bytes; they are transcoded to UTF-8 on read.</p></dd>
+charset's bytes; they are transcoded to UTF-8 on read.</p>
+<p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
+accepted.</p></dd>
 
 </dl></div>
     <div class="section level2">
