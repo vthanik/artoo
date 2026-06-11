@@ -4,7 +4,7 @@
 \alias{read_xpt}
 \title{Read a dataset from SAS XPORT}
 \usage{
-read_xpt(path, encoding = NULL, col_select = NULL, n_max = Inf)
+read_xpt(path, encoding = NULL, col_select = NULL, n_max = Inf, member = NULL)
 }
 \arguments{
 \item{path}{\emph{Source \code{.xpt} path.} \verb{<character(1)>: required}.}
@@ -22,6 +22,14 @@ order, and the \code{vport_meta} is filtered to match.
 
 \item{n_max}{\emph{Maximum records to read.} \verb{<numeric(1)>: default Inf}. Caps
 the row count; the returned \code{vport_meta} reports the rows actually read.}
+
+\item{member}{\emph{Which member of a multi-member transport file to read.}
+\verb{<character(1) | numeric(1)> | NULL}. A transport file can hold several
+datasets; pass a member name (case-insensitive) or 1-based index to pick
+one. \code{NULL} (default) reads a single-member file directly and aborts on
+a multi-member file, pointing at \code{\link[=xpt_members]{xpt_members()}}.
+
+\strong{Tip:} \code{xpt_members(path)} lists what a file holds before you choose.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{vport_meta} (read it with
@@ -53,13 +61,26 @@ write_xpt(adsl, path)
 back <- read_xpt(path)
 get_meta(back)@columns$STUDYID$label
 
-# ---- Example 2: the metadata names the dataset and row count ----
+# ---- Example 2: pick one member of a multi-member transport file ----
 #
-# The restored vport_meta exposes the dataset-level attributes.
-get_meta(back)@dataset$records
+# Build a two-member file by concatenating two single-member files (every
+# member section is 80-byte padded), then read one dataset out of it.
+dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+p_dm <- tempfile(fileext = ".xpt")
+write_xpt(dm, p_dm)
+multi <- tempfile(fileext = ".xpt")
+writeBin(
+  c(
+    readBin(path, "raw", file.size(path)),
+    readBin(p_dm, "raw", file.size(p_dm))[-(1:240)]
+  ),
+  multi
+)
+xpt_members(multi)$name
+nrow(read_xpt(multi, member = "DM"))
 
 }
 \seealso{
-\code{\link[=write_xpt]{write_xpt()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the generic
-dispatcher.
+\code{\link[=xpt_members]{xpt_members()}} to list a file's members; \code{\link[=write_xpt]{write_xpt()}} for the
+inverse; \code{\link[=read_dataset]{read_dataset()}} for the generic dispatcher.
 }

@@ -1,5 +1,7 @@
 # codec_xpt.R -- the SAS XPORT (xpt) codec, v5 (FDA submission default) and
-# v8 (extended names/labels). Single-member only (one dataset = one file).
+# v8 (extended names/labels). Writes are single-member (one dataset = one
+# file, the FDA convention); reads handle multi-member libraries via
+# xpt_members() + read_xpt(member =).
 #
 # The XPORT framing (LIBRARY/MEMBER/NAMESTR/OBS headers, the 140-byte namestr,
 # and the v8 LABELV8 long-name/long-label extension) is built from the SAS
@@ -885,17 +887,18 @@
 }
 
 # v5 stores no obs count: it is the data section after the OBS header, blank-
-# padded to an 80-byte boundary. Seek from EOF and step back over trailing
-# all-0x20 records (the padding) to find the row count -- one record read per
-# trailing blank, never the whole section, so a partial read (n_max) and a
-# >2GB file both stay bounded. Single-member, so no next-MEMBER scan. The
-# ambiguity is confined to all-character data (a numeric field is never
+# padded to an 80-byte boundary. Step back from `end` (the next member's
+# offset, or EOF -- the default) over trailing all-0x20 records (the padding)
+# to find the row count -- one record read per trailing blank, never the
+# whole section, so a partial read (n_max) and a >2GB file both stay bounded.
+# The ambiguity is confined to all-character data (a numeric field is never
 # all-blank), where a genuine trailing all-NA row is indistinguishable from
 # padding -- an inherent v5 limitation (see C4).
 #' @noRd
-.xpt_compute_v5_nobs <- function(con, obs_length, path) {
+.xpt_compute_v5_nobs <- function(con, obs_length, path, end = NULL) {
   start <- seek(con, where = NA)
-  remaining <- file.info(path)$size - start
+  end <- end %||% file.info(path)$size
+  remaining <- end - start
   if (remaining <= 0 || obs_length == 0L) {
     return(0L)
   }
@@ -946,8 +949,7 @@
       cli::cli_abort(
         c(
           "This XPORT file has more than one member.",
-          "x" = "vport reads single-member transport files only.",
-          "i" = "Export one dataset per file, or split the members first."
+          "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
         class = "vport_error_codec",
         call = call
@@ -1006,8 +1008,7 @@
       cli::cli_abort(
         c(
           "This XPORT file has more than one member.",
-          "x" = "vport reads single-member transport files only.",
-          "i" = "Export one dataset per file, or split the members first."
+          "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
         class = "vport_error_codec",
         call = call
@@ -1107,13 +1108,163 @@
   .drop_null(col)
 }
 
-# decode contract: (path, <codec args>, call) -> list(data, meta).
+# Walk every member of an open transport file (con positioned just after the
+# 3-record library header): parse each member's headers, size its obs
+# section, and seek past it. v8 records the row count, so the extent is
+# arithmetic; v5 does not, so the next member's HEADER signature is found by
+# a forward chunk scan and the count derived from the bounded span.
+#' @noRd
+.xpt_scan_members <- function(con, version, path, call = rlang::caller_env()) {
+  size <- file.info(path)$size
+  members <- list()
+  repeat {
+    offset <- seek(con, where = NA)
+    if (offset >= size) {
+      break
+    }
+    peek <- readBin(con, what = "raw", n = min(80, size - offset))
+    if (length(peek) < 80L || all(peek == as.raw(0x20))) {
+      break # trailing padding, not a member
+    }
+    seek(con, where = offset)
+    mem <- .xpt_parse_member(con, version, call)
+    namestrs <- .xpt_parse_namestr_block(
+      con,
+      mem$nvars,
+      version,
+      mem$namestr_size,
+      call
+    )
+    nxt <- .xpt_record_str(con, call)
+    if (
+      grepl("LABELV8", nxt, fixed = TRUE) || grepl("LABELV9", nxt, fixed = TRUE)
+    ) {
+      namestrs <- .xpt_parse_label_extension(con, nxt, namestrs, call)
+      nxt <- .xpt_record_str(con, call)
+    }
+    nobs <- .xpt_parse_obs_header(nxt, version)
+    obs_start <- seek(con, where = NA)
+    obs_length <- if (length(namestrs)) {
+      sum(vapply(namestrs, function(ns) ns$length, integer(1)))
+    } else {
+      0L
+    }
+    if (version == 8L && !is.na(nobs)) {
+      data_bytes <- as.double(nobs) * obs_length
+      obs_end <- min(obs_start + ceiling(data_bytes / 80) * 80, size)
+    } else {
+      nxt_off <- .xpt_next_member_offset(con, path, obs_start)
+      obs_end <- if (is.na(nxt_off)) size else nxt_off
+      # The forward scan moved the connection; the nobs walk reads its start
+      # position from the connection, so restore it first.
+      seek(con, where = obs_start)
+      nobs <- .xpt_compute_v5_nobs(con, obs_length, path, end = obs_end)
+    }
+    members[[length(members) + 1L]] <- list(
+      member = length(members) + 1L,
+      name = mem$name,
+      label = mem$label,
+      nvars = mem$nvars,
+      nobs = as.integer(nobs),
+      offset = offset,
+      obs_end = obs_end
+    )
+    seek(con, where = obs_end)
+  }
+  if (!length(members)) {
+    cli::cli_abort(
+      c(
+        "Not a valid XPORT transport file.",
+        "x" = "No member header follows the library header."
+      ),
+      class = "vport_error_codec",
+      call = call
+    )
+  }
+  members
+}
+
+# First 80-aligned offset at/after `from` whose record opens with the HEADER
+# signature (the next member), or NA when none. Chunked, so a multi-GB v5
+# file is scanned without loading it.
+#' @noRd
+.xpt_next_member_offset <- function(con, path, from) {
+  sig <- charToRaw("HEADER RECORD*******")
+  size <- file.info(path)$size
+  chunk <- 81920L # 1024 records per read
+  pos <- from
+  while (pos < size) {
+    seek(con, where = pos)
+    bytes <- readBin(con, what = "raw", n = min(chunk, size - pos))
+    nrec <- length(bytes) %/% 80L
+    if (nrec == 0L) {
+      break
+    }
+    starts <- seq.int(1L, by = 80L, length.out = nrec)
+    cand <- starts[bytes[starts] == sig[1L]]
+    for (s in cand) {
+      if (s + 19L <= length(bytes) && all(bytes[s:(s + 19L)] == sig)) {
+        return(pos + s - 1)
+      }
+    }
+    pos <- pos + nrec * 80L
+  }
+  NA_real_
+}
+
+# Resolve a `member` selector (1-based index, or case-insensitive name) to a
+# member list index; unknown selectors error listing what the file has.
+#' @noRd
+.xpt_resolve_member <- function(members, member, call = rlang::caller_env()) {
+  nms <- vapply(members, function(m) m$name, character(1))
+  if (is.numeric(member) && length(member) == 1L && !is.na(member)) {
+    i <- as.integer(member)
+    if (i >= 1L && i <= length(members)) {
+      return(i)
+    }
+    cli::cli_abort(
+      c(
+        "{.arg member} index {.val {i}} is out of range.",
+        "i" = "The file has {length(members)} member{?s}: {.val {nms}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  if (is.character(member) && length(member) == 1L && !is.na(member)) {
+    i <- match(toupper(member), toupper(nms))
+    if (!is.na(i)) {
+      return(i)
+    }
+    cli::cli_abort(
+      c(
+        "Unknown member {.val {member}}.",
+        "i" = "The file has: {.val {nms}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  cli::cli_abort(
+    c(
+      "{.arg member} must be a single member name or index.",
+      "x" = "You supplied {.obj_type_friendly {member}}."
+    ),
+    class = "vport_error_input",
+    call = call
+  )
+}
+
+# decode contract: (path, <codec args>, call) -> list(data, meta). A NULL
+# `member` is the single-member fast path (aborts on a multi-member file);
+# otherwise the file is scanned and the chosen member decoded in place.
 #' @noRd
 .decode_xpt <- function(
   path,
   encoding = NULL,
   col_select = NULL,
   n_max = Inf,
+  member = NULL,
   call = rlang::caller_env()
 ) {
   con <- file(path, "rb")
@@ -1121,6 +1272,46 @@
 
   lib <- .xpt_parse_library(con, call)
   version <- lib$version
+  if (is.null(member)) {
+    return(.xpt_decode_member(
+      con,
+      version,
+      path,
+      encoding,
+      col_select,
+      n_max,
+      call = call
+    ))
+  }
+  members <- .xpt_scan_members(con, version, path, call)
+  m <- members[[.xpt_resolve_member(members, member, call)]]
+  seek(con, where = m$offset)
+  .xpt_decode_member(
+    con,
+    version,
+    path,
+    encoding,
+    col_select,
+    n_max,
+    obs_end = m$obs_end,
+    call = call
+  )
+}
+
+# Decode ONE member from `con` (positioned at its MEMBER header). With
+# `obs_end` NA (the single-member path) the obs extent is EOF-derived and the
+# multi-member guards run; a known `obs_end` bounds every read to the member.
+#' @noRd
+.xpt_decode_member <- function(
+  con,
+  version,
+  path,
+  encoding = NULL,
+  col_select = NULL,
+  n_max = Inf,
+  obs_end = NA_real_,
+  call = rlang::caller_env()
+) {
   mem <- .xpt_parse_member(con, version, call)
   namestrs <- .xpt_parse_namestr_block(
     con,
@@ -1148,15 +1339,22 @@
     0L
   }
   if (is.na(nobs)) {
-    nobs <- .xpt_compute_v5_nobs(con, obs_length, path)
+    nobs <- .xpt_compute_v5_nobs(
+      con,
+      obs_length,
+      path,
+      end = if (is.na(obs_end)) NULL else obs_end
+    )
   }
-  # Multi-member detection. v8 records the exact row count, so a second member
-  # is the bytes beyond the padded obs section -- check that boundary. v5's
-  # count is EOF-derived, so a second member is absorbed into the (inflated)
-  # count and the read bytes themselves carry its HEADER signature at an
-  # 80-byte boundary -- scanned inside .xpt_read_obs (no extra IO, n_max-bound).
+  # Multi-member detection (single-member path only; a known obs_end means
+  # the member was already scanned and bounded). v8 records the exact row
+  # count, so a second member is the bytes beyond the padded obs section --
+  # check that boundary. v5's count is EOF-derived, so a second member is
+  # absorbed into the (inflated) count and the read bytes themselves carry
+  # its HEADER signature at an 80-byte boundary -- scanned inside
+  # .xpt_read_obs (no extra IO, n_max-bound).
   obs_start <- seek(con, where = NA)
-  if (version == 8L) {
+  if (version == 8L && is.na(obs_end)) {
     .xpt_check_single_member(con, path, obs_start, nobs, obs_length, call)
   }
   if (is.finite(n_max)) {
@@ -1168,7 +1366,7 @@
     nobs,
     obs_length,
     keep,
-    detect_multimember = version == 5L,
+    detect_multimember = version == 5L && is.na(obs_end),
     call = call
   )
   # Downstream loops (transcode, realize, meta) align 1:1 with the kept cols.
@@ -1353,6 +1551,13 @@ write_xpt <- function(
 #'   **Note:** an unknown name is a `vport_error_input`, never a silent drop.
 #' @param n_max *Maximum records to read.* `<numeric(1)>: default Inf`. Caps
 #'   the row count; the returned `vport_meta` reports the rows actually read.
+#' @param member *Which member of a multi-member transport file to read.*
+#'   `<character(1) | numeric(1)> | NULL`. A transport file can hold several
+#'   datasets; pass a member name (case-insensitive) or 1-based index to pick
+#'   one. `NULL` (default) reads a single-member file directly and aborts on
+#'   a multi-member file, pointing at [xpt_members()].
+#'
+#'   **Tip:** `xpt_members(path)` lists what a file holds before you choose.
 #'
 #' @return *A `<data.frame>`* carrying `vport_meta` (read it with
 #'   [get_meta()]).
@@ -1369,21 +1574,119 @@ write_xpt <- function(
 #' back <- read_xpt(path)
 #' get_meta(back)@columns$STUDYID$label
 #'
-#' # ---- Example 2: the metadata names the dataset and row count ----
+#' # ---- Example 2: pick one member of a multi-member transport file ----
 #' #
-#' # The restored vport_meta exposes the dataset-level attributes.
-#' get_meta(back)@dataset$records
+#' # Build a two-member file by concatenating two single-member files (every
+#' # member section is 80-byte padded), then read one dataset out of it.
+#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+#' p_dm <- tempfile(fileext = ".xpt")
+#' write_xpt(dm, p_dm)
+#' multi <- tempfile(fileext = ".xpt")
+#' writeBin(
+#'   c(
+#'     readBin(path, "raw", file.size(path)),
+#'     readBin(p_dm, "raw", file.size(p_dm))[-(1:240)]
+#'   ),
+#'   multi
+#' )
+#' xpt_members(multi)$name
+#' nrow(read_xpt(multi, member = "DM"))
 #'
-#' @seealso [write_xpt()] for the inverse; [read_dataset()] for the generic
-#'   dispatcher.
+#' @seealso [xpt_members()] to list a file's members; [write_xpt()] for the
+#'   inverse; [read_dataset()] for the generic dispatcher.
 #' @export
-read_xpt <- function(path, encoding = NULL, col_select = NULL, n_max = Inf) {
+read_xpt <- function(
+  path,
+  encoding = NULL,
+  col_select = NULL,
+  n_max = Inf,
+  member = NULL
+) {
   read_dataset(
     path,
     format = "xpt",
     encoding = encoding,
     col_select = col_select,
-    n_max = n_max
+    n_max = n_max,
+    member = member
+  )
+}
+
+#' List the members of a SAS XPORT transport file
+#'
+#' Report every dataset (member) a SAS Transport (`.xpt`) file holds, with
+#' its label, variable count, and row count -- the survey step before
+#' [read_xpt()] with `member =` picks one. A single-member file (the FDA
+#' submission convention) returns one row.
+#'
+#' @details
+#' **v5 has no recorded row count.** A v8 member records its rows; a v5
+#' member's count is derived from the byte span up to the next member (or end
+#' of file) minus trailing padding, so an all-character v5 member whose last
+#' row is entirely blank reports one row fewer (the documented v5 ambiguity,
+#' see [write_xpt()]).
+#'
+#' @param path *Source `.xpt` path.* `<character(1)>: required`. A file that
+#'   is not a valid XPORT library aborts with `vport_error_codec`.
+#'
+#' @return *A `<data.frame>`* with one row per member and columns `member`
+#'   (1-based index), `name`, `label`, `nvars`, and `nobs`. Pass `member` or
+#'   `name` to [read_xpt()].
+#'
+#' @examples
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#'
+#' # ---- Example 1: a single-member file reports one row ----
+#' #
+#' # The FDA convention is one dataset per transport file.
+#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+#' p <- tempfile(fileext = ".xpt")
+#' write_xpt(dm, p)
+#' xpt_members(p)
+#'
+#' # ---- Example 2: survey a multi-member file, then read one member ----
+#' #
+#' # Concatenate two single-member files into one library and list it.
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' p2 <- tempfile(fileext = ".xpt")
+#' write_xpt(adsl, p2)
+#' multi <- tempfile(fileext = ".xpt")
+#' writeBin(
+#'   c(
+#'     readBin(p, "raw", file.size(p)),
+#'     readBin(p2, "raw", file.size(p2))[-(1:240)]
+#'   ),
+#'   multi
+#' )
+#' xpt_members(multi)
+#'
+#' @seealso [read_xpt()] with `member =` to read one of them.
+#' @export
+xpt_members <- function(path) {
+  call <- rlang::caller_env()
+  .check_path(path, call)
+  if (!file.exists(path)) {
+    cli::cli_abort(
+      c(
+        "{.arg path} does not exist.",
+        "x" = "No file at {.path {path}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  con <- file(path, "rb")
+  on.exit(close(con), add = TRUE)
+  lib <- .xpt_parse_library(con, call)
+  members <- .xpt_scan_members(con, lib$version, path, call)
+  data.frame(
+    member = vapply(members, function(m) m$member, integer(1)),
+    name = vapply(members, function(m) m$name, character(1)),
+    label = vapply(members, function(m) m$label, character(1)),
+    nvars = vapply(members, function(m) m$nvars, integer(1)),
+    nobs = vapply(members, function(m) m$nobs, integer(1)),
+    stringsAsFactors = FALSE,
+    row.names = NULL
   )
 }
 

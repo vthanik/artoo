@@ -692,14 +692,24 @@
   if (is.null(vl) || !nrow(vl) || !("where_clause" %in% names(vl))) {
     return(.empty_findings())
   }
-  ds <- if ("dataset" %in% names(vl)) vl$dataset else NA_character_
-  var <- if ("variable" %in% names(vl)) vl$variable else NA_character_
+  ds <- if ("dataset" %in% names(vl)) {
+    vl$dataset
+  } else {
+    rep(NA_character_, nrow(vl))
+  }
+  var <- if ("variable" %in% names(vl)) {
+    vl$variable
+  } else {
+    rep(NA_character_, nrow(vl))
+  }
   bad <- .blank(vl$where_clause)
+  # The message vector must shrink with the subset: a constant length-1
+  # message against zero bad rows would error inside .finding().
   .finding(
     "value_whereclause_present",
     ds[bad],
     var[bad],
-    "A value-level row has no where-clause."
+    rep("A value-level row has no where-clause.", sum(bad))
   )
 }
 

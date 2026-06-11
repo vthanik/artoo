@@ -73,6 +73,7 @@ reference:
   - apply_spec
   - get_meta
   - set_meta
+  - sync_meta
 
 - title: Check
   desc: >
@@ -100,6 +101,7 @@ reference:
   - read_rds
   - write_rds
   - vport_formats
+  - xpt_members
 
 - title: Classes and predicates
   contents:

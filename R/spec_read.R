@@ -122,19 +122,33 @@
   study = c("define", "study", "metadata")
 )
 
-#' Read a specification from JSON or Excel
+#' Read a specification from JSON, Excel, or Define-XML
 #'
 #' Read a clinical-dataset specification into a validated `vport_spec`,
 #' dispatching on the file extension: vport's native JSON (the inverse of
-#' [write_spec()]) or a Pinnacle 21 (P21) Define-XML Excel workbook. The
-#' returned spec is the lingua franca the rest of vport applies and
-#' serialises.
+#' [write_spec()]), a Pinnacle 21 (P21) Excel workbook, or a native
+#' Define-XML 2.0/2.1 document. The returned spec is the lingua franca the
+#' rest of vport applies and serialises.
 #'
 #' @details
-#' **Two formats, one validator.** A `.json` file is read as vport native
-#' JSON; a `.xlsx` / `.xls` file is read as a P21 workbook. Either way the
-#' result is built through [vport_spec()], so type canonicalisation and
-#' cross-slot integrity checks are identical regardless of source.
+#' **Three formats, one validator.** A `.json` file is read as vport native
+#' JSON; a `.xlsx` / `.xls` file is read as a P21 workbook; a `.xml` file is
+#' read as Define-XML 2.x. Either way the result is built through
+#' [vport_spec()], so type canonicalisation and cross-slot integrity checks
+#' are identical regardless of source.
+#'
+#' **Define-XML ingestion** (needs the `xml2` package). ItemGroupDefs become
+#' datasets (keys derived from the ItemRef KeySequence), ItemRef + ItemDef
+#' pairs become variables, CodeLists become codelists
+#' (`def:ExtendedValue = "Yes"` marks an extended term), MethodDefs /
+#' CommentDefs / leaves become the supporting slots, and ValueListDefs land
+#' in the value-level slot with their where-clauses rendered as readable
+#' text.
+#'
+#'   **Note:** an `ExternalCodeList` (MedDRA, ISO-3166) names a dictionary,
+#'   not an enumerable membership list; it is dropped, and variables that
+#'   referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
+#'   refused with guidance.
 #'
 #' **P21 ingestion.** Sheets are located by a tolerant alias match
 #' (case-, space-, and spelling-variant insensitive). Datasets and
@@ -196,10 +210,11 @@ read_spec <- function(path) {
     json = .read_spec_json(path, call),
     xlsx = ,
     xls = .read_spec_xlsx(path, call),
+    xml = .read_spec_define(path, call),
     cli::cli_abort(
       c(
         "Unsupported spec file type {.val {ext}}.",
-        "i" = "read_spec() reads {.val .json} and Pinnacle 21 {.val .xlsx}."
+        "i" = "read_spec() reads {.val .json}, Pinnacle 21 {.val .xlsx}, and Define-XML 2.x {.val .xml}."
       ),
       class = "vport_error_input",
       call = call

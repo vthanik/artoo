@@ -80,3 +80,23 @@ test_that("the closed CDISC vocabularies are exactly the spec set", {
   )
   expect_setequal(vport:::.cdisc_targettypes, c("integer", "decimal"))
 })
+
+# ---- mutation safety: @<- re-validates (pinning test) -----------------------
+
+test_that("property mutation re-runs the validator (no silent corruption)", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  # A wrong property type is refused by the S7 property check.
+  expect_error(spec@datasets <- "not a frame")
+  # Get-modify-set of a value INSIDE a slot re-fires the cross-slot
+  # validator: breaking referential integrity is impossible via @<-.
+  expect_error(
+    spec@datasets$dataset[1] <- "ZZZ",
+    "variables reference dataset"
+  )
+  # The object is untouched after the failed mutations.
+  expect_identical(spec@datasets$dataset, cdisc_datasets$dataset)
+})

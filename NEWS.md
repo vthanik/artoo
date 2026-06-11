@@ -1,5 +1,34 @@
 # vport 0.0.0.9000
 
+* New `xpt_members()` lists every dataset a SAS transport file holds (name,
+  label, variable and row counts), and `read_xpt()` / `read_dataset()`
+  gained `member` to read one member of a multi-member library by
+  case-insensitive name or index. v5 members (which record no row count)
+  are bounded by the next member's offset, so a second member is never
+  absorbed as extra rows. The multi-member abort now points at
+  `xpt_members()` instead of a dead end. Writes stay single-member (the
+  FDA convention).
+* `read_spec()` now reads native Define-XML 2.0/2.1 documents (`.xml`,
+  needs `xml2`): ItemGroupDefs become datasets (keys from KeySequence),
+  ItemDefs become variables, CodeLists become codelists with
+  `def:ExtendedValue` mapped to `extended`, MethodDefs / CommentDefs /
+  leaves fill the supporting slots, and ValueListDefs land in the
+  value-level slot with where-clauses rendered as readable text. Grounded
+  against the official CDISC Define-XML 2.1.0 example (a SHA-pinned test
+  fixture). External-dictionary codelists (MedDRA, ISO-3166) are dropped
+  with their references, as they are not enumerable membership lists.
+* New `sync_meta()` re-aligns a `vport_meta` with a transformed frame
+  (columns narrowed/reordered, records refreshed, keys recomputed, new
+  columns profiled from their class) -- the one-liner after a dplyr or base
+  pipeline that dropped the metadata attribute.
+* `read_xpt()` now takes the long format/informat strings from a LABELV9
+  extension record instead of discarding them.
+* Fixed `validate_spec()` erroring on a value-level table whose
+  where-clauses are all present (the finding message was not vectorized
+  with the subset).
+* An S7 pinning test documents that property mutation re-runs the spec
+  validator, so referential integrity cannot be silently corrupted via
+  `@<-`.
 * `apply_spec()` decode matching gained `trim` (default `TRUE`: a value that
   matches a codelist only after whitespace trimming still decodes, with a
   `vport_warning_codelist` naming the variants) and `ignore_case` (opt-in

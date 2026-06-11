@@ -271,3 +271,85 @@ test_that("set_meta projects informat.sas like format.sas", {
     "YYMMDD10."
   )
 })
+
+# ---- sync_meta(): metadata after attribute-dropping transforms --------------
+
+test_that("sync_meta narrows, reorders, and refreshes records", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  meta <- get_meta(adsl)
+
+  # A base-R pipeline that drops the frame attributes entirely.
+  worked <- as.data.frame(adsl)
+  attr(worked, "metadata_json") <- NULL
+  worked <- worked[worked$SAFFL == "Y", c("AGE", "USUBJID", "STUDYID")]
+
+  out <- sync_meta(worked, meta)
+  m2 <- get_meta(out)
+  expect_identical(names(m2@columns), c("AGE", "USUBJID", "STUDYID"))
+  expect_identical(m2@dataset$records, nrow(worked))
+  expect_identical(m2@columns$AGE, meta@columns$AGE)
+})
+
+test_that("sync_meta synthesizes entries for new columns with a message", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl$AGEGR9 <- ifelse(adsl$AGE > 65, ">65", "<=65")
+  expect_message(out <- sync_meta(adsl), "AGEGR9")
+  m2 <- get_meta(out)
+  expect_identical(m2@columns$AGEGR9$dataType, "string")
+  expect_identical(m2@columns$AGEGR9$name, "AGEGR9")
+})
+
+test_that("sync_meta with no meta and no attribute aborts with guidance", {
+  bare <- data.frame(A = 1)
+  expect_error(sync_meta(bare), class = "vport_error_input")
+})
+
+test_that("sync_meta defaults to the frame's own metadata", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  sub <- adsl
+  sub$AGE <- NULL
+  # The metadata_json attribute survives $<- so sync_meta(x) self-serves.
+  out <- sync_meta(sub)
+  expect_false("AGE" %in% names(get_meta(out)@columns))
+})
+
+test_that("sync_meta validates its inputs", {
+  expect_error(sync_meta("not a frame"), class = "vport_error_input")
+  expect_error(
+    sync_meta(data.frame(A = 1), meta = "nope"),
+    class = "vport_error_input"
+  )
+})
+
+test_that(".meta_from_spec respects a spec-supplied itemOID and studyid", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      itemoid = "IT.CUSTOM.OID",
+      label = "Subject",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(studyid = "VPORT-001", stringsAsFactors = FALSE)
+  )
+  meta <- vport:::.meta_from_spec(spec, "DM")
+  expect_identical(meta@columns$USUBJID$itemOID, "IT.CUSTOM.OID")
+  expect_identical(meta@dataset$studyOID, "VPORT-001")
+})

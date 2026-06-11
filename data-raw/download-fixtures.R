@@ -30,3 +30,22 @@ if (!identical(got, sha256)) {
   )
 }
 message("sas-dm.xpt downloaded and verified (", file.size(dest), " bytes).")
+
+# ---- Define-XML 2.1 example (official CDISC release example) ----------------
+# The defineV21-SDTM.xml example from the CDISC Define-XML 2.1.0 release
+# package (mirrored on GitHub), used to ground read_spec()'s xml branch.
+def_url <- paste0(
+  "https://raw.githubusercontent.com/rubentalstra/Trial-Submission-Studio/",
+  "master/resources/Define-XML_2.1/examples/DefineXML-2-1-SDTM/",
+  "defineV21-SDTM.xml"
+)
+def_dest <- file.path("tests", "testthat", "fixtures", "define21-sdtm.xml")
+def_sha256 <- "24c97a570d1f905435e815ff7e3199b2e17a5e5d6c58b4fabdf1439bf10d5d21"
+if (!file.exists(def_dest)) {
+  utils::download.file(def_url, def_dest, mode = "wb", quiet = TRUE)
+}
+def_got <- digest::digest(file = def_dest, algo = "sha256")
+if (!identical(def_got, def_sha256)) {
+  stop("define21-sdtm.xml checksum mismatch: ", def_got, " != ", def_sha256)
+}
+message("define21-sdtm.xml OK (", def_sha256, ")")

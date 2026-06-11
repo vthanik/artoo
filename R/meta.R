@@ -563,6 +563,118 @@ set_meta <- function(x, meta) {
   x
 }
 
+#' Re-align metadata with a transformed data frame
+#'
+#' Re-attach and reconcile a `vport_meta` after a transformation that dropped
+#' or reshaped it: the metadata's columns are narrowed and reordered to the
+#' frame's current columns, the record count is refreshed, the keys are
+#' recomputed, and a column the metadata does not describe gets an entry
+#' synthesized from its class and attributes. The one-liner to run after a
+#' dplyr (or base) pipeline, before handing the frame to a `write_*()` codec.
+#'
+#' @details
+#' **Why it exists.** Base row subsetting (`x[i, ]`) drops the frame's
+#' `metadata_json` attribute, and many tidyverse verbs rebuild the frame.
+#' `sync_meta()` takes the last-known metadata (the frame's own attribute
+#' when it survived, or an explicit `meta`) and makes it agree with the data
+#' again, so the round trip stays lossless without hand-editing.
+#'
+#' @param x *The transformed data frame.* `<data.frame>: required`.
+#' @param meta *The metadata to reconcile against.* `<vport_meta> | NULL`.
+#'   `NULL` (default) uses the frame's own `metadata_json` attribute.
+#'
+#'   **Requirement:** when the transform dropped the attribute (base `[`
+#'   subsetting does), capture `get_meta()` before the pipeline and pass it
+#'   here; a bare frame with no `meta` aborts with `vport_error_input`.
+#'
+#' @return *A `<data.frame>`*: `x` re-stamped with the reconciled
+#'   `vport_meta`. Hand it to any `write_*()` codec.
+#'
+#' @examples
+#' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#'
+#' # ---- Example 1: re-attach after an attribute-dropping subset ----
+#' #
+#' # Base subsetting drops the metadata; capture it first, transform, then
+#' # sync. The metadata narrows to the kept columns and the new row count.
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' meta <- get_meta(adsl)
+#' elderly <- adsl[adsl$AGE > 65, c("STUDYID", "USUBJID", "AGE")]
+#' synced <- sync_meta(elderly, meta)
+#' get_meta(synced)@dataset$records
+#'
+#' # ---- Example 2: a derived column gains a synthesized entry ----
+#' #
+#' # A new column the metadata does not describe is profiled from its class,
+#' # so the frame still writes losslessly.
+#' adsl$AGEGR9 <- ifelse(adsl$AGE > 65, ">65", "<=65")
+#' synced2 <- sync_meta(adsl)
+#' get_meta(synced2)@columns$AGEGR9$dataType
+#'
+#' @seealso
+#' **Read / attach:** [get_meta()], [set_meta()].
+#'
+#' **Produce conformed frames:** [apply_spec()].
+#' @export
+sync_meta <- function(x, meta = NULL) {
+  call <- rlang::caller_env()
+  if (!is.data.frame(x)) {
+    cli::cli_abort(
+      c(
+        "{.arg x} must be a data frame.",
+        "x" = "You supplied {.obj_type_friendly {x}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  if (is.null(meta)) {
+    json <- attr(x, "metadata_json", exact = TRUE)
+    if (!is.character(json) || length(json) != 1L) {
+      cli::cli_abort(
+        c(
+          "{.arg x} carries no metadata and {.arg meta} was not supplied.",
+          "i" = "Capture {.code meta <- get_meta(x)} before the transform, then {.code sync_meta(x, meta)}."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+    meta <- .meta_from_datasetjson(json)
+  }
+  if (!is_vport_meta(meta)) {
+    cli::cli_abort(
+      c(
+        "{.arg meta} must be a {.cls vport_meta}.",
+        "x" = "You supplied {.obj_type_friendly {meta}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  known <- intersect(names(x), names(meta@columns))
+  synced <- .meta_select_columns(meta, known)
+  fresh <- setdiff(names(x), known)
+  if (length(fresh)) {
+    cols <- synced@columns
+    for (nm in fresh) {
+      cols[[nm]] <- .col_from_frame_col(nm, x[[nm]], synced@dataset$name)
+    }
+    cols <- cols[names(x)] # data order
+    ds <- synced@dataset
+    ds$keys <- .meta_keys(cols)
+    synced <- vport_meta_class(dataset = ds, columns = cols)
+    cli::cli_inform(
+      c(
+        "Synthesized metadata for {length(fresh)} new column{?s}: {.var {fresh}}.",
+        "i" = "Edit the spec (or the meta) if the inferred types need refining."
+      )
+    )
+  }
+  synced <- .meta_set_records(synced, nrow(x))
+  set_meta(x, synced)
+}
+
 # Reduce a meta to a column subset (col_select). Columns are reordered to
 # `keep` (the data's file order); keys are recomputed so a dropped key column
 # simply leaves the key set. Rebuilt via the constructor (the codebase never

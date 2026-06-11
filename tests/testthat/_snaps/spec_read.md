@@ -5,7 +5,7 @@
     Condition
       Error:
       ! Unsupported spec file type "csv".
-      i read_spec() reads ".json" and Pinnacle 21 ".xlsx".
+      i read_spec() reads ".json", Pinnacle 21 ".xlsx", and Define-XML 2.x ".xml".
 
 # .match_p21_sheet informs when several sheets match one role
 

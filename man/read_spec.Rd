@@ -2,7 +2,7 @@
 % Please edit documentation in R/spec_read.R
 \name{read_spec}
 \alias{read_spec}
-\title{Read a specification from JSON or Excel}
+\title{Read a specification from JSON, Excel, or Define-XML}
 \usage{
 read_spec(path)
 }
@@ -19,15 +19,29 @@ with \code{\link[=write_spec]{write_spec()}}.
 \description{
 Read a clinical-dataset specification into a validated \code{vport_spec},
 dispatching on the file extension: vport's native JSON (the inverse of
-\code{\link[=write_spec]{write_spec()}}) or a Pinnacle 21 (P21) Define-XML Excel workbook. The
-returned spec is the lingua franca the rest of vport applies and
-serialises.
+\code{\link[=write_spec]{write_spec()}}), a Pinnacle 21 (P21) Excel workbook, or a native
+Define-XML 2.0/2.1 document. The returned spec is the lingua franca the
+rest of vport applies and serialises.
 }
 \details{
-\strong{Two formats, one validator.} A \code{.json} file is read as vport native
-JSON; a \code{.xlsx} / \code{.xls} file is read as a P21 workbook. Either way the
-result is built through \code{\link[=vport_spec]{vport_spec()}}, so type canonicalisation and
-cross-slot integrity checks are identical regardless of source.
+\strong{Three formats, one validator.} A \code{.json} file is read as vport native
+JSON; a \code{.xlsx} / \code{.xls} file is read as a P21 workbook; a \code{.xml} file is
+read as Define-XML 2.x. Either way the result is built through
+\code{\link[=vport_spec]{vport_spec()}}, so type canonicalisation and cross-slot integrity checks
+are identical regardless of source.
+
+\strong{Define-XML ingestion} (needs the \code{xml2} package). ItemGroupDefs become
+datasets (keys derived from the ItemRef KeySequence), ItemRef + ItemDef
+pairs become variables, CodeLists become codelists
+(\code{def:ExtendedValue = "Yes"} marks an extended term), MethodDefs /
+CommentDefs / leaves become the supporting slots, and ValueListDefs land
+in the value-level slot with their where-clauses rendered as readable
+text.
+
+\strong{Note:} an \code{ExternalCodeList} (MedDRA, ISO-3166) names a dictionary,
+not an enumerable membership list; it is dropped, and variables that
+referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
+refused with guidance.
 
 \strong{P21 ingestion.} Sheets are located by a tolerant alias match
 (case-, space-, and spelling-variant insensitive). Datasets and
