@@ -239,6 +239,9 @@
 #'   UTF-8 by spec); `encoding` only records the data's original charset in the
 #'   `artoo_meta`, so a later [write_xpt()] can reproduce the source bytes.
 #'   `NULL` (default) leaves the recorded encoding untouched.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @param compression *Column compression codec.* `<character(1)>: default
 #'   "snappy"`. One of:
 #'
@@ -293,6 +296,9 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #'   NULL`. `NULL` (default) reads the UTF-8 bytes parquet stores. Pass a
 #'   charset name only to read a foreign file whose string columns hold that
 #'   charset's bytes; they are transcoded to UTF-8 on read.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `artoo_meta` when the file recorded it

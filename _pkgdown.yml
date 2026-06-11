@@ -112,6 +112,7 @@ reference:
   - read_rds
   - write_rds
   - artoo_formats
+  - artoo_encodings
 
 - title: Classes and predicates
   contents:

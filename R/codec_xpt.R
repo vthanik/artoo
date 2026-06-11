@@ -1537,6 +1537,9 @@
 #' @param encoding *Target charset.* `<character(1)> | NULL`. `NULL`
 #'   (default) inherits the source encoding recorded in `artoo_meta`, else
 #'   UTF-8. IANA and SAS names (`"US-ASCII"`, `"wlatin1"`) both work.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @param on_invalid *Policy for values not representable in `encoding`.*
 #'   `<character(1)>: default "error"`. One of `"error"`, `"replace"`
 #'   (substitute `?` and warn), or `"ignore"` (drop them).
@@ -1606,6 +1609,9 @@ write_xpt <- function(
 #' @param encoding *Force a source charset.* `<character(1)> | NULL`. `NULL`
 #'   (default) auto-detects (UTF-8 when every character value and label is
 #'   valid UTF-8, else Windows-1252). IANA and SAS names both work.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @param col_select *Variables to read.* `<character> | NULL`. `NULL`
 #'   (default) reads every column; otherwise a vector of variable names
 #'   (matching the names as stored, uppercase for v5). Columns return in file

@@ -23,7 +23,10 @@ xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) returns the strings exactly as saved (faithful R
 round-trip). Pass a charset name only to transcode a foreign rds whose
-string columns hold that charset's bytes.}
+string columns hold that charset's bytes.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{artoo_meta} when the file recorded

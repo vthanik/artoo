@@ -25,7 +25,10 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{encoding}{\emph{Target charset.} \verb{<character(1)> | NULL}. \code{NULL}
 (default) inherits the source encoding recorded in \code{artoo_meta}, else
-UTF-8. IANA and SAS names (\code{"US-ASCII"}, \code{"wlatin1"}) both work.}
+UTF-8. IANA and SAS names (\code{"US-ASCII"}, \code{"wlatin1"}) both work.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 
 \item{on_invalid}{\emph{Policy for values not representable in \code{encoding}.}
 \verb{<character(1)>: default "error"}. One of \code{"error"}, \code{"replace"}

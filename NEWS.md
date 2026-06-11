@@ -58,6 +58,12 @@ no backward compatibility is kept with the vport surface.
 
 ## Inspect
 
+* New `artoo_encodings()`: the encodings clinical data travels in, one row
+  per encoding with the SAS session-encoding name, the standard IANA name
+  R uses, and the Python codec -- written for SAS programmers who have
+  never had to think about encodings. Every reader/writer `encoding`
+  argument accepts any spelling from the table.
+
 * New `columns()`: the SAS `PROC CONTENTS` / Universal Viewer variable
   pane (`#`, Variable, Type, Len, Format, Informat, Label, plus the CDISC
   Key sequence), polymorphic over a stamped frame, any plain data frame

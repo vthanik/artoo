@@ -16,7 +16,10 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 parquet bytes are always written as UTF-8 (the format's STRING type is
 UTF-8 by spec); \code{encoding} only records the data's original charset in the
 \code{artoo_meta}, so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes.
-\code{NULL} (default) leaves the recorded encoding untouched.}
+\code{NULL} (default) leaves the recorded encoding untouched.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 
 \item{compression}{\emph{Column compression codec.} \verb{<character(1)>: default "snappy"}. One of:
 \itemize{

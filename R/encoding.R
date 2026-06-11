@@ -322,3 +322,124 @@
   v <- as.integer(raw)
   which(v >= 160L & v <= 191L)
 }
+
+#' Encodings for clinical datasets, across SAS, R, and Python
+#'
+#' List the character encodings clinical data actually travels in, with the
+#' name each ecosystem uses for the same thing: the SAS session-encoding
+#' name, the standard (IANA) name that R and artoo use, and the Python
+#' codec. Any spelling from the `encoding` or `sas` column works as the
+#' `encoding` argument of every artoo reader and writer.
+#'
+#' @details
+#' **What an encoding is.** Text is stored as bytes; an encoding is the
+#' rule that maps those bytes to characters. Plain A-Z digits and
+#' punctuation are the same bytes in every encoding listed here -- the
+#' differences only show in accented letters (a-umlaut, e-acute), special
+#' symbols (micro, degree), and non-Latin scripts. Reading bytes with the
+#' wrong rule is what turns a degree sign into garbage.
+#'
+#' **Which one do I have?** In SAS, run `PROC OPTIONS OPTION=ENCODING; RUN;`
+#' and look up the reported name in the `sas` column. Most US/EU Windows
+#' SAS installs report `WLATIN1` -- that is `windows-1252` here.
+#'
+#' **Which one should I write?** Usually none: `write_*(encoding = NULL)`
+#' (the default) inherits the encoding recorded when the data was read, so
+#' a round-trip is byte-faithful. The regulatory defaults artoo applies
+#' when nothing is recorded: SAS XPORT writes `US-ASCII` (the FDA Study
+#' Data Technical Conformance Guide expectation) and Dataset-JSON / NDJSON
+#' write `UTF-8` (required by CDISC and RFC 8259). A value that cannot be
+#' represented in the target encoding aborts loudly -- see `on_invalid` on
+#' the writers.
+#'
+#' **Note:** in memory, artoo text is always UTF-8 (NFC-normalised) --
+#' encodings only matter at the file boundary, exactly as in Python 3.
+#'
+#' @return *A `<data.frame>`* with one row per encoding and columns
+#'   `encoding` (the standard IANA name, used by R), `sas` (the SAS
+#'   session-encoding name), `python` (the Python codec name), and
+#'   `description`.
+#'
+#' @examples
+#' # ---- Example 1: the full cross-ecosystem table ----
+#' #
+#' # One row per encoding; the same byte rule under each ecosystem's name.
+#' artoo_encodings()
+#'
+#' # ---- Example 2: look up a SAS session encoding ----
+#' #
+#' # PROC OPTIONS reported WLATIN1: find what to pass (either name works).
+#' enc <- artoo_encodings()
+#' enc[enc$sas == "WLATIN1", ]
+#'
+#' @seealso
+#' **Use it:** the `encoding` argument of [read_xpt()], [write_xpt()],
+#' [read_json()], and the other readers/writers.
+#'
+#' **Formats:** [artoo_formats()] for the codec registry.
+#' @export
+artoo_encodings <- function() {
+  data.frame(
+    encoding = c(
+      "UTF-8",
+      "US-ASCII",
+      "windows-1252",
+      "windows-1250",
+      "windows-1251",
+      "ISO-8859-1",
+      "ISO-8859-15",
+      "Shift_JIS",
+      "CP932",
+      "EUC-JP",
+      "EUC-KR",
+      "CP936",
+      "CP950"
+    ),
+    sas = c(
+      "UTF-8",
+      "ASCII",
+      "WLATIN1",
+      "WLATIN2",
+      "WCYRILLIC",
+      "LATIN1",
+      "LATIN9",
+      "SHIFT-JIS",
+      "MS-932",
+      "EUC-JP",
+      "EUC-KR",
+      "MS-936",
+      "MS-950"
+    ),
+    python = c(
+      "utf_8",
+      "ascii",
+      "cp1252",
+      "cp1250",
+      "cp1251",
+      "latin_1",
+      "iso8859_15",
+      "shift_jis",
+      "cp932",
+      "euc_jp",
+      "euc_kr",
+      "gbk",
+      "cp950"
+    ),
+    description = c(
+      "Unicode; Dataset-JSON requirement and the modern default everywhere",
+      "7-bit basic Latin; what the FDA expects inside a submission XPORT",
+      "Western European Windows; the usual US/EU SAS session (WLATIN1)",
+      "Central European Windows",
+      "Cyrillic Windows",
+      "Western European Unix SAS (LATIN1)",
+      "Western European with the euro sign (LATIN9)",
+      "Japanese (PMDA submissions from Japanese SAS sessions)",
+      "Japanese Windows (Microsoft Shift JIS variant)",
+      "Japanese Unix",
+      "Korean",
+      "Simplified Chinese Windows (GBK)",
+      "Traditional Chinese Windows (Big5)"
+    ),
+    stringsAsFactors = FALSE
+  )
+}

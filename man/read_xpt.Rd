@@ -11,7 +11,10 @@ read_xpt(path, encoding = NULL, col_select = NULL, n_max = Inf, member = NULL)
 
 \item{encoding}{\emph{Force a source charset.} \verb{<character(1)> | NULL}. \code{NULL}
 (default) auto-detects (UTF-8 when every character value and label is
-valid UTF-8, else Windows-1252). IANA and SAS names both work.}
+valid UTF-8, else Windows-1252). IANA and SAS names both work.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 
 \item{col_select}{\emph{Variables to read.} \verb{<character> | NULL}. \code{NULL}
 (default) reads every column; otherwise a vector of variable names

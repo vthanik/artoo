@@ -399,6 +399,9 @@ write_json <- function(x, path, created = NULL, strict = FALSE) {
 #'   IANA or SAS charset name (e.g. `"windows-1252"`) only to read a
 #'   non-conformant file a producer wrote in that charset; the bytes are
 #'   transcoded to UTF-8 on read.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `artoo_meta` (read it with

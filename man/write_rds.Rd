@@ -15,7 +15,10 @@ write_rds(x, path, encoding = NULL)
 R-native and faithful: strings are saved as-is, never transcoded.
 \code{encoding} only records the data's original charset in the \code{artoo_meta},
 so a later \code{\link[=write_xpt]{write_xpt()}} can reproduce the source bytes. \code{NULL} (default)
-leaves the recorded encoding untouched.}
+leaves the recorded encoding untouched.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 }
 \value{
 \emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.

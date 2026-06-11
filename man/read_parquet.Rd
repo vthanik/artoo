@@ -23,7 +23,10 @@ xpt v8 bounds the disk read; the other formats cap after decode.}
 
 \item{encoding}{\emph{Source charset of the string columns.} \verb{<character(1)> | NULL}. \code{NULL} (default) reads the UTF-8 bytes parquet stores. Pass a
 charset name only to read a foreign file whose string columns hold that
-charset's bytes; they are transcoded to UTF-8 on read.}
+charset's bytes; they are transcoded to UTF-8 on read.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{artoo_meta} when the file recorded it

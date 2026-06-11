@@ -25,7 +25,10 @@ xpt v8 bounds the disk read; the other formats cap after decode.}
 \item{encoding}{\emph{Source charset of the file bytes.} \verb{<character(1)> | NULL}. \code{NULL} (default) reads UTF-8, as Dataset-JSON requires. Pass an
 IANA or SAS charset name (e.g. \code{"windows-1252"}) only to read a
 non-conformant file a producer wrote in that charset; the bytes are
-transcoded to UTF-8 on read.}
+transcoded to UTF-8 on read.
+
+\strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
+accepted.}
 }
 \value{
 \emph{A \verb{<data.frame>}} carrying \code{artoo_meta} (read it with

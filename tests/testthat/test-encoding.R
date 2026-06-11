@@ -192,3 +192,38 @@ test_that(".recode_col transcodes a character column and preserves its attribute
   # a non-character column passes through untouched.
   expect_identical(artoo:::.recode_col(1:3, "windows-1252"), 1:3)
 })
+
+# ---- artoo_encodings(): the cross-ecosystem reference table -----------------
+
+test_that("artoo_encodings() returns the documented shape", {
+  enc <- artoo_encodings()
+  expect_s3_class(enc, "data.frame")
+  expect_identical(names(enc), c("encoding", "sas", "python", "description"))
+  expect_gt(nrow(enc), 10L)
+  expect_false(anyNA(unlist(enc)))
+})
+
+test_that("every listed SAS name resolves through the alias map", {
+  enc <- artoo_encodings()
+  for (nm in enc$sas) {
+    expect_no_error(artoo:::.resolve_charset(nm), message = nm)
+  }
+})
+
+test_that("every listed IANA name resolves on this host", {
+  enc <- artoo_encodings()
+  for (nm in enc$encoding) {
+    expect_no_error(artoo:::.resolve_charset(nm), message = nm)
+  }
+})
+
+test_that("SAS and IANA spellings of one row resolve to the same charset", {
+  enc <- artoo_encodings()
+  for (i in seq_len(nrow(enc))) {
+    expect_identical(
+      artoo:::.resolve_charset(enc$sas[i]),
+      artoo:::.resolve_charset(enc$encoding[i]),
+      label = enc$encoding[i]
+    )
+  }
+})

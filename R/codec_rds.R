@@ -68,6 +68,9 @@
 #'   so a later [write_xpt()] can reproduce the source bytes. `NULL` (default)
 #'   leaves the recorded encoding untouched.
 #'
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
@@ -104,6 +107,9 @@ write_rds <- function(x, path, encoding = NULL) {
 #'   NULL`. `NULL` (default) returns the strings exactly as saved (faithful R
 #'   round-trip). Pass a charset name only to transcode a foreign rds whose
 #'   string columns hold that charset's bytes.
+#'
+#'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
+#'   accepted.
 #' @inheritParams read_dataset
 #'
 #' @return *A `<data.frame>`* carrying `artoo_meta` when the file recorded
