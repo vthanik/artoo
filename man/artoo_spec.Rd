@@ -12,7 +12,8 @@ artoo_spec(
   values = NULL,
   methods = NULL,
   comments = NULL,
-  documents = NULL
+  documents = NULL,
+  standard = NULL
 )
 }
 \arguments{
@@ -36,7 +37,8 @@ supplied.
 resolve here.}
 
 \item{study}{\emph{Study-level metadata.} \verb{<data.frame> | NULL}. A single row
-of named study fields (e.g. \code{studyid}, \code{standard}).}
+of named study fields (e.g. \code{studyid}). A \code{standard} field, when
+present, is consumed into \verb{@standard}.}
 
 \item{values}{\emph{Value-level (VLM) metadata.} \verb{<data.frame> | NULL}.}
 
@@ -50,6 +52,14 @@ by \code{comment_id}; must carry \code{comment_id} when supplied.}
 
 \item{documents}{\emph{Document references.} \verb{<data.frame> | NULL}. Referenced
 by \code{document_id}; must carry \code{document_id} when supplied.}
+
+\item{standard}{\emph{The CDISC standard the spec implements.}
+\verb{<character(1)> | NULL}. E.g. \code{"ADaMIG 1.1"} or \code{"SDTMIG 3.2"}. When
+\code{NULL} (default) it is resolved from \code{datasets$standard} or
+\code{study$standard}; absent everywhere, \verb{@standard} is \code{NA}.
+
+\strong{Restriction:} all sources must agree on one value; conflicting
+standards abort with \code{artoo_error_spec}.}
 }
 \value{
 \emph{A validated \code{artoo_spec} object.} Inspect it with
@@ -81,6 +91,15 @@ SAS / P21 spellings resolve automatically (\code{"text"}, \code{"Char"},
 \strong{Cross-slot integrity.} Construction fails (\code{artoo_error_spec}) if a
 variable names a dataset absent from \code{datasets}, or references a
 \code{codelist_id} absent from \code{codelists}.
+
+\strong{One spec, one standard.} A \code{artoo_spec} carries exactly one CDISC
+standard, stored as the scalar \verb{@standard} property. The constructor
+resolves it from the \code{standard} argument, a \code{standard} column in
+\code{datasets} (the P21 workbook shape), and a \code{standard} field in \code{study}
+(the Define-XML shape) -- those columns are consumed, so \verb{@standard} is
+the single home. More than one distinct value aborts with
+\code{artoo_error_spec}; scope the source to one standard (e.g.
+\code{read_spec(path, datasets = ...)}) instead of mixing.
 }
 \examples{
 # ---- Example 1: build a spec from the bundled CDISC-pilot tables ----

@@ -55,6 +55,6 @@ get_meta(head_rows)@dataset$records
 
 }
 \seealso{
-\code{\link[=write_ndjson]{write_ndjson()}} for the inverse; \code{\link[jsonlite:read_json]{read_json()}} for the
+\code{\link[=write_ndjson]{write_ndjson()}} for the inverse; \code{\link[=read_json]{read_json()}} for the
 array-form file; \code{\link[=read_dataset]{read_dataset()}} for the generic dispatcher.
 }

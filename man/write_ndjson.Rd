@@ -17,7 +17,7 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};
 freeze it for byte-stable output.}
 
-\item{strict}{\emph{Suppress the \verb{_artoo} extension block.} \verb{<logical(1)>: default FALSE}. See \code{\link[jsonlite:write_json]{write_json()}}: the same extension semantics apply
+\item{strict}{\emph{Suppress the \verb{_artoo} extension block.} \verb{<logical(1)>: default FALSE}. See \code{\link[=write_json]{write_json()}}: the same extension semantics apply
 to the metadata line.}
 }
 \value{
@@ -59,6 +59,6 @@ nrow(read_ndjson(gz))
 
 }
 \seealso{
-\code{\link[=read_ndjson]{read_ndjson()}} for the inverse; \code{\link[jsonlite:write_json]{write_json()}} for the
+\code{\link[=read_ndjson]{read_ndjson()}} for the inverse; \code{\link[=write_json]{write_json()}} for the
 array-form file; \code{\link[=write_dataset]{write_dataset()}} for the generic dispatcher.
 }

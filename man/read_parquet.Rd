@@ -56,6 +56,6 @@ get_meta(back)@dataset$records
 
 }
 \seealso{
-\code{\link[nanoparquet:write_parquet]{write_parquet()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the
+\code{\link[=write_parquet]{write_parquet()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the
 generic dispatcher.
 }

@@ -99,3 +99,100 @@ test_that("is_artoo_spec() is FALSE for non-specs", {
   expect_false(is_artoo_spec(mtcars))
   expect_false(is_artoo_spec(NULL))
 })
+
+# ---- single-standard model (@standard) -----------------------------------
+
+test_that("an explicit standard lands on @standard", {
+  spec <- artoo_spec(
+    data.frame(dataset = "ADSL"),
+    data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+    standard = "ADaMIG 1.1"
+  )
+  expect_identical(spec_standard(spec), "ADaMIG 1.1")
+})
+
+test_that("a P21-style datasets$standard column is consumed into @standard", {
+  spec <- artoo_spec(
+    data.frame(dataset = c("DM", "VS"), standard = "SDTMIG 3.2"),
+    data.frame(
+      dataset = c("DM", "VS"),
+      variable = c("USUBJID", "VSTESTCD"),
+      data_type = "string"
+    )
+  )
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
+  expect_false("standard" %in% names(spec@datasets))
+})
+
+test_that("a Define-style study$standard field is consumed into @standard", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+    study = data.frame(studyid = "CDISC01", standard = "SDTMIG 3.2")
+  )
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
+  expect_false("standard" %in% names(spec@study))
+  expect_identical(spec_study(spec, "studyid"), "CDISC01")
+})
+
+test_that("agreeing sources resolve to the one standard", {
+  spec <- artoo_spec(
+    data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"),
+    data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+    study = data.frame(standard = "ADaMIG 1.1"),
+    standard = "ADaMIG 1.1"
+  )
+  expect_identical(spec_standard(spec), "ADaMIG 1.1")
+})
+
+test_that("mixing standards aborts at construction", {
+  expect_error(
+    artoo_spec(
+      data.frame(
+        dataset = c("ADSL", "DM"),
+        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
+      ),
+      data.frame(
+        dataset = c("ADSL", "DM"),
+        variable = c("AGE", "USUBJID"),
+        data_type = c("integer", "string")
+      )
+    ),
+    class = "artoo_error_spec"
+  )
+  expect_snapshot(
+    error = TRUE,
+    artoo_spec(
+      data.frame(
+        dataset = c("ADSL", "DM"),
+        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
+      ),
+      data.frame(
+        dataset = c("ADSL", "DM"),
+        variable = c("AGE", "USUBJID"),
+        data_type = c("integer", "string")
+      )
+    )
+  )
+})
+
+test_that("no standard anywhere resolves to NA", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string")
+  )
+  expect_identical(spec_standard(spec), NA_character_)
+})
+
+test_that("blank and NA standards are ignored during resolution", {
+  spec <- artoo_spec(
+    data.frame(dataset = c("DM", "VS"), standard = c("SDTMIG 3.2", NA)),
+    data.frame(
+      dataset = c("DM", "VS"),
+      variable = c("USUBJID", "VSTESTCD"),
+      data_type = "string"
+    ),
+    study = data.frame(standard = "  ")
+  )
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
+})

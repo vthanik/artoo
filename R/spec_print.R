@@ -53,10 +53,15 @@
     "Study: %s",
     if (is.na(studyid)) "(unspecified)" else studyid
   )
+  standard <- sprintf(
+    "Standard: %s",
+    if (is.na(x@standard)) "(unspecified)" else x@standard
+  )
 
   lines <- c(
     "<artoo_spec>",
     header,
+    standard,
     sprintf("Datasets:  %d", n_ds),
     sprintf("Variables: %d", n_var),
     sprintf("Codelists: %d", n_cl)

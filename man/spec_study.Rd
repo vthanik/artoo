@@ -19,8 +19,8 @@ table; an unknown field aborts with \code{artoo_error_input}.}
 }
 \description{
 Return the study-level metadata row, or a single field from it. Holds the
-study identifier, standard, and implementation-guide version that scope
-the whole spec.
+study identifier and any other study-scoped fields a source provides
+(the CDISC standard lives on its own property -- see \code{\link[=spec_standard]{spec_standard()}}).
 }
 \examples{
 # ---- Example 1: the whole study row, then one field ----
@@ -30,12 +30,13 @@ the whole spec.
 spec <- artoo_spec(
   cdisc_datasets, cdisc_variables,
   codelists = cdisc_codelists,
-  study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
+  study = data.frame(studyid = "CDISCPILOT01")
 )
 spec_study(spec)
 spec_study(spec, "studyid")
 
 }
 \seealso{
-\code{\link[=spec_datasets]{spec_datasets()}} for the datasets the study scopes.
+\code{\link[=spec_datasets]{spec_datasets()}} for the datasets the study scopes;
+\code{\link[=spec_standard]{spec_standard()}} for the spec's CDISC standard.
 }

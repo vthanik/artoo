@@ -87,13 +87,14 @@ write_spec <- function(spec, path) {
     )
   }
 
-  # Fixed key order: version first, then each slot in canonical order. A
-  # NULL `values` slot is emitted as JSON null (null = "null").
+  # Fixed key order: version, then the scalar standard, then each slot in
+  # canonical order. A NULL `values` slot is emitted as JSON null
+  # (null = "null"); an NA standard likewise serialises to null.
   payload <- c(
-    list(artoo_spec_version = .spec_json_version),
+    list(artoo_spec_version = .spec_json_version, standard = spec@standard),
     lapply(.spec_json_slots, function(s) S7::prop(spec, s))
   )
-  names(payload) <- c("artoo_spec_version", .spec_json_slots)
+  names(payload) <- c("artoo_spec_version", "standard", .spec_json_slots)
 
   json <- jsonlite::toJSON(
     payload,

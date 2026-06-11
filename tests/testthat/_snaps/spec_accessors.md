@@ -16,5 +16,5 @@
       Error:
       ! `field` must be a study-level field.
       x "nope" is not present.
-      i Available: "studyid" and "standard".
+      i Available: "studyid".
 

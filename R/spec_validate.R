@@ -58,6 +58,17 @@
 .spec_validate <- function(self) {
   issues <- character(0)
 
+  # One spec = one standard: the property is a scalar (NA permitted).
+  if (length(self@standard) != 1L) {
+    issues <- c(
+      issues,
+      sprintf(
+        "@standard must be a single value (NA when unspecified), not length %d.",
+        length(self@standard)
+      )
+    )
+  }
+
   issues <- c(
     issues,
     .validate_slot(

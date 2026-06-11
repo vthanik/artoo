@@ -58,6 +58,15 @@
 #' variable names a dataset absent from `datasets`, or references a
 #' `codelist_id` absent from `codelists`.
 #'
+#' **One spec, one standard.** A `artoo_spec` carries exactly one CDISC
+#' standard, stored as the scalar `@standard` property. The constructor
+#' resolves it from the `standard` argument, a `standard` column in
+#' `datasets` (the P21 workbook shape), and a `standard` field in `study`
+#' (the Define-XML shape) -- those columns are consumed, so `@standard` is
+#' the single home. More than one distinct value aborts with
+#' `artoo_error_spec`; scope the source to one standard (e.g.
+#' `read_spec(path, datasets = ...)`) instead of mixing.
+#'
 #' @param datasets *Dataset-level metadata table.*
 #'   `<data.frame>: required`. One row per dataset; must carry a `dataset`
 #'   column. Optional columns `label`, `class`, `structure`, `keys` are
@@ -75,7 +84,15 @@
 #'   **Interaction:** every `codelist_id` referenced by `variables` must
 #'   resolve here.
 #' @param study *Study-level metadata.* `<data.frame> | NULL`. A single row
-#'   of named study fields (e.g. `studyid`, `standard`).
+#'   of named study fields (e.g. `studyid`). A `standard` field, when
+#'   present, is consumed into `@standard`.
+#' @param standard *The CDISC standard the spec implements.*
+#'   `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
+#'   `NULL` (default) it is resolved from `datasets$standard` or
+#'   `study$standard`; absent everywhere, `@standard` is `NA`.
+#'
+#'   **Restriction:** all sources must agree on one value; conflicting
+#'   standards abort with `artoo_error_spec`.
 #' @param values *Value-level (VLM) metadata.* `<data.frame> | NULL`.
 #' @param methods *Derivation methods.* `<data.frame> | NULL`. The
 #'   Define-XML method definitions variables reference by `method_id`; must
@@ -121,7 +138,8 @@ artoo_spec <- function(
   values = NULL,
   methods = NULL,
   comments = NULL,
-  documents = NULL
+  documents = NULL,
+  standard = NULL
 ) {
   call <- rlang::caller_env()
   if (is.null(datasets) || is.null(variables)) {
@@ -193,6 +211,13 @@ artoo_spec <- function(
     )
   }
 
+  # Resolve the one CDISC standard from every place a source can carry it
+  # (explicit argument, P21 datasets column, Define-XML study field), then
+  # strip those columns -- @standard is the single home.
+  standard <- .resolve_standard(standard, datasets, study, call)
+  datasets$standard <- NULL
+  study$standard <- NULL
+
   # Canonicalise each variable's data_type to a CDISC dataType.
   if (nrow(variables)) {
     variables$data_type <- vapply(
@@ -211,6 +236,7 @@ artoo_spec <- function(
   .spec_check_refs(datasets, variables, codelists, call)
 
   artoo_spec_class(
+    standard = standard,
     study = study,
     datasets = datasets,
     variables = variables,
@@ -220,6 +246,34 @@ artoo_spec <- function(
     documents = documents,
     values = values
   )
+}
+
+# Resolve the spec's one CDISC standard. Unions the explicit argument, a
+# P21-style `standard` column on the datasets table, and a Define-XML-style
+# `standard` field on the study row; drops NA/blank; aborts when more than
+# one distinct value survives. Returns a length-1 character (NA when no
+# source names a standard).
+#' @noRd
+.resolve_standard <- function(standard, datasets, study, call) {
+  cands <- c(
+    standard,
+    if ("standard" %in% names(datasets)) datasets$standard,
+    if ("standard" %in% names(study)) study$standard
+  )
+  cands <- trimws(as.character(cands))
+  cands <- unique(cands[!is.na(cands) & nzchar(cands)])
+  if (length(cands) > 1L) {
+    .artoo_abort(
+      c(
+        "A {.cls artoo_spec} carries exactly one CDISC standard.",
+        "x" = "Found {length(cands)} distinct standards: {.val {cands}}.",
+        "i" = "Split the source by standard, or scope the read to one standard's datasets with {.code read_spec(path, datasets = ...)}."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  if (length(cands)) cands else NA_character_
 }
 
 # Friendly cross-slot reference checks (the S7 validator repeats these as a

@@ -412,6 +412,8 @@ read_spec <- function(
     call = call
   )
 
+  # The scalar standard rides its own top-level key (a JSON null reads back
+  # as NULL, which the constructor resolves to NA).
   artoo_spec(
     datasets = tables$datasets,
     variables = variables,
@@ -420,7 +422,8 @@ read_spec <- function(
     values = tables$values,
     methods = pick("methods"),
     comments = pick("comments"),
-    documents = pick("documents")
+    documents = pick("documents"),
+    standard = raw[["standard"]]
   )
 }
 

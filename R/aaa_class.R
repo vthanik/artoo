@@ -38,7 +38,6 @@
   subclass = "character",
   structure = "character",
   keys = "character",
-  standard = "character",
   comment_id = "character"
 )
 .spec_req_datasets <- c("dataset")
@@ -121,6 +120,12 @@ artoo_spec_class <- S7::new_class(
   "artoo_spec",
   package = "artoo",
   properties = list(
+    # One spec = one CDISC standard (scalar; NA when unspecified). Mixing
+    # standards aborts at construction -- see .resolve_standard().
+    standard = S7::new_property(
+      S7::class_character,
+      default = NA_character_
+    ),
     study = S7::class_data.frame,
     datasets = S7::class_data.frame,
     variables = S7::class_data.frame,

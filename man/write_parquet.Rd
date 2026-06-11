@@ -41,7 +41,7 @@ workflow (spec -> apply_spec -> write_parquet); a thin wrapper over
 \strong{Metadata where plain Parquet has none.} A bare nanoparquet/arrow file
 drops labels, formats, and codelists; \code{write_parquet()} embeds the complete
 \code{artoo_meta} as a single Dataset-JSON-shaped string under the
-\code{metadata_json} key, so \code{\link[nanoparquet:read_parquet]{read_parquet()}} restores every CDISC attribute.
+\code{metadata_json} key, so \code{\link[=read_parquet]{read_parquet()}} restores every CDISC attribute.
 The same string is what a \code{.json} file or an rds carries, so conversion
 between any two formats stays lossless. A reader without artoo still opens
 the data and can see the \code{metadata_json} block.
@@ -65,6 +65,6 @@ identical(get_meta(back)@columns, get_meta(adsl)@columns)
 
 }
 \seealso{
-\code{\link[nanoparquet:read_parquet]{read_parquet()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the
+\code{\link[=read_parquet]{read_parquet()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the
 generic dispatcher.
 }

@@ -243,11 +243,48 @@ spec_keys <- function(spec, dataset) {
   keys[nzchar(keys)]
 }
 
+#' The CDISC standard a spec implements
+#'
+#' Return the one CDISC standard the specification carries (e.g.
+#' `"ADaMIG 1.1"`, `"SDTMIG 3.2"`). A `artoo_spec` is single-standard by
+#' construction -- [artoo_spec()] aborts when its sources mix standards --
+#' so this is always a scalar; `NA` when no source named one.
+#'
+#' @param spec *The specification to read.* `<artoo_spec>: required`.
+#'
+#' @return *A `<character(1)>`*: the standard, or `NA` when unspecified.
+#'
+#' @examples
+#' # ---- Example 1: the standard set at construction ----
+#' #
+#' # Pass the standard explicitly (or let it resolve from a P21 workbook's
+#' # Standard column / a Define-XML study block) and read it back.
+#' spec <- artoo_spec(
+#'   cdisc_datasets, cdisc_variables,
+#'   codelists = cdisc_codelists,
+#'   standard = "ADaMIG 1.1"
+#' )
+#' spec_standard(spec)
+#'
+#' # ---- Example 2: unspecified resolves to NA ----
+#' #
+#' # A spec built without any standard source carries NA.
+#' bare <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec_standard(bare)
+#'
+#' @seealso [spec_study()] for the rest of the study-level metadata;
+#'   [artoo_spec()] for how the standard is resolved.
+#' @export
+spec_standard <- function(spec) {
+  .check_spec_arg(spec)
+  spec@standard
+}
+
 #' Study-level metadata
 #'
 #' Return the study-level metadata row, or a single field from it. Holds the
-#' study identifier, standard, and implementation-guide version that scope
-#' the whole spec.
+#' study identifier and any other study-scoped fields a source provides
+#' (the CDISC standard lives on its own property -- see [spec_standard()]).
 #'
 #' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param field *Return one field instead of the row.* `<character(1)> |
@@ -266,12 +303,13 @@ spec_keys <- function(spec, dataset) {
 #' spec <- artoo_spec(
 #'   cdisc_datasets, cdisc_variables,
 #'   codelists = cdisc_codelists,
-#'   study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
+#'   study = data.frame(studyid = "CDISCPILOT01")
 #' )
 #' spec_study(spec)
 #' spec_study(spec, "studyid")
 #'
-#' @seealso [spec_datasets()] for the datasets the study scopes.
+#' @seealso [spec_datasets()] for the datasets the study scopes;
+#'   [spec_standard()] for the spec's CDISC standard.
 #' @export
 spec_study <- function(spec, field = NULL) {
   .check_spec_arg(spec)

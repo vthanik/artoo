@@ -58,6 +58,6 @@ get_meta(back)@dataset$records
 
 }
 \seealso{
-\code{\link[jsonlite:write_json]{write_json()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the generic
+\code{\link[=write_json]{write_json()}} for the inverse; \code{\link[=read_dataset]{read_dataset()}} for the generic
 dispatcher.
 }

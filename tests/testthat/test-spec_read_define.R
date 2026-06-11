@@ -99,11 +99,14 @@ test_that("value-level metadata lands in @values with where clauses", {
   expect_true(all(nzchar(lb$where_clause)))
 })
 
-test_that("the study block carries name and standard", {
+test_that("the study block carries the name; the standard rides @standard", {
   spec <- read_spec(.define_fixture())
   st <- spec@study
   expect_identical(st$study_name, "CDISC01_1")
-  expect_match(st$standard, "SDTMIG")
+  # The Define standard is consumed into the scalar property -- @standard
+  # is its single home, not the study data frame.
+  expect_false("standard" %in% names(st))
+  expect_match(spec_standard(spec), "SDTMIG")
 })
 
 test_that("the parsed spec validates", {
@@ -174,7 +177,7 @@ test_that("a Define 2.0 document with no codelists or supporting slots reads", {
   writeLines(.mini_define(body), p)
   spec <- read_spec(p)
   # The 2.0 standard rides the MetaDataVersion attributes.
-  expect_identical(spec@study$standard, "SDTMIG 3.2")
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
   # def:DisplayFormat (a namespaced attribute) is recovered.
   v <- spec_variables(spec, "DM")
   expect_identical(v$display_format, "$12.")

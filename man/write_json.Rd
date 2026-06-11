@@ -48,7 +48,7 @@ write.
 
 \strong{Streaming write, whole-file read.} The writer streams the \code{rows} array
 in bounded slabs (a \code{.json.gz} path gzips the stream transparently), but
-\code{\link[jsonlite:read_json]{read_json()}} must parse the whole array at once. For multi-million-row
+\code{\link[=read_json]{read_json()}} must parse the whole array at once. For multi-million-row
 datasets prefer the NDJSON variant (\code{\link[=write_ndjson]{write_ndjson()}} / \code{\link[=read_ndjson]{read_ndjson()}}),
 which bounds memory in both directions.
 }
@@ -72,6 +72,6 @@ write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
 
 }
 \seealso{
-\code{\link[jsonlite:read_json]{read_json()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the generic
+\code{\link[=read_json]{read_json()}} for the inverse; \code{\link[=write_dataset]{write_dataset()}} for the generic
 dispatcher.
 }
