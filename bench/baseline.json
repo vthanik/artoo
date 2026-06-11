@@ -1,0 +1,33 @@
+{
+  "rows": 1000000,
+  "cols": 8,
+  "r_version": "4.5.3",
+  "platform": "aarch64-apple-darwin20",
+  "timings": {
+    "xpt": {
+      "write_s": 4.86,
+      "read_s": 7.04,
+      "size_mb": 67
+    },
+    "json": {
+      "write_s": 6.14,
+      "read_s": 9.48,
+      "size_mb": 103.7
+    },
+    "ndjson": {
+      "write_s": 6.33,
+      "read_s": 10.92,
+      "size_mb": 103.7
+    },
+    "rds": {
+      "write_s": 1.54,
+      "read_s": 0.48,
+      "size_mb": 18.6
+    },
+    "parquet": {
+      "write_s": 1.05,
+      "read_s": 1.08,
+      "size_mb": 22.8
+    }
+  }
+}

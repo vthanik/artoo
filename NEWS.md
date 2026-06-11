@@ -1,5 +1,27 @@
 # vport 0.0.0.9000
 
+* New `read_ndjson()` / `write_ndjson()`: the newline-delimited variant of
+  CDISC Dataset-JSON v1.1 (`.ndjson`, `.jsonl`). Line 1 carries the complete
+  metadata block; each following line is one row array. Memory stays bounded
+  in both directions (the writer streams slabs, the reader parses line
+  batches, `n_max` stops the line loop early), making ndjson the format for
+  multi-million-row datasets.
+* `read_json()` and `read_ndjson()` read `.json.gz` / `.ndjson.gz`
+  transparently (gzip magic-byte detection), and the writers gzip when the
+  path ends in `.gz`; the generic dispatcher resolves the double extension.
+  A `.gz` behind a binary container format (xpt, parquet, rds) is refused
+  with `vport_error_input`.
+* `write_json()` now streams the `rows` array in bounded slabs of per-column
+  JSON literals instead of materializing an O(rows x cols) cell list, with a
+  progress bar over slabs; output is byte-identical to the previous
+  serialization (pinned by golden files).
+* `write_parquet()` gained `compression` (`"snappy"` default, `"gzip"`,
+  `"zstd"`, `"uncompressed"`), passed through to nanoparquet.
+* `write_xpt()` packs character columns with one vectorized buffer fill per
+  column instead of a per-row loop; a 1M-row character-heavy write is an
+  order of magnitude faster and the output is byte-identical.
+* Added `bench/bench-io.R`, a 1M x 30 benchmark harness writing
+  `bench/baseline.json` for the opt-in performance-regression smoke.
 * SAS special missing tags (`.A`-`.Z`, `._`) now survive every format, not
   just xpt and rds: json and parquet carry them in the namespaced
   `_vport.specialMissings` extension while the data values stay plain nulls

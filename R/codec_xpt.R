@@ -422,13 +422,7 @@
           call = call
         )
       }
-      bytes <- if (nobs) {
-        unlist(lapply(seq_len(nobs), function(k) {
-          .str_to_raw_bytes(if (is.na(chr[k])) "" else chr[k], nlng)
-        }))
-      } else {
-        raw(0)
-      }
+      bytes <- .strvec_to_fixed_raw(chr, nlng)
     }
 
     out_name <- nm

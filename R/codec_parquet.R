@@ -40,9 +40,26 @@
   meta,
   path,
   encoding = NULL,
+  compression = "snappy",
   call = rlang::caller_env()
 ) {
   rlang::check_installed("nanoparquet", reason = "to write Parquet files.")
+
+  valid_comp <- c("snappy", "gzip", "zstd", "uncompressed")
+  if (
+    !is.character(compression) ||
+      length(compression) != 1L ||
+      !compression %in% valid_comp
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg compression} must be one of {.val {valid_comp}}.",
+        "x" = "You supplied {.val {compression}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
 
   # Parquet bytes stay UTF-8 (the format's STRING type is UTF-8 by spec); an
   # explicit `encoding` is recorded as the source-charset metadata so a later
@@ -86,9 +103,14 @@
   tryCatch(
     {
       if (is.null(kv)) {
-        nanoparquet::write_parquet(x, tmp)
+        nanoparquet::write_parquet(x, tmp, compression = compression)
       } else {
-        nanoparquet::write_parquet(x, tmp, metadata = kv)
+        nanoparquet::write_parquet(
+          x,
+          tmp,
+          compression = compression,
+          metadata = kv
+        )
       }
       ok <- TRUE
     },
@@ -209,6 +231,13 @@
 #'   UTF-8 by spec); `encoding` only records the data's original charset in the
 #'   `vport_meta`, so a later [write_xpt()] can reproduce the source bytes.
 #'   `NULL` (default) leaves the recorded encoding untouched.
+#' @param compression *Column compression codec.* `<character(1)>: default
+#'   "snappy"`. One of:
+#'
+#'   - `"snappy"` (default) -- fast, the parquet ecosystem default.
+#'   - `"gzip"` -- smaller files, slower.
+#'   - `"zstd"` -- the best size/speed trade-off where supported.
+#'   - `"uncompressed"` -- raw pages.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
@@ -232,8 +261,14 @@
 #' @seealso [read_parquet()] for the inverse; [write_dataset()] for the
 #'   generic dispatcher.
 #' @export
-write_parquet <- function(x, path, encoding = NULL) {
-  write_dataset(x, path, format = "parquet", encoding = encoding)
+write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
+  write_dataset(
+    x,
+    path,
+    format = "parquet",
+    encoding = encoding,
+    compression = compression
+  )
 }
 
 #' Read a dataset from Apache Parquet

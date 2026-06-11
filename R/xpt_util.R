@@ -53,6 +53,42 @@
   }
 }
 
+# A whole character column to fixed-width raw, one `width`-byte field per
+# element, right-padded with ASCII spaces; NA packs as all spaces. The
+# vectorized OBS-section packer: one buffer allocation and one destination
+# scatter for the column, never a per-cell call (a 1M-row column is one
+# charToRaw, not a million). The Encoding mark is neutralized on a local copy
+# before the collapse -- paste0 re-encodes latin1-marked strings (iconv
+# output for a single-byte target) to the session charset, which would
+# corrupt the target bytes; "unknown" passes the stored bytes through.
+#' @noRd
+.strvec_to_fixed_raw <- function(chr, width) {
+  n <- length(chr)
+  if (n == 0L) {
+    return(raw(0))
+  }
+  chr[is.na(chr)] <- ""
+  bw <- nchar(chr, type = "bytes")
+  if (any(bw > width)) {
+    over <- utils::head(which(bw > width), 1L)
+    cli::cli_abort(
+      c(
+        "Internal packing error: a value needs {bw[over]} bytes in a {width}-byte field.",
+        "i" = "The OBS writer sizes fields to the max byte length; please report this."
+      ),
+      class = "vport_error_codec"
+    )
+  }
+  buf <- rep(as.raw(0x20), width * n)
+  if (any(bw > 0L)) {
+    Encoding(chr) <- "unknown"
+    all_bytes <- charToRaw(paste0(chr, collapse = ""))
+    dest <- sequence(bw) + rep((seq_len(n) - 1L) * width, bw)
+    buf[dest] <- all_bytes
+  }
+  buf
+}
+
 # Integer <-> big-endian raw (S370FPIB), used for var counts / lengths / npos.
 #' @noRd
 .int_to_pib2 <- function(x) {

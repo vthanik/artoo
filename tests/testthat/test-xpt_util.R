@@ -72,3 +72,71 @@ test_that(".read_bytes returns exactly n bytes", {
   on.exit(close(con))
   expect_length(vport:::.read_bytes(con, 6L), 6L)
 })
+
+# ---- .strvec_to_fixed_raw (vectorized OBS field packing) --------------------
+
+test_that(".strvec_to_fixed_raw packs, pads, and handles NA", {
+  out <- vport:::.strvec_to_fixed_raw(c("AB", NA, "", "ABCD"), 4L)
+  expect_identical(
+    out,
+    as.raw(c(
+      0x41,
+      0x42,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x20,
+      0x41,
+      0x42,
+      0x43,
+      0x44
+    ))
+  )
+  expect_identical(vport:::.strvec_to_fixed_raw(character(0), 8L), raw(0))
+})
+
+test_that(".strvec_to_fixed_raw is byte-true for multibyte UTF-8", {
+  x <- c("café", "éé") # 5 and 4 UTF-8 bytes
+  out <- vport:::.strvec_to_fixed_raw(x, 5L)
+  expect_identical(out[1:5], charToRaw("café"))
+  expect_identical(out[6:10], c(charToRaw("éé"), as.raw(0x20)))
+})
+
+test_that(".strvec_to_fixed_raw preserves latin1-marked target bytes", {
+  # .to_target output for a windows-1252 write arrives latin1-marked; the
+  # packer must emit the stored single bytes, never re-encode to UTF-8.
+  x <- iconv(c("café", "nø"), from = "UTF-8", to = "latin1")
+  expect_identical(Encoding(x), c("latin1", "latin1"))
+  out <- vport:::.strvec_to_fixed_raw(x, 4L)
+  expect_identical(
+    out,
+    as.raw(c(0x63, 0x61, 0x66, 0xE9, 0x6E, 0xF8, 0x20, 0x20))
+  )
+})
+
+test_that(".strvec_to_fixed_raw matches the per-cell packer byte for byte", {
+  set.seed(42)
+  x <- replicate(
+    200,
+    paste0(sample(c(LETTERS, " ", "-", "é"), sample(0:12, 1)), collapse = "")
+  )
+  x[c(3, 50)] <- NA
+  width <- max(nchar(x, type = "bytes"), 1L, na.rm = TRUE)
+  old <- unlist(lapply(seq_along(x), function(k) {
+    vport:::.str_to_raw_bytes(if (is.na(x[k])) "" else x[k], width)
+  }))
+  expect_identical(vport:::.strvec_to_fixed_raw(x, width), old)
+})
+
+test_that(".strvec_to_fixed_raw aborts on a value wider than the field", {
+  expect_error(
+    vport:::.strvec_to_fixed_raw("ABCDE", 4L),
+    class = "vport_error_codec"
+  )
+})

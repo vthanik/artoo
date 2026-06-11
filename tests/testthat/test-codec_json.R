@@ -342,13 +342,13 @@ test_that("an end-to-end datetime column round-trips as POSIXct", {
 test_that("the encode/decode default branches coerce via character", {
   call <- rlang::current_env()
   expect_identical(
-    vport:::.json_encode_column(
+    vport:::.json_col_literals(
       c("a", NA),
       list(dataType = "weird"),
       "X",
       call
     ),
-    list("a", NULL)
+    c("\"a\"", "null")
   )
   expect_identical(
     vport:::.json_decode_column(list("a", NULL), list(dataType = "weird")),

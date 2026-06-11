@@ -25,17 +25,6 @@
 
 # ---- encode helpers ---------------------------------------------------------
 
-# A length-n list of JSON-ready scalars, NULL where `na` is TRUE. Initializing
-# a list() leaves absent slots NULL (-> JSON null); the kept slots take one
-# scalar each from the vector RHS.
-#' @noRd
-.scalars_or_null <- function(v, na) {
-  out <- vector("list", length(v))
-  keep <- !na
-  out[keep] <- v[keep]
-  out
-}
-
 # ISO 8601 text for a temporal column (the no-targetDataType exchange form).
 # Realizing first means a numeric/never-realized column still serializes
 # correctly; a partial-ISO character column stays as-is (never silent NA).
@@ -63,72 +52,6 @@
   }
 }
 
-# One column's JSON cell list, dispatched off the META dataType (not the R
-# class): a conformed `decimal` is character but emits as a JSON string, a
-# `boolean` is logical and emits as true/false. NaN/Inf are not valid CDISC
-# numerics, so they abort loudly rather than producing invalid JSON (plan C2).
-#' @noRd
-.json_encode_column <- function(col, cm, nm, call) {
-  dt <- if (!is.null(cm)) cm$dataType else .infer_frame_type(col)$data_type
-  tgt <- if (!is.null(cm)) cm$targetDataType else NULL
-  disp <- if (!is.null(cm)) cm$displayFormat else NULL
-
-  if (dt %in% c("date", "datetime", "time")) {
-    if (identical(tgt, "integer")) {
-      num <- .deflate_temporal(col, dt, var = nm, call = call)
-      return(.scalars_or_null(num, is.na(num)))
-    }
-    iso <- .temporal_to_iso(col, dt, disp)
-    return(.scalars_or_null(iso, is.na(iso)))
-  }
-
-  switch(
-    dt,
-    string = ,
-    URI = .scalars_or_null(as.character(col), is.na(col)),
-    decimal = .scalars_or_null(as.character(col), is.na(col)),
-    integer = .scalars_or_null(as.integer(col), is.na(col)),
-    boolean = .scalars_or_null(as.logical(col), is.na(col)),
-    float = ,
-    double = {
-      num <- as.numeric(col)
-      bad <- is.nan(num) | is.infinite(num)
-      if (any(bad)) {
-        offenders <- utils::head(unique(as.character(num[bad])), 3L)
-        cli::cli_abort(
-          c(
-            "Column {.var {nm}} contains {.val {offenders}}.",
-            "x" = "NaN and infinite values are not valid in CDISC Dataset-JSON.",
-            "i" = "Recode them to NA, or use a string dataType."
-          ),
-          class = "vport_error_type",
-          call = call
-        )
-      }
-      .scalars_or_null(num, is.na(num))
-    },
-    .scalars_or_null(as.character(col), is.na(col))
-  )
-}
-
-# Build the flat row-major `rows` array. Each column is encoded once
-# (vectorized per column, plan 9.A.6), then transposed to rows; the transpose
-# is plain list indexing, not per-cell type dispatch.
-#' @noRd
-.json_rows <- function(x, meta, call) {
-  nms <- names(x)
-  nr <- nrow(x)
-  has_meta <- is_vport_meta(meta)
-  col_cells <- lapply(nms, function(nm) {
-    cm <- if (has_meta) meta@columns[[nm]] else NULL
-    .json_encode_column(x[[nm]], cm, nm, call)
-  })
-  if (nr == 0L) {
-    return(list())
-  }
-  lapply(seq_len(nr), function(i) lapply(col_cells, .subset2, i))
-}
-
 # encode contract: (x, meta, path, <codec args>, call) -> invisible(path).
 #' @noRd
 .encode_json <- function(
@@ -154,33 +77,7 @@
   # The namespaced `_vport` block carries what strict CDISC cannot: special
   # missing tags, the recorded source encoding, informats. It appears only
   # when there is content; `strict = TRUE` suppresses it with a loss warning.
-  special <- .collect_special_missings(x)
-  if (isTRUE(strict)) {
-    dropped <- character(0)
-    if (length(special)) {
-      dropped <- c(dropped, "special missing tags (.A-.Z)")
-    }
-    if (!is.null(meta@dataset$encoding)) {
-      dropped <- c(dropped, "the recorded source encoding")
-    }
-    if (
-      any(vapply(meta@columns, function(c) !is.null(c$informat), logical(1)))
-    ) {
-      dropped <- c(dropped, "informats")
-    }
-    if (length(dropped)) {
-      cli::cli_warn(
-        c(
-          "strict = TRUE drops vport extensions from {.path {path}}.",
-          "x" = "Not carried: {dropped}.",
-          "i" = "Write with strict = FALSE to keep them in the _vport block."
-        ),
-        class = "vport_warning_codec",
-        call = call
-      )
-    }
-    special <- NULL
-  }
+  special <- .json_prepare_special(x, meta, strict, path, call)
 
   # Canonicalise character columns to NFC so the UTF-8 output is canonical. A
   # no-op on ASCII / single-byte data, so demo goldens are byte-stable.
@@ -190,8 +87,14 @@
     }
   }
 
-  rows <- .json_rows(x, meta, call)
-  obj <- c(
+  # Streaming write: the metadata head is serialized once (digits = I(17),
+  # the guaranteed IEEE-754 round-trip precision -- digits = NA delegated to
+  # R's 15-digit default, which silently lost the last ulp), then the rows
+  # are streamed in slabs of per-column JSON literals (.json_stream_rows), so
+  # a multi-million-row frame never materializes an O(rows x cols) cell list.
+  # Byte-identical to the previous whole-object serialization (the goldens
+  # under fixtures/json-golden pin this). Atomic: temp file, then rename.
+  head_obj <- c(
     list(
       datasetJSONCreationDateTime = format(
         created,
@@ -199,28 +102,19 @@
         tz = "UTC"
       )
     ),
-    .meta_payload(meta, extensions = !isTRUE(strict), special = special),
-    list(rows = rows)
+    .meta_payload(meta, extensions = !isTRUE(strict), special = special)
   )
-  # digits = I(17): 17 significant digits is the guaranteed round-trip
-  # precision for IEEE-754 doubles (digits = NA delegates to R's 15-digit
-  # default, which silently loses the last ulp -- 0.1 + 0.2 came back 0.3).
-  # Deterministic, so byte-stable; auto_unbox keeps scalars unwrapped.
-  json <- jsonlite::toJSON(
-    obj,
-    auto_unbox = TRUE,
-    null = "null",
-    na = "null",
-    digits = I(17)
-  )
+  head_raw <- .json_head_raw(head_obj)
 
-  # Atomic write to UTF-8: build in a temp file, then rename over the target.
   tmp <- tempfile(tmpdir = dirname(path), fileext = ".json.tmp")
-  con <- file(tmp, "wb")
+  con <- .json_out_con(tmp, path)
   ok <- FALSE
   tryCatch(
     {
-      writeBin(charToRaw(enc2utf8(as.character(json))), con)
+      writeBin(head_raw[-length(head_raw)], con) # head minus its closing }
+      writeBin(charToRaw(",\"rows\":["), con)
+      .json_stream_rows(x, meta, con, call, sep = ",", progress = TRUE)
+      writeBin(charToRaw("]}"), con)
       close(con)
       ok <- TRUE
     },
@@ -302,7 +196,7 @@
 # value reads a foreign (non-conformant) file a producer wrote in that charset.
 #' @noRd
 .json_read_text <- function(path, encoding = NULL, call) {
-  bytes <- readBin(path, what = "raw", n = file.info(path)$size)
+  bytes <- .read_maybe_gz(path)
   if (
     length(bytes) >= 3L &&
       bytes[1L] == as.raw(0xEF) &&
@@ -424,6 +318,12 @@
 #' so exact precision is preserved. The file is always UTF-8 (RFC 8259 / CDISC
 #' v1.1). `NaN` and infinite values are not valid CDISC numerics and abort the
 #' write.
+#'
+#' **Streaming write, whole-file read.** The writer streams the `rows` array
+#' in bounded slabs (a `.json.gz` path gzips the stream transparently), but
+#' [read_json()] must parse the whole array at once. For multi-million-row
+#' datasets prefer the NDJSON variant ([write_ndjson()] / [read_ndjson()]),
+#' which bounds memory in both directions.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `vport_meta`.

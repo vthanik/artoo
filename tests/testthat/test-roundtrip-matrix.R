@@ -7,7 +7,7 @@
 # record (boolean/integer/decimal come back numeric, "" comes back NA).
 
 .full_formats <- function() {
-  fmts <- c("json", "rds")
+  fmts <- c("json", "ndjson", "rds")
   if (requireNamespace("nanoparquet", quietly = TRUE)) {
     fmts <- c(fmts, "parquet")
   }

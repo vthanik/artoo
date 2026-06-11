@@ -29,8 +29,16 @@
     return(format)
   }
   known <- .registered_formats()
+  # A .gz suffix is transparent compression, not a format: peel it and
+  # resolve the inner extension (dm.json.gz -> json). Only the text-streaming
+  # codecs gzip; a binary container behind .gz is refused loudly.
+  ext <- tools::file_ext(path)
+  gz <- identical(tolower(ext), "gz")
+  if (gz) {
+    ext <- tools::file_ext(sub("\\.gz$", "", path, ignore.case = TRUE))
+  }
   codec <- tryCatch(
-    .codec_for_ext(tools::file_ext(path), call),
+    .codec_for_ext(ext, call),
     vport_error_codec = function(e) {
       cli::cli_abort(
         c(
@@ -42,6 +50,16 @@
       )
     }
   )
+  if (gz && !codec$format %in% c("json", "ndjson")) {
+    cli::cli_abort(
+      c(
+        "gz compression is not supported for the {.val {codec$format}} format.",
+        "i" = "Only {.val json} and {.val ndjson} stream through gzip."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
   codec$format
 }
 

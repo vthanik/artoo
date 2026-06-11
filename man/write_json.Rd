@@ -45,6 +45,12 @@ ISO 8601 strings, or as SAS-epoch numbers when their \code{targetDataType} is
 so exact precision is preserved. The file is always UTF-8 (RFC 8259 / CDISC
 v1.1). \code{NaN} and infinite values are not valid CDISC numerics and abort the
 write.
+
+\strong{Streaming write, whole-file read.} The writer streams the \code{rows} array
+in bounded slabs (a \code{.json.gz} path gzips the stream transparently), but
+\code{\link[=read_json]{read_json()}} must parse the whole array at once. For multi-million-row
+datasets prefer the NDJSON variant (\code{\link[=write_ndjson]{write_ndjson()}} / \code{\link[=read_ndjson]{read_ndjson()}}),
+which bounds memory in both directions.
 }
 \examples{
 spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)

@@ -211,3 +211,31 @@ test_that("read_parquet(encoding=) decodes a foreign (non-UTF-8) byte column", {
   back <- read_parquet(p, encoding = "windows-1252")
   expect_identical(back$SITE, "café")
 })
+
+# ---- compression passthrough ------------------------------------------------
+
+test_that("write_parquet(compression =) reaches nanoparquet", {
+  df <- data.frame(
+    USUBJID = rep(sprintf("S-%03d", 1:50), 20),
+    AVAL = rep(as.numeric(1:100), 10)
+  )
+  pz <- withr::local_tempfile(fileext = ".parquet")
+  pu <- withr::local_tempfile(fileext = ".parquet")
+  write_parquet(df, pz, compression = "zstd")
+  write_parquet(df, pu, compression = "uncompressed")
+  mz <- nanoparquet::read_parquet_metadata(pz)$column_chunks$codec
+  mu <- nanoparquet::read_parquet_metadata(pu)$column_chunks$codec
+  expect_true(all(mz == "ZSTD"))
+  expect_true(all(mu == "UNCOMPRESSED"))
+  expect_identical(read_parquet(pz)$AVAL, df$AVAL)
+})
+
+test_that("an invalid compression value aborts before writing", {
+  df <- data.frame(A = 1)
+  p <- withr::local_tempfile(fileext = ".parquet")
+  expect_error(
+    write_parquet(df, p, compression = "lz77"),
+    class = "vport_error_input"
+  )
+  expect_false(file.exists(p))
+})

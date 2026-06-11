@@ -93,6 +93,8 @@ reference:
   - write_xpt
   - read_json
   - write_json
+  - read_ndjson
+  - write_ndjson
   - read_parquet
   - write_parquet
   - read_rds
