@@ -19,7 +19,9 @@ vport_checks(
   variable_name = TRUE,
   dataset_name = TRUE,
   label_length = TRUE,
-  integer_overflow = TRUE
+  integer_overflow = TRUE,
+  integer_fraction = TRUE,
+  iso8601_format = TRUE
 )
 }
 \arguments{
@@ -74,6 +76,18 @@ v5 / FDA limit.} \verb{<logical(1)>: default TRUE}.}
 \item{integer_overflow}{\emph{Flag an integer-typed variable holding values
 beyond R's 32-bit integer range.} \verb{<logical(1)>: default TRUE}. Such
 values become \code{NA} under coercion, so this is an error, not a warning.}
+
+\item{integer_fraction}{\emph{Flag an integer-typed variable holding fractional
+values.} \verb{<logical(1)>: default TRUE}. Coercion would truncate them
+(162.6 becomes 162) -- a data-integrity event; fix the spec dataType
+(\code{float} / \code{decimal}) or the data before conforming.}
+
+\item{iso8601_format}{\emph{Flag a character date/datetime/time variable whose
+values are not valid ISO 8601 text.} \verb{<logical(1)>: default TRUE}. A
+character column under a temporal dataType is the CDISC \code{--DTC} form;
+complete values, right-truncated partials (\code{"1951"}, \code{"1951-12"}), and
+SDTMIG hyphen placeholders (\code{"2003---15"}) all pass, while
+\code{"12NOV2019"} or an impossible calendar date is flagged.}
 }
 \value{
 \emph{A \verb{<vport_checks>} control object}. Pass it as the \code{checks}

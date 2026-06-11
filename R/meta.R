@@ -157,6 +157,41 @@
   vport_meta_class(dataset = ds_meta, columns = cols)
 }
 
+# Resolve the storage form of each temporal column where metadata meets
+# data. A spec's date/datetime/time variable with no targetDataType is, by
+# CDISC definition, ISO 8601 text -- correct for a character --DTC column.
+# But when the data column is actually numeric-backed (R Date/POSIXct/
+# vport_time, or a never-realized SAS-epoch numeric), the truthful exchange
+# form is numeric: stamp targetDataType = "integer" so every codec writes a
+# SAS-epoch number and every reader realizes the same R class back
+# (lossless by construction). Character columns are left untouched -- their
+# exchange form IS the ISO text. Runs once, at stamp time, so the recorded
+# meta and every emitted sidecar agree.
+#' @noRd
+.meta_resolve_temporal_targets <- function(meta, x) {
+  cols <- meta@columns
+  changed <- FALSE
+  for (nm in names(cols)) {
+    cm <- cols[[nm]]
+    dt <- cm$dataType %||% ""
+    if (!dt %in% c("date", "datetime", "time")) {
+      next
+    }
+    if (!is.null(cm$targetDataType) || !(nm %in% names(x))) {
+      next
+    }
+    if (!is.character(x[[nm]])) {
+      cm$targetDataType <- "integer"
+      cols[[nm]] <- cm[intersect(.meta_col_fields, names(cm))]
+      changed <- TRUE
+    }
+  }
+  if (!changed) {
+    return(meta)
+  }
+  vport_meta_class(dataset = meta@dataset, columns = cols)
+}
+
 # ---- build vport_meta from a bare frame (no spec) ---------------------------
 
 # One column entry derived from a data frame column's attributes and R class
@@ -183,7 +218,15 @@
     name = name,
     label = .na_to_null(label %||% NA),
     dataType = ti$data_type,
-    targetDataType = NULL,
+    # A temporal dataType inferred from an R class (Date/POSIXct/time) is
+    # numeric-backed by construction; record targetDataType = "integer" so
+    # every codec stores it as a SAS-epoch numeric and a read realizes it
+    # back to the same class (CDISC: no targetDataType would mean ISO text).
+    targetDataType = if (ti$data_type %in% c("date", "datetime", "time")) {
+      "integer"
+    } else {
+      NULL
+    },
     length = .resolve_xpt_length(len_attr, col),
     displayFormat = display_format,
     informat = if (!is.null(inf_attr) && nzchar(inf_attr)) {

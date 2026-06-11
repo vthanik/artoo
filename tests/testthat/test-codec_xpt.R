@@ -763,9 +763,12 @@ test_that("encoding detection considers labels, not just data values", {
   expect_identical(get_meta(back)@columns$PAYS$label, "Résidence")
 })
 
-test_that("a character-backed date column aborts on write, no garbage days (review B7)", {
+test_that("a character-backed date column writes as ISO text, no garbage days (review B7)", {
   # "2014" used to coerce via as.numeric() and silently write SAS day 2014
-  # (= 1965-07-07); the lost-coercion guard never saw it.
+  # (= 1965-07-07). With no numeric targetDataType a character temporal is
+  # the CDISC ISO-text form: it stores as a character variable and the
+  # partial values survive verbatim. (With targetDataType = "integer" the
+  # write still aborts loud -- covered in test-temporal-iso.R.)
   df <- data.frame(
     SUBJ = c("A", "B"),
     ADT = c("2014", "2015"),
@@ -783,7 +786,11 @@ test_that("a character-backed date column aborts on write, no garbage days (revi
   meta <- vport:::vport_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
-  expect_error(write_xpt(df, p), class = "vport_error_codec")
+  write_xpt(df, p)
+  back <- read_xpt(p)
+  expect_identical(back$ADT, c("2014", "2015"))
+  # The temporal display format is dropped for a character variable.
+  expect_null(get_meta(back)@columns$ADT$displayFormat)
 })
 
 test_that("special-missing tags survive a temporal round-trip (review codec C3)", {

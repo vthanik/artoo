@@ -50,11 +50,13 @@ test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guar
   expect_equal(sas_days[ok], r_epoch_days[ok] + 3653)
 })
 
-test_that("a scaffolded date variable realizes to a Date NA", {
+test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
+  # The spec types TRTSDT "date" with no targetDataType: by the CDISC
+  # storage rule that is ISO 8601 text, so the scaffold is character NA.
   spec <- demo_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
   out <- apply_spec(raw, spec, "ADSL", on_error = "off")
-  expect_s3_class(out$TRTSDT, "Date")
+  expect_type(out$TRTSDT, "character")
   expect_true(all(is.na(out$TRTSDT)))
 })
 
@@ -167,14 +169,18 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   )
 })
 
-test_that("coercion warns when an integer dataType truncates fractions (review B6)", {
+test_that("truncating integer coercion aborts by default, warns under on_lossy (review B6)", {
   vars <- cdisc_variables
   vars$data_type[vars$dataset == "DM" & vars$variable == "AGE"] <- "integer"
   spec <- vport_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
   raw <- cdisc_dm
   raw$AGE[1] <- raw$AGE[1] + 0.7
-  expect_warning(
+  expect_error(
     apply_spec(raw, spec, "DM", on_error = "off"),
+    class = "vport_error_type"
+  )
+  expect_warning(
+    apply_spec(raw, spec, "DM", on_error = "off", on_lossy = "warn"),
     class = "vport_warning_coercion"
   )
 })
@@ -215,11 +221,17 @@ test_that("integer overflow under coercion is named precisely", {
     )
   )
   df <- data.frame(SUBJN = c(1, 9999999999))
+  # Overflow is lossy (values become NA): abort by default, named precisely.
+  expect_error(
+    apply_spec(df, spec, "DM", on_error = "off"),
+    class = "vport_error_type",
+    regexp = "overflow"
+  )
+  # Opting out keeps the old two-warning behavior (lossy + NA-introduction).
   expect_warning(
     expect_warning(
-      out <- apply_spec(df, spec, "DM", on_error = "off"),
-      class = "vport_warning_coercion",
-      regexp = "overflowed"
+      out <- apply_spec(df, spec, "DM", on_error = "off", on_lossy = "warn"),
+      class = "vport_warning_coercion"
     ),
     class = "vport_warning_coercion"
   )

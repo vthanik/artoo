@@ -117,31 +117,61 @@ test_that("deflate is robust to an already-numeric input (double-deflate safe)",
   expect_identical(vport:::.deflate_temporal(19725, "date"), 19725)
 })
 
-test_that("realize parses complete ISO character input per family", {
-  d <- vport:::.realize_temporal(c("2014-01-02", NA), "date", "E8601DA.")
+test_that("realize parses complete ISO character input per family (from_text)", {
+  # from_text = TRUE is the explicit opt-in (targetDataType demands numeric
+  # storage); without it, ISO text is the CDISC storage form and stays put.
+  d <- vport:::.realize_temporal(
+    c("2014-01-02", NA),
+    "date",
+    "E8601DA.",
+    from_text = TRUE
+  )
   expect_s3_class(d, "Date")
   expect_identical(format(d[1]), "2014-01-02")
 
-  dt <- vport:::.realize_temporal("2014-01-02T08:30:00", "datetime", "E8601DT.")
+  dt <- vport:::.realize_temporal(
+    "2014-01-02T08:30:00",
+    "datetime",
+    "E8601DT.",
+    from_text = TRUE
+  )
   expect_s3_class(dt, "POSIXct")
   expect_identical(format(dt, "%H:%M:%S", tz = "UTC"), "08:30:00")
 
-  t <- vport:::.realize_temporal(c("08:30:00", "25:00:00"), "time", "TIME8.")
+  t <- vport:::.realize_temporal(
+    c("08:30:00", "25:00:00"),
+    "time",
+    "TIME8.",
+    from_text = TRUE
+  )
   expect_true(is_vport_time(t))
   expect_identical(unclass(t), c(30600, 90000))
 })
 
-test_that("partial ISO datetime and time stay character", {
+test_that("character ISO text stays character without from_text", {
+  expect_type(
+    vport:::.realize_temporal(c("2014-01-02", NA), "date", "DATE9."),
+    "character"
+  )
+})
+
+test_that("partial ISO datetime and time stay character even under from_text", {
   expect_type(
     vport:::.realize_temporal(
       c("2014-01-02T08", "x"),
       "datetime",
-      "DATETIME20."
+      "DATETIME20.",
+      from_text = TRUE
     ),
     "character"
   )
   expect_type(
-    vport:::.realize_temporal(c("8h", "9h"), "time", "TIME8."),
+    vport:::.realize_temporal(
+      c("8h", "9h"),
+      "time",
+      "TIME8.",
+      from_text = TRUE
+    ),
     "character"
   )
 })
@@ -203,7 +233,8 @@ test_that("realize datetime parses fractional seconds", {
   dt <- vport:::.realize_temporal(
     "2014-01-02T08:30:00.5",
     "datetime",
-    "E8601DT."
+    "E8601DT.",
+    from_text = TRUE
   )
   expect_s3_class(dt, "POSIXct")
   expect_identical(as.numeric(dt) %% 60, 0.5)
@@ -214,19 +245,22 @@ test_that("realize datetime honors a UTC offset as an instant", {
   off <- vport:::.realize_temporal(
     "2014-01-02T08:30:00+05:30",
     "datetime",
-    "E8601DT."
+    "E8601DT.",
+    from_text = TRUE
   )
   utc <- vport:::.realize_temporal(
     "2014-01-02T03:00:00",
     "datetime",
-    "E8601DT."
+    "E8601DT.",
+    from_text = TRUE
   )
   expect_identical(as.numeric(off), as.numeric(utc))
   # Z is the zero offset
   z <- vport:::.realize_temporal(
     "2014-01-02T03:00:00Z",
     "datetime",
-    "E8601DT."
+    "E8601DT.",
+    from_text = TRUE
   )
   expect_identical(as.numeric(z), as.numeric(utc))
 })
@@ -235,13 +269,19 @@ test_that("realize datetime leaves an impossible datetime character", {
   out <- vport:::.realize_temporal(
     c("2014-01-02T08:30:00", "2014-13-45T08:30:00"),
     "datetime",
-    "E8601DT."
+    "E8601DT.",
+    from_text = TRUE
   )
   expect_type(out, "character")
 })
 
 test_that("realize time parses fractional seconds", {
-  t <- vport:::.realize_temporal("08:30:00.5", "time", "TIME8.")
+  t <- vport:::.realize_temporal(
+    "08:30:00.5",
+    "time",
+    "TIME8.",
+    from_text = TRUE
+  )
   expect_true(is_vport_time(t))
   expect_identical(unclass(t), 30600.5)
 })
@@ -252,7 +292,8 @@ test_that("realize date leaves a shape-valid impossible date character", {
   out <- vport:::.realize_temporal(
     c("2014-01-02", "2014-13-45"),
     "date",
-    "DATE9."
+    "DATE9.",
+    from_text = TRUE
   )
   expect_type(out, "character")
   out2 <- vport:::.realize_temporal(

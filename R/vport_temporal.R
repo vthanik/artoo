@@ -384,9 +384,26 @@
 # class; displayFormat only validates -- when it does not classify as the
 # matching family, the column is left numeric and the caller (check_spec)
 # reports it. Idempotent on already-correct classes.
+#
+# `from_text` gates character input. Realization exists to make SAS-epoch
+# NUMBERS readable; ISO 8601 text is already readable, and in CDISC a
+# temporal dataType with no numeric targetDataType IS text (the --DTC
+# convention), so promoting it to Date would silently change the
+# submission storage shape. Callers pass from_text = TRUE only when the
+# metadata explicitly demands numeric storage (targetDataType integer/
+# decimal) -- then parsing full-ISO text to the R class is the conform
+# step's job (partials still stay character via the never-silent-NA gate).
 #' @noRd
-.realize_temporal <- function(col, data_type, display_format = NA) {
+.realize_temporal <- function(
+  col,
+  data_type,
+  display_format = NA,
+  from_text = FALSE
+) {
   if (!(data_type %in% c("date", "datetime", "time"))) {
+    return(col)
+  }
+  if (is.character(col) && !isTRUE(from_text)) {
     return(col)
   }
   fmt <- .resolve_display_format(data_type, display_format)
@@ -415,18 +432,21 @@
 # Anything else aborts: a character column would coerce a year-only partial
 # date ("2014") to SAS day 2014 = 1965-07-07, and a mismatched temporal class
 # (POSIXct under "date") would write seconds as days -- both silent garbage.
+# This only fires when the metadata demands numeric storage (targetDataType
+# integer/decimal); without one, a character temporal column is written as
+# ISO 8601 text (the --DTC convention) and never reaches deflate.
 #' @noRd
 .deflate_temporal_abort <- function(col, data_type, expected, var, call) {
   headline <- if (is.null(var)) {
-    "Cannot write this column as a SAS {data_type}."
+    "Cannot write this column as a SAS {data_type} numeric."
   } else {
-    "Cannot write column {.var {var}} as a SAS {data_type}."
+    "Cannot write column {.var {var}} as a SAS {data_type} numeric."
   }
   cli::cli_abort(
     c(
       headline,
-      "x" = "It is {.obj_type_friendly {col}}; a {data_type} column must be {expected} or already a SAS-epoch numeric.",
-      "i" = "Character values, e.g. partial ISO dates, are not representable as SAS {data_type} numerics; use dataType {.val string} or complete the values."
+      "x" = "It is {.obj_type_friendly {col}}; with targetDataType {.val integer} a {data_type} column must be {expected} or already a SAS-epoch numeric.",
+      "i" = "Partial ISO 8601 values cannot be SAS numerics. Drop the spec's targetDataType to write them as ISO text, or complete the values."
     ),
     class = "vport_error_codec",
     call = call
@@ -470,4 +490,135 @@
     },
     as.numeric(col)
   )
+}
+
+# ---- ISO 8601 validation (CDISC-partial-aware) ------------------------------
+
+# Validate character temporal values as ISO 8601 in the forms CDISC data
+# actually carries: complete values, right truncation ("2003", "2003-12",
+# "2003-12-15T13"), and the SDTMIG hyphen placeholders for unknown
+# intermediate components ("2003---15", "--12-15"). NA and "" are never
+# violations here -- missingness is the mandatory/codelist checks' concern.
+# Returns a logical vector aligned to `x`.
+#' @noRd
+.iso8601_valid <- function(x, family) {
+  out <- rep(TRUE, length(x))
+  idx <- which(!is.na(x) & nzchar(trimws(x)))
+  if (!length(idx)) {
+    return(out)
+  }
+  out[idx] <- vapply(
+    trimws(x[idx]),
+    .iso8601_valid1,
+    logical(1),
+    family = family,
+    USE.NAMES = FALSE
+  )
+  out
+}
+
+#' @noRd
+.iso8601_valid1 <- function(s, family) {
+  if (family == "time") {
+    return(.iso_time_ok(sub("^T", "", s)))
+  }
+  has_t <- grepl("T", s, fixed = TRUE)
+  if (family == "date" && has_t) {
+    return(FALSE)
+  }
+  if (!has_t) {
+    return(.iso_date_ok(s))
+  }
+  parts <- strsplit(s, "T", fixed = TRUE)[[1L]]
+  if (length(parts) != 2L || !nzchar(parts[2L])) {
+    return(FALSE)
+  }
+  # ISO 8601 requires the date complete (or placeholder-complete) before a
+  # time component may follow: "2003-12T13" is malformed.
+  .iso_date_ok(parts[1L], need_complete = TRUE) && .iso_time_ok(parts[2L])
+}
+
+# One date token: right-truncated digits, or a hyphen-placeholder form.
+# Range-checks the present components; full dates get a real calendar check.
+#' @noRd
+.iso_date_ok <- function(d, need_complete = FALSE) {
+  m <- regmatches(
+    d,
+    regexec("^([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?$", d)
+  )[[1L]]
+  if (length(m)) {
+    if (need_complete && (!nzchar(m[3L]) || !nzchar(m[4L]))) {
+      return(FALSE)
+    }
+    return(.iso_ymd_ok(m[2L], m[3L], m[4L]))
+  }
+  # SDTMIG placeholders: unknown month ("2003---15") or unknown year
+  # ("--12-15"). The remaining digits are still range-checked.
+  m <- regmatches(d, regexec("^([0-9]{4})---?([0-9]{2})$", d))[[1L]]
+  if (length(m)) {
+    return(.iso_ymd_ok(m[2L], "", m[3L]))
+  }
+  m <- regmatches(d, regexec("^--([0-9]{2})-([0-9]{2})$", d))[[1L]]
+  if (length(m)) {
+    return(.iso_ymd_ok("", m[2L], m[3L]))
+  }
+  FALSE
+}
+
+#' @noRd
+.iso_ymd_ok <- function(y, mo, dy) {
+  if (nzchar(mo)) {
+    moi <- as.integer(mo)
+    if (moi < 1L || moi > 12L) {
+      return(FALSE)
+    }
+  }
+  if (nzchar(dy)) {
+    dyi <- as.integer(dy)
+    if (dyi < 1L || dyi > 31L) {
+      return(FALSE)
+    }
+  }
+  if (nzchar(y) && nzchar(mo) && nzchar(dy)) {
+    # Real calendar check for complete dates (2014-02-30 is invalid).
+    return(!is.na(as.Date(paste(y, mo, dy, sep = "-"), format = "%Y-%m-%d")))
+  }
+  TRUE
+}
+
+# One time token (zone stripped first): right-truncated hh[:mm[:ss[.f]]],
+# with the SDTMIG unknown-hour placeholder ("-:15") accepted.
+#' @noRd
+.iso_time_ok <- function(t) {
+  t <- sub("(Z|[+-][0-9]{2}:?[0-9]{2})$", "", t)
+  if (!nzchar(t)) {
+    return(FALSE)
+  }
+  m <- regmatches(
+    t,
+    regexec(
+      "^([0-9]{2}|-)(?::([0-9]{2}|-)(?::([0-9]{2})(?:\\.[0-9]+)?)?)?$",
+      t
+    )
+  )[[1L]]
+  if (!length(m)) {
+    return(FALSE)
+  }
+  h <- m[2L]
+  mi <- m[3L]
+  se <- m[4L]
+  if (identical(h, "-") && !nzchar(mi)) {
+    return(FALSE)
+  }
+  ok <- TRUE
+  if (grepl("^[0-9]{2}$", h)) {
+    ok <- ok && as.integer(h) <= 23L
+  }
+  if (grepl("^[0-9]{2}$", mi)) {
+    ok <- ok && as.integer(mi) <= 59L
+  }
+  if (nzchar(se)) {
+    ok <- ok && as.integer(se) <= 59L
+  }
+  ok
 }

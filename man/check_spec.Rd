@@ -49,9 +49,12 @@ returns every divergence it finds. \code{\link[=apply_spec]{apply_spec()}} runs 
 to do via its \code{on_error} argument (warn, abort, off). The dimensions
 checked are: missing variables (split into mandatory, an error, and
 permissible, a warning), extra variables (data column the spec does not
-declare), type mismatch, character length overflow, the hard 200-byte XPORT
-v5 / FDA character limit, codelist membership, label drift against the spec,
-key uniqueness, and displayFormat validity.
+declare), type mismatch, ISO 8601 validity of character date/datetime/time
+values (CDISC partials pass; \code{"12NOV2019"} does not), fractional values
+and 32-bit overflow under an \code{integer} dataType (both would corrupt data
+at coercion), character length overflow, the hard 200-byte XPORT v5 / FDA
+character limit, codelist membership, label drift against the spec, key
+uniqueness, and displayFormat validity.
 
 \strong{Decode-aware membership.} \code{decode} selects which codelist column the
 data is checked against, matching \code{\link[=apply_spec]{apply_spec()}}'s decode step:

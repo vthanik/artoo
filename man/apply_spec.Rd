@@ -11,6 +11,7 @@ apply_spec(
   on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  on_lossy = c("error", "warn"),
   trim = TRUE,
   ignore_case = FALSE,
   na_position = c("first", "last"),
@@ -42,6 +43,21 @@ finding.
 \item{no_match}{\emph{Policy for values absent from a codelist when decoding.}
 \verb{<character(1)>}. One of \code{"error"} (default), \code{"keep"}, or \code{"na"}. Has
 no effect when \code{decode = "none"}.}
+
+\item{on_lossy}{\emph{Policy when coercion would damage values.}
+\verb{<character(1)>}. One of:
+\itemize{
+\item \code{"error"} (default) abort before any value is damaged: an \code{integer}
+dataType truncating fractional values (a height losing its decimals)
+or overflowing R's 32-bit range (values becoming \code{NA}) is a
+data-integrity event, not a nuisance.
+\item \code{"warn"} apply the lossy coercion and warn
+(\code{vport_warning_coercion}).
+}
+
+\strong{Tip:} \code{\link[=check_spec]{check_spec()}} flags the same conditions before any coercion
+runs (\code{integer_fraction}, \code{integer_overflow}), so a pre-flight check
+catches them without touching the data.}
 
 \item{trim}{\emph{Match codelist values after trimming whitespace.}
 \verb{<logical(1)>: default TRUE}. Real data carries trailing blanks; a value

@@ -22,7 +22,9 @@
   "variable_name",
   "dataset_name",
   "label_length",
-  "integer_overflow"
+  "integer_overflow",
+  "integer_fraction",
+  "iso8601_format"
 )
 
 #' Control which conformance checks run
@@ -76,6 +78,16 @@
 #' @param integer_overflow *Flag an integer-typed variable holding values
 #'   beyond R's 32-bit integer range.* `<logical(1)>: default TRUE`. Such
 #'   values become `NA` under coercion, so this is an error, not a warning.
+#' @param integer_fraction *Flag an integer-typed variable holding fractional
+#'   values.* `<logical(1)>: default TRUE`. Coercion would truncate them
+#'   (162.6 becomes 162) -- a data-integrity event; fix the spec dataType
+#'   (`float` / `decimal`) or the data before conforming.
+#' @param iso8601_format *Flag a character date/datetime/time variable whose
+#'   values are not valid ISO 8601 text.* `<logical(1)>: default TRUE`. A
+#'   character column under a temporal dataType is the CDISC `--DTC` form;
+#'   complete values, right-truncated partials (`"1951"`, `"1951-12"`), and
+#'   SDTMIG hyphen placeholders (`"2003---15"`) all pass, while
+#'   `"12NOV2019"` or an impossible calendar date is flagged.
 #'
 #' @return *A `<vport_checks>` control object*. Pass it as the `checks`
 #'   argument to [check_spec()] or [apply_spec()].
@@ -111,7 +123,9 @@ vport_checks <- function(
   variable_name = TRUE,
   dataset_name = TRUE,
   label_length = TRUE,
-  integer_overflow = TRUE
+  integer_overflow = TRUE,
+  integer_fraction = TRUE,
+  iso8601_format = TRUE
 ) {
   call <- rlang::caller_env()
   toggles <- list(
@@ -129,7 +143,9 @@ vport_checks <- function(
     variable_name = variable_name,
     dataset_name = dataset_name,
     label_length = label_length,
-    integer_overflow = integer_overflow
+    integer_overflow = integer_overflow,
+    integer_fraction = integer_fraction,
+    iso8601_format = iso8601_format
   )
   for (nm in names(toggles)) {
     v <- toggles[[nm]]

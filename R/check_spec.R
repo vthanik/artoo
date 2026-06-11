@@ -24,9 +24,12 @@
 #' to do via its `on_error` argument (warn, abort, off). The dimensions
 #' checked are: missing variables (split into mandatory, an error, and
 #' permissible, a warning), extra variables (data column the spec does not
-#' declare), type mismatch, character length overflow, the hard 200-byte XPORT
-#' v5 / FDA character limit, codelist membership, label drift against the spec,
-#' key uniqueness, and displayFormat validity.
+#' declare), type mismatch, ISO 8601 validity of character date/datetime/time
+#' values (CDISC partials pass; `"12NOV2019"` does not), fractional values
+#' and 32-bit overflow under an `integer` dataType (both would corrupt data
+#' at coercion), character length overflow, the hard 200-byte XPORT v5 / FDA
+#' character limit, codelist membership, label drift against the spec, key
+#' uniqueness, and displayFormat validity.
 #'
 #' **Decode-aware membership.** `decode` selects which codelist column the
 #' data is checked against, matching [apply_spec()]'s decode step:
@@ -167,10 +170,19 @@ check_spec <- function(
     col <- x[[v]]
     dt <- vars$data_type[i]
 
+    temporal <- !is.na(dt) && dt %in% c("date", "datetime", "time")
+
     if (checks$type_mismatch && !is.na(dt)) {
       want <- .type_storage(dt)
       have <- .storage_of(col)
-      if (!is.na(have) && have != want) {
+      # A character date/datetime/time column is the CDISC ISO 8601 text
+      # form (--DTC), not a type mismatch; its values are validated by the
+      # iso8601_format dimension below instead.
+      if (
+        !is.na(have) &&
+          have != want &&
+          !(temporal && have == "character")
+      ) {
         found[[length(found) + 1L]] <- .finding(
           "type_mismatch",
           dataset,
@@ -181,6 +193,28 @@ check_spec <- function(
             have,
             dt,
             want
+          )
+        )
+      }
+    }
+
+    # Character temporal values must be ISO 8601 (complete, right-truncated
+    # partial, or SDTMIG hyphen-placeholder form). "12NOV2019" or
+    # "2014-13-45" here would otherwise surface only at write time.
+    if (checks$iso8601_format && temporal && is.character(col)) {
+      ok <- .iso8601_valid(col, dt)
+      if (!all(ok)) {
+        bad <- utils::head(unique(col[!ok]), 5L)
+        found[[length(found) + 1L]] <- .finding(
+          "iso8601_format",
+          dataset,
+          v,
+          sprintf(
+            "'%s' has %d value(s) that are not valid ISO 8601 %s text: %s.",
+            v,
+            sum(!ok),
+            dt,
+            paste(bad, collapse = ", ")
           )
         )
       }
@@ -217,6 +251,26 @@ check_spec <- function(
             "'%s' has values up to %d bytes, over the 200-byte XPORT v5 limit.",
             v,
             maxb
+          )
+        )
+      }
+    }
+
+    # Fractional values under an integer dataType: coercion would silently
+    # truncate them (HEIGHTBL 162.6 -> 162). Pre-flight here so the spec
+    # bug surfaces before apply_spec()'s coercion ever runs.
+    if (checks$integer_fraction && identical(dt, "integer")) {
+      nv <- suppressWarnings(as.numeric(col))
+      frac <- !is.na(nv) & is.finite(nv) & nv != trunc(nv)
+      if (any(frac)) {
+        found[[length(found) + 1L]] <- .finding(
+          "integer_fraction",
+          dataset,
+          v,
+          sprintf(
+            "'%s' has %d fractional value(s) but the spec dataType is integer; coercion would truncate them.",
+            v,
+            sum(frac)
           )
         )
       }

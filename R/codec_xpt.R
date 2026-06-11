@@ -337,12 +337,26 @@
       la <- attr(col, "label", exact = TRUE)
       if (is.null(la)) "" else as.character(la)
     }
+    # A character date/datetime/time column with no numeric targetDataType
+    # is ISO 8601 text -- the CDISC --DTC convention (partial dates like
+    # "1951" and "1951-12" included). It stores as a character variable;
+    # the SAS-numeric path below is reserved for columns whose metadata
+    # (targetDataType) or R class (Date/POSIXct/vport_time/numeric) is
+    # numeric-backed.
+    tdt <- if (!is.null(cm)) cm$targetDataType else NULL
+    iso_text <- dt %in%
+      c("date", "datetime", "time") &&
+      is.character(col) &&
+      is.null(tdt)
     display <- if (!is.null(cm)) cm$displayFormat else NULL
-    display <- .resolve_display_format(
-      dt,
-      if (is.null(display)) NA else display
-    )
-    vtype <- .xpt_vartype(dt)
+    display <- if (iso_text) {
+      # A SAS temporal format (DATE9.) on a character variable would be
+      # wrong; keep only an explicit character format ($...), else none.
+      if (!is.null(display) && grepl("^\\$", display)) display else NA
+    } else {
+      .resolve_display_format(dt, if (is.null(display)) NA else display)
+    }
+    vtype <- if (iso_text) 2L else .xpt_vartype(dt)
     # Labels are metadata; transcode with "replace" so a stray glyph never
     # aborts a write. The namestr field holds at most 40 bytes; truncate on a
     # character boundary so a multibyte character is never split (the full
@@ -1097,6 +1111,16 @@
     name = ns$name,
     label = if (nzchar(ns$label)) ns$label else NULL,
     dataType = dt,
+    # A numeric SAS temporal IS dataType date/datetime/time with numeric
+    # storage -- record targetDataType = "integer" so the next codec (json,
+    # parquet) writes the same exchange form and realizes the same R class.
+    targetDataType = if (
+      ns$vartype == 1L && dt %in% c("date", "datetime", "time")
+    ) {
+      "integer"
+    } else {
+      NULL
+    },
     length = if (ns$vartype == 2L && ns$length > 0L) {
       as.integer(ns$length)
     } else {
@@ -1464,6 +1488,16 @@
 #' `vport_meta` and the sidecar in self-describing formats (Dataset-JSON,
 #' Parquet, rds). XPORT also cannot distinguish an empty string from `NA`
 #' (both store as blanks) and drops trailing spaces.
+#'
+#' **Character ISO dates (`--DTC`) write as text.** A character column whose
+#' `dataType` is `date`/`datetime`/`time` with no numeric `targetDataType` is
+#' the CDISC ISO 8601 text form -- the SDTM `--DTC` convention -- and stores
+#' as a character variable, partial dates (`"1951"`, `"1951-12"`) included,
+#' byte for byte. The SAS-numeric encoding (with `DATE9.`-style formats) is
+#' used for columns that are R `Date`/`POSIXct`/`vport_time` or whose
+#' metadata records `targetDataType = "integer"` (the ADaM numeric-date
+#' convention). A character column *under* `targetDataType = "integer"`
+#' aborts loudly -- a partial date can never become a SAS numeric silently.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `vport_meta`.

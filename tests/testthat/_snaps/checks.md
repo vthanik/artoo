@@ -19,6 +19,8 @@
         [x] dataset_name
         [x] label_length
         [x] integer_overflow
+        [x] integer_fraction
+        [x] iso8601_format
 
 ---
 
@@ -41,4 +43,6 @@
         [x] dataset_name
         [x] label_length
         [x] integer_overflow
+        [x] integer_fraction
+        [x] iso8601_format
 

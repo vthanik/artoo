@@ -82,6 +82,18 @@
 #' @param no_match *Policy for values absent from a codelist when decoding.*
 #'   `<character(1)>`. One of `"error"` (default), `"keep"`, or `"na"`. Has
 #'   no effect when `decode = "none"`.
+#' @param on_lossy *Policy when coercion would damage values.*
+#'   `<character(1)>`. One of:
+#'   * `"error"` (default) abort before any value is damaged: an `integer`
+#'     dataType truncating fractional values (a height losing its decimals)
+#'     or overflowing R's 32-bit range (values becoming `NA`) is a
+#'     data-integrity event, not a nuisance.
+#'   * `"warn"` apply the lossy coercion and warn
+#'     (`vport_warning_coercion`).
+#'
+#'   **Tip:** [check_spec()] flags the same conditions before any coercion
+#'   runs (`integer_fraction`, `integer_overflow`), so a pre-flight check
+#'   catches them without touching the data.
 #' @param trim *Match codelist values after trimming whitespace.*
 #'   `<logical(1)>: default TRUE`. Real data carries trailing blanks; a value
 #'   that matches only after trimming still decodes, with a
@@ -139,6 +151,7 @@ apply_spec <- function(
   on_error = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
+  on_lossy = c("error", "warn"),
   trim = TRUE,
   ignore_case = FALSE,
   na_position = c("first", "last"),
@@ -149,6 +162,7 @@ apply_spec <- function(
   on_error <- match.arg(on_error)
   decode <- match.arg(decode)
   no_match <- match.arg(no_match)
+  on_lossy <- match.arg(on_lossy)
   na_position <- match.arg(na_position)
   for (flag in c("trim", "ignore_case")) {
     fv <- get(flag)
@@ -187,7 +201,7 @@ apply_spec <- function(
     out <- .drop_unspec(out, info, call)
   }
   if ("coerce" %in% run) {
-    out <- .coerce_types(out, info, call)
+    out <- .coerce_types(out, info, on_lossy, call)
   }
   if ("decode" %in% run) {
     out <- .decode_codelists(

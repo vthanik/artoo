@@ -26,10 +26,14 @@
 # ---- encode helpers ---------------------------------------------------------
 
 # ISO 8601 text for a temporal column (the no-targetDataType exchange form).
-# Realizing first means a numeric/never-realized column still serializes
-# correctly; a partial-ISO character column stays as-is (never silent NA).
+# A character column already IS the ISO text (partials included) and passes
+# through byte-faithfully; realizing first means a numeric/never-realized
+# column still serializes correctly.
 #' @noRd
 .temporal_to_iso <- function(col, data_type, display_format) {
+  if (is.character(col)) {
+    return(col)
+  }
   realized <- .realize_temporal(col, data_type, display_format)
   if (data_type == "date") {
     if (inherits(realized, "Date")) {
@@ -173,8 +177,14 @@
         use_num <- is.numeric(vals[[nn[1L]]])
       }
     }
-    raw <- if (use_num) .json_extract_num(vals) else .json_extract_chr(vals)
-    return(.realize_temporal(raw, dt, disp %||% NA))
+    # Numbers are SAS-epoch values and realize to the R class; ISO text
+    # stays text -- with no numeric targetDataType, text IS the recorded
+    # storage form (--DTC), and partials make a silent promotion to Date
+    # impossible anyway.
+    if (!use_num) {
+      return(.json_extract_chr(vals))
+    }
+    return(.realize_temporal(.json_extract_num(vals), dt, disp %||% NA))
   }
 
   switch(

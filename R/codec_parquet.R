@@ -187,11 +187,18 @@
   # Realize temporal columns from the meta dataType (plan D1: meta-first).
   # Date/POSIXct survive nanoparquet natively and realize idempotently (the
   # integer-backed DATE arrival is canonicalized to double); a time column
-  # comes back a bare double and becomes vport_time here.
+  # comes back a bare double and becomes vport_time here. A character ISO
+  # 8601 column (the no-targetDataType --DTC form) stays text -- realize is
+  # for numeric storage, and text is already readable.
   for (nm in names(meta@columns)) {
     cm <- meta@columns[[nm]]
     dt <- cm$dataType %||% ""
-    if (dt %in% c("date", "datetime", "time") && nm %in% names(df)) {
+    if (
+      dt %in%
+        c("date", "datetime", "time") &&
+        nm %in% names(df) &&
+        !is.character(df[[nm]])
+    ) {
       df[[nm]] <- .realize_temporal(df[[nm]], dt, cm$displayFormat %||% NA)
     }
   }

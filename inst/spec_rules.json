@@ -636,5 +636,27 @@
     "description": "A coded term has no decoded value.",
     "reason": "cannot distinguish enumerated value lists (no decode expected) from coded terms",
     "engine": "spec"
+  },
+  {
+    "id": "integer_fraction",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "An integer-typed variable holds fractional values; coercion would truncate them.",
+    "reason": null,
+    "engine": "data"
+  },
+  {
+    "id": "iso8601_format",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A character date/datetime/time variable holds values that are not valid ISO 8601 text (complete, right-truncated partial, or SDTMIG hyphen-placeholder form).",
+    "reason": null,
+    "engine": "data"
   }
 ]

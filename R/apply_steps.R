@@ -54,17 +54,32 @@
   )
 }
 
-# 1. Add spec variables missing from x, as the type-correct NA.
+# 1. Add spec variables missing from x, as the type-correct NA. A temporal
+# variable with no numeric targetDataType is ISO 8601 text by CDISC
+# definition (the --DTC convention), so it scaffolds as character NA.
 #' @noRd
 .scaffold_vars <- function(x, info, call = rlang::caller_env()) {
   missing <- setdiff(info$spec_vars, names(x))
   if (!length(missing)) {
     return(x)
   }
-  types <- info$vars$data_type[match(missing, info$vars$variable)]
+  rows <- match(missing, info$vars$variable)
+  types <- info$vars$data_type[rows]
+  tdts <- if ("target_data_type" %in% names(info$vars)) {
+    info$vars$target_data_type[rows]
+  } else {
+    rep(NA_character_, length(rows))
+  }
   n <- nrow(x)
   for (i in seq_along(missing)) {
-    x[[missing[i]]] <- .na_for_type(types[i], n)
+    iso_text <- !is.na(types[i]) &&
+      types[i] %in% c("date", "datetime", "time") &&
+      is.na(tdts[i])
+    x[[missing[i]]] <- if (iso_text) {
+      rep(NA_character_, n)
+    } else {
+      .na_for_type(types[i], n)
+    }
   }
   cli::cli_inform(
     "Scaffolded {length(missing)} variable{?s}: {.var {missing}}",
@@ -87,10 +102,17 @@
   x[keep]
 }
 
-# 3. Coerce each column to its CDISC dataType storage; warn on NA-introduction
-# and on fractional values an integer coercion truncated.
+# 3. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
+# Lossy numeric coercion (truncated fractions, 32-bit overflow) follows the
+# `on_lossy` policy: "error" (the default -- silent data damage in a
+# submission dataset is a data-integrity event) or "warn".
 #' @noRd
-.coerce_types <- function(x, info, call = rlang::caller_env()) {
+.coerce_types <- function(
+  x,
+  info,
+  on_lossy = "error",
+  call = rlang::caller_env()
+) {
   vars <- info$vars
   introduced <- character(0)
   truncated <- character(0)
@@ -105,9 +127,21 @@
     if (dt %in% c("date", "datetime", "time")) {
       # Realize to the R presentation class (Date/POSIXct/vport_time) using
       # the spec displayFormat (default by dataType when absent). dataType
-      # drives the class; an unrecognized format leaves the column numeric.
+      # drives the class. Character ISO text realizes ONLY when the spec's
+      # targetDataType demands numeric storage; without one, ISO text is
+      # already the CDISC exchange form (--DTC) and stays character.
+      tdt <- if ("target_data_type" %in% names(vars)) {
+        vars$target_data_type[i]
+      } else {
+        NA_character_
+      }
       before_na <- sum(is.na(x[[v]]))
-      x[[v]] <- .realize_temporal(x[[v]], dt, vars$display_format[i])
+      x[[v]] <- .realize_temporal(
+        x[[v]],
+        dt,
+        vars$display_format[i],
+        from_text = !is.na(tdt) && tdt %in% c("integer", "decimal")
+      )
       # Re-attach label etc., but keep the realized class and its tzone.
       keep_off <- c("class", "levels", "names", "tzone")
       n_na <- sum(is.na(x[[v]])) - before_na
@@ -136,33 +170,52 @@
       introduced <- c(introduced, sprintf("%s (%d)", v, n_na))
     }
   }
+  # Truncation and overflow damage values (a fractional height losing its
+  # decimals is a data-integrity event, not a nuisance); under the default
+  # on_lossy = "error" the pipeline aborts BEFORE any write can happen.
+  # Checked ahead of the NA-introduction warning so an abort is never
+  # preceded by a half-report of the same values.
+  if (length(truncated) || length(overflowed)) {
+    lossy <- c(
+      if (length(truncated)) {
+        sprintf(
+          "Integer coercion would truncate fractional values in: %s.",
+          paste(truncated, collapse = ", ")
+        )
+      },
+      if (length(overflowed)) {
+        sprintf(
+          "Integer coercion would overflow R's 32-bit range (values become NA) in: %s.",
+          paste(overflowed, collapse = ", ")
+        )
+      }
+    )
+    if (identical(on_lossy, "error")) {
+      cli::cli_abort(
+        c(
+          "Coercion to the spec dataTypes would lose data.",
+          stats::setNames(lossy, rep("x", length(lossy))),
+          "i" = "Fix the spec (dataType {.val float} or {.val decimal} keeps fractions), or accept the loss with {.code on_lossy = \"warn\"}."
+        ),
+        class = "vport_error_type",
+        call = call
+      )
+    }
+    cli::cli_warn(
+      c(
+        "Coercion to the spec dataTypes lost data.",
+        stats::setNames(lossy, rep("x", length(lossy))),
+        "i" = "Use dataType {.val float} or {.val decimal} to keep these values."
+      ),
+      class = "vport_warning_coercion",
+      call = call
+    )
+  }
   if (length(introduced)) {
     cli::cli_warn(
       c(
         "Coercion introduced NA in {length(introduced)} variable{?s}.",
         "i" = "{introduced}"
-      ),
-      class = "vport_warning_coercion",
-      call = call
-    )
-  }
-  if (length(truncated)) {
-    cli::cli_warn(
-      c(
-        "Integer coercion truncated fractional values in {length(truncated)} variable{?s}.",
-        "i" = "{truncated}",
-        "i" = "Use dataType {.val float} or {.val decimal} to keep fractions."
-      ),
-      class = "vport_warning_coercion",
-      call = call
-    )
-  }
-  if (length(overflowed)) {
-    cli::cli_warn(
-      c(
-        "Integer coercion overflowed R's 32-bit range in {length(overflowed)} variable{?s}; those values are now NA.",
-        "i" = "{overflowed}",
-        "i" = "Use dataType {.val float}, {.val double}, or {.val decimal} for values beyond +/-2147483647."
       ),
       class = "vport_warning_coercion",
       call = call
@@ -294,9 +347,14 @@
   x
 }
 
-# 7. Build the vport_meta from the spec, stamp records, attach it.
+# 7. Build the vport_meta from the spec, stamp records, attach it. Temporal
+# storage forms are resolved here, where the metadata meets the data: a
+# numeric-backed date/datetime/time column with no spec targetDataType gets
+# targetDataType = "integer" recorded (see .meta_resolve_temporal_targets),
+# so every codec and sidecar agrees on the exchange form.
 #' @noRd
 .stamp_meta <- function(x, info, spec, dataset, call = rlang::caller_env()) {
   meta <- .meta_from_spec(spec, dataset, records = nrow(x), call = call)
+  meta <- .meta_resolve_temporal_targets(meta, x)
   set_meta(x, meta)
 }
