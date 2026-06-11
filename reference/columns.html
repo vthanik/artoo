@@ -93,6 +93,12 @@ attributes come from the one lossless reader (an unknown extension
 aborts with the registry's known-extensions message).</p>
 <p><strong>Tip:</strong> a multi-member XPORT file needs <code>member =</code>; without one the
 xpt reader aborts and points at <code><a href="xpt_members.html">xpt_members()</a></code> for the listing.</p>
+<p><strong>Note:</strong> an <code>.xpt</code> path shows a blank <code>Key</code>: the XPORT byte layout
+stores only name, label, length, and formats, so <code>keySequence</code> (like
+codelist and origin) cannot ride in the file. The metadata-carrying
+formats (<code>.json</code>, <code>.ndjson</code>, <code>.parquet</code>, <code>.rds</code>) and the in-session
+conformed frame show it; re-apply the spec after an xpt read to
+restore it.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

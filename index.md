@@ -61,34 +61,35 @@ get_meta(read_xpt(path))@dataset$records
 
 [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) is
 the quick look a SAS programmer expects from `PROC CONTENTS` — on a
-conformed frame or straight off a file:
+conformed frame or straight off a file (a metadata-carrying format also
+shows the CDISC `Key` sequence; XPORT bytes cannot store it):
 
 ``` r
 
-columns(path)
+columns(adsl)
 #> <artoo_columns> ADSL -- 54 variables, 60 obs
 #> #   Variable  Type  Len  Format  Informat  Label                                     Key
-#> 1   STUDYID   Char  12                     Study Identifier
-#> 2   USUBJID   Char  11                     Unique Subject Identifier
+#> 1   STUDYID   Char  12                     Study Identifier                          1
+#> 2   USUBJID   Char  11                     Unique Subject Identifier                 2
 #> 3   SUBJID    Char  4                      Subject Identifier for the Study
 #> 4   SITEID    Char  3                      Study Site Identifier
 #> 5   SITEGR1   Char  3                      Pooled Site Group 1
 #> 6   ARM       Char  20                     Description of Planned Arm
 #> 7   TRT01P    Char  20                     Planned Treatment for Period 01
-#> 8   TRT01PN   Num                          Planned Treatment for Period 01 (N)
+#> 8   TRT01PN   Num   2                      Planned Treatment for Period 01 (N)
 #> 9   TRT01A    Char  20                     Actual Treatment for Period 01
-#> 10  TRT01AN   Num                          Actual Treatment for Period 01 (N)
-#> 11  TRTSDT    Num        date9.            Date of First Exposure to Treatment
-#> 12  TRTEDT    Num        date9.            Date of Last Exposure to Treatment
-#> 13  TRTDURD   Num                          Total Treatment Duration (Days)
-#> 14  AVGDD     Num        5.1               Avg Daily Dose (as planned)
-#> 15  CUMDOSE   Num        8.1               Cumulative Dose (as planned)
-#> 16  AGE       Num                          Age
+#> 10  TRT01AN   Num   2                      Actual Treatment for Period 01 (N)
+#> 11  TRTSDT    Num   5    date9.            Date of First Exposure to Treatment
+#> 12  TRTEDT    Num   5    date9.            Date of Last Exposure to Treatment
+#> 13  TRTDURD   Num   3                      Total Treatment Duration (Days)
+#> 14  AVGDD     Num   4    5.1               Avg Daily Dose (as planned)
+#> 15  CUMDOSE   Num   7    8.1               Cumulative Dose (as planned)
+#> 16  AGE       Num   2                      Age
 #> 17  AGEGR1    Char  5                      Pooled Age Group 1
-#> 18  AGEGR1N   Num                          Pooled Age Group 1 (N)
+#> 18  AGEGR1N   Num   2                      Pooled Age Group 1 (N)
 #> 19  AGEU      Char  5                      Age Units
 #> 20  RACE      Char  32                     Race
-#> 21  RACEN     Num                          Race (N)
+#> 21  RACEN     Num   1                      Race (N)
 #> 22  SEX       Char  1                      Sex
 #> 23  ETHNIC    Char  22                     Ethnicity
 #> 24  SAFFL     Char  1                      Safety Population Flag
@@ -100,28 +101,28 @@ columns(path)
 #> 30  DISCONFL  Char  1                      Subject Discontinued Study Flag
 #> 31  DSRAEFL   Char  1                      Subject Discontinued due to AE Flag
 #> 32  DTHFL     Char  1                      Subject Death Flag
-#> 33  BMIBL     Num        5.1               Baseline BMI (kg/m^2)
+#> 33  BMIBL     Num   4    5.1               Baseline BMI (kg/m^2)
 #> 34  BMIBLGR1  Char  6                      Pooled Baseline BMI Group 1
-#> 35  HEIGHTBL  Num        6.1               Baseline Height (cm)
-#> 36  WEIGHTBL  Num        6.1               Baseline Weight (kg)
-#> 37  EDUCLVL   Num                          Years of Education
-#> 38  DISONDT   Num        date9.            Date of Onset of Disease
-#> 39  DURDIS    Num        6.1               Duration of Disease (Months)
+#> 35  HEIGHTBL  Num   5    6.1               Baseline Height (cm)
+#> 36  WEIGHTBL  Num   5    6.1               Baseline Weight (kg)
+#> 37  EDUCLVL   Num   2                      Years of Education
+#> 38  DISONDT   Num   5    date9.            Date of Onset of Disease
+#> 39  DURDIS    Num   5    6.1               Duration of Disease (Months)
 #> 40  DURDSGR1  Char  4                      Pooled Disease Duration Group 1
-#> 41  VISIT1DT  Num        date9.            Date of Visit 1
-#> 42  RFSTDTC   Char  10                     Subject Reference Start Date/Time
-#> 43  RFENDTC   Char  10                     Subject Reference End Date/Time
-#> 44  VISNUMEN  Num                          End of Trt Visit (Vis 12 or Early Term.)
-#> 45  RFENDT    Num                          Date of Discontinuation/Completion
+#> 41  VISIT1DT  Num   5    date9.            Date of Visit 1
+#> 42  RFSTDTC   Char                         Subject Reference Start Date/Time
+#> 43  RFENDTC   Char                         Subject Reference End Date/Time
+#> 44  VISNUMEN  Num   2                      End of Trt Visit (Vis 12 or Early Term.)
+#> 45  RFENDT    Num   5                      Date of Discontinuation/Completion
 #> 46  EOSSTT    Char  12                     End of Study Status
 #> 47  DCSREAS   Char  18                     Reason for Discontinuation from Study
 #> 48  EOSDISP   Char  27                     Standardized Disposition Term
-#> 49  MMS1TSBL  Num                          MMS1-Total Score at Baseline
-#> 50  TRTDUR    Num
-#> 51  DISONSDT  Num        DATE9.
+#> 49  MMS1TSBL  Num   2                      MMS1-Total Score at Baseline
+#> 50  TRTDUR    Num   8
+#> 51  DISONSDT  Num   8    DATE9.
 #> 52  DCDECOD   Char  27
 #> 53  DCREASCD  Char  18
-#> 54  MMSETOT   Num
+#> 54  MMSETOT   Num   8
 ```
 
 Conformance is data, not console noise: `conformance(adsl)` returns

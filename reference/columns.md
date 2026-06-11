@@ -52,6 +52,13 @@ reader aborts and points at
 [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md)
 for the listing.
 
+**Note:** an `.xpt` path shows a blank `Key`: the XPORT byte layout
+stores only name, label, length, and formats, so `keySequence` (like
+codelist and origin) cannot ride in the file. The metadata-carrying
+formats (`.json`, `.ndjson`, `.parquet`, `.rds`) and the in-session
+conformed frame show it; re-apply the spec after an xpt read to restore
+it.
+
 ## See also
 
 **Members:**
