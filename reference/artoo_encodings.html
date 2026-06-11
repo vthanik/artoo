@@ -63,9 +63,9 @@ of every artoo reader and writer.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><em>A <code>&lt;data.frame&gt;</code></em> with one row per encoding and columns
-<code>sas</code> (the SAS session-encoding name), <code>r</code> (the R name – the
-standard IANA name <code><a href="https://rdrr.io/r/base/iconv.html" class="external-link">iconv()</a></code> uses, and what artoo records in the
-metadata), <code>python</code> (the Python codec name), and <code>description</code>.</p>
+<code>r</code> (the R name – the standard IANA name <code><a href="https://rdrr.io/r/base/iconv.html" class="external-link">iconv()</a></code> uses, and what
+artoo records in the metadata), <code>sas</code> (the SAS session-encoding
+name), <code>python</code> (the Python codec name), and <code>description</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -102,20 +102,20 @@ encodings only matter at the file boundary, exactly as in Python 3.</p>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># One row per encoding; the same byte rule under each ecosystem's name.</span></span></span>
 <span class="r-in"><span><span class="fu">artoo_encodings</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          sas            r     python</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1      UTF-8        UTF-8      utf_8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2      ASCII     US-ASCII      ascii</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    WLATIN1 windows-1252     cp1252</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4    WLATIN2 windows-1250     cp1250</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  WCYRILLIC windows-1251     cp1251</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6     LATIN1   ISO-8859-1    latin_1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7     LATIN9  ISO-8859-15 iso8859_15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8  SHIFT-JIS    Shift_JIS  shift_jis</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9     MS-932        CP932      cp932</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10    EUC-JP       EUC-JP     euc_jp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11    EUC-KR       EUC-KR     euc_kr</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12    MS-936        CP936        gbk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13    MS-950        CP950      cp950</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               r       sas     python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1         UTF-8     UTF-8      utf_8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2      US-ASCII     ASCII      ascii</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  windows-1252   WLATIN1     cp1252</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  windows-1250   WLATIN2     cp1250</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  windows-1251 WCYRILLIC     cp1251</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6    ISO-8859-1    LATIN1    latin_1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   ISO-8859-15    LATIN9 iso8859_15</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8     Shift_JIS SHIFT-JIS  shift_jis</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9         CP932    MS-932      cp932</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10       EUC-JP    EUC-JP     euc_jp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11       EUC-KR    EUC-KR     euc_kr</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12        CP936    MS-936        gbk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13        CP950    MS-950      cp950</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                                            description</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1  Unicode; Dataset-JSON requirement and the modern default everywhere</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2    7-bit basic Latin; what the FDA expects inside a submission XPORT</span>
@@ -137,8 +137,8 @@ encodings only matter at the file boundary, exactly as in Python 3.</p>
 <span class="r-in"><span><span class="co"># same bytes (the sas and r spellings both work as encoding=).</span></span></span>
 <span class="r-in"><span><span class="va">enc</span> <span class="op">&lt;-</span> <span class="fu">artoo_encodings</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">enc</span><span class="op">[</span><span class="va">enc</span><span class="op">$</span><span class="va">sas</span> <span class="op">==</span> <span class="st">"WLATIN1"</span>, <span class="op">]</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       sas            r python</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 WLATIN1 windows-1252 cp1252</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              r     sas python</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 windows-1252 WLATIN1 cp1252</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                                       description</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3 Western European Windows; the usual US/EU SAS session (WLATIN1)</span>
 <span class="r-in"><span></span></span>
