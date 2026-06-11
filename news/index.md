@@ -75,10 +75,11 @@ no backward compatibility is kept with the vport surface.
 - New
   [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md):
   the encodings clinical data travels in, one row per encoding with the
-  SAS session-encoding name, the standard IANA name R uses, and the
-  Python codec – written for SAS programmers who have never had to think
-  about encodings. Every reader/writer `encoding` argument accepts any
-  spelling from the table.
+  name under each ecosystem – `sas` (session encoding), `r` (the
+  standard IANA name [`iconv()`](https://rdrr.io/r/base/iconv.html)
+  uses), and `python` (codec) – written for SAS programmers who have
+  never had to think about encodings. Every reader/writer `encoding`
+  argument accepts the `sas` or `r` spelling.
 
 - New
   [`columns()`](https://vthanik.github.io/artoo/reference/columns.md):

@@ -2,9 +2,10 @@
 
 List the character encodings clinical data actually travels in, with the
 name each ecosystem uses for the same thing: the SAS session-encoding
-name, the standard (IANA) name that R and artoo use, and the Python
-codec. Any spelling from the `encoding` or `sas` column works as the
-`encoding` argument of every artoo reader and writer.
+name, the R name (the standard IANA name, which
+[`iconv()`](https://rdrr.io/r/base/iconv.html) and the wider R ecosystem
+use), and the Python codec. Any spelling from the `sas` or `r` column
+works as the `encoding` argument of every artoo reader and writer.
 
 ## Usage
 
@@ -14,9 +15,11 @@ artoo_encodings()
 
 ## Value
 
-*A `<data.frame>`* with one row per encoding and columns `encoding` (the
-standard IANA name, used by R), `sas` (the SAS session-encoding name),
-`python` (the Python codec name), and `description`.
+*A `<data.frame>`* with one row per encoding and columns `sas` (the SAS
+session-encoding name), `r` (the R name – the standard IANA name
+[`iconv()`](https://rdrr.io/r/base/iconv.html) uses, and what artoo
+records in the metadata), `python` (the Python codec name), and
+`description`.
 
 ## Details
 
@@ -63,20 +66,20 @@ for the codec registry.
 #
 # One row per encoding; the same byte rule under each ecosystem's name.
 artoo_encodings()
-#>        encoding       sas     python
-#> 1         UTF-8     UTF-8      utf_8
-#> 2      US-ASCII     ASCII      ascii
-#> 3  windows-1252   WLATIN1     cp1252
-#> 4  windows-1250   WLATIN2     cp1250
-#> 5  windows-1251 WCYRILLIC     cp1251
-#> 6    ISO-8859-1    LATIN1    latin_1
-#> 7   ISO-8859-15    LATIN9 iso8859_15
-#> 8     Shift_JIS SHIFT-JIS  shift_jis
-#> 9         CP932    MS-932      cp932
-#> 10       EUC-JP    EUC-JP     euc_jp
-#> 11       EUC-KR    EUC-KR     euc_kr
-#> 12        CP936    MS-936        gbk
-#> 13        CP950    MS-950      cp950
+#>          sas            r     python
+#> 1      UTF-8        UTF-8      utf_8
+#> 2      ASCII     US-ASCII      ascii
+#> 3    WLATIN1 windows-1252     cp1252
+#> 4    WLATIN2 windows-1250     cp1250
+#> 5  WCYRILLIC windows-1251     cp1251
+#> 6     LATIN1   ISO-8859-1    latin_1
+#> 7     LATIN9  ISO-8859-15 iso8859_15
+#> 8  SHIFT-JIS    Shift_JIS  shift_jis
+#> 9     MS-932        CP932      cp932
+#> 10    EUC-JP       EUC-JP     euc_jp
+#> 11    EUC-KR       EUC-KR     euc_kr
+#> 12    MS-936        CP936        gbk
+#> 13    MS-950        CP950      cp950
 #>                                                            description
 #> 1  Unicode; Dataset-JSON requirement and the modern default everywhere
 #> 2    7-bit basic Latin; what the FDA expects inside a submission XPORT
@@ -94,11 +97,12 @@ artoo_encodings()
 
 # ---- Example 2: look up a SAS session encoding ----
 #
-# PROC OPTIONS reported WLATIN1: find what to pass (either name works).
+# PROC OPTIONS reported WLATIN1: find the R and Python names for the
+# same bytes (the sas and r spellings both work as encoding=).
 enc <- artoo_encodings()
 enc[enc$sas == "WLATIN1", ]
-#>       encoding     sas python
-#> 3 windows-1252 WLATIN1 cp1252
+#>       sas            r python
+#> 3 WLATIN1 windows-1252 cp1252
 #>                                                       description
 #> 3 Western European Windows; the usual US/EU SAS session (WLATIN1)
 ```
