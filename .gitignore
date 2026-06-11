@@ -40,3 +40,6 @@ tests/testthat/testthat-problems.rds
 
 # macOS
 .DS_Store
+
+# Large download-only test fixture (34MB); see data-raw/download-fixtures.R
+tests/testthat/fixtures/sas-lb.xpt

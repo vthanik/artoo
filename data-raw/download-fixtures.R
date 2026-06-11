@@ -49,3 +49,36 @@ if (!identical(def_got, def_sha256)) {
   stop("define21-sdtm.xml checksum mismatch: ", def_got, " != ", def_sha256)
 }
 message("define21-sdtm.xml OK (", def_sha256, ")")
+
+# ---- Additional SDTM domains (repeated-measures realism) --------------------
+# AE (adverse events; multiple records per subject, wider than DM) is
+# committed alongside DM. LB (laboratory; ~60k rows) is large, so it is
+# download-only (gitignored) and the stress tests skip when it is absent.
+sdtm_base <- paste0(
+  "https://github.com/cdisc-org/sdtm-adam-pilot-project/raw/master/",
+  "updated-pilot-submission-package/900172/m5/datasets/cdiscpilot01/",
+  "tabulations/sdtm/"
+)
+sdtm_fixtures <- list(
+  list(
+    file = "sas-ae.xpt",
+    url = paste0(sdtm_base, "ae.xpt"),
+    sha = "05cf23dadadf1b6a11f4474c76724f870de389ba6a4312c825b30e299cb1e4d9"
+  ),
+  list(
+    file = "sas-lb.xpt",
+    url = paste0(sdtm_base, "lb.xpt"),
+    sha = "47394de7c6484bdf3d5b15c5fe580ca49125707475e6352d30afd5d75c2d7830"
+  )
+)
+for (fx in sdtm_fixtures) {
+  d <- file.path("tests", "testthat", "fixtures", fx$file)
+  if (!file.exists(d)) {
+    utils::download.file(fx$url, d, mode = "wb", quiet = TRUE)
+  }
+  got <- digest::digest(file = d, algo = "sha256")
+  if (!identical(got, fx$sha)) {
+    stop(fx$file, " SHA256 mismatch: ", got, " != ", fx$sha)
+  }
+  message(fx$file, " OK (", file.size(d), " bytes)")
+}

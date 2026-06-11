@@ -227,7 +227,31 @@ read_dataset <- function(
   if ("n_max" %in% fwd) {
     dargs$n_max <- n_max
   }
-  res <- do.call(decode, c(dargs, list(...), list(call = call)))
+  # The decode boundary takes untrusted file bytes. A codec aborts with a
+  # vport_error_* on malformed input, but an external engine (the parquet C++
+  # reader, readRDS, jsonlite's UTF-8 validator) can raise a raw R error on a
+  # truncated or bit-flipped file. Translate any such non-vport error into a
+  # vport_error_codec so the read contract holds for every codec -- return a
+  # data frame or abort with a vport condition, never leak a foreign error.
+  res <- tryCatch(
+    do.call(decode, c(dargs, list(...), list(call = call))),
+    error = function(e) {
+      # A codec's own vport_error_* (the malformed-input message it crafted)
+      # passes through unchanged; only a foreign error from an external engine
+      # is re-wrapped.
+      if (any(grepl("^vport_error_", class(e)))) {
+        stop(e)
+      }
+      cli::cli_abort(
+        c(
+          "Could not read {.path {path}} as {.val {fmt}}.",
+          "x" = "{conditionMessage(e)}"
+        ),
+        class = "vport_error_codec",
+        call = call
+      )
+    }
+  )
   # Self-describing containers (rds) can hold anything; the read_* contract
   # promises a data frame, so refuse other payloads loudly.
   if (!is.data.frame(res$data)) {

@@ -1,5 +1,18 @@
 # vport 0.0.0.9000
 
+* `read_dataset()` now guarantees its contract for every codec: a truncated
+  or bit-flipped file aborts with `vport_error_codec` instead of leaking a
+  raw error from an external engine (the parquet C++ reader's "invalid
+  Parquet file", `readRDS`'s "error reading from connection", jsonlite's
+  UTF-8 validator), found by a new fuzzing suite. The original message is
+  preserved in the abort.
+* Added fuzzing (`test-fuzz-codecs.R`: truncation at every boundary, header
+  bit-flips, random bytes behind a valid magic; every read returns a frame
+  or aborts cleanly, never crashes or hangs), stress tests
+  (`test-stress.R`: wide 1000-variable and tall 200k-row frames behind
+  `VPORT_STRESS=1`), an opt-in performance-regression check (`VPORT_BENCH=1`
+  vs `bench/baseline.json`), and the real CDISC pilot AE domain (committed)
+  plus LB (download-only) as repeated-measures realism fixtures.
 * New `xpt_members()` lists every dataset a SAS transport file holds (name,
   label, variable and row counts), and `read_xpt()` / `read_dataset()`
   gained `member` to read one member of a multi-member library by

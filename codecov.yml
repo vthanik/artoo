@@ -4,11 +4,14 @@ coverage:
   status:
     project:
       default:
+        # auto: the target is derived from the base commit, so coverage can
+        # only hold or rise -- it updates itself instead of going stale
+        # against a hand-typed number (matches the sibling tabular package).
         target: auto
         threshold: 1%
-        informational: true
+        informational: false
     patch:
       default:
         target: auto
         threshold: 1%
-        informational: true
+        informational: false
