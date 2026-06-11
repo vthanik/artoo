@@ -79,7 +79,10 @@ reads native JSON, a P21 Excel workbook, or Define-XML back into a
 #
 # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 # JSON file, and confirm read_spec() reconstructs it intact.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 path <- tempfile(fileext = ".json")
 write_spec(spec, path)
 identical(read_spec(path), spec)
@@ -94,5 +97,5 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   write_spec(spec, xlsx)
   spec_datasets(read_spec(xlsx))
 }
-#> [1] "ADSL" "DM"  
+#> [1] "ADSL"
 ```

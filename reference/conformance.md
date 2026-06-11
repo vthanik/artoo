@@ -48,7 +48,10 @@ to select dimensions.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_sdtm_datasets, cdisc_sdtm_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: inspect what the conform step found ----
 #

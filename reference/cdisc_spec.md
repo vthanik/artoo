@@ -1,37 +1,48 @@
-# CDISC demo specification tables
+# CDISC demo specification tables (one standard per pair)
 
-The dataset-level (`cdisc_datasets`) and variable-level
-(`cdisc_variables`) metadata for the bundled `cdisc_adsl` and `cdisc_dm`
-datasets, in the shape
-[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
-expects. The variable table is *derived from the data* (names, labels,
-inferred CDISC types, byte lengths) by `data-raw/`. Pass both to
-[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
-to build a specification for examples and tests.
+The constructor-shaped metadata tables for the bundled demo data, split
+by CDISC standard because a `artoo_spec` carries exactly one:
+`cdisc_adam_datasets` + `cdisc_adam_variables` describe ADSL (ADaMIG
+1.1), and `cdisc_sdtm_datasets` + `cdisc_sdtm_variables` describe DM
+(SDTMIG 3.1.2). Each variables table is *derived from the data* (names,
+labels, inferred CDISC types, byte lengths) by `data-raw/`. Pass one
+standard's pair to
+[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md);
+passing both pairs together aborts with `artoo_error_spec` – mixing
+standards in one spec is the mistake the split exists to prevent.
 
 ## Usage
 
 ``` r
-cdisc_datasets
+cdisc_adam_datasets
 
-cdisc_variables
+cdisc_adam_variables
+
+cdisc_sdtm_datasets
+
+cdisc_sdtm_variables
 
 cdisc_codelists
 ```
 
 ## Format
 
-`cdisc_datasets` is a data frame with one row per dataset:
+Each `*_datasets` table is a data frame with one row per dataset:
 
 - dataset:
 
-  Dataset name (`"ADSL"`, `"DM"`).
+  Dataset name (`"ADSL"` or `"DM"`).
 
 - label:
 
   Dataset label.
 
-`cdisc_variables` is a data frame with one row per variable:
+- standard:
+
+  The CDISC standard, consumed into the spec's
+  [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md).
+
+Each `*_variables` table is a data frame with one row per variable:
 
 - dataset:
 
@@ -56,6 +67,10 @@ cdisc_codelists
 - order:
 
   Variable order within the dataset.
+
+- codelist_id:
+
+  NCI codelist reference (`"C66731"` on `SEX`).
 
 `cdisc_codelists` is a data frame of controlled-terminology terms (the
 real NCI codelist C66731 for `SEX`):

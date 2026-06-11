@@ -35,7 +35,10 @@ for its sort keys.
 #
 # Build the spec from the bundled CDISC-pilot tables and list its
 # datasets -- the names you pass to the other accessors.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 spec_datasets(spec)
-#> [1] "ADSL" "DM"  
+#> [1] "ADSL"
 ```

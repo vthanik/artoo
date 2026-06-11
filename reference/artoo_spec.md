@@ -144,25 +144,25 @@ the single home. More than one distinct value aborts with
 ``` r
 # ---- Example 1: build a spec from the bundled CDISC-pilot tables ----
 #
-# `cdisc_datasets` and `cdisc_variables` hold the CDISC pilot ADaM
+# `cdisc_sdtm_datasets` and `cdisc_sdtm_variables` hold the CDISC pilot ADaM
 # metadata in the shape artoo_spec() expects; the constructor
 # canonicalises every type and checks cross-slot integrity.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 spec_datasets(spec)
-#> [1] "ADSL" "DM"  
+#> [1] "DM"
 
 # ---- Example 2: a focused spec for a single dataset ----
 #
 # Slice the bundled tables to one dataset (DM) to build a smaller spec.
-dm_ds <- cdisc_datasets[cdisc_datasets$dataset == "DM", ]
-dm_var <- cdisc_variables[cdisc_variables$dataset == "DM", ]
+dm_ds <- cdisc_sdtm_datasets[cdisc_sdtm_datasets$dataset == "DM", ]
+dm_var <- cdisc_sdtm_variables[cdisc_sdtm_variables$dataset == "DM", ]
 dm_spec <- artoo_spec(dm_ds, dm_var, codelists = cdisc_codelists)
 head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
-#>    variable                             label data_type
-#> 49  STUDYID                  Study Identifier    string
-#> 50   DOMAIN               Domain Abbreviation    string
-#> 51  USUBJID         Unique Subject Identifier    string
-#> 52   SUBJID  Subject Identifier for the Study    string
-#> 53  RFSTDTC Subject Reference Start Date/Time    string
-#> 54  RFENDTC   Subject Reference End Date/Time    string
+#>   variable                             label data_type
+#> 1  STUDYID                  Study Identifier    string
+#> 2   DOMAIN               Domain Abbreviation    string
+#> 3  USUBJID         Unique Subject Identifier    string
+#> 4   SUBJID  Subject Identifier for the Study    string
+#> 5  RFSTDTC Subject Reference Start Date/Time    string
+#> 6  RFENDTC   Subject Reference End Date/Time    string
 ```

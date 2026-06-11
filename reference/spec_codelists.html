@@ -94,7 +94,10 @@ allowed; non-members downgrade to notes in <code><a href="check_spec.html">check
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># SEX is coded against C66731; spec_codelists() returns the terms and their</span></span></span>
 <span class="r-in"><span><span class="co"># decodes that apply_spec() will enforce or decode.</span></span></span>
-<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_datasets</span>, <span class="va">cdisc_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">cdisc_adam_datasets</span>, <span class="va">cdisc_adam_variables</span>,</span></span>
+<span class="r-in"><span>  codelists <span class="op">=</span> <span class="va">cdisc_codelists</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">spec_codelists</span><span class="op">(</span><span class="va">spec</span>, <span class="st">"C66731"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   codelist_id             term           decode order extended</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1      C66731                F           Female     1       NA</span>

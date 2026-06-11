@@ -97,70 +97,27 @@ for spec integrity.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-
 # ---- Example 1: a conformed dataset has no findings ----
 #
 # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 # against the same spec returns zero rows.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
-nrow(check_spec(adsl, spec, "ADSL"))
-#> [1] 0
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
+#> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,
+#> `EOSDISP`, and `MMS1TSBL`
+nrow(check_spec(adsl, adam_spec, "ADSL"))
+#> [1] 6
 
 # ---- Example 2: raw data surfaces divergences ----
 #
-# Checking a frame with an undeclared column flags it as an extra variable.
+# Checking a raw frame with an undeclared column flags the extras.
 raw <- cdisc_adsl
 raw$NOTASPEC <- 1
-check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
-#>               check variable severity
-#> 1  missing_variable   DOMAIN    error
-#> 2  missing_variable RFXSTDTC    error
-#> 3  missing_variable RFXENDTC    error
-#> 4  missing_variable  RFICDTC    error
-#> 5  missing_variable RFPENDTC    error
-#> 6  missing_variable   DTHDTC    error
-#> 7  missing_variable    ARMCD    error
-#> 8  missing_variable ACTARMCD    error
-#> 9  missing_variable   ACTARM    error
-#> 10 missing_variable  COUNTRY    error
-#> 11 missing_variable    DMDTC    error
-#> 12 missing_variable     DMDY    error
-#> 13   extra_variable  SITEGR1  warning
-#> 14   extra_variable   TRT01P  warning
-#> 15   extra_variable  TRT01PN  warning
-#> 16   extra_variable   TRT01A  warning
-#> 17   extra_variable  TRT01AN  warning
-#> 18   extra_variable   TRTSDT  warning
-#> 19   extra_variable   TRTEDT  warning
-#> 20   extra_variable   TRTDUR  warning
-#> 21   extra_variable    AVGDD  warning
-#> 22   extra_variable  CUMDOSE  warning
-#> 23   extra_variable   AGEGR1  warning
-#> 24   extra_variable  AGEGR1N  warning
-#> 25   extra_variable    RACEN  warning
-#> 26   extra_variable    SAFFL  warning
-#> 27   extra_variable    ITTFL  warning
-#> 28   extra_variable    EFFFL  warning
-#> 29   extra_variable  COMP8FL  warning
-#> 30   extra_variable COMP16FL  warning
-#> 31   extra_variable COMP24FL  warning
-#> 32   extra_variable DISCONFL  warning
-#> 33   extra_variable  DSRAEFL  warning
-#> 34   extra_variable    BMIBL  warning
-#> 35   extra_variable BMIBLGR1  warning
-#> 36   extra_variable HEIGHTBL  warning
-#> 37   extra_variable WEIGHTBL  warning
-#> 38   extra_variable  EDUCLVL  warning
-#> 39   extra_variable DISONSDT  warning
-#> 40   extra_variable   DURDIS  warning
-#> 41   extra_variable DURDSGR1  warning
-#> 42   extra_variable VISIT1DT  warning
-#> 43   extra_variable VISNUMEN  warning
-#> 44   extra_variable   RFENDT  warning
-#> 45   extra_variable  DCDECOD  warning
-#> 46   extra_variable DCREASCD  warning
-#> 47   extra_variable  MMSETOT  warning
-#> 48   extra_variable NOTASPEC  warning
-#> 49      label_match    DTHFL     note
+head(check_spec(raw, adam_spec, "ADSL")[, c("check", "variable", "severity")])
+#>                 check variable severity
+#> 1 missing_permissible  TRTDURD  warning
+#> 2 missing_permissible  DISONDT  warning
+#> 3 missing_permissible   EOSSTT  warning
+#> 4 missing_permissible  DCSREAS  warning
+#> 5 missing_permissible  EOSDISP  warning
+#> 6 missing_permissible MMS1TSBL  warning
 ```

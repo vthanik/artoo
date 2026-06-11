@@ -92,6 +92,17 @@ no backward compatibility is kept with the vport surface.
 
 ### Data
 
+- The demo constructor tables are split by standard –
+  `cdisc_adam_datasets`
+  - `cdisc_adam_variables` (ADSL, ADaMIG 1.1) and
+    `cdisc_sdtm_datasets` + `cdisc_sdtm_variables` (DM, SDTMIG 3.1.2),
+    each carrying its `standard` column – replacing the removed
+    `cdisc_datasets`/`cdisc_variables`, which mixed both standards in
+    one spec (the exact shape the single-standard model forbids).
+    Stacking the two pairs into one
+    [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
+    now aborts, and the build gates assert it. `cdisc_codelists` stays
+    shared: controlled terminology is standard-agnostic.
 - New bundled specs `adam_spec` (ADaMIG 1.1: ADSL, ADAE) and `sdtm_spec`
   (SDTMIG 3.1.2: TS, DM, VS, SUPPDM), built reproducibly from the
   official CDISC Define-XML 2.1 release examples and shipped also as P21

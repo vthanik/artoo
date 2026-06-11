@@ -86,7 +86,10 @@ it on to a <code>write_*()</code> codec or back through <code><a href="get_meta.
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># Conform a dataset, capture its metadata, then re-attach after an</span></span></span>
 <span class="r-in"><span><span class="co"># attribute-dropping transform so the write stays lossless.</span></span></span>
-<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_datasets</span>, <span class="va">cdisc_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">cdisc_adam_datasets</span>, <span class="va">cdisc_adam_variables</span>,</span></span>
+<span class="r-in"><span>  codelists <span class="op">=</span> <span class="va">cdisc_codelists</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">spec</span>, <span class="st">"ADSL"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">trimmed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span></span></span>
@@ -144,8 +147,12 @@ it on to a <code>write_*()</code> codec or back through <code><a href="get_meta.
 <span class="r-in"><span><span class="co"># ---- Example 2: stamp a bare frame straight from a spec ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># A writer with a raw frame and no apply step can build metadata from the</span></span></span>
-<span class="r-in"><span><span class="co"># spec and attach it directly.</span></span></span>
-<span class="r-in"><span><span class="va">meta_dm</span> <span class="op">&lt;-</span> <span class="fu">artoo</span><span class="fu">:::</span><span class="fu">.meta_from_spec</span><span class="op">(</span><span class="va">spec</span>, <span class="st">"DM"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># spec and attach it directly (DM is SDTM, so its spec is sdtm-shaped).</span></span></span>
+<span class="r-in"><span><span class="va">sdtm</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">cdisc_sdtm_datasets</span>, <span class="va">cdisc_sdtm_variables</span>,</span></span>
+<span class="r-in"><span>  codelists <span class="op">=</span> <span class="va">cdisc_codelists</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">meta_dm</span> <span class="op">&lt;-</span> <span class="fu">artoo</span><span class="fu">:::</span><span class="fu">.meta_from_spec</span><span class="op">(</span><span class="va">sdtm</span>, <span class="st">"DM"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu">set_meta</span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">meta_dm</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="is_artoo_meta.html">is_artoo_meta</a></span><span class="op">(</span><span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>

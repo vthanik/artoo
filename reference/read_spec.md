@@ -105,7 +105,7 @@ serialises a spec to native JSON.
 #
 # write_spec() and read_spec() are inverses on the JSON path: the spec
 # that comes back is identical to the one written.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 path <- tempfile(fileext = ".json")
 write_spec(spec, path)
 back <- read_spec(path)
@@ -121,11 +121,11 @@ dm_spec <- read_spec(path, datasets = "DM")
 spec_datasets(dm_spec)
 #> [1] "DM"
 head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
-#>    variable                             label data_type
-#> 49  STUDYID                  Study Identifier    string
-#> 50   DOMAIN               Domain Abbreviation    string
-#> 51  USUBJID         Unique Subject Identifier    string
-#> 52   SUBJID  Subject Identifier for the Study    string
-#> 53  RFSTDTC Subject Reference Start Date/Time    string
-#> 54  RFENDTC   Subject Reference End Date/Time    string
+#>   variable                             label data_type
+#> 1  STUDYID                  Study Identifier    string
+#> 2   DOMAIN               Domain Abbreviation    string
+#> 3  USUBJID         Unique Subject Identifier    string
+#> 4   SUBJID  Subject Identifier for the Study    string
+#> 5  RFSTDTC Subject Reference Start Date/Time    string
+#> 6  RFENDTC   Subject Reference End Date/Time    string
 ```

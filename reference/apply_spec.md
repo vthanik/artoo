@@ -113,13 +113,14 @@ for what the stamp attaches.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-
 # ---- Example 1: conform ADSL, then read its metadata ----
 #
-# The raw frame is scaffolded, coerced, ordered, sorted, and stamped; the
-# result carries the CDISC metadata get_meta() reads back.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
+# The bundled adam_spec describes ADSL; the raw frame is scaffolded,
+# coerced, ordered, sorted, and stamped with the CDISC metadata
+# get_meta() reads back.
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
+#> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,
+#> `EOSDISP`, and `MMS1TSBL`
 get_meta(adsl)@dataset$records
 #> [1] 60
 
@@ -127,11 +128,23 @@ get_meta(adsl)@dataset$records
 #
 # apply_spec() never drops data: a column outside the spec rides along
 # (reported by the extra_variable finding) and still writes losslessly.
+# DM is SDTM, so it conforms against the bundled sdtm_spec.
 raw <- cdisc_dm
 raw$DERIVED <- seq_len(nrow(raw))
-dm <- apply_spec(raw, spec, "DM")
+dm <- apply_spec(raw, sdtm_spec, "DM")
+#> Scaffolded 1 variable: `BRTHDTC`
 findings <- conformance(dm)
 findings[findings$check == "extra_variable", c("variable", "message")]
-#>   variable                                       message
-#> 1  DERIVED Column 'DERIVED' is not declared in the spec.
+#>    variable                                        message
+#> 1  RFXSTDTC Column 'RFXSTDTC' is not declared in the spec.
+#> 2  RFXENDTC Column 'RFXENDTC' is not declared in the spec.
+#> 3   RFICDTC  Column 'RFICDTC' is not declared in the spec.
+#> 4  RFPENDTC Column 'RFPENDTC' is not declared in the spec.
+#> 5    DTHDTC   Column 'DTHDTC' is not declared in the spec.
+#> 6     DTHFL    Column 'DTHFL' is not declared in the spec.
+#> 7  ACTARMCD Column 'ACTARMCD' is not declared in the spec.
+#> 8    ACTARM   Column 'ACTARM' is not declared in the spec.
+#> 9     DMDTC    Column 'DMDTC' is not declared in the spec.
+#> 10     DMDY     Column 'DMDY' is not declared in the spec.
+#> 11  DERIVED  Column 'DERIVED' is not declared in the spec.
 ```

@@ -44,7 +44,7 @@ for the spec's CDISC standard.
 # spec_study() with no field returns the study-level table; pass a field
 # name to pull a single value such as the study identifier.
 spec <- artoo_spec(
-  cdisc_datasets, cdisc_variables,
+  cdisc_adam_datasets, cdisc_adam_variables,
   codelists = cdisc_codelists,
   study = data.frame(studyid = "CDISCPILOT01")
 )

@@ -76,26 +76,26 @@ for a variable's controlled terminology.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: one dataset's variables ----
 #
 # Pass a dataset name to get just that domain's variables, already
 # canonicalised to CDISC dataTypes.
 head(spec_variables(spec, "DM")[, c("variable", "label", "data_type")])
-#>    variable                             label data_type
-#> 49  STUDYID                  Study Identifier    string
-#> 50   DOMAIN               Domain Abbreviation    string
-#> 51  USUBJID         Unique Subject Identifier    string
-#> 52   SUBJID  Subject Identifier for the Study    string
-#> 53  RFSTDTC Subject Reference Start Date/Time    string
-#> 54  RFENDTC   Subject Reference End Date/Time    string
+#>   variable                             label data_type
+#> 1  STUDYID                  Study Identifier    string
+#> 2   DOMAIN               Domain Abbreviation    string
+#> 3  USUBJID         Unique Subject Identifier    string
+#> 4   SUBJID  Subject Identifier for the Study    string
+#> 5  RFSTDTC Subject Reference Start Date/Time    string
+#> 6  RFENDTC   Subject Reference End Date/Time    string
 
 # ---- Example 2: every variable across the spec ----
 #
 # Omit `dataset` to get the full table, e.g. to count variables per domain.
 table(spec_variables(spec)$dataset)
 #> 
-#> ADSL   DM 
-#>   48   25 
+#> DM 
+#> 25 
 ```

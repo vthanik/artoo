@@ -74,7 +74,7 @@ which stamps it.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: the column pane of a conformed frame ----
 #

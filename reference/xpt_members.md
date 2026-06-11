@@ -42,17 +42,21 @@ with `member =` to read one of them.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: a single-member file reports one row ----
 #
 # The FDA convention is one dataset per transport file.
-dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+#> Scaffolded 1 variable: `BRTHDTC`
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
 xpt_members(p)
 #>   member name        label nvars nobs
-#> 1      1   DM Demographics    25   60
+#> 1      1   DM Demographics    26   60
 
 # ---- Example 2: survey a multi-member file, then read one member ----
 #
@@ -70,6 +74,6 @@ writeBin(
 )
 xpt_members(multi)
 #>   member name                          label nvars nobs
-#> 1      1   DM                   Demographics    25   60
+#> 1      1   DM                   Demographics    26   60
 #> 2      2 ADSL Subject-Level Analysis Dataset    48   60
 ```

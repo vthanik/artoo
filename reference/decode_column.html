@@ -153,7 +153,7 @@ submission.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_datasets</span>, <span class="va">cdisc_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_sdtm_datasets</span>, <span class="va">cdisc_sdtm_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 1: decode a coded variable into a display column ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -172,7 +172,7 @@ submission.</p>
 <span class="r-in"><span><span class="co"># derive it from SEX's decoded values: to_code maps each decode to its</span></span></span>
 <span class="r-in"><span><span class="co"># submission code, and the spec dataType makes the result integer.</span></span></span>
 <span class="r-in"><span><span class="va">vars</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">cdisc_variables</span>,</span></span>
+<span class="r-in"><span>  <span class="va">cdisc_sdtm_variables</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    dataset <span class="op">=</span> <span class="st">"DM"</span>, variable <span class="op">=</span> <span class="st">"SEXN"</span>, label <span class="op">=</span> <span class="st">"Sex (N)"</span>,</span></span>
 <span class="r-in"><span>    data_type <span class="op">=</span> <span class="st">"integer"</span>, length <span class="op">=</span> <span class="fl">8L</span>, order <span class="op">=</span> <span class="cn">NA_integer_</span>,</span></span>
@@ -186,7 +186,7 @@ submission.</p>
 <span class="r-in"><span>    decode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"F"</span>, <span class="st">"M"</span><span class="op">)</span>, order <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">spec_n</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_datasets</span>, <span class="va">vars</span>, codelists <span class="op">=</span> <span class="va">cls</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec_n</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_sdtm_datasets</span>, <span class="va">vars</span>, codelists <span class="op">=</span> <span class="va">cls</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dm_n</span> <span class="op">&lt;-</span> <span class="fu">decode_column</span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">spec_n</span>, <span class="st">"DM"</span>,</span></span>
 <span class="r-in"><span>  from <span class="op">=</span> <span class="st">"SEX"</span>, to <span class="op">=</span> <span class="st">"SEXN"</span>, direction <span class="op">=</span> <span class="st">"to_code"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>

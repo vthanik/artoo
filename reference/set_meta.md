@@ -47,7 +47,10 @@ which stamps it.
 #
 # Conform a dataset, capture its metadata, then re-attach after an
 # attribute-dropping transform so the write stays lossless.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 meta <- get_meta(adsl)
 trimmed <- head(as.data.frame(adsl), 5)
@@ -105,8 +108,12 @@ set_meta(trimmed, meta)
 # ---- Example 2: stamp a bare frame straight from a spec ----
 #
 # A writer with a raw frame and no apply step can build metadata from the
-# spec and attach it directly.
-meta_dm <- artoo:::.meta_from_spec(spec, "DM")
+# spec and attach it directly (DM is SDTM, so its spec is sdtm-shaped).
+sdtm <- artoo_spec(
+  cdisc_sdtm_datasets, cdisc_sdtm_variables,
+  codelists = cdisc_codelists
+)
+meta_dm <- artoo:::.meta_from_spec(sdtm, "DM")
 dm <- set_meta(cdisc_dm, meta_dm)
 is_artoo_meta(get_meta(dm))
 #> [1] TRUE

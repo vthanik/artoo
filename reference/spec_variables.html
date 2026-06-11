@@ -100,28 +100,28 @@ variable's controlled terminology.</p></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_datasets</span>, <span class="va">cdisc_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="artoo_spec.html">artoo_spec</a></span><span class="op">(</span><span class="va">cdisc_sdtm_datasets</span>, <span class="va">cdisc_sdtm_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 1: one dataset's variables ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># Pass a dataset name to get just that domain's variables, already</span></span></span>
 <span class="r-in"><span><span class="co"># canonicalised to CDISC dataTypes.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">spec_variables</span><span class="op">(</span><span class="va">spec</span>, <span class="st">"DM"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"label"</span>, <span class="st">"data_type"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    variable                             label data_type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 49  STUDYID                  Study Identifier    string</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 50   DOMAIN               Domain Abbreviation    string</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 51  USUBJID         Unique Subject Identifier    string</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 52   SUBJID  Subject Identifier for the Study    string</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 53  RFSTDTC Subject Reference Start Date/Time    string</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 54  RFENDTC   Subject Reference End Date/Time    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   variable                             label data_type</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  STUDYID                  Study Identifier    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   DOMAIN               Domain Abbreviation    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  USUBJID         Unique Subject Identifier    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   SUBJID  Subject Identifier for the Study    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  RFSTDTC Subject Reference Start Date/Time    string</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  RFENDTC   Subject Reference End Date/Time    string</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: every variable across the spec ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># Omit `dataset` to get the full table, e.g. to count variables per domain.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="fu">spec_variables</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span><span class="op">$</span><span class="va">dataset</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ADSL   DM </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   48   25 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> DM </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25 </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -68,7 +68,11 @@
 </ul></div>
 <div class="section level3">
 <h3 id="data-0-0-0-9000">Data<a class="anchor" aria-label="anchor" href="#data-0-0-0-9000"></a></h3>
-<ul><li>New bundled specs <code>adam_spec</code> (ADaMIG 1.1: ADSL, ADAE) and <code>sdtm_spec</code> (SDTMIG 3.1.2: TS, DM, VS, SUPPDM), built reproducibly from the official CDISC Define-XML 2.1 release examples and shipped also as P21 workbooks under <code>inst/extdata/</code>. New demo datasets <code>cdisc_adae</code>, <code>cdisc_vs</code>, <code>cdisc_ts</code>, <code>cdisc_suppdm</code> from the PHUSE Test Data Factory. Every bundled dataset conforms to its bundled spec under <code>apply_spec(conformance = "abort")</code> – gated at build time and at test time.</li>
+<ul><li>The demo constructor tables are split by standard – <code>cdisc_adam_datasets</code>
+<ul><li>
+<code>cdisc_adam_variables</code> (ADSL, ADaMIG 1.1) and <code>cdisc_sdtm_datasets</code> + <code>cdisc_sdtm_variables</code> (DM, SDTMIG 3.1.2), each carrying its <code>standard</code> column – replacing the removed <code>cdisc_datasets</code>/<code>cdisc_variables</code>, which mixed both standards in one spec (the exact shape the single-standard model forbids). Stacking the two pairs into one <code><a href="../reference/artoo_spec.html">artoo_spec()</a></code> now aborts, and the build gates assert it. <code>cdisc_codelists</code> stays shared: controlled terminology is standard-agnostic.</li>
+</ul></li>
+<li>New bundled specs <code>adam_spec</code> (ADaMIG 1.1: ADSL, ADAE) and <code>sdtm_spec</code> (SDTMIG 3.1.2: TS, DM, VS, SUPPDM), built reproducibly from the official CDISC Define-XML 2.1 release examples and shipped also as P21 workbooks under <code>inst/extdata/</code>. New demo datasets <code>cdisc_adae</code>, <code>cdisc_vs</code>, <code>cdisc_ts</code>, <code>cdisc_suppdm</code> from the PHUSE Test Data Factory. Every bundled dataset conforms to its bundled spec under <code>apply_spec(conformance = "abort")</code> – gated at build time and at test time.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="fixes-0-0-0-9000">Fixes<a class="anchor" aria-label="anchor" href="#fixes-0-0-0-9000"></a></h3>

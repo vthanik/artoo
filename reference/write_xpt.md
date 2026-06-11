@@ -95,7 +95,10 @@ for the generic dispatcher.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: write a conformed dataset as v5 (FDA standard) ----
 #
@@ -108,8 +111,9 @@ write_xpt(adsl, path)
 # ---- Example 2: v8 for long names, with a frozen timestamp ----
 #
 # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
-# reproducible.
-dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+# reproducible. DM is SDTM, so it conforms against the bundled sdtm_spec.
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+#> Scaffolded 1 variable: `BRTHDTC`
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
 ```

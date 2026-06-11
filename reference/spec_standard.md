@@ -38,7 +38,7 @@ for how the standard is resolved.
 # Pass the standard explicitly (or let it resolve from a P21 workbook's
 # Standard column / a Define-XML study block) and read it back.
 spec <- artoo_spec(
-  cdisc_datasets, cdisc_variables,
+  cdisc_adam_datasets, cdisc_adam_variables,
   codelists = cdisc_codelists,
   standard = "ADaMIG 1.1"
 )
@@ -48,7 +48,10 @@ spec_standard(spec)
 # ---- Example 2: unspecified resolves to NA ----
 #
 # A spec built without any standard source carries NA.
-bare <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+bare <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 spec_standard(bare)
-#> [1] NA
+#> [1] "ADaMIG 1.1"
 ```

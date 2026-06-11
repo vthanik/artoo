@@ -81,7 +81,7 @@ for the generic dispatcher.
 ## Examples
 
 ``` r
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset to Parquet ----
 #

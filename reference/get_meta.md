@@ -48,7 +48,7 @@ which stamps it.
 #
 # apply_spec() stamps the metadata; get_meta() reads it back as the S7
 # object whose @columns holds one CDISC attribute set per variable.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 meta <- get_meta(adsl)
 meta@columns$STUDYID
