@@ -228,6 +228,37 @@ vport_spec <- function(
 #' @noRd
 .spec_check_refs <- function(datasets, variables, codelists, call) {
   if (nrow(variables)) {
+    # Duplicate (dataset, variable) definitions make every downstream step
+    # ambiguous (which label? which type?). Fail at construction, with the
+    # exact rows, instead of deep inside apply_spec() after the user has
+    # already derived everything. read_spec(on_duplicate=) offers the
+    # keep-first policy for workbooks that ship with duplicates.
+    key <- paste(variables$dataset, variables$variable, sep = ".")
+    keyed <- !is.na(variables$dataset) & !is.na(variables$variable)
+    dup_keys <- unique(key[keyed][duplicated(key[keyed])])
+    if (length(dup_keys)) {
+      lines <- vapply(
+        utils::head(dup_keys, 3L),
+        function(k) {
+          rows <- which(keyed & key == k)
+          sprintf(
+            "Rows %s of {.arg variables} all define %s.",
+            paste(rows, collapse = " and "),
+            k
+          )
+        },
+        character(1)
+      )
+      cli::cli_abort(
+        c(
+          "{.arg variables} defines {length(dup_keys)} variable{?s} more than once.",
+          stats::setNames(lines, rep("x", length(lines))),
+          "i" = "Remove the duplicate rows, or read the file with {.code read_spec(path, on_duplicate = \"first\")}."
+        ),
+        class = "vport_error_spec",
+        call = call
+      )
+    }
     orphan <- setdiff(unique(variables$dataset), datasets$dataset)
     orphan <- orphan[!is.na(orphan)]
     if (length(orphan)) {

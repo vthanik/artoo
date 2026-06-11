@@ -137,6 +137,25 @@
     }
   }
 
+  # Duplicate (dataset, variable) definitions are ambiguous (which label?
+  # which type?); the friendly constructor reports the exact rows, this is
+  # the last line of defence.
+  if (all(c("dataset", "variable") %in% names(vars)) && nrow(vars)) {
+    key <- paste(vars$dataset, vars$variable, sep = ".")
+    keyed <- !is.na(vars$dataset) & !is.na(vars$variable)
+    dup <- unique(key[keyed][duplicated(key[keyed])])
+    if (length(dup)) {
+      issues <- c(
+        issues,
+        sprintf(
+          "variables define duplicate (dataset, variable) pair%s: %s.",
+          if (length(dup) > 1L) "s" else "",
+          paste(utils::head(dup, 5L), collapse = ", ")
+        )
+      )
+    }
+  }
+
   # Cross-slot: every variable's dataset must exist in datasets.
   if (
     all(c("dataset") %in% names(vars)) &&

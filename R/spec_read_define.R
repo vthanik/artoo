@@ -54,7 +54,12 @@
 }
 
 #' @noRd
-.read_spec_define <- function(path, call = rlang::caller_env()) {
+.read_spec_define <- function(
+  path,
+  scope_datasets = NULL,
+  on_duplicate = "error",
+  call = rlang::caller_env()
+) {
   rlang::check_installed("xml2", reason = "to read Define-XML specs.")
   doc <- tryCatch(
     xml2::read_xml(path),
@@ -347,12 +352,26 @@
   # ---- value-level metadata ----------------------------------------------
   values <- .dx_values(mdv, items, vl_owner)
 
+  # Scope before the duplicate guard (a problem confined to another
+  # ItemGroup never blocks this read), then resolve duplicates by policy.
+  scoped <- .spec_scope_tables(
+    list(datasets = datasets, variables = variables, values = values),
+    scope_datasets,
+    call
+  )
+  variables <- .resolve_duplicate_variables(
+    scoped$variables,
+    on_duplicate,
+    where = "The variables table",
+    call = call
+  )
+
   vport_spec(
-    datasets = datasets,
+    datasets = scoped$datasets,
     variables = variables,
     codelists = codelists,
     study = study,
-    values = values,
+    values = scoped$values,
     methods = methods,
     comments = comments,
     documents = documents

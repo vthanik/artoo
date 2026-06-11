@@ -163,6 +163,20 @@
 #'   required`. A `.json` (native) or `.xlsx` / `.xls` (P21) file.
 #'
 #'   **Requirement:** reading a P21 workbook needs the `readxl` package.
+#' @param datasets *Read only these datasets.* `<character> | NULL`. `NULL`
+#'   (default) reads the whole spec. Otherwise the spec is scoped to the
+#'   named datasets before validation, so one broken sheet elsewhere in a
+#'   workbook cannot block the dataset you are working on. An unknown name
+#'   aborts listing what the file defines.
+#' @param on_duplicate *Policy for a variable defined more than once.*
+#'   `<character(1)>`. A workbook row duplicated within one dataset makes
+#'   the spec ambiguous; the finding is reported with its source location
+#'   (sheet and row numbers for Excel). One of:
+#'   * `"error"` (default) abort, naming each duplicate's rows.
+#'   * `"first"` keep the first definition of each, dropping the rest with
+#'     a message.
+#'   * `"warn"` keep the first definition and warn
+#'     (`vport_warning_spec`).
 #'
 #' @return *A validated `vport_spec`.* Inspect it with [spec_datasets()] /
 #'   [spec_variables()], check it with [validate_spec()], or persist it
@@ -179,11 +193,14 @@
 #' back <- read_spec(path)
 #' identical(back, spec)
 #'
-#' # ---- Example 2: read back, then inspect a dataset's variables ----
+#' # ---- Example 2: scope the read to one dataset ----
 #' #
-#' # A spec read from disk behaves exactly like one built in memory -- the
-#' # accessors work unchanged.
-#' head(spec_variables(back, "DM")[, c("variable", "label", "data_type")])
+#' # `datasets =` reads just the domain you are working on -- validation is
+#' # scoped with it, so a problem elsewhere in the workbook cannot block
+#' # this dataset.
+#' dm_spec <- read_spec(path, datasets = "DM")
+#' spec_datasets(dm_spec)
+#' head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 #'
 #' @seealso
 #' **Inverse:** [write_spec()] serialises a spec to native JSON.
@@ -191,8 +208,26 @@
 #' **Build / inspect:** [vport_spec()], [spec_datasets()],
 #' [spec_variables()], [validate_spec()].
 #' @export
-read_spec <- function(path) {
+read_spec <- function(
+  path,
+  datasets = NULL,
+  on_duplicate = c("error", "first", "warn")
+) {
   call <- rlang::caller_env()
+  on_duplicate <- match.arg(on_duplicate)
+  if (
+    !is.null(datasets) &&
+      (!is.character(datasets) || !length(datasets) || anyNA(datasets))
+  ) {
+    cli::cli_abort(
+      c(
+        "{.arg datasets} must be a character vector of dataset names.",
+        "x" = "You supplied {.obj_type_friendly {datasets}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
   .check_path(path, call = call)
   if (!file.exists(path)) {
     cli::cli_abort(
@@ -207,10 +242,10 @@ read_spec <- function(path) {
   ext <- tolower(tools::file_ext(path))
   switch(
     ext,
-    json = .read_spec_json(path, call),
+    json = .read_spec_json(path, datasets, on_duplicate, call),
     xlsx = ,
-    xls = .read_spec_xlsx(path, call),
-    xml = .read_spec_define(path, call),
+    xls = .read_spec_xlsx(path, datasets, on_duplicate, call),
+    xml = .read_spec_define(path, datasets, on_duplicate, call),
     cli::cli_abort(
       c(
         "Unsupported spec file type {.val {ext}}.",
@@ -222,10 +257,128 @@ read_spec <- function(path) {
   )
 }
 
+# ---- shared read-time guards ----------------------------------------------
+
+# Scope the raw spec tables to the requested datasets BEFORE validation, so
+# a problem confined to one sheet's other domains never blocks the dataset
+# being read. Unknown names abort listing what the file defines.
+#' @noRd
+.spec_scope_tables <- function(tables, datasets, call) {
+  if (is.null(datasets)) {
+    return(tables)
+  }
+  datasets <- unique(trimws(datasets))
+  avail <- if (
+    is.data.frame(tables$datasets) && "dataset" %in% names(tables$datasets)
+  ) {
+    unique(trimws(tables$datasets$dataset))
+  } else {
+    character(0)
+  }
+  unknown <- setdiff(datasets, avail)
+  if (length(unknown)) {
+    cli::cli_abort(
+      c(
+        "Unknown dataset{?s} in {.arg datasets}: {.val {unknown}}.",
+        "i" = "The spec defines: {.val {avail}}."
+      ),
+      class = "vport_error_input",
+      call = call
+    )
+  }
+  keep_rows <- function(df) {
+    if (is.null(df) || !is.data.frame(df) || !("dataset" %in% names(df))) {
+      return(df)
+    }
+    df[!is.na(df$dataset) & trimws(df$dataset) %in% datasets, , drop = FALSE]
+  }
+  tables$datasets <- keep_rows(tables$datasets)
+  tables$variables <- keep_rows(tables$variables)
+  tables$values <- keep_rows(tables$values)
+  tables
+}
+
+# Resolve duplicate (dataset, variable) definitions at read time, reporting
+# each duplicate's SOURCE location ("Variables sheet rows 276 and 280" for
+# Excel, table rows otherwise) -- the actionable form of the finding the
+# constructor would otherwise raise with bare table indices. `rows` aligns
+# original source row numbers to `variables`; NULL falls back to indices.
+#' @noRd
+.resolve_duplicate_variables <- function(
+  variables,
+  on_duplicate,
+  where,
+  rows = NULL,
+  call = rlang::caller_env()
+) {
+  if (
+    is.null(variables) ||
+      !nrow(variables) ||
+      !all(c("dataset", "variable") %in% names(variables))
+  ) {
+    return(variables)
+  }
+  if (is.null(rows)) {
+    rows <- seq_len(nrow(variables))
+  }
+  key <- paste(variables$dataset, variables$variable, sep = ".")
+  keyed <- !is.na(variables$dataset) & !is.na(variables$variable)
+  dup_keys <- unique(key[keyed][duplicated(key[keyed])])
+  if (!length(dup_keys)) {
+    return(variables)
+  }
+  lines <- vapply(
+    utils::head(dup_keys, 5L),
+    function(k) {
+      at <- rows[keyed & key == k]
+      sprintf(
+        "%s rows %s all define %s.",
+        where,
+        paste(at, collapse = " and "),
+        k
+      )
+    },
+    character(1)
+  )
+  if (on_duplicate == "error") {
+    cli::cli_abort(
+      c(
+        "The spec defines {length(dup_keys)} variable{?s} more than once.",
+        stats::setNames(lines, rep("x", length(lines))),
+        "i" = "Fix the source, or keep the first definition of each with {.code on_duplicate = \"first\"}."
+      ),
+      class = "vport_error_spec",
+      call = call
+    )
+  }
+  if (on_duplicate == "warn") {
+    cli::cli_warn(
+      c(
+        "Keeping the first definition of {length(dup_keys)} duplicated variable{?s}.",
+        stats::setNames(lines, rep("x", length(lines)))
+      ),
+      class = "vport_warning_spec",
+      call = call
+    )
+  } else {
+    cli::cli_inform(
+      "Kept the first definition of {length(dup_keys)} duplicated variable{?s}.",
+      class = "vport_message_spec"
+    )
+  }
+  drop <- keyed & duplicated(key) & key %in% dup_keys
+  variables[!drop, , drop = FALSE]
+}
+
 # ---- Native JSON --------------------------------------------------------
 
 #' @noRd
-.read_spec_json <- function(path, call = rlang::caller_env()) {
+.read_spec_json <- function(
+  path,
+  datasets = NULL,
+  on_duplicate = "error",
+  call = rlang::caller_env()
+) {
   raw <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE)
   .check_spec_json_version(raw[["vport_spec_version"]], call)
 
@@ -243,12 +396,28 @@ read_spec <- function(path) {
     NULL
   }
 
+  tables <- .spec_scope_tables(
+    list(
+      datasets = pick("datasets"),
+      variables = pick("variables"),
+      values = pick("values")
+    ),
+    datasets,
+    call
+  )
+  variables <- .resolve_duplicate_variables(
+    tables$variables,
+    on_duplicate,
+    where = "The variables table",
+    call = call
+  )
+
   vport_spec(
-    datasets = pick("datasets"),
-    variables = pick("variables"),
+    datasets = tables$datasets,
+    variables = variables,
     codelists = pick("codelists"),
     study = pick("study"),
-    values = pick("values"),
+    values = tables$values,
     methods = pick("methods"),
     comments = pick("comments"),
     documents = pick("documents")
@@ -278,7 +447,12 @@ read_spec <- function(path) {
 # ---- Pinnacle 21 Excel --------------------------------------------------
 
 #' @noRd
-.read_spec_xlsx <- function(path, call = rlang::caller_env()) {
+.read_spec_xlsx <- function(
+  path,
+  datasets = NULL,
+  on_duplicate = "error",
+  call = rlang::caller_env()
+) {
   rlang::check_installed("readxl", reason = "to read a Pinnacle 21 Excel spec.")
   sheets <- readxl::excel_sheets(path)
 
@@ -291,8 +465,9 @@ read_spec <- function(path) {
   doc_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$documents)
   st_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$study)
 
+  scope <- datasets # the user's dataset filter; `datasets` becomes the table
   datasets <- .read_p21_tab(path, ds_sheet)
-  variables <- .read_p21_tab(path, var_sheet)
+  variables <- .read_p21_tab(path, var_sheet, track_rows = TRUE)
   codelists <- .read_p21_tab(path, cl_sheet)
   values <- .read_p21_tab(path, vl_sheet)
   methods <- .read_p21_tab(path, mt_sheet)
@@ -331,6 +506,25 @@ read_spec <- function(path) {
   # A still-blank dataset means a blank first row or broken merge: fail
   # loud rather than orphan the variable on an NA dataset.
   .check_filled(variables, "dataset", "Variables", call)
+
+  # Scope to the requested datasets BEFORE the duplicate guard, so a
+  # problem confined to another domain's rows never blocks this read; then
+  # resolve duplicates with their actual sheet + Excel row locations.
+  scoped <- .spec_scope_tables(
+    list(datasets = datasets, variables = variables, values = values),
+    scope,
+    call
+  )
+  datasets <- scoped$datasets
+  values <- scoped$values
+  variables <- .resolve_duplicate_variables(
+    scoped$variables,
+    on_duplicate,
+    where = sprintf("Sheet '%s'", var_sheet),
+    rows = scoped$variables[[".vport_row"]],
+    call = call
+  )
+  variables[[".vport_row"]] <- NULL
 
   # Drop P21 codelist header rows (an id/name but no submission term) and
   # trailing blank-key rows in the supporting-metadata sheets.
@@ -377,8 +571,11 @@ read_spec <- function(path) {
 
 # Read one sheet as text and drop all-blank rows. NULL when the sheet is
 # absent (sheet_name NULL); a 0-row data frame when present but empty.
+# `track_rows = TRUE` records each data row's spreadsheet row number (data
+# index + 1 for the header) in a `.vport_row` column, BEFORE the blank-row
+# filter, so a later finding can point at the exact Excel row.
 #' @noRd
-.read_p21_tab <- function(path, sheet_name) {
+.read_p21_tab <- function(path, sheet_name, track_rows = FALSE) {
   if (is.null(sheet_name)) {
     return(NULL)
   }
@@ -394,8 +591,13 @@ read_spec <- function(path) {
       is.na(cc) | !nzchar(trimws(cc))
     })
     blank <- Reduce(`&`, blank_cols)
+    if (track_rows) {
+      df[[".vport_row"]] <- seq_len(nrow(df)) + 1L
+    }
     df <- df[!blank, , drop = FALSE]
     rownames(df) <- NULL
+  } else if (track_rows && !is.null(df)) {
+    df[[".vport_row"]] <- integer(0)
   }
   df
 }

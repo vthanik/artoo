@@ -268,3 +268,111 @@ test_that(".match_p21_sheet on a single match is silent", {
   )
   expect_identical(used, "Datasets")
 })
+
+# ---- datasets = scoping + on_duplicate (read-time hardening) ----------------
+
+test_that("read_spec(datasets=) scopes a native JSON spec to one dataset", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_spec(spec, p)
+  dm_only <- read_spec(p, datasets = "DM")
+  expect_identical(spec_datasets(dm_only), "DM")
+  expect_identical(unique(spec_variables(dm_only)$dataset), "DM")
+})
+
+test_that("read_spec(datasets=) rejects an unknown dataset, listing what exists", {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_spec(spec, p)
+  expect_error(read_spec(p, datasets = "ADAE"), class = "vport_error_input")
+  expect_snapshot(error = TRUE, read_spec(p, datasets = "ADAE"))
+  expect_error(read_spec(p, datasets = 1L), class = "vport_error_input")
+})
+
+test_that("read_spec(datasets=) scopes a P21 workbook", {
+  skip_if_not_installed("readxl")
+  p <- test_path("fixtures", "p21_adam_spec.xlsx")
+  suppressMessages(dm_only <- read_spec(p, datasets = "DM"))
+  expect_identical(spec_datasets(dm_only), "DM")
+})
+
+# A native JSON spec with one variable defined twice (hand-built: the
+# vport_spec() constructor itself refuses duplicates, which is the point).
+.dup_spec_json <- function() {
+  spec <- vport_spec(
+    cdisc_datasets,
+    cdisc_variables,
+    codelists = cdisc_codelists
+  )
+  p <- withr::local_tempfile(fileext = ".json", .local_envir = parent.frame())
+  write_spec(spec, p)
+  raw <- jsonlite::fromJSON(p, simplifyDataFrame = TRUE)
+  v <- raw$variables
+  dup <- v[v$dataset == "DM" & v$variable == "SEX", , drop = FALSE]
+  raw$variables <- rbind(v, dup)
+  jsonlite::write_json(raw, p, auto_unbox = TRUE, null = "null", na = "null")
+  p
+}
+
+test_that("a duplicated variable aborts at read with its row locations", {
+  p <- .dup_spec_json()
+  expect_error(read_spec(p), class = "vport_error_spec")
+  err <- tryCatch(read_spec(p), error = function(e) conditionMessage(e))
+  # The message names the locations and the offending variable.
+  expect_match(paste(err, collapse = " "), "DM.SEX")
+  expect_match(paste(err, collapse = " "), "rows")
+})
+
+test_that("on_duplicate = 'first' keeps the first definition", {
+  p <- .dup_spec_json()
+  spec <- suppressMessages(read_spec(p, on_duplicate = "first"))
+  v <- spec_variables(spec, "DM")
+  expect_identical(sum(v$variable == "SEX"), 1L)
+})
+
+test_that("on_duplicate = 'warn' keeps the first definition and warns", {
+  p <- .dup_spec_json()
+  expect_warning(
+    spec <- read_spec(p, on_duplicate = "warn"),
+    class = "vport_warning_spec"
+  )
+  expect_identical(sum(spec_variables(spec, "DM")$variable == "SEX"), 1L)
+})
+
+test_that("scoping runs before the duplicate guard (broken domain elsewhere)", {
+  # The dogfood scenario: a duplicate confined to one domain must not block
+  # reading a different, clean domain.
+  p <- .dup_spec_json() # duplicate lives in DM
+  adsl_only <- read_spec(p, datasets = "ADSL")
+  expect_identical(spec_datasets(adsl_only), "ADSL")
+})
+
+test_that(".resolve_duplicate_variables reports source rows (Excel-style)", {
+  vars <- data.frame(
+    dataset = c("ADCM", "ADCM", "ADCM"),
+    variable = c("STUDYID", "TRTP", "STUDYID"),
+    stringsAsFactors = FALSE
+  )
+  err <- tryCatch(
+    vport:::.resolve_duplicate_variables(
+      vars,
+      "error",
+      where = "Sheet 'Variables'",
+      rows = c(276L, 277L, 280L)
+    ),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(
+    paste(err, collapse = " "),
+    "Sheet 'Variables' rows 276 and 280 all define ADCM.STUDYID",
+    fixed = TRUE
+  )
+})

@@ -15,3 +15,12 @@
       Several sheets match one Pinnacle 21 role.
       i Using "Datasets"; ignoring "datasets ".
 
+# read_spec(datasets=) rejects an unknown dataset, listing what exists
+
+    Code
+      read_spec(p, datasets = "ADAE")
+    Condition
+      Error:
+      ! Unknown dataset in `datasets`: "ADAE".
+      i The spec defines: "ADSL" and "DM".
+

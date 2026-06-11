@@ -171,14 +171,20 @@ test_that("scaffold and drop progress carry class vport_message_apply", {
   )
 })
 
-test_that("a duplicated spec variable aborts with vport_error_spec", {
+test_that("a duplicated spec variable aborts at construction, with the rows", {
+  # Fail fast, fail locatably: the duplicate surfaces when the spec is
+  # built, naming the offending rows, not deep inside apply_spec() after
+  # every derivation has already run.
   vars <- cdisc_variables
   dup <- vars[vars$dataset == "DM" & vars$variable == "SEX", , drop = FALSE]
   vars2 <- rbind(vars, dup)
-  spec <- vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
   expect_error(
-    apply_spec(cdisc_dm, spec, "DM", conformance = "off"),
+    vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists),
     class = "vport_error_spec"
+  )
+  expect_snapshot(
+    error = TRUE,
+    vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
   )
 })
 

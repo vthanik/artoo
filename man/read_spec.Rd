@@ -4,12 +4,30 @@
 \alias{read_spec}
 \title{Read a specification from JSON, Excel, or Define-XML}
 \usage{
-read_spec(path)
+read_spec(path, datasets = NULL, on_duplicate = c("error", "first", "warn"))
 }
 \arguments{
 \item{path}{\emph{The specification file to read.} \verb{<character(1)>: required}. A \code{.json} (native) or \code{.xlsx} / \code{.xls} (P21) file.
 
 \strong{Requirement:} reading a P21 workbook needs the \code{readxl} package.}
+
+\item{datasets}{\emph{Read only these datasets.} \verb{<character> | NULL}. \code{NULL}
+(default) reads the whole spec. Otherwise the spec is scoped to the
+named datasets before validation, so one broken sheet elsewhere in a
+workbook cannot block the dataset you are working on. An unknown name
+aborts listing what the file defines.}
+
+\item{on_duplicate}{\emph{Policy for a variable defined more than once.}
+\verb{<character(1)>}. A workbook row duplicated within one dataset makes
+the spec ambiguous; the finding is reported with its source location
+(sheet and row numbers for Excel). One of:
+\itemize{
+\item \code{"error"} (default) abort, naming each duplicate's rows.
+\item \code{"first"} keep the first definition of each, dropping the rest with
+a message.
+\item \code{"warn"} keep the first definition and warn
+(\code{vport_warning_spec}).
+}}
 }
 \value{
 \emph{A validated \code{vport_spec}.} Inspect it with \code{\link[=spec_datasets]{spec_datasets()}} /
@@ -63,11 +81,14 @@ write_spec(spec, path)
 back <- read_spec(path)
 identical(back, spec)
 
-# ---- Example 2: read back, then inspect a dataset's variables ----
+# ---- Example 2: scope the read to one dataset ----
 #
-# A spec read from disk behaves exactly like one built in memory -- the
-# accessors work unchanged.
-head(spec_variables(back, "DM")[, c("variable", "label", "data_type")])
+# `datasets =` reads just the domain you are working on -- validation is
+# scoped with it, so a problem elsewhere in the workbook cannot block
+# this dataset.
+dm_spec <- read_spec(path, datasets = "DM")
+spec_datasets(dm_spec)
+head(spec_variables(dm_spec, "DM")[, c("variable", "label", "data_type")])
 
 }
 \seealso{

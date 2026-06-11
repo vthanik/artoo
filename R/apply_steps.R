@@ -35,18 +35,8 @@
   }
   rownames(vars) <- NULL
 
-  dupes <- unique(vars$variable[duplicated(vars$variable)])
-  if (length(dupes)) {
-    cli::cli_abort(
-      c(
-        "Duplicate variable{?s} in the spec for dataset {.val {dataset}}.",
-        "x" = "Duplicated: {.val {dupes}}."
-      ),
-      class = "vport_error_spec",
-      call = call
-    )
-  }
-
+  # Duplicate (dataset, variable) rows are rejected at vport_spec()
+  # construction (with row locations), so the slices here are unambiguous.
   list(
     vars = vars,
     spec_vars = vars$variable,
