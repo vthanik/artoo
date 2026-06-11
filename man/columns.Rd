@@ -42,6 +42,13 @@ aborts with the registry's known-extensions message).
 
 \strong{Tip:} a multi-member XPORT file needs \verb{member =}; without one the
 xpt reader aborts and points at \code{\link[=xpt_members]{xpt_members()}} for the listing.
+
+\strong{Note:} an \code{.xpt} path shows a blank \code{Key}: the XPORT byte layout
+stores only name, label, length, and formats, so \code{keySequence} (like
+codelist and origin) cannot ride in the file. The metadata-carrying
+formats (\code{.json}, \code{.ndjson}, \code{.parquet}, \code{.rds}) and the in-session
+conformed frame show it; re-apply the spec after an xpt read to
+restore it.
 }
 \examples{
 spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)

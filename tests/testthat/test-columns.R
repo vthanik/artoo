@@ -122,3 +122,20 @@ test_that("print is the left-aligned SAS pane (snapshot)", {
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   expect_snapshot(print(columns(dm)))
 })
+
+test_that("a subset artoo_columns still prints (attrs dropped by `[`)", {
+  spec <- demo_spec()
+  dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  pane <- columns(dm)
+  # A 0-row subset (this spec declares no keys) and a populated subset must
+  # both format without warnings.
+  empty_sub <- pane[!is.na(pane$Key), c("Variable", "Key")]
+  expect_identical(nrow(empty_sub), 0L)
+  expect_no_warning(out0 <- format(empty_sub))
+  expect_match(out0[1], "artoo_columns")
+
+  some_sub <- pane[1:3, c("Variable", "Type")]
+  expect_no_warning(out3 <- format(some_sub))
+  expect_match(out3[1], "3 variables")
+  expect_length(out3, 5L) # header + names row + 3 data rows
+})

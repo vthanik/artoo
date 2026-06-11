@@ -68,10 +68,12 @@ get_meta(read_xpt(path))@dataset$records
 ```
 
 `columns()` is the quick look a SAS programmer expects from
-`PROC CONTENTS` — on a conformed frame or straight off a file:
+`PROC CONTENTS` — on a conformed frame or straight off a file (a
+metadata-carrying format also shows the CDISC `Key` sequence; XPORT bytes
+cannot store it):
 
 ```{r}
-columns(path)
+columns(adsl)
 ```
 
 Conformance is data, not console noise: `conformance(adsl)` returns every

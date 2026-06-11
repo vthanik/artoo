@@ -32,6 +32,13 @@
 #' **Tip:** a multi-member XPORT file needs `member =`; without one the
 #' xpt reader aborts and points at [xpt_members()] for the listing.
 #'
+#' **Note:** an `.xpt` path shows a blank `Key`: the XPORT byte layout
+#' stores only name, label, length, and formats, so `keySequence` (like
+#' codelist and origin) cannot ride in the file. The metadata-carrying
+#' formats (`.json`, `.ndjson`, `.parquet`, `.rds`) and the in-session
+#' conformed frame show it; re-apply the spec after an xpt read to
+#' restore it.
+#'
 #' @param x *What to describe.* `<data.frame> | <character(1)>: required`.
 #'   A stamped frame (carries `artoo_meta`), any plain data frame, or a
 #'   path to a dataset file (`.xpt`, `.json`, `.ndjson`, `.parquet`,
@@ -156,26 +163,26 @@ columns <- function(x, member = NULL) {
 
 #' @exportS3Method format artoo_columns
 format.artoo_columns <- function(x, ...) {
-  ds <- attr(x, "dataset", exact = TRUE)
+  # `[` on a data frame drops custom attributes but keeps the class, so a
+  # filtered pane arrives here without dataset/records -- degrade gracefully.
+  ds <- attr(x, "dataset", exact = TRUE) %||% NA_character_
+  records <- attr(x, "records", exact = TRUE)
   header <- sprintf(
-    "<artoo_columns> %s-- %d variable%s, %d obs",
-    if (is.na(ds)) "" else paste0(ds, " "),
+    "<artoo_columns> %s-- %d variable%s%s",
+    if (length(ds) != 1L || is.na(ds)) "" else paste0(ds, " "),
     nrow(x),
     if (nrow(x) == 1L) "" else "s",
-    attr(x, "records", exact = TRUE) %||% NA_integer_
+    if (is.null(records)) "" else sprintf(", %d obs", records)
   )
   body <- as.data.frame(x)
   # Render every cell left-aligned; NA prints blank (the SAS viewer look).
-  cells <- vapply(
-    body,
-    function(col) {
-      ch <- as.character(col)
-      ch[is.na(ch)] <- ""
-      ch
-    },
-    character(nrow(body))
-  )
-  cells <- matrix(cells, nrow = nrow(body))
+  # Built by explicit dims so a 0-row pane degrades to the header line.
+  cells <- matrix("", nrow = nrow(body), ncol = ncol(body))
+  for (j in seq_along(body)) {
+    ch <- as.character(body[[j]])
+    ch[is.na(ch)] <- ""
+    cells[, j] <- ch
+  }
   table <- rbind(names(body), cells)
   widths <- apply(nchar(table, type = "width"), 2, max)
   pad <- function(s, w) {
