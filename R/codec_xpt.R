@@ -164,9 +164,11 @@
     .int_to_pib2(r$formatd),
     .int_to_pib2(just),
     as.raw(c(0x00, 0x00)),
-    .str_to_raw("", 8L),
-    .int_to_pib2(0L),
-    .int_to_pib2(0L),
+    # niform / nifl / nifd: the SAS informat (how to read the field back in),
+    # bytes 73-84. Carried so a real SAS file round-trips its input spec.
+    .str_to_raw(r$informat_name %||% "", 8L),
+    .int_to_pib2(r$informatl %||% 0L),
+    .int_to_pib2(r$informatd %||% 0L),
     .int_to_pib4(npos)
   )
   if (version == 5L) {
@@ -177,7 +179,7 @@
       .str_to_raw(r$name, 32L),
       .int_to_pib2(length(charToRaw(r$label))),
       .int_to_pib2(nchar(r$format_name)),
-      .int_to_pib2(0L),
+      .int_to_pib2(nchar(r$informat_name %||% "")),
       raw(14L)
     )
   }
@@ -449,6 +451,9 @@
     }
 
     fmt <- .parse_format_str(if (is.na(display)) "" else display)
+    inf <- .parse_format_str(
+      if (!is.null(cm) && !is.null(cm$informat)) cm$informat else ""
+    )
     recs[[i]] <- list(
       name = out_name,
       label = label_t,
@@ -458,6 +463,9 @@
       format_name = fmt$name,
       formatl = fmt$length,
       formatd = fmt$decimals,
+      informat_name = inf$name,
+      informatl = inf$length,
+      informatd = inf$decimals,
       bytes = bytes
     )
   }
@@ -740,6 +748,9 @@
   format_name <- .raw_to_str(raw140[57:64])
   formatl <- .pib2_to_int(raw140[65:66])
   formatd <- .pib2_to_int(raw140[67:68])
+  informat_name <- .raw_to_str(raw140[73:80])
+  informatl <- .pib2_to_int(raw140[81:82])
+  informatd <- .pib2_to_int(raw140[83:84])
   npos <- .pib4_to_int(raw140[85:88])
   if (version == 8L && namestr_size >= 140L) {
     name <- .raw_to_str(raw140[89:120])
@@ -753,6 +764,9 @@
     format_name = format_name,
     formatl = formatl,
     formatd = formatd,
+    informat_name = informat_name,
+    informatl = informatl,
+    informatd = informatd,
     npos = npos
   )
 }
@@ -835,6 +849,27 @@
         namestrs[[varnum]]$label <- .raw_to_str(
           data_raw[pos:(pos + label_len - 1L)]
         )
+        pos <- pos + label_len
+      }
+      # LABELV9 also carries the full format / informat strings (the NAMESTR
+      # fields hold at most 8 name characters); parse and take them as the
+      # authoritative values rather than discarding them.
+      if (fmt_len > 0L) {
+        pf <- .parse_format_str(.raw_to_str(
+          data_raw[pos:(pos + fmt_len - 1L)]
+        ))
+        namestrs[[varnum]]$format_name <- pf$name
+        namestrs[[varnum]]$formatl <- pf$length
+        namestrs[[varnum]]$formatd <- pf$decimals
+        pos <- pos + fmt_len
+      }
+      if (infmt_len > 0L) {
+        pi <- .parse_format_str(.raw_to_str(
+          data_raw[pos:(pos + infmt_len - 1L)]
+        ))
+        namestrs[[varnum]]$informat_name <- pi$name
+        namestrs[[varnum]]$informatl <- pi$length
+        namestrs[[varnum]]$informatd <- pi$decimals
       }
     }
   }
@@ -1057,6 +1092,11 @@
 #' @noRd
 .meta_col_from_namestr <- function(ns, dataset, dt) {
   disp <- .xpt_format_string(ns$format_name, ns$formatl, ns$formatd)
+  infm <- .xpt_format_string(
+    ns$informat_name %||% "",
+    ns$informatl %||% 0L,
+    ns$informatd %||% 0L
+  )
   col <- list(
     itemOID = paste0("IT.", dataset, ".", ns$name),
     name = ns$name,
@@ -1067,7 +1107,8 @@
     } else {
       NULL
     },
-    displayFormat = if (nzchar(disp)) disp else NULL
+    displayFormat = if (nzchar(disp)) disp else NULL,
+    informat = if (nzchar(infm)) infm else NULL
   )
   .drop_null(col)
 }

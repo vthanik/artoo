@@ -94,12 +94,21 @@ test_that("the sidecar is embedded under the metadata_json key", {
   )
 })
 
-test_that("a plain nanoparquet file degrades to a bare frame (9.B)", {
+test_that("a plain nanoparquet file reads with synthesized metadata (9.B)", {
   p <- withr::local_tempfile(fileext = ".parquet")
   nanoparquet::write_parquet(data.frame(a = 1:3, b = c("x", "y", "z")), p)
   back <- read_parquet(p)
   expect_identical(nrow(back), 3L)
-  expect_null(attr(back, "metadata_json", exact = TRUE))
+  # No sidecar -> the meta is synthesized from the schema, so the frame still
+  # feeds get_meta() and a downstream write_xpt()/write_json().
+  meta <- get_meta(back)
+  expect_identical(meta@columns$a$dataType, "integer")
+  expect_identical(meta@columns$b$dataType, "string")
+  expect_identical(meta@dataset$records, 3L)
+  xpt <- withr::local_tempfile(fileext = ".xpt")
+  jsn <- withr::local_tempfile(fileext = ".json")
+  expect_no_error(write_xpt(back, xpt))
+  expect_no_error(write_json(back, jsn))
 })
 
 test_that("encode without meta writes a sidecar-free parquet", {

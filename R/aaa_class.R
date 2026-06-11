@@ -52,6 +52,7 @@
   target_data_type = "character",
   length = "integer",
   display_format = "character",
+  informat = "character",
   key_sequence = "integer",
   order = "integer",
   codelist_id = "character",

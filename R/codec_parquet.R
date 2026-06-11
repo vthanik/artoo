@@ -69,7 +69,11 @@
 
   kv <- if (is_vport_meta(meta)) {
     stats::setNames(
-      .meta_to_datasetjson(meta, extensions = TRUE),
+      .meta_to_datasetjson(
+        meta,
+        extensions = TRUE,
+        special = .collect_special_missings(x)
+      ),
       .parquet_meta_key
     )
   } else {
@@ -143,22 +147,36 @@
     df[[nm]] <- .recode_col(df[[nm]], source_enc)
   }
   json <- .parquet_sidecar(path)
-  if (is.null(json)) {
-    # Foreign / plain-nanoparquet parquet: no vport metadata. Degrade to a
-    # bare frame rather than aborting (plan 9.B).
-    return(list(data = df, meta = NULL))
+  # Parse the sidecar ONCE: the same parsed object feeds the meta rebuild and
+  # the special-missing tag reattachment below. A foreign / plain-nanoparquet
+  # file (no sidecar) gets metadata synthesized from the column types and
+  # attributes -- the same path a bare frame takes on write -- so the result
+  # still feeds get_meta() and write_xpt()/write_json(), never an abort
+  # (plan 9.B).
+  p <- if (is.null(json)) {
+    NULL
+  } else {
+    jsonlite::fromJSON(json, simplifyVector = FALSE)
   }
-
-  meta <- .meta_from_datasetjson(json)
-  # Realize temporal columns from the sidecar dataType (plan D1: meta-first).
-  # Date/POSIXct survive nanoparquet natively and realize idempotently; a time
-  # column comes back a bare double and becomes vport_time here.
+  meta <- if (is.null(p)) .meta_from_frame(df) else .meta_from_parsed(p)
+  if (is.null(meta)) {
+    return(list(data = df, meta = NULL)) # 0-column foreign file
+  }
+  # Realize temporal columns from the meta dataType (plan D1: meta-first).
+  # Date/POSIXct survive nanoparquet natively and realize idempotently (the
+  # integer-backed DATE arrival is canonicalized to double); a time column
+  # comes back a bare double and becomes vport_time here.
   for (nm in names(meta@columns)) {
     cm <- meta@columns[[nm]]
     dt <- cm$dataType %||% ""
     if (dt %in% c("date", "datetime", "time") && nm %in% names(df)) {
       df[[nm]] <- .realize_temporal(df[[nm]], dt, cm$displayFormat %||% NA)
     }
+  }
+  # Reattach special-missing tags AFTER realization (it rebuilds vectors).
+  sm <- if (is.null(p)) NULL else .special_from_parsed(p)
+  if (!is.null(sm)) {
+    df <- .apply_special_missings(df, sm)
   }
   list(data = df, meta = meta)
 }

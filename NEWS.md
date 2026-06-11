@@ -1,5 +1,38 @@
 # vport 0.0.0.9000
 
+* SAS special missing tags (`.A`-`.Z`, `._`) now survive every format, not
+  just xpt and rds: json and parquet carry them in the namespaced
+  `_vport.specialMissings` extension while the data values stay plain nulls
+  (a foreign reader degrades gracefully to ordinary missings), and partial
+  reads (`n_max`) keep the tags row-aligned. Previously an
+  xpt -> json -> xpt round trip silently degraded them to plain missings.
+* SAS informats now round-trip: `write_xpt()` writes NAMESTR bytes 73-84
+  (`niform`/`nifl`/`nifd`), `read_xpt()` reads them back (including the
+  long-format/informat strings in a LABELV9 extension, which were previously
+  discarded), the spec gained an optional `informat` column, frames carry an
+  `informat.sas` column attribute (projected by `set_meta()`, read back by
+  the bare-frame writer), and every other format carries informats in the
+  `_vport.informats` extension.
+* A round-trip losslessness matrix test now exercises every ordered pair of
+  formats over a torture frame covering all ten CDISC dataTypes, non-ASCII
+  text, and special missings on plain and temporal columns.
+* `read_parquet()` now synthesizes metadata from the column types and
+  attributes when a foreign (plain-nanoparquet/arrow) file carries no vport
+  sidecar, so `get_meta()` and a downstream `write_xpt()`/`write_json()`
+  work on any parquet file; previously the frame came back bare.
+* `read_parquet()` canonicalizes integer-backed `Date` columns (nanoparquet's
+  native DATE arrival) to R's double backing, so `identical()` holds across
+  codecs.
+* `write_json()` gained `strict`: `TRUE` writes a pure closed-vocabulary
+  CDISC file and warns (`vport_warning_codec`) naming any dropped vport
+  extensions; the default (`FALSE`) emits a single namespaced `_vport` block
+  only when there is content strict CDISC cannot express (special missing
+  tags, the recorded source encoding, informats). The block is stamped with
+  `vportMetaVersion` for forward compatibility.
+* `write_json()` now serializes doubles with 17 significant digits, the
+  guaranteed IEEE-754 round-trip precision; `digits = NA` delegated to R's
+  15-digit default and silently lost the last ulp (`0.1 + 0.2` read back
+  as `0.3`).
 * Added a pkgdown website, two Quarto vignettes ("From spec to submission
   dataset" and "One dataset, every format"), and a rendered README covering
   the spec-to-submission workflow and lossless any-to-any conversion.

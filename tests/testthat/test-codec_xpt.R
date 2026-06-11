@@ -1022,3 +1022,59 @@ test_that(".xpt_parse_member defaults the NAMESTR size on an invalid field", {
   on.exit(close(con))
   expect_identical(vport:::.xpt_parse_member(con, 5L)$namestr_size, 140L)
 })
+
+# ---- informats (NAMESTR bytes 73-84) ----------------------------------------
+
+test_that("an informat round-trips through xpt v5 and v8", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = c("DM", "DM"),
+      variable = c("USUBJID", "BRTHDT"),
+      label = c("Subject", "Birth Date"),
+      data_type = c("string", "date"),
+      display_format = c(NA, "DATE9."),
+      informat = c(NA, "YYMMDD10."),
+      stringsAsFactors = FALSE
+    )
+  )
+  df <- data.frame(
+    USUBJID = c("01-001", "01-002"),
+    BRTHDT = as.Date(c("1980-04-12", "1975-09-30")),
+    stringsAsFactors = FALSE
+  )
+  dm <- apply_spec(df, spec, "DM", on_error = "off")
+  for (v in c(5, 8)) {
+    p <- withr::local_tempfile(fileext = ".xpt")
+    write_xpt(dm, p, version = v)
+    back <- read_xpt(p)
+    expect_identical(
+      get_meta(back)@columns$BRTHDT$informat,
+      "YYMMDD10.",
+      info = paste("version", v)
+    )
+    expect_null(get_meta(back)@columns$USUBJID$informat)
+  }
+})
+
+test_that("the informat lands in NAMESTR bytes 73-84", {
+  df <- data.frame(AGE = c(34, 41))
+  attr(df$AGE, "informat.sas") <- "BEST8.2"
+  attr(df, "dataset_name") <- "DM"
+  p <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, p)
+  bytes <- readBin(p, "raw", file.info(p)$size)
+  # v5 layout: 3 library + 5 member header records, then the NAMESTR record.
+  ns <- bytes[(80L * 8L + 1L):(80L * 8L + 140L)]
+  expect_identical(rawToChar(ns[73:80]), "BEST    ")
+  expect_identical(vport:::.pib2_to_int(ns[81:82]), 8L)
+  expect_identical(vport:::.pib2_to_int(ns[83:84]), 2L)
+})
+
+test_that("a real SAS xpt with no informats still reads cleanly", {
+  fixture <- test_path("fixtures", "sas-dm.xpt")
+  skip_if_not(file.exists(fixture), "SAS fixture not present")
+  dm <- read_xpt(fixture)
+  metas <- get_meta(dm)@columns
+  expect_true(all(vapply(metas, function(c) is.null(c$informat), logical(1))))
+})

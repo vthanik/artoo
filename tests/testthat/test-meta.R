@@ -209,3 +209,65 @@ test_that("is_vport_meta is FALSE for non-meta objects", {
   expect_false(is_vport_meta(cdisc_adsl))
   expect_false(is_vport_meta(list()))
 })
+
+# ---- informats ride _vport.informats, never the CDISC columns array --------
+
+test_that("informat is stripped from emitted columns and rides _vport", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "BRTHDT",
+      label = "Birth Date",
+      data_type = "date",
+      display_format = "DATE9.",
+      informat = "YYMMDD10.",
+      stringsAsFactors = FALSE
+    )
+  )
+  meta <- vport:::.meta_from_spec(spec, "DM")
+  expect_identical(meta@columns$BRTHDT$informat, "YYMMDD10.")
+
+  payload <- vport:::.meta_payload(meta, extensions = TRUE)
+  emitted <- payload$columns[[1]]
+  expect_false("informat" %in% names(emitted))
+  expect_identical(payload[["_vport"]]$informats$BRTHDT, "YYMMDD10.")
+  expect_identical(payload[["_vport"]]$vportMetaVersion, "1.0")
+
+  # The strict payload drops the block entirely.
+  strict <- vport:::.meta_payload(meta, extensions = FALSE)
+  expect_false("_vport" %in% names(strict))
+
+  # Round-trip identity through the serializer, informat back in canonical
+  # position.
+  back <- vport:::.meta_from_datasetjson(
+    vport:::.meta_to_datasetjson(meta, extensions = TRUE)
+  )
+  expect_identical(back@columns, meta@columns)
+})
+
+test_that("set_meta projects informat.sas like format.sas", {
+  spec <- vport_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "BRTHDT",
+      label = "Birth Date",
+      data_type = "date",
+      display_format = "DATE9.",
+      informat = "YYMMDD10.",
+      stringsAsFactors = FALSE
+    )
+  )
+  meta <- vport:::.meta_from_spec(spec, "DM")
+  df <- data.frame(BRTHDT = as.Date("1980-04-12"))
+  stamped <- set_meta(df, meta)
+  expect_identical(attr(stamped$BRTHDT, "informat.sas"), "YYMMDD10.")
+  # And a bare frame carrying the attribute feeds it back into the meta.
+  bare <- data.frame(BRTHDT = as.Date("1980-04-12"))
+  attr(bare$BRTHDT, "informat.sas") <- "YYMMDD10."
+  expect_identical(
+    vport:::.meta_from_frame(bare)@columns$BRTHDT$informat,
+    "YYMMDD10."
+  )
+})

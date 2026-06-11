@@ -293,7 +293,18 @@ read_dataset <- function(
     }
   }
   if (is.finite(n_max) && nrow(data) > n_max) {
-    data <- data[seq_len(n_max), , drop = FALSE]
+    idx <- seq_len(n_max)
+    # Row-subsetting a data frame drops column attributes; carry the
+    # special-missing tags across, aligned to the kept rows. (xpt consumes
+    # n_max natively, so this matters for the post-decode formats.)
+    sm <- lapply(data, function(col) attr(col, "sas_missing", exact = TRUE))
+    data <- data[idx, , drop = FALSE]
+    for (nm in names(data)) {
+      tags <- .subset_special_missings(sm[[nm]], idx)
+      if (!is.null(tags) && any(!is.na(tags))) {
+        attr(data[[nm]], "sas_missing") <- tags
+      }
+    }
     if (is_vport_meta(meta)) {
       meta <- .meta_set_records(meta, nrow(data))
     }

@@ -20,6 +20,7 @@
   "targetDataType",
   "length",
   "displayFormat",
+  "informat",
   "keySequence",
   "codelist",
   "significantDigits",
@@ -67,6 +68,7 @@
     targetDataType = .na_to_null(row$target_data_type),
     length = .na_to_null_int(row$length),
     displayFormat = .na_to_null(row$display_format),
+    informat = .na_to_null(row$informat),
     keySequence = .na_to_null_int(row$key_sequence),
     codelist = .na_to_null(row$codelist_id),
     significantDigits = .na_to_null_int(row$significant_digits),
@@ -175,6 +177,7 @@
     attr(col, "width", exact = TRUE) %||%
     attr(col, "sas.length", exact = TRUE)
   label <- attr(col, "label", exact = TRUE)
+  inf_attr <- attr(col, "informat.sas", exact = TRUE)
   col_meta <- list(
     itemOID = paste0("IT.", dataset, ".", name),
     name = name,
@@ -183,6 +186,11 @@
     targetDataType = NULL,
     length = .resolve_xpt_length(len_attr, col),
     displayFormat = display_format,
+    informat = if (!is.null(inf_attr) && nzchar(inf_attr)) {
+      as.character(inf_attr)
+    } else {
+      NULL
+    },
     keySequence = NULL,
     codelist = NULL,
     significantDigits = NULL,
@@ -231,25 +239,45 @@
 # this single payload builder between the sidecar string and the .json file
 # codec is what keeps the formats from drifting (plan F4/4.0).
 #
-# `encoding` is vport's on-disk source-encoding record. Dataset-JSON v1.1
-# has a closed top-level vocabulary with no `encoding` key, so it is NEVER
-# spread into the standard block; with `extensions = TRUE` it rides a single
-# namespaced `_vport` object instead. The sidecar string set_meta() stamps
-# (rds/xpt/parquet) carries the extension; the Dataset-JSON FILE codec
-# serializes with `extensions = FALSE` to stay strict-CDISC. `_vport` is the
-# forward home for future vport extensions (e.g. vportMetaVersion).
+# Dataset-JSON v1.1 has closed vocabularies at the top level AND inside the
+# `columns` array, so everything vport-specific rides a single namespaced
+# `_vport` object instead of the standard block: `sourceEncoding` (the on-disk
+# source-charset record), `informats` (a {variable: "DATE9."} map -- the
+# column entries carry `informat` in-memory but it is stripped from the
+# emitted array), and `specialMissings` (row-aligned .A-.Z/._ tags, passed by
+# codecs as `special=`; see sas_missing.R for why they never enter the
+# set_meta() sidecar). Whenever `_vport` is emitted it is stamped with
+# `vportMetaVersion` for forward compatibility.
 #' @noRd
-.meta_payload <- function(meta, extensions = FALSE) {
+.meta_payload <- function(meta, extensions = FALSE, special = NULL) {
   ds <- meta@dataset
+  cols <- meta@columns
+  informats <- .drop_null(lapply(cols, function(c) c$informat))
+  cols <- lapply(cols, function(c) c[setdiff(names(c), "informat")])
   payload <- c(
     list(datasetJSONVersion = "1.1.0"),
     # keys derivable from keySequence; encoding is a vport extension. Neither
     # is spread into the standard CDISC block.
     ds[setdiff(names(ds), c("keys", "encoding"))],
-    list(columns = unname(meta@columns))
+    list(columns = unname(cols))
   )
-  if (isTRUE(extensions) && !is.null(ds$encoding)) {
-    payload <- c(payload, list(`_vport` = list(sourceEncoding = ds$encoding)))
+  ext <- list()
+  if (isTRUE(extensions)) {
+    if (!is.null(ds$encoding)) {
+      ext$sourceEncoding <- ds$encoding
+    }
+    if (length(informats)) {
+      ext$informats <- informats
+    }
+    if (length(special)) {
+      ext$specialMissings <- special
+    }
+  }
+  if (length(ext)) {
+    payload <- c(
+      payload,
+      list(`_vport` = c(list(vportMetaVersion = "1.0"), ext))
+    )
   }
   payload
 }
@@ -257,12 +285,28 @@
 # The ONE serializer. Emits the metadata block as a JSON string; every codec
 # embeds this exact string verbatim into its container's KV/attribute slot.
 #' @noRd
-.meta_to_datasetjson <- function(meta, extensions = FALSE) {
+.meta_to_datasetjson <- function(meta, extensions = FALSE, special = NULL) {
   jsonlite::toJSON(
-    .meta_payload(meta, extensions),
+    .meta_payload(meta, extensions, special = special),
     auto_unbox = TRUE,
     null = "null"
   )
+}
+
+# Pull the specialMissings block out of an already-parsed payload, re-typed
+# to the .apply_special_missings() shape; NULL when the file carries none.
+#' @noRd
+.special_from_parsed <- function(p) {
+  sm <- p[["_vport"]]$specialMissings
+  if (is.null(sm) || !length(sm)) {
+    return(NULL)
+  }
+  lapply(sm, function(e) {
+    list(
+      rows = as.integer(unlist(e$rows)),
+      tags = as.character(unlist(e$tags))
+    )
+  })
 }
 
 # Coerce a parsed JSON scalar list back to a typed column entry in canonical
@@ -287,6 +331,17 @@
 .meta_from_parsed <- function(p) {
   cols <- lapply(p$columns, .col_from_parsed)
   names(cols) <- vapply(cols, function(c) c$name, character(1))
+
+  # Informats ride _vport (the CDISC columns vocabulary is closed); merge them
+  # back into the column entries, re-ordered to the canonical field order so
+  # the round-trip stays an identity.
+  informats <- p[["_vport"]]$informats
+  if (!is.null(informats) && length(informats)) {
+    for (nm in intersect(names(informats), names(cols))) {
+      cols[[nm]]$informat <- as.character(informats[[nm]])
+      cols[[nm]] <- cols[[nm]][intersect(.meta_col_fields, names(cols[[nm]]))]
+    }
+  }
 
   records <- if (!is.null(p$records)) as.integer(p$records) else NULL
   enc <- if (
@@ -492,9 +547,15 @@ set_meta <- function(x, meta) {
     }
     lbl <- cm$label
     fmt <- cm$displayFormat
+    inf <- cm$informat
     attr(x[[nm]], "label") <- if (!is.null(lbl) && nzchar(lbl)) lbl else NULL
     attr(x[[nm]], "format.sas") <- if (!is.null(fmt) && nzchar(fmt)) {
       fmt
+    } else {
+      NULL
+    }
+    attr(x[[nm]], "informat.sas") <- if (!is.null(inf) && nzchar(inf)) {
+      inf
     } else {
       NULL
     }

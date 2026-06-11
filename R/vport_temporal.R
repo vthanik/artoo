@@ -294,6 +294,14 @@
 #' @noRd
 .realize_date <- function(col) {
   if (inherits(col, "Date")) {
+    # Canonical in-memory backing is double (what as.Date(character) and the
+    # SAS-epoch path produce); nanoparquet's DATE arrives integer-backed.
+    # Normalize so identical() holds across codecs.
+    if (is.integer(unclass(col))) {
+      attrs <- attributes(col)
+      col <- as.numeric(unclass(col))
+      attributes(col) <- attrs
+    }
     return(col)
   }
   if (is.character(col)) {

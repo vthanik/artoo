@@ -298,7 +298,8 @@ test_that("col_select works on a foreign parquet with no vport metadata", {
   nanoparquet::write_parquet(df, p)
   back <- read_parquet(p, col_select = c("C", "A"))
   expect_identical(names(back), c("A", "C")) # file order
-  expect_null(attr(back, "metadata_json", exact = TRUE)) # bare frame, NULL meta
+  # The synthesized meta is narrowed to the kept columns like any other meta.
+  expect_identical(names(get_meta(back)@columns), c("A", "C"))
 })
 
 # ---- Part B: rds encoding (faithful default + foreign read) -----------------

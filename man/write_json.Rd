@@ -4,7 +4,7 @@
 \alias{write_json}
 \title{Write a dataset to CDISC Dataset-JSON}
 \usage{
-write_json(x, path, created = NULL)
+write_json(x, path, created = NULL, strict = FALSE)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
@@ -15,6 +15,16 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{vport_meta}.}
 \item{created}{\emph{Creation timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};
 freeze it for byte-stable output.}
+
+\item{strict}{\emph{Suppress the \verb{_vport} extension block.} \verb{<logical(1)>: default FALSE}. By default the file carries a single namespaced \verb{_vport}
+object when (and only when) there is content strict CDISC cannot
+express: SAS special-missing tags (\code{.A}-\code{.Z}, \code{._}), the recorded source
+encoding, and informats. Data values stay plain \code{null}s either way, so a
+foreign reader degrades gracefully.
+
+\strong{Note:} \code{strict = TRUE} writes a pure closed-vocabulary file and warns
+(\code{vport_warning_codec}) naming exactly what was dropped; those
+attributes will not survive a read-back.}
 }
 \value{
 \emph{The input \code{x}}, invisibly, so a write can sit mid-pipeline.

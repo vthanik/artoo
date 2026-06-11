@@ -136,6 +136,7 @@
   meta,
   path,
   created = NULL,
+  strict = FALSE,
   call = rlang::caller_env()
 ) {
   if (!is_vport_meta(meta)) {
@@ -149,6 +150,37 @@
     )
   }
   created <- created %||% Sys.time()
+
+  # The namespaced `_vport` block carries what strict CDISC cannot: special
+  # missing tags, the recorded source encoding, informats. It appears only
+  # when there is content; `strict = TRUE` suppresses it with a loss warning.
+  special <- .collect_special_missings(x)
+  if (isTRUE(strict)) {
+    dropped <- character(0)
+    if (length(special)) {
+      dropped <- c(dropped, "special missing tags (.A-.Z)")
+    }
+    if (!is.null(meta@dataset$encoding)) {
+      dropped <- c(dropped, "the recorded source encoding")
+    }
+    if (
+      any(vapply(meta@columns, function(c) !is.null(c$informat), logical(1)))
+    ) {
+      dropped <- c(dropped, "informats")
+    }
+    if (length(dropped)) {
+      cli::cli_warn(
+        c(
+          "strict = TRUE drops vport extensions from {.path {path}}.",
+          "x" = "Not carried: {dropped}.",
+          "i" = "Write with strict = FALSE to keep them in the _vport block."
+        ),
+        class = "vport_warning_codec",
+        call = call
+      )
+    }
+    special <- NULL
+  }
 
   # Canonicalise character columns to NFC so the UTF-8 output is canonical. A
   # no-op on ASCII / single-byte data, so demo goldens are byte-stable.
@@ -167,17 +199,19 @@
         tz = "UTC"
       )
     ),
-    .meta_payload(meta, extensions = FALSE),
+    .meta_payload(meta, extensions = !isTRUE(strict), special = special),
     list(rows = rows)
   )
-  # digits = NA -> shortest round-trippable form for each double (deterministic,
-  # so byte-stable); auto_unbox keeps scalars unwrapped; NA -> null.
+  # digits = I(17): 17 significant digits is the guaranteed round-trip
+  # precision for IEEE-754 doubles (digits = NA delegates to R's 15-digit
+  # default, which silently loses the last ulp -- 0.1 + 0.2 came back 0.3).
+  # Deterministic, so byte-stable; auto_unbox keeps scalars unwrapped.
   json <- jsonlite::toJSON(
     obj,
     auto_unbox = TRUE,
     null = "null",
     na = "null",
-    digits = NA
+    digits = I(17)
   )
 
   # Atomic write to UTF-8: build in a temp file, then rename over the target.
@@ -362,6 +396,12 @@
     row.names = .set_row_names(length(rows)),
     class = "data.frame"
   )
+  # Reattach special-missing tags AFTER the columns are fully realized
+  # (temporal realization rebuilds vectors and would drop the attribute).
+  sm <- .special_from_parsed(p)
+  if (!is.null(sm)) {
+    df <- .apply_special_missings(df, sm)
+  }
   list(data = df, meta = meta)
 }
 
@@ -391,6 +431,16 @@
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
 #'   freeze it for byte-stable output.
+#' @param strict *Suppress the `_vport` extension block.* `<logical(1)>:
+#'   default FALSE`. By default the file carries a single namespaced `_vport`
+#'   object when (and only when) there is content strict CDISC cannot
+#'   express: SAS special-missing tags (`.A`-`.Z`, `._`), the recorded source
+#'   encoding, and informats. Data values stay plain `null`s either way, so a
+#'   foreign reader degrades gracefully.
+#'
+#'   **Note:** `strict = TRUE` writes a pure closed-vocabulary file and warns
+#'   (`vport_warning_codec`) naming exactly what was dropped; those
+#'   attributes will not survive a read-back.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
@@ -415,8 +465,8 @@
 #' @seealso [read_json()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.
 #' @export
-write_json <- function(x, path, created = NULL) {
-  write_dataset(x, path, format = "json", created = created)
+write_json <- function(x, path, created = NULL, strict = FALSE) {
+  write_dataset(x, path, format = "json", created = created, strict = strict)
 }
 
 #' Read a dataset from CDISC Dataset-JSON
