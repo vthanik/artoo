@@ -38,7 +38,7 @@ a multi-member file, pointing at \code{\link[=xpt_members]{xpt_members()}}.
 \description{
 Read a SAS Transport (\code{.xpt}) file (v5 or v8) back to a data frame,
 restoring the \code{artoo_meta} its NAMESTR records carry and realizing SAS
-date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{artoo_time}. The
+date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{hms::hms}. The
 ingest end of the I/O layer; a thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with
 \code{format = "xpt"}.
 }

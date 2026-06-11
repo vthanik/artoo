@@ -1,7 +1,7 @@
 # artoo_temporal.R -- SAS temporal realize/deflate + format classification.
 #
 # artoo presents SAS date/datetime/time columns as native R Date / POSIXct /
-# artoo_time so they render correctly in the data viewer, while the codecs
+# hms so they render correctly in the data viewer, while the codecs
 # store them as SAS-epoch numerics. `.realize_temporal` (numeric/ISO -> R
 # class) and `.deflate_temporal` (R class -> SAS numeric) are the shared
 # pair every codec calls; the SAS displayFormat rides in artoo_meta. The
@@ -202,7 +202,7 @@
     data_type,
     date = "Date",
     datetime = "POSIXct",
-    time = "artoo_time",
+    time = "hms",
     .type_storage(data_type)
   )
 }
@@ -229,8 +229,8 @@
     list(data_type = "date", display_format = "DATE9.")
   } else if (inherits(col, "POSIXct")) {
     list(data_type = "datetime", display_format = "DATETIME20.")
-  } else if (is_artoo_time(col) || inherits(col, "difftime")) {
-    # difftime/hms is haven's actual TIME representation; treat it as time.
+  } else if (inherits(col, "difftime")) {
+    # hms IS a difftime (double seconds); any difftime is a time-of-day.
     list(data_type = "time", display_format = "TIME8.")
   } else if (is.factor(col) || is.character(col)) {
     list(data_type = "string", display_format = NULL)
@@ -265,8 +265,38 @@
 
 # ---- realize: storage -> R presentation class ------------------------------
 
+# Exchange text for time-of-day seconds: HH:MM:SS, sign preserved, hours
+# free to exceed 24, fractional seconds rendered only where present with
+# trailing zeros stripped (08:30:00.5). This is the byte-stable Dataset-JSON
+# serialisation -- deliberately NOT format(<hms>), which pads for column
+# alignment and forces a uniform fraction width across the vector.
 #' @noRd
-.hms_to_seconds <- function(x) {
+.time_iso_text <- function(s) {
+  out <- rep(NA_character_, length(s))
+  ok <- !is.na(s)
+  if (any(ok)) {
+    sv <- s[ok]
+    sign <- ifelse(sv < 0, "-", "")
+    a <- abs(sv)
+    hh <- as.integer(a %/% 3600)
+    mm <- as.integer((a %% 3600) %/% 60)
+    sec <- a %% 60
+    ss <- as.integer(sec)
+    base <- sprintf("%s%02d:%02d:%02d", sign, hh, mm, ss)
+    frac <- sec - ss
+    has_frac <- frac > 0
+    if (any(has_frac)) {
+      fs <- formatC(frac[has_frac], format = "f", digits = 6)
+      fs <- sub("^0", "", sub("0+$", "", fs))
+      base[has_frac] <- paste0(base[has_frac], fs)
+    }
+    out[ok] <- base
+  }
+  out
+}
+
+#' @noRd
+.parse_hms_text <- function(x) {
   vapply(
     strsplit(x, ":", fixed = TRUE),
     function(p) {
@@ -365,19 +395,25 @@
   as.POSIXct(as.numeric(col), origin = .sas_epoch_datetime, tz = "UTC")
 }
 
+# Times realize to hms (a double-backed difftime in seconds): >24h elapsed,
+# negative, and fractional values all survive, and the data viewer renders
+# HH:MM:SS. A plain difftime input is normalised to seconds.
 #' @noRd
 .realize_time <- function(col) {
-  if (is_artoo_time(col)) {
+  if (inherits(col, "hms")) {
     return(col)
+  }
+  if (inherits(col, "difftime")) {
+    return(hms::as_hms(col))
   }
   if (is.character(col)) {
     full <- is.na(col) | grepl("^[0-9]+:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?$", col)
     if (!all(full)) {
       return(col)
     }
-    return(.keep_if_lossy(col, artoo_time(.hms_to_seconds(col))))
+    return(.keep_if_lossy(col, hms::hms(.parse_hms_text(col))))
   }
-  artoo_time(as.numeric(col))
+  hms::hms(as.numeric(col))
 }
 
 # Realize a temporal column to its R class. dataType is authoritative for the
@@ -460,9 +496,9 @@
   var = NULL,
   call = rlang::caller_env()
 ) {
-  # is.numeric() is FALSE for Date/POSIXct (base S3 methods) but TRUE for
-  # artoo_time's bare double, so exclude it explicitly from the passthrough.
-  bare_numeric <- is.numeric(col) && !is_artoo_time(col)
+  # is.numeric() is FALSE for Date/POSIXct/hms (classed S3), so a TRUE here
+  # is a genuinely bare SAS-epoch numeric (double-deflate / never-realized).
+  bare_numeric <- is.numeric(col)
   switch(
     data_type,
     date = if (inherits(col, "Date")) {
@@ -479,14 +515,14 @@
     } else {
       .deflate_temporal_abort(col, data_type, "a POSIXct", var, call)
     },
-    time = if (is_artoo_time(col)) {
-      unclass(col)
-    } else if (inherits(col, "difftime")) {
+    # NEVER unclass() an hms into storage: unclass keeps a units attribute;
+    # as.numeric(col, units = "secs") is the clean bare double.
+    time = if (inherits(col, "difftime")) {
       as.numeric(col, units = "secs")
     } else if (bare_numeric) {
       as.numeric(col)
     } else {
-      .deflate_temporal_abort(col, data_type, "a artoo_time", var, call)
+      .deflate_temporal_abort(col, data_type, "an hms (or difftime)", var, call)
     },
     as.numeric(col)
   )

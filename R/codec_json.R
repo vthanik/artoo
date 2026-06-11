@@ -48,8 +48,8 @@
       as.character(realized)
     }
   } else {
-    if (is_artoo_time(realized)) {
-      format(realized)
+    if (inherits(realized, "difftime")) {
+      .time_iso_text(as.numeric(realized, units = "secs"))
     } else {
       as.character(realized)
     }
@@ -383,7 +383,7 @@ write_json <- function(x, path, created = NULL, strict = FALSE) {
 #'
 #' Read a CDISC Dataset-JSON v1.1 (`.json`) file back to a data frame,
 #' restoring the full `artoo_meta` it carries and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. Column
+#' date/datetime/time variables to R `Date` / `POSIXct` / `hms::hms`. Column
 #' types are reconstructed from the recorded metadata, not guessed from the
 #' JSON tokens, so the round-trip is lossless. The ingest end of the I/O layer;
 #' a thin wrapper over [read_dataset()] with `format = "json"`.

@@ -37,7 +37,7 @@ test_that(".resolve_display_format defaults by dataType when missing", {
 test_that(".presentation_class maps temporal dataType to R class", {
   expect_identical(artoo:::.presentation_class("date"), "Date")
   expect_identical(artoo:::.presentation_class("datetime"), "POSIXct")
-  expect_identical(artoo:::.presentation_class("time"), "artoo_time")
+  expect_identical(artoo:::.presentation_class("time"), "hms")
   expect_identical(artoo:::.presentation_class("string"), "character")
 })
 
@@ -58,10 +58,11 @@ test_that("realize datetime uses 1960 seconds in UTC", {
   expect_identical(attr(dt, "tzone"), "UTC")
 })
 
-test_that("realize time becomes artoo_time seconds since midnight", {
+test_that("realize time becomes hms seconds since midnight", {
   t <- artoo:::.realize_temporal(30600, "time", "TIME8.")
-  expect_true(is_artoo_time(t))
-  expect_identical(format(t), "08:30:00")
+  expect_s3_class(t, "hms")
+  expect_identical(as.numeric(t, units = "secs"), 30600)
+  expect_identical(trimws(format(t)), "08:30:00")
 })
 
 test_that("realize handles pre-1960 (negative) dates", {
@@ -72,7 +73,7 @@ test_that("realize handles pre-1960 (negative) dates", {
 test_that("realize is idempotent on already-correct classes", {
   d <- as.Date("2014-01-02")
   expect_identical(artoo:::.realize_temporal(d, "date", "DATE9."), d)
-  t <- artoo_time(30600)
+  t <- hms::hms(30600)
   expect_identical(artoo:::.realize_temporal(t, "time", "TIME8."), t)
 })
 
@@ -110,7 +111,7 @@ test_that("deflate inverts realize for all three families", {
   )
   dt <- as.POSIXct("2014-01-02", tz = "UTC")
   expect_identical(artoo:::.deflate_temporal(dt, "datetime"), 19725 * 86400)
-  expect_identical(artoo:::.deflate_temporal(artoo_time(30600), "time"), 30600)
+  expect_identical(artoo:::.deflate_temporal(hms::hms(30600), "time"), 30600)
 })
 
 test_that("deflate is robust to an already-numeric input (double-deflate safe)", {
@@ -144,8 +145,8 @@ test_that("realize parses complete ISO character input per family (from_text)", 
     "TIME8.",
     from_text = TRUE
   )
-  expect_true(is_artoo_time(t))
-  expect_identical(unclass(t), c(30600, 90000))
+  expect_s3_class(t, "hms")
+  expect_identical(as.numeric(t, units = "secs"), c(30600, 90000))
 })
 
 test_that("character ISO text stays character without from_text", {
@@ -176,8 +177,8 @@ test_that("partial ISO datetime and time stay character even under from_text", {
   )
 })
 
-test_that(".hms_to_seconds returns NA for a malformed token", {
-  expect_identical(artoo:::.hms_to_seconds("08:30"), NA_real_)
+test_that(".parse_hms_text returns NA for a malformed token", {
+  expect_identical(artoo:::.parse_hms_text("08:30"), NA_real_)
 })
 
 test_that(".parse_format_str handles a name with no width", {
@@ -282,8 +283,8 @@ test_that("realize time parses fractional seconds", {
     "TIME8.",
     from_text = TRUE
   )
-  expect_true(is_artoo_time(t))
-  expect_identical(unclass(t), 30600.5)
+  expect_s3_class(t, "hms")
+  expect_identical(as.numeric(t, units = "secs"), 30600.5)
 })
 
 test_that("realize date leaves a shape-valid impossible date character", {
@@ -345,7 +346,7 @@ test_that(".deflate_temporal refuses a class/dataType mismatch (review B7)", {
     class = "artoo_error_codec"
   )
   expect_error(
-    artoo:::.deflate_temporal(artoo_time(30600), "date", var = "ADT"),
+    artoo:::.deflate_temporal(hms::hms(30600), "date", var = "ADT"),
     class = "artoo_error_codec"
   )
 })
@@ -353,4 +354,65 @@ test_that(".deflate_temporal refuses a class/dataType mismatch (review B7)", {
 test_that(".deflate_temporal still passes through SAS-epoch numerics", {
   expect_identical(artoo:::.deflate_temporal(c(2014, NA), "date"), c(2014, NA))
   expect_identical(artoo:::.deflate_temporal(30600L, "time"), 30600)
+})
+
+# ---- hms time model (replaces the old artoo_time class) ---------------------
+
+test_that(".time_iso_text renders unpadded exchange text", {
+  # Sign preserved, hours past 24 allowed, fraction only where present
+  # (deliberately NOT format(<hms>), which pads and uniformizes fractions).
+  expect_identical(
+    artoo:::.time_iso_text(c(30600, NA, 30600.5, -120, 100000)),
+    c("08:30:00", NA, "08:30:00.5", "-00:02:00", "27:46:40")
+  )
+})
+
+test_that("deflating an hms yields a bare double with no units attribute", {
+  s <- artoo:::.deflate_temporal(hms::hms(c(3600.5, NA, -120)), "time")
+  expect_identical(s, c(3600.5, NA, -120))
+  expect_null(attributes(s))
+})
+
+test_that("a plain difftime realizes to hms with unit conversion", {
+  d <- as.difftime(1.5, units = "hours")
+  t <- artoo:::.realize_temporal(d, "time", "TIME8.")
+  expect_s3_class(t, "hms")
+  expect_identical(as.numeric(t, units = "secs"), 5400)
+})
+
+test_that(">24h, negative, and fractional times round-trip every codec", {
+  df <- data.frame(USUBJID = c("01", "02", "03", "04"))
+  df$ATM <- hms::hms(c(100000, -120, 30600.5, NA))
+  for (writer_ext in c(".xpt", ".json", ".ndjson", ".parquet", ".rds")) {
+    if (writer_ext == ".parquet") {
+      skip_if_not_installed("nanoparquet")
+    }
+    p <- withr::local_tempfile(fileext = writer_ext)
+    write_dataset(df, p)
+    back <- read_dataset(p)
+    expect_s3_class(back$ATM, "hms")
+    expect_identical(
+      as.numeric(back$ATM, units = "secs"),
+      as.numeric(df$ATM, units = "secs"),
+      info = writer_ext
+    )
+  }
+})
+
+test_that("a scaffolded time variable is hms after apply_spec", {
+  spec <- artoo_spec(
+    data.frame(dataset = "ADVS"),
+    data.frame(
+      dataset = "ADVS",
+      variable = c("USUBJID", "ATM"),
+      data_type = c("string", "time"),
+      target_data_type = c(NA, "integer"),
+      display_format = c(NA, "TIME8."),
+      stringsAsFactors = FALSE
+    )
+  )
+  raw <- data.frame(USUBJID = c("01-001", "01-002"), stringsAsFactors = FALSE)
+  out <- apply_spec(raw, spec, "ADVS", conformance = "off")
+  expect_s3_class(out$ATM, "hms")
+  expect_true(all(is.na(out$ATM)))
 })

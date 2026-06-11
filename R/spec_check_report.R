@@ -118,9 +118,9 @@
 # Plain S3 methods on the qualified S7 class name ("artoo::artoo_check" is the
 # first entry of class()). NOT S7::method(print, ...)<-: that creates local
 # `print`/`format` bindings in the namespace, which hijack the S3 registration
-# of every plain *.artoo_time method at load time (registerS3methods resolves
-# the generic in the package namespace and registers into the local stub's
-# methods table instead of base's), killing user-facing dispatch.
+# of every other plain print./format. method at load time (registerS3methods
+# resolves the generic in the package namespace and registers into the local
+# stub's methods table instead of base's), killing user-facing dispatch.
 
 #' @exportS3Method print artoo::artoo_check
 `print.artoo::artoo_check` <- function(x, ...) {

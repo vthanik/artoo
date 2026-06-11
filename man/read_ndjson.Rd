@@ -31,7 +31,7 @@ xpt v8 bounds the disk read; the other formats cap after decode.}
 Read a newline-delimited CDISC Dataset-JSON v1.1 (\code{.ndjson}) file back to
 a data frame, restoring the full \code{artoo_meta} from its metadata line and
 realizing SAS date/datetime/time variables to R \code{Date} / \code{POSIXct} /
-\code{artoo_time}. Rows are parsed in bounded slabs, and \code{n_max} stops the
+\code{hms::hms}. Rows are parsed in bounded slabs, and \code{n_max} stops the
 line loop early, so a partial read of a huge file never parses the tail.
 A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "ndjson"}.
 }

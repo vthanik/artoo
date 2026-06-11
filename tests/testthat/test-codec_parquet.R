@@ -54,9 +54,9 @@ test_that("DM round-trips through the generic dispatcher by extension", {
 
 # ---- decimal + time fidelity ------------------------------------------------
 
-test_that("decimal stays an exact string and time becomes artoo_time", {
+test_that("decimal stays an exact string and time becomes hms", {
   df <- data.frame(D = c("0.10", "100.000", NA), stringsAsFactors = FALSE)
-  df$TM <- artoo_time(c(3600, NA, 7200))
+  df$TM <- hms::hms(c(3600, NA, 7200))
   vars <- data.frame(
     dataset = "X",
     variable = c("D", "TM"),
@@ -72,7 +72,7 @@ test_that("decimal stays an exact string and time becomes artoo_time", {
   write_parquet(ap, p)
   back <- read_parquet(p)
   expect_identical(as.character(back$D), c("0.10", "100.000", NA))
-  expect_s3_class(back$TM, "artoo_time")
+  expect_s3_class(back$TM, "hms")
   expect_identical(unclass(back$TM), unclass(ap$TM))
 })
 

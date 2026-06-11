@@ -11,7 +11,7 @@ test_that("class inference maps R types to CDISC dataTypes", {
     dte = as.Date("2014-01-02"),
     dtm = as.POSIXct("2014-01-02 08:00:00", tz = "UTC")
   )
-  x$tm <- artoo_time(30600)
+  x$tm <- hms::hms(30600)
   meta <- artoo:::.meta_from_frame(x)
 
   dt <- function(v) meta@columns[[v]]$dataType
@@ -26,7 +26,7 @@ test_that("class inference maps R types to CDISC dataTypes", {
 
 test_that("temporal columns get a default displayFormat", {
   x <- data.frame(dte = as.Date("2014-01-02"))
-  x$tm <- artoo_time(0)
+  x$tm <- hms::hms(0)
   meta <- artoo:::.meta_from_frame(x)
   expect_identical(meta@columns$dte$displayFormat, "DATE9.")
   expect_identical(meta@columns$tm$displayFormat, "TIME8.")

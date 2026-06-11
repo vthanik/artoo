@@ -32,7 +32,7 @@ charset's bytes; they are transcoded to UTF-8 on read.}
 \description{
 Read an Apache Parquet (\code{.parquet}) file back to a data frame, restoring the
 \code{artoo_meta} from its \code{metadata_json} sidecar and realizing SAS
-date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{artoo_time}. A
+date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{hms::hms}. A
 parquet written by another tool (with no artoo sidecar) reads back as a
 bare frame. A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "parquet"}.
 Requires the lightweight \code{nanoparquet} package.

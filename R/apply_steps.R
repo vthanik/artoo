@@ -96,7 +96,7 @@
     }
     old <- attributes(x[[v]])
     if (dt %in% c("date", "datetime", "time")) {
-      # Realize to the R presentation class (Date/POSIXct/artoo_time) using
+      # Realize to the R presentation class (Date/POSIXct/hms) using
       # the spec displayFormat (default by dataType when absent). dataType
       # drives the class. Character ISO text realizes ONLY when the spec's
       # targetDataType demands numeric storage; without one, ISO text is

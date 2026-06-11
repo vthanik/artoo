@@ -21,6 +21,7 @@ Depends:
     R (>= 4.2)
 Imports:
     cli,
+    hms,
     jsonlite,
     rlang (>= 1.1.0),
     S7,

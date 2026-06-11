@@ -69,13 +69,14 @@
     meta <- .meta_set_encoding(meta, encoding)
   }
 
-  # artoo_time is a classed double with no native parquet type; store the bare
-  # seconds (the read path realizes it back from the sidecar dataType). Date
-  # and POSIXct have native parquet types, so they pass through untouched.
+  # hms has no native parquet type; store the bare seconds (the read path
+  # realizes it back from the sidecar dataType). as.numeric(units = "secs")
+  # -- never unclass(), which would keep a stray units attribute. Date and
+  # POSIXct have native parquet types, so they pass through untouched.
   # Character columns are NFC-canonicalised (a no-op on ASCII / single-byte).
   for (nm in names(x)) {
-    if (is_artoo_time(x[[nm]])) {
-      x[[nm]] <- unclass(x[[nm]])
+    if (inherits(x[[nm]], "difftime")) {
+      x[[nm]] <- as.numeric(x[[nm]], units = "secs")
     } else if (is.character(x[[nm]])) {
       x[[nm]] <- .nfc(x[[nm]])
     }
@@ -187,7 +188,7 @@
   # Realize temporal columns from the meta dataType (plan D1: meta-first).
   # Date/POSIXct survive nanoparquet natively and realize idempotently (the
   # integer-backed DATE arrival is canonicalized to double); a time column
-  # comes back a bare double and becomes artoo_time here. A character ISO
+  # comes back a bare double and becomes hms here. A character ISO
   # 8601 column (the no-targetDataType --DTC form) stays text -- realize is
   # for numeric storage, and text is already readable.
   for (nm in names(meta@columns)) {
@@ -282,7 +283,7 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #'
 #' Read an Apache Parquet (`.parquet`) file back to a data frame, restoring the
 #' `artoo_meta` from its `metadata_json` sidecar and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. A
+#' date/datetime/time variables to R `Date` / `POSIXct` / `hms::hms`. A
 #' parquet written by another tool (with no artoo sidecar) reads back as a
 #' bare frame. A thin wrapper over [read_dataset()] with `format = "parquet"`.
 #' Requires the lightweight `nanoparquet` package.

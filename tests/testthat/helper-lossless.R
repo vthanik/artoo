@@ -122,7 +122,7 @@ expect_lossless <- function(a, b, via = "", meta = TRUE) {
       c("2024-03-01 12:34:56", NA, "2024-03-15 23:59:59"),
       tz = "UTC"
     ),
-    ATM = artoo_time(c(3600, NA, 86399)),
+    ATM = hms::hms(c(3600, NA, 86399)),
     REFURI = c("https://x.test/a", NA, "https://x.test/b"),
     stringsAsFactors = FALSE
   )

@@ -256,7 +256,7 @@ write_ndjson <- function(x, path, created = NULL, strict = FALSE) {
 #' Read a newline-delimited CDISC Dataset-JSON v1.1 (`.ndjson`) file back to
 #' a data frame, restoring the full `artoo_meta` from its metadata line and
 #' realizing SAS date/datetime/time variables to R `Date` / `POSIXct` /
-#' `artoo_time`. Rows are parsed in bounded slabs, and `n_max` stops the
+#' `hms::hms`. Rows are parsed in bounded slabs, and `n_max` stops the
 #' line loop early, so a partial read of a huge file never parses the tail.
 #' A thin wrapper over [read_dataset()] with `format = "ndjson"`.
 #'

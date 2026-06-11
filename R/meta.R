@@ -161,7 +161,7 @@
 # data. A spec's date/datetime/time variable with no targetDataType is, by
 # CDISC definition, ISO 8601 text -- correct for a character --DTC column.
 # But when the data column is actually numeric-backed (R Date/POSIXct/
-# artoo_time, or a never-realized SAS-epoch numeric), the truthful exchange
+# hms, or a never-realized SAS-epoch numeric), the truthful exchange
 # form is numeric: stamp targetDataType = "integer" so every codec writes a
 # SAS-epoch number and every reader realizes the same R class back
 # (lossless by construction). Character columns are left untouched -- their

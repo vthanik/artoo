@@ -123,7 +123,7 @@ test_that("a whole-number double stays double on re-read (C1)", {
 
 test_that("integer, boolean, and time columns round-trip by type", {
   df <- data.frame(I = c(1L, NA, 3L), B = c(TRUE, FALSE, NA))
-  df$TM <- artoo_time(c(3600, NA, 7200))
+  df$TM <- hms::hms(c(3600, NA, 7200))
   vars <- data.frame(
     dataset = "X",
     variable = c("I", "B", "TM"),
@@ -144,7 +144,7 @@ test_that("integer, boolean, and time columns round-trip by type", {
     c(TRUE, FALSE, NA),
     ignore_attr = c("label", "format.sas")
   )
-  expect_s3_class(back$TM, "artoo_time")
+  expect_s3_class(back$TM, "hms")
   expect_identical(unclass(back$TM), unclass(ap$TM))
 })
 
@@ -301,7 +301,7 @@ test_that(".temporal_to_iso renders each class and keeps partial values", {
     "2021-01-15T08:30:00"
   )
   expect_identical(
-    artoo:::.temporal_to_iso(artoo_time(3600), "time", "TIME8."),
+    artoo:::.temporal_to_iso(hms::hms(3600), "time", "TIME8."),
     "01:00:00"
   )
   # Partial values that cannot realize stay as character text, never NA.

@@ -341,7 +341,7 @@
     # is ISO 8601 text -- the CDISC --DTC convention (partial dates like
     # "1951" and "1951-12" included). It stores as a character variable;
     # the SAS-numeric path below is reserved for columns whose metadata
-    # (targetDataType) or R class (Date/POSIXct/artoo_time/numeric) is
+    # (targetDataType) or R class (Date/POSIXct/hms/numeric) is
     # numeric-backed.
     tdt <- if (!is.null(cm)) cm$targetDataType else NULL
     iso_text <- dt %in%
@@ -1494,7 +1494,7 @@
 #' the CDISC ISO 8601 text form -- the SDTM `--DTC` convention -- and stores
 #' as a character variable, partial dates (`"1951"`, `"1951-12"`) included,
 #' byte for byte. The SAS-numeric encoding (with `DATE9.`-style formats) is
-#' used for columns that are R `Date`/`POSIXct`/`artoo_time` or whose
+#' used for columns that are R `Date`/`POSIXct`/`hms` or whose
 #' metadata records `targetDataType = "integer"` (the ADaM numeric-date
 #' convention). A character column *under* `targetDataType = "integer"`
 #' aborts loudly -- a partial date can never become a SAS numeric silently.
@@ -1562,7 +1562,7 @@ write_xpt <- function(
 #'
 #' Read a SAS Transport (`.xpt`) file (v5 or v8) back to a data frame,
 #' restoring the `artoo_meta` its NAMESTR records carry and realizing SAS
-#' date/datetime/time variables to R `Date` / `POSIXct` / `artoo_time`. The
+#' date/datetime/time variables to R `Date` / `POSIXct` / `hms::hms`. The
 #' ingest end of the I/O layer; a thin wrapper over [read_dataset()] with
 #' `format = "xpt"`.
 #'

@@ -93,14 +93,14 @@ test_that("special missing tags survive a numeric round-trip (.A-.Z, ._)", {
 
 # ---- temporal ---------------------------------------------------------------
 
-test_that("Date, POSIXct, and artoo_time columns round-trip", {
+test_that("Date, POSIXct, and hms columns round-trip", {
   df <- data.frame(SUBJ = c("A", "B", "C"), stringsAsFactors = FALSE)
   df$DT <- as.Date(c("2020-01-01", NA, "2021-06-15"))
   df$DTM <- as.POSIXct(
     c("2020-01-01 08:30:00", "2020-12-31 23:59:59", NA),
     tz = "UTC"
   )
-  df$TM <- artoo_time(c(0, 30600, 90061)) # incl. > 86400 (elapsed past 24h)
+  df$TM <- hms::hms(c(0, 30600, 90061)) # incl. > 86400 (elapsed past 24h)
   attr(df, "dataset_name") <- "TEST"
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(df, p, created = frozen)
@@ -112,7 +112,7 @@ test_that("Date, POSIXct, and artoo_time columns round-trip", {
   expect_identical(as.numeric(back$DT), as.numeric(df$DT))
   expect_s3_class(back$DTM, "POSIXct")
   expect_equal(as.numeric(back$DTM), as.numeric(df$DTM))
-  expect_true(is_artoo_time(back$TM))
+  expect_s3_class(back$TM, "hms")
   # set_meta() projects the SAS format/label as attrs now; compare seconds.
   expect_identical(as.numeric(back$TM), as.numeric(df$TM))
 })

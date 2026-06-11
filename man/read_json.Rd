@@ -34,7 +34,7 @@ transcoded to UTF-8 on read.}
 \description{
 Read a CDISC Dataset-JSON v1.1 (\code{.json}) file back to a data frame,
 restoring the full \code{artoo_meta} it carries and realizing SAS
-date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{artoo_time}. Column
+date/datetime/time variables to R \code{Date} / \code{POSIXct} / \code{hms::hms}. Column
 types are reconstructed from the recorded metadata, not guessed from the
 JSON tokens, so the round-trip is lossless. The ingest end of the I/O layer;
 a thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "json"}.
