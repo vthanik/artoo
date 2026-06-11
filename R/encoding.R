@@ -325,11 +325,12 @@
 
 #' Encodings for clinical datasets, across SAS, R, and Python
 #'
-#' List the character encodings clinical data actually travels in, with the
-#' name each ecosystem uses for the same thing: the SAS session-encoding
-#' name, the standard (IANA) name that R and artoo use, and the Python
-#' codec. Any spelling from the `encoding` or `sas` column works as the
-#' `encoding` argument of every artoo reader and writer.
+#' List the character encodings clinical data actually travels in, with
+#' the name each ecosystem uses for the same thing: the SAS
+#' session-encoding name, the R name (the standard IANA name, which
+#' `iconv()` and the wider R ecosystem use), and the Python codec. Any
+#' spelling from the `sas` or `r` column works as the `encoding` argument
+#' of every artoo reader and writer.
 #'
 #' @details
 #' **What an encoding is.** Text is stored as bytes; an encoding is the
@@ -356,9 +357,9 @@
 #' encodings only matter at the file boundary, exactly as in Python 3.
 #'
 #' @return *A `<data.frame>`* with one row per encoding and columns
-#'   `encoding` (the standard IANA name, used by R), `sas` (the SAS
-#'   session-encoding name), `python` (the Python codec name), and
-#'   `description`.
+#'   `sas` (the SAS session-encoding name), `r` (the R name -- the
+#'   standard IANA name `iconv()` uses, and what artoo records in the
+#'   metadata), `python` (the Python codec name), and `description`.
 #'
 #' @examples
 #' # ---- Example 1: the full cross-ecosystem table ----
@@ -368,7 +369,8 @@
 #'
 #' # ---- Example 2: look up a SAS session encoding ----
 #' #
-#' # PROC OPTIONS reported WLATIN1: find what to pass (either name works).
+#' # PROC OPTIONS reported WLATIN1: find the R and Python names for the
+#' # same bytes (the sas and r spellings both work as encoding=).
 #' enc <- artoo_encodings()
 #' enc[enc$sas == "WLATIN1", ]
 #'
@@ -380,21 +382,6 @@
 #' @export
 artoo_encodings <- function() {
   data.frame(
-    encoding = c(
-      "UTF-8",
-      "US-ASCII",
-      "windows-1252",
-      "windows-1250",
-      "windows-1251",
-      "ISO-8859-1",
-      "ISO-8859-15",
-      "Shift_JIS",
-      "CP932",
-      "EUC-JP",
-      "EUC-KR",
-      "CP936",
-      "CP950"
-    ),
     sas = c(
       "UTF-8",
       "ASCII",
@@ -409,6 +396,21 @@ artoo_encodings <- function() {
       "EUC-KR",
       "MS-936",
       "MS-950"
+    ),
+    r = c(
+      "UTF-8",
+      "US-ASCII",
+      "windows-1252",
+      "windows-1250",
+      "windows-1251",
+      "ISO-8859-1",
+      "ISO-8859-15",
+      "Shift_JIS",
+      "CP932",
+      "EUC-JP",
+      "EUC-KR",
+      "CP936",
+      "CP950"
     ),
     python = c(
       "utf_8",

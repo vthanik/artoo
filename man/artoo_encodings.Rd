@@ -8,16 +8,17 @@ artoo_encodings()
 }
 \value{
 \emph{A \verb{<data.frame>}} with one row per encoding and columns
-\code{encoding} (the standard IANA name, used by R), \code{sas} (the SAS
-session-encoding name), \code{python} (the Python codec name), and
-\code{description}.
+\code{sas} (the SAS session-encoding name), \code{r} (the R name -- the
+standard IANA name \code{iconv()} uses, and what artoo records in the
+metadata), \code{python} (the Python codec name), and \code{description}.
 }
 \description{
-List the character encodings clinical data actually travels in, with the
-name each ecosystem uses for the same thing: the SAS session-encoding
-name, the standard (IANA) name that R and artoo use, and the Python
-codec. Any spelling from the \code{encoding} or \code{sas} column works as the
-\code{encoding} argument of every artoo reader and writer.
+List the character encodings clinical data actually travels in, with
+the name each ecosystem uses for the same thing: the SAS
+session-encoding name, the R name (the standard IANA name, which
+\code{iconv()} and the wider R ecosystem use), and the Python codec. Any
+spelling from the \code{sas} or \code{r} column works as the \code{encoding} argument
+of every artoo reader and writer.
 }
 \details{
 \strong{What an encoding is.} Text is stored as bytes; an encoding is the
@@ -51,7 +52,8 @@ artoo_encodings()
 
 # ---- Example 2: look up a SAS session encoding ----
 #
-# PROC OPTIONS reported WLATIN1: find what to pass (either name works).
+# PROC OPTIONS reported WLATIN1: find the R and Python names for the
+# same bytes (the sas and r spellings both work as encoding=).
 enc <- artoo_encodings()
 enc[enc$sas == "WLATIN1", ]
 
