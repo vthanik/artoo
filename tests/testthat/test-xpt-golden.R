@@ -1,7 +1,7 @@
 # Byte-golden snapshots. A frozen `created` is the only header entropy (no
 # Sys.info / R.version / OS fields, and IEEE->IBM + formatC are locale-
 # independent), so a write is byte-deterministic. These pin the exact bytes:
-# a diff means the serializer changed -- inspect it, never blind-accept.
+# a diff means the serializer changed — inspect it, never blind-accept.
 
 golden_created <- as.POSIXct("2020-01-01", tz = "UTC")
 

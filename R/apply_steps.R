@@ -1,11 +1,11 @@
-# apply_steps.R -- the internal, ordered steps of apply_spec().
+# apply_steps.R — the internal, ordered steps of apply_spec().
 #
 # Each step takes the working data frame and a pre-extracted `info` list
 # (see .apply_info) and returns a new data frame; the original is never
 # mutated, so any step aborting leaves the caller's input untouched
 # (the transactional guarantee). Steps are NOT exported: they are not
 # independently meaningful and inviting mis-composition. The pipeline is
-# fixed -- scaffold, coerce, order, sort, stamp -- with no subsetting knob.
+# fixed — scaffold, coerce, order, sort, stamp — with no subsetting knob.
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort
@@ -117,7 +117,7 @@
       keep_off <- c("class", "levels", "names", "tzone")
       n_na <- sum(is.na(x[[v]])) - before_na
     } else {
-      # Name 32-bit overflow precisely BEFORE coercion turns the values NA --
+      # Name 32-bit overflow precisely BEFORE coercion turns the values NA —
       # the generic NA-introduction warning would bury the cause.
       if (identical(dt, "integer")) {
         nv <- suppressWarnings(as.numeric(x[[v]]))
@@ -143,7 +143,7 @@
   }
   # Truncation and overflow damage values (a fractional height losing its
   # decimals is a data-integrity event, not a nuisance); the pipeline aborts
-  # BEFORE any value is touched -- there is no opt-out. Checked ahead of the
+  # BEFORE any value is touched — there is no opt-out. Checked ahead of the
   # NA-introduction warning so an abort is never preceded by a half-report
   # of the same values.
   if (length(truncated) || length(overflowed)) {
@@ -209,7 +209,7 @@
   # Real data carries trailing whitespace (trim = TRUE, the default) and
   # sometimes case variants (ignore_case, opt-in). A value that matches
   # only after normalization maps, but the variants are reported
-  # (artoo_warning_codelist) -- a normalized match is still a CT finding
+  # (artoo_warning_codelist) — a normalized match is still a CT finding
   # for check_spec(), which always compares exactly.
   norm <- function(s) {
     if (trim) {

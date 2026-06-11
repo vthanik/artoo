@@ -18,11 +18,11 @@ meaningful when \code{x} is a path to a multi-member \code{.xpt} file.}
 \value{
 \emph{A \verb{<artoo_columns>} data frame} with columns \verb{#}, \code{Variable},
 \code{Type}, \code{Len}, \code{Format}, \code{Informat}, \code{Label}, \code{Key}, printed
-left-aligned. It is an ordinary data frame underneath -- filter or
+left-aligned. It is an ordinary data frame underneath — filter or
 inspect it like one.
 }
 \description{
-Return a one-row-per-variable attribute table -- the pane a SAS
+Return a one-row-per-variable attribute table — the pane a SAS
 programmer reads in \verb{PROC CONTENTS} or the Universal Viewer: position,
 name, Char/Num type, length, format, informat, label, and the CDISC key
 sequence. This is the quick look after \code{\link[=apply_spec]{apply_spec()}} stamps a frame, or
@@ -32,7 +32,7 @@ on any dataset file artoo can read.
 \strong{Every real column shows.} The table covers the \emph{frame's} columns: a
 column the spec never declared (which \code{\link[=apply_spec]{apply_spec()}} keeps, never drops)
 still appears, its attributes inferred from the R class. A plain,
-never-stamped data frame works the same way -- every attribute is
+never-stamped data frame works the same way — every attribute is
 inferred.
 
 \strong{A path reads through the codec.} A file path is dispatched by

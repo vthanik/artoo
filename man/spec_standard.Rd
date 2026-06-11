@@ -15,7 +15,7 @@ spec_standard(spec)
 \description{
 Return the one CDISC standard the specification carries (e.g.
 \code{"ADaMIG 1.1"}, \code{"SDTMIG 3.2"}). A \code{artoo_spec} is single-standard by
-construction -- \code{\link[=artoo_spec]{artoo_spec()}} aborts when its sources mix standards --
+construction — \code{\link[=artoo_spec]{artoo_spec()}} aborts when its sources mix standards —
 so this is always a scalar; \code{NA} when no source named one.
 }
 \examples{

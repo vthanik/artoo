@@ -1,8 +1,8 @@
-# build-spec-rules.R -- generate inst/spec_rules.json, the open catalog of
+# build-spec-rules.R — generate inst/spec_rules.json, the open catalog of
 # every spec-validation check artoo runs (and the rules it defers).
 #
 # Hand-authored (no external rule catalog is copied or shipped); artoo uses
-# its OWN behavioral check ids -- never another tool's rule numbering.
+# its OWN behavioral check ids — never another tool's rule numbering.
 # Re-run after adding/removing a check:
 #   Rscript data-raw/build-spec-rules.R
 # A parity test asserts the implemented ids here == the ids the engine emits.

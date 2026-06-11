@@ -1,4 +1,4 @@
-# artoo_temporal.R -- SAS temporal realize/deflate + format classification.
+# artoo_temporal.R — SAS temporal realize/deflate + format classification.
 #
 # artoo presents SAS date/datetime/time columns as native R Date / POSIXct /
 # hms so they render correctly in the data viewer, while the codecs
@@ -256,7 +256,7 @@
 # Exchange text for time-of-day seconds: HH:MM:SS, sign preserved, hours
 # free to exceed 24, fractional seconds rendered only where present with
 # trailing zeros stripped (08:30:00.5). This is the byte-stable Dataset-JSON
-# serialisation -- deliberately NOT format(<hms>), which pads for column
+# serialisation — deliberately NOT format(<hms>), which pads for column
 # alignment and forces a uniform fraction width across the vector.
 #' @noRd
 .time_iso_text <- function(s) {
@@ -337,7 +337,7 @@
 # Parse full ISO 8601 datetimes to UTC instants. A trailing zone (Z, or
 # +/-HH:MM, or +/-HHMM) shifts the wall clock to the UTC instant via %z; a
 # value with no zone is read as UTC. Fractional seconds parse via %OS. The
-# offset itself is NOT round-tripped on write -- deflate stores SAS numeric
+# offset itself is NOT round-tripped on write — deflate stores SAS numeric
 # datetimes, which are UTC instants, by design.
 #' @noRd
 .parse_iso_datetime <- function(x) {
@@ -405,7 +405,7 @@
 }
 
 # Realize a temporal column to its R class. dataType is authoritative for the
-# class; displayFormat only validates -- when it does not classify as the
+# class; displayFormat only validates — when it does not classify as the
 # matching family, the column is left numeric and the caller (check_spec)
 # reports it. Idempotent on already-correct classes.
 #
@@ -415,7 +415,7 @@
 # convention), so promoting it to Date would silently change the
 # submission storage shape. Callers pass from_text = TRUE only when the
 # metadata explicitly demands numeric storage (targetDataType integer/
-# decimal) -- then parsing full-ISO text to the R class is the conform
+# decimal) — then parsing full-ISO text to the R class is the conform
 # step's job (partials still stay character via the never-silent-NA gate).
 #' @noRd
 .realize_temporal <- function(
@@ -455,7 +455,7 @@
 # already-SAS-epoch bare numeric (double-deflate / never-realized column).
 # Anything else aborts: a character column would coerce a year-only partial
 # date ("2014") to SAS day 2014 = 1965-07-07, and a mismatched temporal class
-# (POSIXct under "date") would write seconds as days -- both silent garbage.
+# (POSIXct under "date") would write seconds as days — both silent garbage.
 # This only fires when the metadata demands numeric storage (targetDataType
 # integer/decimal); without one, a character temporal column is written as
 # ISO 8601 text (the --DTC convention) and never reaches deflate.
@@ -522,7 +522,7 @@
 # actually carries: complete values, right truncation ("2003", "2003-12",
 # "2003-12-15T13"), and the SDTMIG hyphen placeholders for unknown
 # intermediate components ("2003---15", "--12-15"). NA and "" are never
-# violations here -- missingness is the mandatory/codelist checks' concern.
+# violations here — missingness is the mandatory/codelist checks' concern.
 # Returns a logical vector aligned to `x`.
 #' @noRd
 .iso8601_valid <- function(x, family) {

@@ -1,4 +1,4 @@
-# spec_validate.R -- S7 validators for artoo_spec and artoo_meta.
+# spec_validate.R — S7 validators for artoo_spec and artoo_meta.
 #
 # These run at construction (the last line of defence behind the friendly
 # artoo_spec() constructor). Each returns NULL when valid or a character

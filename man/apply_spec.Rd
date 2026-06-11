@@ -63,9 +63,9 @@ pipeline (ordered after the declared ones), is \emph{reported} by the
 \verb{write_*()} codec with metadata inferred from its R class. Membership is
 reported, not enforced by destruction.
 
-\strong{Lossless or abort.} A coercion that would damage values -- an
+\strong{Lossless or abort.} A coercion that would damage values — an
 \code{integer} dataType truncating fractions or overflowing R's 32-bit range
--- aborts with \code{artoo_error_type} before any value is touched. There is
+— aborts with \code{artoo_error_type} before any value is touched. There is
 no opt-out: fix the spec (dataType \code{"float"} or \code{"decimal"} keeps
 fractions) rather than accept silent damage.
 

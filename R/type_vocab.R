@@ -1,4 +1,4 @@
-# type_vocab.R -- the single source of truth for variable types.
+# type_vocab.R — the single source of truth for variable types.
 #
 # Maps any spec/SAS type token to the closed CDISC Dataset-JSON v1.1
 # `dataType` vocabulary (`.cdisc_datatypes`), and from a `dataType` to the
@@ -28,7 +28,7 @@
   datetime = "datetime",
   time = "time",
   # Define-XML date subtypes. Dataset-JSON v1.1 has no "partial*" /
-  # "incomplete*" dataType -- a partial date IS dataType "date" with a
+  # "incomplete*" dataType — a partial date IS dataType "date" with a
   # partial ISO value (the partialness lives in the value/displayFormat).
   # ISO 8601 duration / interval have no dedicated dataType -> string.
   partialdate = "date",
@@ -88,7 +88,7 @@
 
 # R storage mode used to hold a column of a given CDISC dataType. Dates,
 # datetimes, and times are held as numeric (SAS-style; the displayFormat
-# carries the SAS format) -- the codec layer realises the ISO-string vs
+# carries the SAS format) — the codec layer realises the ISO-string vs
 # numeric storage per format.
 #' @noRd
 .type_storage <- function(data_type) {

@@ -25,7 +25,7 @@ Ready-made \code{artoo_spec} objects built from the official CDISC Define-XML
 2.1 release examples: \code{adam_spec} (ADaMIG 1.1; datasets ADSL, ADAE) and
 \code{sdtm_spec} (SDTMIG 3.1.2; datasets TS, DM, VS, SUPPDM). Every bundled
 demo dataset conforms to its spec under
-\code{apply_spec(conformance = "abort")} -- the pairing is gated at build
+\code{apply_spec(conformance = "abort")} — the pairing is gated at build
 time. The same specs ship as P21 workbooks in
 \code{system.file("extdata", "adam-spec.xlsx", package = "artoo")} and
 \code{"sdtm-spec.xlsx"}, written by \code{\link[=write_spec]{write_spec()}}.

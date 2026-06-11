@@ -1,4 +1,4 @@
-# make-p21-fixture.R -- build the P21 Excel test fixture for read_spec().
+# make-p21-fixture.R — build the P21 Excel test fixture for read_spec().
 #
 # Reproducible, public, hand-authored from standard CDISC metadata (no
 # study/patient data, nothing copied from a private archive). Re-run with:
@@ -7,7 +7,7 @@
 #
 # Authoring-time only: uses openxlsx2 to write the workbook (and to MERGE
 # the Dataset / codelist-ID columns). openxlsx2 is NOT a package
-# dependency -- artoo ships with no xlsx-writing dependency.
+# dependency — artoo ships with no xlsx-writing dependency.
 
 stopifnot(requireNamespace("openxlsx2", quietly = TRUE))
 

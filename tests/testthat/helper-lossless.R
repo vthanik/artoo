@@ -3,8 +3,8 @@
 # `expect_lossless(a, b)` asserts value identity, class identity, and
 # special-missing tag equivalence per column, and (when both sides carry it)
 # artoo_meta column identity. Tag equivalence normalizes the two encodings of
-# an ordinary missing -- a "." tag and an absent tag mean the same on-disk
-# null -- so an xpt leg (which re-tags every missing ".") compares equal to a
+# an ordinary missing — a "." tag and an absent tag mean the same on-disk
+# null — so an xpt leg (which re-tags every missing ".") compares equal to a
 # json/parquet leg (which carries only non-"." tags).
 
 .norm_tags <- function(col, n) {

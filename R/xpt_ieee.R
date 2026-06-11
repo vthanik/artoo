@@ -1,10 +1,10 @@
-# xpt_ieee.R -- IEEE 754 <-> IBM 370 floating-point conversion.
+# xpt_ieee.R — IEEE 754 <-> IBM 370 floating-point conversion.
 #
 # The byte-level core of the xpt codec, ported from the herald archive
 # (identical float math in both archives; herald chosen per the "latest wins"
 # rule). artoo's additions over the port: no vctrs dependency, and an optional
 # `missing` tag vector so extended special missings (.A-.Z, ._) survive the
-# WRITE path -- the one place v0 was lossy (it read them but wrote them all
+# WRITE path — the one place v0 was lossy (it read them but wrote them all
 # back as the standard "." indicator).
 #
 # IBM 370 double (8 bytes): bit 0 sign, bits 1-7 exponent (bias 64, base-16),

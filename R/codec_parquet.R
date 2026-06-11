@@ -1,12 +1,12 @@
-# codec_parquet.R -- the Apache Parquet codec (nanoparquet engine + sidecar).
+# codec_parquet.R — the Apache Parquet codec (nanoparquet engine + sidecar).
 #
 # Parquet stores the data natively via nanoparquet (a lightweight, zero-R-dep
-# engine -- arrow is banned), and artoo's full CDISC metadata rides alongside
+# engine — arrow is banned), and artoo's full CDISC metadata rides alongside
 # as the universal `metadata_json` sidecar (plan 4.0/4.1): the single
 # Dataset-JSON-shaped string set_meta() stamps, embedded verbatim in the
 # parquet file's key-value metadata under the key "metadata_json". This is
 # exactly where artoo beats plain nanoparquet/arrow, which drop
-# labels/formats/codelists -- artoo round-trips the complete artoo_meta.
+# labels/formats/codelists — artoo round-trips the complete artoo_meta.
 #
 # Read precedence is META-FIRST (plan D1): types are reconstructed from the
 # sidecar, with nanoparquet's native column types advisory. A parquet written
@@ -71,7 +71,7 @@
 
   # hms has no native parquet type; store the bare seconds (the read path
   # realizes it back from the sidecar dataType). as.numeric(units = "secs")
-  # -- never unclass(), which would keep a stray units attribute. Date and
+  # — never unclass(), which would keep a stray units attribute. Date and
   # POSIXct have native parquet types, so they pass through untouched.
   # Character columns are NFC-canonicalised (a no-op on ASCII / single-byte).
   for (nm in names(x)) {
@@ -173,7 +173,7 @@
   # Parse the sidecar ONCE: the same parsed object feeds the meta rebuild and
   # the special-missing tag reattachment below. A foreign / plain-nanoparquet
   # file (no sidecar) gets metadata synthesized from the column types and
-  # attributes -- the same path a bare frame takes on write -- so the result
+  # attributes — the same path a bare frame takes on write — so the result
   # still feeds get_meta() and write_xpt()/write_json(), never an abort
   # (plan 9.B).
   p <- if (is.null(json)) {
@@ -189,7 +189,7 @@
   # Date/POSIXct survive nanoparquet natively and realize idempotently (the
   # integer-backed DATE arrival is canonicalized to double); a time column
   # comes back a bare double and becomes hms here. A character ISO
-  # 8601 column (the no-targetDataType --DTC form) stays text -- realize is
+  # 8601 column (the no-targetDataType --DTC form) stays text — realize is
   # for numeric storage, and text is already readable.
   for (nm in names(meta@columns)) {
     cm <- meta@columns[[nm]]
@@ -245,10 +245,10 @@
 #' @param compression *Column compression codec.* `<character(1)>: default
 #'   "snappy"`. One of:
 #'
-#'   - `"snappy"` (default) -- fast, the parquet ecosystem default.
-#'   - `"gzip"` -- smaller files, slower.
-#'   - `"zstd"` -- the best size/speed trade-off where supported.
-#'   - `"uncompressed"` -- raw pages.
+#'   - `"snappy"` (default) — fast, the parquet ecosystem default.
+#'   - `"gzip"` — smaller files, slower.
+#'   - `"zstd"` — the best size/speed trade-off where supported.
+#'   - `"uncompressed"` — raw pages.
 #'
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'

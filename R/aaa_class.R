@@ -1,7 +1,7 @@
-# aaa_class.R -- S7 class definitions, loaded first (aaa_ prefix).
+# aaa_class.R — S7 class definitions, loaded first (aaa_ prefix).
 #
 # Two classes: `artoo_spec` (the CDISC specification) and `artoo_meta`
-# (the metadata a dataset carries -- the codec contract). Both validate
+# (the metadata a dataset carries — the codec contract). Both validate
 # at construction. The per-slot column schemas and closed vocabularies
 # below are the single source of truth; adding a column is a one-line
 # edit here.
@@ -78,7 +78,7 @@
 )
 .spec_req_codelists <- c("codelist_id", "term")
 
-# Methods, comments, documents -- the Define-XML supporting metadata that
+# Methods, comments, documents — the Define-XML supporting metadata that
 # variables / value-level rows reference by id. Carried so validation can
 # check completeness (e.g. a referenced method's description is present)
 # and referential integrity.
@@ -121,7 +121,7 @@ artoo_spec_class <- S7::new_class(
   package = "artoo",
   properties = list(
     # One spec = one CDISC standard (scalar; NA when unspecified). Mixing
-    # standards aborts at construction -- see .resolve_standard().
+    # standards aborts at construction — see .resolve_standard().
     standard = S7::new_property(
       S7::class_character,
       default = NA_character_

@@ -780,7 +780,7 @@ test_that("a character-backed date column writes as ISO text, no garbage days (r
   # (= 1965-07-07). With no numeric targetDataType a character temporal is
   # the CDISC ISO-text form: it stores as a character variable and the
   # partial values survive verbatim. (With targetDataType = "integer" the
-  # write still aborts loud -- covered in test-temporal-iso.R.)
+  # write still aborts loud — covered in test-temporal-iso.R.)
   df <- data.frame(
     SUBJ = c("A", "B"),
     ADT = c("2014", "2015"),
@@ -912,7 +912,7 @@ test_that("the FDA gate stays silent for ASCII and UTF-8 multibyte content", {
   p <- withr::local_tempfile(fileext = ".xpt")
   expect_no_warning(write_xpt(df, p, created = frozen))
   # UTF-8 "cafe-acute": the trailing 0xA9 is a multibyte continuation byte, not
-  # an FDA-forbidden single-byte glyph -- the gate must not false-fire.
+  # an FDA-forbidden single-byte glyph — the gate must not false-fire.
   df2 <- data.frame(SUBJ = "A", TXT = "café", stringsAsFactors = FALSE)
   attr(df2, "dataset_name") <- "T"
   p2 <- withr::local_tempfile(fileext = ".xpt")
@@ -1101,7 +1101,7 @@ test_that("a real SAS xpt with no informats still reads cleanly", {
 test_that("a second member hidden in the floored-off v5 tail still aborts", {
   # With wide records (obs_length > 80), an appended member header is shorter
   # than one record, so the EOF-derived row count floors it away and the
-  # in-obs signature scan never sees it -- the regression was a silent drop.
+  # in-obs signature scan never sees it — the regression was a silent drop.
   df <- data.frame(
     SUBJ = c("A", "B"),
     COMMENT = c(strrep("x", 200), strrep("y", 200)),

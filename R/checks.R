@@ -1,4 +1,4 @@
-# checks.R -- artoo_checks(), the conformance-dimension control.
+# checks.R — artoo_checks(), the conformance-dimension control.
 #
 # A small validated record toggling which dimensions check_spec() (and
 # therefore apply_spec(check=)) evaluates. One object can be built per study
@@ -80,7 +80,7 @@
 #'   values become `NA` under coercion, so this is an error, not a warning.
 #' @param integer_fraction *Flag an integer-typed variable holding fractional
 #'   values.* `<logical(1)>: default TRUE`. Coercion would truncate them
-#'   (162.6 becomes 162) -- a data-integrity event; fix the spec dataType
+#'   (162.6 becomes 162) — a data-integrity event; fix the spec dataType
 #'   (`float` / `decimal`) or the data before conforming.
 #' @param iso8601_format *Flag a character date/datetime/time variable whose
 #'   values are not valid ISO 8601 text.* `<logical(1)>: default TRUE`. A

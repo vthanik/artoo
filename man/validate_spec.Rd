@@ -49,7 +49,7 @@ programmatic use.
 }
 \details{
 \strong{Dataset-scoped.} A spec workbook carries many datasets. Pass
-\code{dataset} to validate only the one(s) you are working on -- the
+\code{dataset} to validate only the one(s) you are working on — the
 methods, comments, and codelists those datasets reference are checked
 for completeness, but unrelated datasets are not. \code{dataset = NULL}
 validates the whole spec.

@@ -22,7 +22,7 @@ names you pass as the \code{dataset} argument to the other accessors and to
 # ---- Example 1: the datasets the pilot ADaM spec defines ----
 #
 # Build the spec from the bundled CDISC-pilot tables and list its
-# datasets -- the names you pass to the other accessors.
+# datasets — the names you pass to the other accessors.
 spec <- artoo_spec(
   cdisc_adam_datasets, cdisc_adam_variables,
   codelists = cdisc_codelists

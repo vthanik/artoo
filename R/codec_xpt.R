@@ -1,4 +1,4 @@
-# codec_xpt.R -- the SAS XPORT (xpt) codec, v5 (FDA submission default) and
+# codec_xpt.R — the SAS XPORT (xpt) codec, v5 (FDA submission default) and
 # v8 (extended names/labels). Writes are single-member (one dataset = one
 # file, the FDA convention); reads handle multi-member libraries via
 # xpt_members() + read_xpt(member =).
@@ -6,7 +6,7 @@
 # The XPORT framing (LIBRARY/MEMBER/NAMESTR/OBS headers, the 140-byte namestr,
 # and the v8 LABELV8 long-name/long-label extension) is built from the SAS
 # XPORT v5/v8 transport spec. All metadata flows through the artoo_meta spine
-# -- the codec never reads or writes raw column attributes -- and all
+# — the codec never reads or writes raw column attributes — and all
 # transcoding goes through encoding.R. The byte/float/temporal mechanics reuse
 # the existing building blocks (xpt_ieee.R, xpt_util.R, artoo_temporal.R).
 #
@@ -338,7 +338,7 @@
       if (is.null(la)) "" else as.character(la)
     }
     # A character date/datetime/time column with no numeric targetDataType
-    # is ISO 8601 text -- the CDISC --DTC convention (partial dates like
+    # is ISO 8601 text — the CDISC --DTC convention (partial dates like
     # "1951" and "1951-12" included). It stores as a character variable;
     # the SAS-numeric path below is reserved for columns whose metadata
     # (targetDataType) or R class (Date/POSIXct/hms/numeric) is
@@ -918,12 +918,12 @@
 
 # v5 stores no obs count: it is the data section after the OBS header, blank-
 # padded to an 80-byte boundary. Step back from `end` (the next member's
-# offset, or EOF -- the default) over trailing all-0x20 records (the padding)
-# to find the row count -- one record read per trailing blank, never the
+# offset, or EOF — the default) over trailing all-0x20 records (the padding)
+# to find the row count — one record read per trailing blank, never the
 # whole section, so a partial read (n_max) and a >2GB file both stay bounded.
 # The ambiguity is confined to all-character data (a numeric field is never
 # all-blank), where a genuine trailing all-NA row is indistinguishable from
-# padding -- an inherent v5 limitation (see C4).
+# padding — an inherent v5 limitation (see C4).
 #' @noRd
 .xpt_compute_v5_nobs <- function(
   con,
@@ -950,7 +950,7 @@
       break
     }
   }
-  # The floor() above drops a tail shorter than one record -- and when
+  # The floor() above drops a tail shorter than one record — and when
   # records are wide, an ENTIRE small second member can hide inside that
   # floored-off fragment (the in-obs signature scan never sees it, because
   # only r * obs_length bytes are read). Scan the fragment's 80-byte-aligned
@@ -974,7 +974,7 @@
 }
 
 # artoo reads single-member transport files only. After the obs section (padded
-# to an 80-byte boundary) anything more is a second member; abort -- but only
+# to an 80-byte boundary) anything more is a second member; abort — but only
 # when the bytes at that boundary carry a real "HEADER RECORD*******" signature,
 # so extra blank padding never triggers a false abort. Leaves con at obs_start.
 #' @noRd
@@ -1139,7 +1139,7 @@
     label = if (nzchar(ns$label)) ns$label else NULL,
     dataType = dt,
     # A numeric SAS temporal IS dataType date/datetime/time with numeric
-    # storage -- record targetDataType = "integer" so the next codec (json,
+    # storage — record targetDataType = "integer" so the next codec (json,
     # parquet) writes the same exchange form and realizes the same R class.
     targetDataType = if (
       ns$vartype == 1L && dt %in% c("date", "datetime", "time")
@@ -1401,10 +1401,10 @@
   }
   # Multi-member detection (single-member path only; a known obs_end means
   # the member was already scanned and bounded). v8 records the exact row
-  # count, so a second member is the bytes beyond the padded obs section --
+  # count, so a second member is the bytes beyond the padded obs section —
   # check that boundary. v5's count is EOF-derived, so a second member is
   # absorbed into the (inflated) count and the read bytes themselves carry
-  # its HEADER signature at an 80-byte boundary -- scanned inside
+  # its HEADER signature at an 80-byte boundary — scanned inside
   # .xpt_read_obs (no extra IO, n_max-bound).
   obs_start <- seek(con, where = NA)
   if (version == 8L && is.na(obs_end)) {
@@ -1427,8 +1427,8 @@
 
   char_idx <- which(vapply(namestrs, function(ns) ns$vartype == 2L, logical(1)))
   # Header text (dataset label, variable labels) is byte-passthrough until
-  # here; it joins the detection scan -- labels can be the only non-ASCII
-  # content in a file -- and is transcoded below like the data columns.
+  # here; it joins the detection scan — labels can be the only non-ASCII
+  # content in a file — and is transcoded below like the data columns.
   hdr_text <- c(
     mem$label,
     vapply(namestrs, function(ns) ns$label, character(1))
@@ -1520,13 +1520,13 @@
 #'
 #' **Character ISO dates (`--DTC`) write as text.** A character column whose
 #' `dataType` is `date`/`datetime`/`time` with no numeric `targetDataType` is
-#' the CDISC ISO 8601 text form -- the SDTM `--DTC` convention -- and stores
+#' the CDISC ISO 8601 text form — the SDTM `--DTC` convention — and stores
 #' as a character variable, partial dates (`"1951"`, `"1951-12"`) included,
 #' byte for byte. The SAS-numeric encoding (with `DATE9.`-style formats) is
 #' used for columns that are R `Date`/`POSIXct`/`hms` or whose
 #' metadata records `targetDataType = "integer"` (the ADaM numeric-date
 #' convention). A character column *under* `targetDataType = "integer"`
-#' aborts loudly -- a partial date can never become a SAS numeric silently.
+#' aborts loudly — a partial date can never become a SAS numeric silently.
 #'
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `artoo_meta`.
@@ -1690,7 +1690,7 @@ read_xpt <- function(
 #' List the members of a SAS XPORT transport file
 #'
 #' Report every dataset (member) a SAS Transport (`.xpt`) file holds, with
-#' its label, variable count, and row count -- the survey step before
+#' its label, variable count, and row count — the survey step before
 #' [read_xpt()] with `member =` picks one. A single-member file (the FDA
 #' submission convention) returns one row.
 #'

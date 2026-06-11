@@ -1,8 +1,8 @@
-# columns.R -- columns(): the SAS-viewer-style variable attribute pane.
+# columns.R — columns(): the SAS-viewer-style variable attribute pane.
 #
 # One row per column of a frame (or of a dataset file), with the attribute
 # names a SAS programmer expects from PROC CONTENTS / the Universal Viewer:
-# #, Variable, Type, Len, Format, Informat, Label -- plus a CDISC Key column
+# #, Variable, Type, Len, Format, Informat, Label — plus a CDISC Key column
 # (the keySequence). Polymorphic: a stamped frame reads its artoo_meta, a
 # plain frame is inferred from R classes, and a file path is read through
 # the one lossless codec for its extension (reusing the reader guarantees
@@ -11,7 +11,7 @@
 
 #' View a dataset's variable attributes, SAS-style
 #'
-#' Return a one-row-per-variable attribute table -- the pane a SAS
+#' Return a one-row-per-variable attribute table — the pane a SAS
 #' programmer reads in `PROC CONTENTS` or the Universal Viewer: position,
 #' name, Char/Num type, length, format, informat, label, and the CDISC key
 #' sequence. This is the quick look after [apply_spec()] stamps a frame, or
@@ -21,7 +21,7 @@
 #' **Every real column shows.** The table covers the *frame's* columns: a
 #' column the spec never declared (which [apply_spec()] keeps, never drops)
 #' still appears, its attributes inferred from the R class. A plain,
-#' never-stamped data frame works the same way -- every attribute is
+#' never-stamped data frame works the same way — every attribute is
 #' inferred.
 #'
 #' **A path reads through the codec.** A file path is dispatched by
@@ -48,7 +48,7 @@
 #'
 #' @return *A `<artoo_columns>` data frame* with columns `#`, `Variable`,
 #'   `Type`, `Len`, `Format`, `Informat`, `Label`, `Key`, printed
-#'   left-aligned. It is an ordinary data frame underneath -- filter or
+#'   left-aligned. It is an ordinary data frame underneath — filter or
 #'   inspect it like one.
 #'
 #' @examples
@@ -164,7 +164,7 @@ columns <- function(x, member = NULL) {
 #' @exportS3Method format artoo_columns
 format.artoo_columns <- function(x, ...) {
   # `[` on a data frame drops custom attributes but keeps the class, so a
-  # filtered pane arrives here without dataset/records -- degrade gracefully.
+  # filtered pane arrives here without dataset/records — degrade gracefully.
   ds <- attr(x, "dataset", exact = TRUE) %||% NA_character_
   records <- attr(x, "records", exact = TRUE)
   header <- sprintf(

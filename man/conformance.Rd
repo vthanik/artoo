@@ -23,7 +23,7 @@ data frame for programmatic use.
 }
 \description{
 Pull the conformance findings \code{\link[=apply_spec]{apply_spec()}} attached to a conformed
-data frame -- the readable answer to "what did the check find?". The
+data frame — the readable answer to "what did the check find?". The
 result is the same findings frame \code{\link[=check_spec]{check_spec()}} returns (one row per
 divergence), with a print method that renders a sectioned report, so
 \code{conformance(adsl)} at the console is the inspection step the

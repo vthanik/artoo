@@ -1,10 +1,10 @@
-# io.R -- the format-agnostic read/write dispatchers.
+# io.R — the format-agnostic read/write dispatchers.
 #
 # write_dataset()/read_dataset() select a codec by explicit `format=` or file
 # extension, then delegate to its encode/decode. write_dataset() pulls the
 # artoo_meta off the frame once (get_meta) and hands it to the codec;
 # read_dataset() re-attaches whatever meta the codec recovers. Codecs never
-# touch raw attributes -- the meta spine is the only metadata path.
+# touch raw attributes — the meta spine is the only metadata path.
 
 # The artoo_meta to write with: the frame's own metadata_json when present,
 # else one derived from its column attributes + R classes (so a bare or
@@ -230,8 +230,8 @@ read_dataset <- function(
   # The decode boundary takes untrusted file bytes. A codec aborts with a
   # artoo_error_* on malformed input, but an external engine (the parquet C++
   # reader, readRDS, jsonlite's UTF-8 validator) can raise a raw R error on a
-  # truncated or bit-flipped file. The whole read path -- decode AND the
-  # narrowing / meta-reattachment tail -- is translated, because a corrupt
+  # truncated or bit-flipped file. The whole read path — decode AND the
+  # narrowing / meta-reattachment tail — is translated, because a corrupt
   # container can also yield a payload that only fails later (an rds whose
   # bit-flipped bytes decompress to a RAGGED data frame breaks the column
   # re-projection; an invalid-UTF-8 label breaks the meta serializer). The

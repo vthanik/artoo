@@ -1,4 +1,4 @@
-# findings.R -- the one findings model, shared by both checkers.
+# findings.R — the one findings model, shared by both checkers.
 #
 # A "finding" is one concept with one shape: a 6-column data frame
 # (check, dimension, severity, dataset, variable, message). The open rule

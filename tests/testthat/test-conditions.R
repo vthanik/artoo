@@ -22,7 +22,7 @@ test_that("helper conditions carry the full three-level class chain", {
 
 test_that("public errors of different kinds are caught family-wide", {
   # input kind (bad path), codec kind (unknown extension), spec kind
-  # (malformed slot) -- one tryCatch(artoo_error = ) catches them all.
+  # (malformed slot) — one tryCatch(artoo_error = ) catches them all.
   expect_error(read_spec(123), class = "artoo_error")
   expect_error(artoo:::.codec_for_ext("zzz"), class = "artoo_error")
   expect_error(

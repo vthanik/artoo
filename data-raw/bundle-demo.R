@@ -1,11 +1,11 @@
 # data-raw/bundle-demo.R
 # Build artoo's CDISC demo data reproducibly from the PUBLIC PHUSE Test
-# Data Factory (phuse-org/phuse-scripts) -- the canonical open CDISC pilot
+# Data Factory (phuse-org/phuse-scripts) — the canonical open CDISC pilot
 # datasets. The .xpt sources are read at BUILD TIME with haven (a dev-only
 # tool; haven is NOT a package dependency). The shipped .rda files are
 # self-contained base-R data frames.
 #
-# Dogfood: the .xpt sources are read with artoo's own read_xpt() -- artoo eats
+# Dogfood: the .xpt sources are read with artoo's own read_xpt() — artoo eats
 # its own cooking, so the demo data exercises the reader it ships.
 #
 # Run from the package root:  Rscript data-raw/bundle-demo.R
@@ -108,7 +108,7 @@ cdisc_suppdm <- trim_rows(
   60L
 )
 
-# ---- Derived spec tables (ONE standard per pair -- never mixed) -----------
+# ---- Derived spec tables (ONE standard per pair — never mixed) -----------
 # A artoo_spec carries exactly one CDISC standard, so the demo constructor
 # tables are split by standard: the ADaM pair (ADSL) and the SDTM pair
 # (DM). The shared NCI codelist table is controlled terminology, which is

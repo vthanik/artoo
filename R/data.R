@@ -1,4 +1,4 @@
-# data.R -- documentation for the bundled CDISC-pilot demo data.
+# data.R — documentation for the bundled CDISC-pilot demo data.
 # Regenerate the .rda files with data-raw/bundle-demo.R.
 
 #' CDISC demo specification tables (one standard per pair)
@@ -10,7 +10,7 @@
 #' describe DM (SDTMIG 3.1.2). Each variables table is *derived from the
 #' data* (names, labels, inferred CDISC types, byte lengths) by
 #' `data-raw/`. Pass one standard's pair to [artoo_spec()]; passing both
-#' pairs together aborts with `artoo_error_spec` -- mixing standards in
+#' pairs together aborts with `artoo_error_spec` — mixing standards in
 #' one spec is the mistake the split exists to prevent.
 #'
 #' @format
@@ -147,7 +147,7 @@
 #' 2.1 release examples: `adam_spec` (ADaMIG 1.1; datasets ADSL, ADAE) and
 #' `sdtm_spec` (SDTMIG 3.1.2; datasets TS, DM, VS, SUPPDM). Every bundled
 #' demo dataset conforms to its spec under
-#' `apply_spec(conformance = "abort")` -- the pairing is gated at build
+#' `apply_spec(conformance = "abort")` — the pairing is gated at build
 #' time. The same specs ship as P21 workbooks in
 #' `system.file("extdata", "adam-spec.xlsx", package = "artoo")` and
 #' `"sdtm-spec.xlsx"`, written by [write_spec()].

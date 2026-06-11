@@ -17,7 +17,7 @@ is not a valid XPORT library aborts with \code{artoo_error_codec}.}
 }
 \description{
 Report every dataset (member) a SAS Transport (\code{.xpt}) file holds, with
-its label, variable count, and row count -- the survey step before
+its label, variable count, and row count — the survey step before
 \code{\link[=read_xpt]{read_xpt()}} with \verb{member =} picks one. A single-member file (the FDA
 submission convention) returns one row.
 }

@@ -1,6 +1,6 @@
-# xpt_util.R -- byte-level helpers for the xpt codec.
+# xpt_util.R — byte-level helpers for the xpt codec.
 #
-# Ported from the herald archive (herald, not v0 -- diff confirmed it the
+# Ported from the herald archive (herald, not v0 — diff confirmed it the
 # strict superset). artoo changes: drop the vctrs dependency (base coercion),
 # dot-prefix internals, and `.sas_datetime_str()` takes an explicit `time` so
 # writes are byte-stable (the codec injects a frozen `created=`, never an
@@ -58,7 +58,7 @@
 # vectorized OBS-section packer: one buffer allocation and one destination
 # scatter for the column, never a per-cell call (a 1M-row column is one
 # charToRaw, not a million). The Encoding mark is neutralized on a local copy
-# before the collapse -- paste0 re-encodes latin1-marked strings (iconv
+# before the collapse — paste0 re-encodes latin1-marked strings (iconv
 # output for a single-byte target) to the session charset, which would
 # corrupt the target bytes; "unknown" passes the stored bytes through.
 #' @noRd

@@ -1,4 +1,4 @@
-# json_common.R -- the columnar JSON literal engine, shared by the
+# json_common.R — the columnar JSON literal engine, shared by the
 # Dataset-JSON file codec (codec_json.R) and the NDJSON codec
 # (codec_ndjson.R).
 #
@@ -9,7 +9,7 @@
 # values are serialized ONCE as a JSON array, the outer brackets are
 # stripped, and the elements are recovered by splitting on the separator.
 # The split is structural, not a hand-rolled parser:
-# - string arrays split on the exact 3-byte sequence `","` -- inside JSON
+# - string arrays split on the exact 3-byte sequence `","` — inside JSON
 #   string content a quote is always escaped to \", so quote-comma-quote can
 #   only be a separator (the values are serialized NA-free, so no bare null
 #   ever interrupts the pattern);

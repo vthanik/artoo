@@ -23,10 +23,10 @@ accepted.}
 
 \item{compression}{\emph{Column compression codec.} \verb{<character(1)>: default "snappy"}. One of:
 \itemize{
-\item \code{"snappy"} (default) -- fast, the parquet ecosystem default.
-\item \code{"gzip"} -- smaller files, slower.
-\item \code{"zstd"} -- the best size/speed trade-off where supported.
-\item \code{"uncompressed"} -- raw pages.
+\item \code{"snappy"} (default) — fast, the parquet ecosystem default.
+\item \code{"gzip"} — smaller files, slower.
+\item \code{"zstd"} — the best size/speed trade-off where supported.
+\item \code{"uncompressed"} — raw pages.
 }}
 }
 \value{

@@ -1,4 +1,4 @@
-# check_spec.R -- the data-conformance checker (engine == "data").
+# check_spec.R — the data-conformance checker (engine == "data").
 #
 # check_spec() compares a data frame against one dataset's spec and returns a
 # findings data frame. It reuses the metadata already in the spec (labels,

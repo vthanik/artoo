@@ -62,7 +62,7 @@ by CDISC standard because a \code{artoo_spec} carries exactly one:
 describe DM (SDTMIG 3.1.2). Each variables table is \emph{derived from the
 data} (names, labels, inferred CDISC types, byte lengths) by
 \verb{data-raw/}. Pass one standard's pair to \code{\link[=artoo_spec]{artoo_spec()}}; passing both
-pairs together aborts with \code{artoo_error_spec} -- mixing standards in
+pairs together aborts with \code{artoo_error_spec} — mixing standards in
 one spec is the mistake the split exists to prevent.
 }
 \keyword{datasets}

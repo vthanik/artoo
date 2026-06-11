@@ -1,4 +1,4 @@
-# The any-to-any losslessness matrix -- the acceptance test of the flagship
+# The any-to-any losslessness matrix — the acceptance test of the flagship
 # promise. Every ordered pair of full-metadata formats (json, parquet, rds)
 # must round-trip the torture frame (all 10 dataTypes, non-ASCII, special
 # missings on plain and temporal columns) with data, tags, and meta identical.
@@ -75,7 +75,7 @@ test_that("the conformed demo datasets chain through every format pair", {
 
 test_that("xpt legs preserve values, tags, and the carried metadata", {
   # The xpt-representable slice of the torture frame (boolean/integer/decimal
-  # narrow to numeric in NAMESTR -- the documented C3 contract -- so they are
+  # narrow to numeric in NAMESTR — the documented C3 contract — so they are
   # exercised in the value comparison but not the meta-identity one).
   src <- .torture_frame()
   xpt_cols <- c("USUBJID", "AVAL", "DVAL", "ADT", "ADTM", "ATM", "REFURI")

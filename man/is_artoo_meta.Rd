@@ -13,7 +13,7 @@ is_artoo_meta(x)
 \emph{A \verb{<logical(1)>}}: \code{TRUE} when \code{x} is a \code{artoo_meta}, else \code{FALSE}.
 }
 \description{
-Report whether an object is a \code{artoo_meta} -- the CDISC-shaped metadata a
+Report whether an object is a \code{artoo_meta} — the CDISC-shaped metadata a
 conformed dataset carries through the artoo workflow (spec -> apply_spec ->
 read_/write_). \code{\link[=get_meta]{get_meta()}} returns one; this is the type guard before you
 inspect its \verb{@dataset} and \verb{@columns} slots.
@@ -30,7 +30,7 @@ is_artoo_meta(meta)
 
 # ---- Example 2: a bare data frame carries no meta object ----
 #
-# The raw frame itself is not a artoo_meta -- only the object get_meta()
+# The raw frame itself is not a artoo_meta — only the object get_meta()
 # returns is.
 is_artoo_meta(cdisc_adsl)
 

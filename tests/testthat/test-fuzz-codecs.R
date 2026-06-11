@@ -36,7 +36,7 @@
   paths
 }
 
-# Reading must EITHER succeed with a data frame OR throw a artoo condition --
+# Reading must EITHER succeed with a data frame OR throw a artoo condition —
 # never any other error, never a crash, never a hang.
 .expect_clean <- function(path, fmt) {
   # A corrupt-but-readable file may legitimately warn (an encoding heuristic,
@@ -153,7 +153,7 @@ test_that("a corrupt rds payload failing AFTER decode still aborts as artoo (CI 
   # A bit-flipped rds can decompress to a payload readRDS accepts but
   # that only fails in the post-decode tail (the column re-projection, or
   # cli rendering a foreign message that quotes invalid-UTF-8 file
-  # bytes). The contract: a data frame OR a artoo condition -- never a
+  # bytes). The contract: a data frame OR a artoo condition — never a
   # raw R error. Both shapes the CI fuzzer hit are pinned here.
   expect_clean_rds <- function(payload) {
     p <- withr::local_tempfile(fileext = ".rds", .local_envir = parent.frame())

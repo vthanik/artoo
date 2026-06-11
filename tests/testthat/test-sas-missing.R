@@ -198,7 +198,7 @@ test_that("the json file stays valid Dataset-JSON with plain nulls", {
   jsn <- withr::local_tempfile(fileext = ".json")
   write_json(df, jsn)
   p <- jsonlite::fromJSON(jsn, simplifyVector = FALSE)
-  # Data values are ordinary nulls -- a foreign reader sees plain missings.
+  # Data values are ordinary nulls — a foreign reader sees plain missings.
   expect_null(p$rows[[2]][[3]])
   expect_null(p$rows[[5]][[3]])
   # The tags ride the namespaced extension, version-stamped.

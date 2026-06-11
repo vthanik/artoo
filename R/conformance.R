@@ -1,4 +1,4 @@
-# conformance.R -- the conformance-findings accessor and the classed
+# conformance.R — the conformance-findings accessor and the classed
 # findings frame. check_spec() returns a `artoo_findings` data frame (the
 # 6-column findings shape plus a print method); apply_spec() stores that
 # same object in the `artoo.conformance` attribute, and conformance() is
@@ -16,7 +16,7 @@
 #' Read the conformance findings a dataset carries
 #'
 #' Pull the conformance findings [apply_spec()] attached to a conformed
-#' data frame -- the readable answer to "what did the check find?". The
+#' data frame — the readable answer to "what did the check find?". The
 #' result is the same findings frame [check_spec()] returns (one row per
 #' divergence), with a print method that renders a sectioned report, so
 #' `conformance(adsl)` at the console is the inspection step the

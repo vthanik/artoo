@@ -79,7 +79,7 @@ values become \code{NA} under coercion, so this is an error, not a warning.}
 
 \item{integer_fraction}{\emph{Flag an integer-typed variable holding fractional
 values.} \verb{<logical(1)>: default TRUE}. Coercion would truncate them
-(162.6 becomes 162) -- a data-integrity event; fix the spec dataType
+(162.6 becomes 162) — a data-integrity event; fix the spec dataType
 (\code{float} / \code{decimal}) or the data before conforming.}
 
 \item{iso8601_format}{\emph{Flag a character date/datetime/time variable whose

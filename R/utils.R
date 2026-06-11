@@ -1,7 +1,7 @@
-# utils.R -- small base-R helpers shared across the package.
+# utils.R — small base-R helpers shared across the package.
 # `%||%` is imported from rlang (see artoo-package.R); do not redefine.
 
-# Condition family helpers -- every condition artoo raises flows through one
+# Condition family helpers — every condition artoo raises flows through one
 # of these, so each carries a three-level class chain and is catchable at any
 # altitude: the specific kind ("artoo_error_input"), the severity
 # ("artoo_error" / "artoo_warning" / "artoo_message"), and the package root
@@ -84,7 +84,7 @@
 }
 
 # A foreign error's message can quote raw file bytes (jsonlite echoes the
-# offending input), so it may not be valid UTF-8 -- and cli's own message
+# offending input), so it may not be valid UTF-8 — and cli's own message
 # rendering would then error INSIDE the abort handler, leaking an unclassed
 # condition. Substitute invalid bytes (<hh> escapes) so the message is
 # always safe to interpolate.

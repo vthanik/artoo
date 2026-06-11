@@ -21,25 +21,25 @@ the named dataset's rows.
 \emph{A data frame of variable metadata}, one row per variable, with
 22 columns (absent ones are filled with typed \code{NA} at construction):
 \itemize{
-\item \code{dataset}, \code{variable} -- the identifying pair (unique within a spec).
-\item \code{itemoid} -- the Define-XML / Dataset-JSON item OID, when recorded.
-\item \code{label} -- the variable label (<= 40 bytes for XPORT v5).
-\item \code{data_type} -- canonical CDISC dataType (\code{string}, \code{integer},
+\item \code{dataset}, \code{variable} — the identifying pair (unique within a spec).
+\item \code{itemoid} — the Define-XML / Dataset-JSON item OID, when recorded.
+\item \code{label} — the variable label (<= 40 bytes for XPORT v5).
+\item \code{data_type} — canonical CDISC dataType (\code{string}, \code{integer},
 \code{decimal}, \code{float}, \code{double}, \code{boolean}, \code{date}, \code{datetime}, \code{time},
 \code{URI}).
-\item \code{target_data_type} -- \code{integer}/\code{decimal} when a temporal variable
+\item \code{target_data_type} — \code{integer}/\code{decimal} when a temporal variable
 stores as a SAS-epoch numeric; \code{NA} means ISO 8601 text (\code{--DTC}).
-\item \code{length} -- declared storage length (bytes for character).
-\item \code{display_format}, \code{informat} -- SAS format / informat strings.
-\item \code{key_sequence} -- 1-based position in the dataset sort key.
-\item \code{order} -- column position in the dataset.
-\item \code{codelist_id}, \code{method_id}, \code{comment_id} -- references into the
+\item \code{length} — declared storage length (bytes for character).
+\item \code{display_format}, \code{informat} — SAS format / informat strings.
+\item \code{key_sequence} — 1-based position in the dataset sort key.
+\item \code{order} — column position in the dataset.
+\item \code{codelist_id}, \code{method_id}, \code{comment_id} — references into the
 codelists / methods / comments slots.
-\item \code{mandatory} -- logical obligation flag (\code{NA} is treated as
+\item \code{mandatory} — logical obligation flag (\code{NA} is treated as
 mandatory by \code{\link[=check_spec]{check_spec()}}).
-\item \code{significant_digits} -- for \code{decimal} variables.
+\item \code{significant_digits} — for \code{decimal} variables.
 \item \code{origin}, \code{source}, \code{predecessor}, \code{assigned_value}, \code{pages},
-\code{role} -- Define-XML provenance fields, carried as-is.
+\code{role} — Define-XML provenance fields, carried as-is.
 }
 
 Filter or arrange it with ordinary base / \code{dplyr} verbs.

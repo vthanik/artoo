@@ -2,7 +2,7 @@
 #
 # Source: the public CDISC SDTM/ADaM pilot submission package (cdiscpilot01),
 # DM domain. It is genuine SAS PROC COPY XPORT output, freely redistributable,
-# and lets the suite prove artoo reads real SAS bytes -- not just its own.
+# and lets the suite prove artoo reads real SAS bytes — not just its own.
 #
 # The file is committed under tests/testthat/fixtures/ so the test needs no
 # network. Re-run this only to refresh it; the SHA256 below pins exactly what

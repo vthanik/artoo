@@ -1,4 +1,4 @@
-# sas_missing.R -- special-missing (.A-.Z, ._) carriage across codecs.
+# sas_missing.R — special-missing (.A-.Z, ._) carriage across codecs.
 #
 # In-session canonical form: the row-aligned `sas_missing` character attribute
 # on a column (NA where untagged; values ".", "._", ".A"-".Z"), exactly what
@@ -10,7 +10,7 @@
 # Invariants:
 # - Tags ride the container only at codec ENCODE time: row indices are
 #   computed fresh against the frame being written. They are deliberately NOT
-#   part of the metadata_json string set_meta() stamps -- a stored row-index
+#   part of the metadata_json string set_meta() stamps — a stored row-index
 #   map would desync under user subsetting. Only codecs pass `special=` to
 #   .meta_payload().
 # - "." is the default meaning of an on-disk null, so it is never carried;
@@ -19,7 +19,7 @@
 
 # Gather the non-"." tags of every column into the on-disk shape: a named
 # list of list(rows = <integer, 1-based>, tags = <character>), or NULL when
-# the frame carries none. Only tags sitting on an NA cell count -- a tag on a
+# the frame carries none. Only tags sitting on an NA cell count — a tag on a
 # non-NA cell is stale and is dropped, not carried.
 #' @noRd
 .collect_special_missings <- function(x) {

@@ -13,7 +13,7 @@ is_artoo_spec(x)
 \emph{A \verb{<logical(1)>}}: \code{TRUE} when \code{x} is a \code{artoo_spec}, else \code{FALSE}.
 }
 \description{
-Report whether an object is a \code{artoo_spec} -- the validated CDISC
+Report whether an object is a \code{artoo_spec} — the validated CDISC
 specification that drives the artoo workflow (spec -> apply_spec ->
 read_/write_). \code{\link[=artoo_spec]{artoo_spec()}} builds one; this is the type guard before you
 pass it to \code{\link[=apply_spec]{apply_spec()}} or reach into it with the spec accessors.
@@ -28,7 +28,7 @@ is_artoo_spec(spec)
 
 # ---- Example 2: an ordinary object is not a spec ----
 #
-# Any non-artoo_spec value -- a bare data frame, say -- returns FALSE.
+# Any non-artoo_spec value — a bare data frame, say — returns FALSE.
 is_artoo_spec(cdisc_dm)
 
 }

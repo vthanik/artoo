@@ -1,12 +1,12 @@
-# codec_ndjson.R -- the CDISC Dataset-JSON v1.1 codec, NDJSON variant.
+# codec_ndjson.R — the CDISC Dataset-JSON v1.1 codec, NDJSON variant.
 #
 # NDJSON (newline-delimited JSON) is the streaming exchange form Dataset-JSON
 # v1.1 defines for large datasets: line 1 holds everything a `.json` file
 # carries except `rows` (the same metadata payload, built by the ONE
 # serializer .meta_payload()); every subsequent line is one row array.
-# Memory stays bounded in BOTH directions -- the writer streams slabs of
+# Memory stays bounded in BOTH directions — the writer streams slabs of
 # per-column literals (json_common.R) and the reader parses slab-sized line
-# batches -- which the array-form `.json` reader cannot do (it materializes
+# batches — which the array-form `.json` reader cannot do (it materializes
 # the whole `rows` array). Use ndjson for multi-million-row datasets.
 
 # encode contract: (x, meta, path, <codec args>, call) -> invisible(path).

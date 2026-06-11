@@ -1,4 +1,4 @@
-# spec_read.R -- read_spec(): native JSON + Pinnacle 21 Excel -> artoo_spec.
+# spec_read.R — read_spec(): native JSON + Pinnacle 21 Excel -> artoo_spec.
 #
 # The P21 Excel parser is ported from the herald-v0 archive
 # (R/spec-read.R) and hardened: artoo-targeted column maps, alias-set
@@ -48,7 +48,7 @@
 #' @noRd
 # Note: the P21 Codelists "Comment" column is conventionally inline free
 # text (a description of the codelist), NOT a Comment-ID reference like the
-# Variables/Datasets "Comment" columns -- so it is deliberately NOT mapped
+# Variables/Datasets "Comment" columns — so it is deliberately NOT mapped
 # to `comment_id` (which would yield false "unresolved comment" findings).
 .p21_codelist_map <- c(
   "ID" = "codelist_id",
@@ -195,7 +195,7 @@
 #'
 #' # ---- Example 2: scope the read to one dataset ----
 #' #
-#' # `datasets =` reads just the domain you are working on -- validation is
+#' # `datasets =` reads just the domain you are working on — validation is
 #' # scoped with it, so a problem elsewhere in the workbook cannot block
 #' # this dataset.
 #' dm_spec <- read_spec(path, datasets = "DM")
@@ -300,7 +300,7 @@ read_spec <- function(
 
 # Resolve duplicate (dataset, variable) definitions at read time, reporting
 # each duplicate's SOURCE location ("Variables sheet rows 276 and 280" for
-# Excel, table rows otherwise) -- the actionable form of the finding the
+# Excel, table rows otherwise) — the actionable form of the finding the
 # constructor would otherwise raise with bare table indices. `rows` aligns
 # original source row numbers to `variables`; NULL falls back to indices.
 #' @noRd

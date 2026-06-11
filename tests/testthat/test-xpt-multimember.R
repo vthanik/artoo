@@ -1,6 +1,6 @@
 # Multi-member XPORT reads: xpt_members() lists the datasets a transport
 # file holds; read_xpt(member=) seeks to and decodes one of them. Fixtures
-# are built by byte-concatenating artoo-written single-member files -- every
+# are built by byte-concatenating artoo-written single-member files — every
 # member section is 80-byte padded, so the catenation is a valid library.
 
 .mm_frames <- function() {
@@ -126,7 +126,7 @@ test_that("xpt_members rejects a non-xpt file", {
 
 test_that("a member read equals the same dataset read single-member", {
   # The oracle here is artoo's own single-member reader (pyreadstat absorbs
-  # a second v5 member as extra rows of the first -- the exact failure mode
+  # a second v5 member as extra rows of the first — the exact failure mode
   # artoo's boundary-bounded read avoids).
   fr <- .mm_frames()
   dm <- fr$dm
@@ -183,7 +183,7 @@ test_that("the scanner handles a v8 member with a long label", {
   p2 <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p1, version = 8)
   # The long dataset label truncates at 40 bytes (expected; v8 has no
-  # dataset-label extension) -- the long COLUMN label is what LABELV8 keeps.
+  # dataset-label extension) — the long COLUMN label is what LABELV8 keeps.
   suppressWarnings(write_xpt(ae, p2, version = 8))
   multi <- withr::local_tempfile(fileext = ".xpt")
   con <- file(multi, "wb")

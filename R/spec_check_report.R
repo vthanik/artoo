@@ -1,4 +1,4 @@
-# spec_check_report.R -- render a artoo_check as a sectioned text report
+# spec_check_report.R — render a artoo_check as a sectioned text report
 # (datacompy `.report()` style) and the S7 print/format methods.
 #
 # The renderer is the plain function `.format_check()` so it is testable

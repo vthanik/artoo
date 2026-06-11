@@ -19,13 +19,13 @@ spec's \code{codelists} slot; an unknown id aborts with \code{artoo_error_input}
 \emph{A data frame of codelist terms}, one row per term: every term
 when \code{codelist_id} is \code{NULL}, else the named codelist's terms. Columns:
 \itemize{
-\item \code{codelist_id} -- the codelist identifier variables reference.
-\item \code{term} -- the submission value (what conformed data carries).
-\item \code{decode} -- the human-readable decoded value.
-\item \code{order} -- display order within the codelist.
-\item \code{extended} -- \code{TRUE} marks an extensible codelist (sponsor terms
+\item \code{codelist_id} — the codelist identifier variables reference.
+\item \code{term} — the submission value (what conformed data carries).
+\item \code{decode} — the human-readable decoded value.
+\item \code{order} — display order within the codelist.
+\item \code{extended} — \code{TRUE} marks an extensible codelist (sponsor terms
 allowed; non-members downgrade to notes in \code{\link[=check_spec]{check_spec()}}).
-\item \code{comment_id} -- reference into the comments slot.
+\item \code{comment_id} — reference into the comments slot.
 }
 }
 \description{

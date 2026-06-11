@@ -60,7 +60,7 @@ test_that("the literal engine reproduces the demo goldens byte for byte", {
 # The adversarial / torture frames carry separator-lookalike strings AND
 # extreme-magnitude doubles (-1e75, 1e-300). The STRING escaping is what the
 # literal-split engine must get right, so the strings are byte-pinned; the
-# numbers are checked by round-trip equality, not byte-pinned -- jsonlite's
+# numbers are checked by round-trip equality, not byte-pinned — jsonlite's
 # 16th/17th significant digit for an extreme magnitude is platform-dependent
 # (correctly-rounded but not identical across libc), and pinning it would
 # test the platform's printf, not artoo. Intra-run stability (write twice,

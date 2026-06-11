@@ -1,4 +1,4 @@
-# Tests for validate_spec() -- dataset-scoped, returns a artoo_check.
+# Tests for validate_spec() — dataset-scoped, returns a artoo_check.
 
 clean_spec <- function() {
   ds <- cdisc_sdtm_datasets

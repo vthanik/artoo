@@ -1,4 +1,4 @@
-# codec_rds.R -- the rds codec.
+# codec_rds.R — the rds codec.
 #
 # saveRDS/readRDS already round-trip live R attributes, so the metadata_json
 # string set_meta() stamps survives natively. The codec still goes through the

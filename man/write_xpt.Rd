@@ -58,13 +58,13 @@ Parquet, rds). XPORT also cannot distinguish an empty string from \code{NA}
 
 \strong{Character ISO dates (\code{--DTC}) write as text.} A character column whose
 \code{dataType} is \code{date}/\code{datetime}/\code{time} with no numeric \code{targetDataType} is
-the CDISC ISO 8601 text form -- the SDTM \code{--DTC} convention -- and stores
+the CDISC ISO 8601 text form — the SDTM \code{--DTC} convention — and stores
 as a character variable, partial dates (\code{"1951"}, \code{"1951-12"}) included,
 byte for byte. The SAS-numeric encoding (with \code{DATE9.}-style formats) is
 used for columns that are R \code{Date}/\code{POSIXct}/\code{hms} or whose
 metadata records \code{targetDataType = "integer"} (the ADaM numeric-date
 convention). A character column \emph{under} \code{targetDataType = "integer"}
-aborts loudly -- a partial date can never become a SAS numeric silently.
+aborts loudly — a partial date can never become a SAS numeric silently.
 }
 \examples{
 spec <- artoo_spec(

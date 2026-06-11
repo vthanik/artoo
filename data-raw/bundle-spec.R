@@ -3,7 +3,7 @@
 # shipped P21 workbooks (inst/extdata/adam-spec.xlsx, sdtm-spec.xlsx) from
 # PUBLIC sources only: the official CDISC Define-XML 2.1 release examples
 # (ADaM + SDTM), mirrored on GitHub and pinned by sha256. The bundled demo
-# datasets (bundle-demo.R) come from the PHUSE Test Data Factory -- the same
+# datasets (bundle-demo.R) come from the PHUSE Test Data Factory — the same
 # CDISC pilot study these defines describe.
 #
 # Run from the package root AFTER bundle-demo.R:
@@ -12,7 +12,7 @@
 # Produces: data/adam_spec.rda, data/sdtm_spec.rda,
 #           inst/extdata/adam-spec.xlsx, inst/extdata/sdtm-spec.xlsx.
 #
-# Decisions (ADRs, one line each -- see data-raw/README.md):
+# Decisions (ADRs, one line each — see data-raw/README.md):
 # - SUPPVS is in the SDTM example define but phuse-scripts ships no
 #   suppvs.xpt; the bundled sdtm_spec is scoped to datasets with data.
 # - CL.ARM / CL.ARMCD / CL.BMICAT / CL.VSTESTCD / CL.VSTEST / CL.VSRESU are
@@ -25,7 +25,7 @@
 # - VS gains the SDTMIG timepoint variables VSTPT / VSTPTNUM (the example
 #   define omits them) and VSTPTNUM joins the VS key: the pilot data records
 #   repeated measurements per position that only the timepoint
-#   disambiguates -- without it the VS key is not unique.
+#   disambiguates — without it the VS key is not unique.
 
 devtools::load_all(quiet = TRUE)
 

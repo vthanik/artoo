@@ -84,7 +84,7 @@ test_that("a large vector with mixed values round-trips", {
 })
 
 # ---- external oracle: published IBM System/370 hex-float constants ----------
-# Big-endian 8-byte IBM-370 representations, independent of artoo's code -- a
+# Big-endian 8-byte IBM-370 representations, independent of artoo's code — a
 # symmetric encode/decode bug cannot satisfy these fixed bytes.
 
 test_that(".ieee_to_ibm matches the published IBM-370 hex constants", {

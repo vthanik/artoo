@@ -1,4 +1,4 @@
-# codec_json.R -- the CDISC Dataset-JSON v1.1 codec.
+# codec_json.R — the CDISC Dataset-JSON v1.1 codec.
 #
 # Dataset-JSON is the native home of artoo's metadata shape: the file IS the
 # serialized artoo_meta plus a flat `rows` array (array-of-arrays, row-major).
@@ -92,7 +92,7 @@
   }
 
   # Streaming write: the metadata head is serialized once (digits = I(17),
-  # the guaranteed IEEE-754 round-trip precision -- digits = NA delegated to
+  # the guaranteed IEEE-754 round-trip precision — digits = NA delegated to
   # R's 15-digit default, which silently lost the last ulp), then the rows
   # are streamed in slabs of per-column JSON literals (.json_stream_rows), so
   # a multi-million-row frame never materializes an O(rows x cols) cell list.
@@ -136,7 +136,7 @@
 # ---- decode helpers ---------------------------------------------------------
 
 # Pull one typed extractor over a list of parsed JSON cells (NULL -> typed NA).
-# A single vapply per column (plan 9.A.6) -- never the per-cell-per-column loop
+# A single vapply per column (plan 9.A.6) — never the per-cell-per-column loop
 # the archived reader used.
 #' @noRd
 .json_extract_num <- function(vals) {
@@ -178,7 +178,7 @@
       }
     }
     # Numbers are SAS-epoch values and realize to the R class; ISO text
-    # stays text -- with no numeric targetDataType, text IS the recorded
+    # stays text — with no numeric targetDataType, text IS the recorded
     # storage form (--DTC), and partials make a silent promotion to Date
     # impossible anyway.
     if (!use_num) {

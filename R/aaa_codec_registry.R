@@ -1,4 +1,4 @@
-# aaa_codec_registry.R -- the codec registry, loaded early (aaa_ prefix).
+# aaa_codec_registry.R — the codec registry, loaded early (aaa_ prefix).
 #
 # Each format is a codec: a record with an `encode`/`decode` pair (written
 # against the S7 artoo_meta), the file extensions it claims, and a read/write
@@ -10,7 +10,7 @@
 .artoo_codecs <- new.env(parent = emptyenv())
 
 # Register a codec. `encode` and `decode` are the NAMES of the two contract
-# functions -- `encode(x, meta, path, <codec args>, call) -> invisible(path)`
+# functions — `encode(x, meta, path, <codec args>, call) -> invisible(path)`
 # and `decode(path, <codec args>, call) -> list(data, meta)`. Codecs take NO
 # `...`: the dispatchers forward user arguments plus `call =` verbatim, so an
 # argument a codec does not declare is a loud "unused argument" error, and

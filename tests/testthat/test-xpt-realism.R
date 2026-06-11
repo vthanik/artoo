@@ -30,7 +30,7 @@ test_that("AE round-trips through every format losslessly", {
     back <- read_dataset(p, format = fmt)
     # expect_lossless normalizes the redundant "." tag the xpt reader places
     # on every numeric missing (a "." is an ordinary null; json/parquet drop
-    # it, which is correct) -- values, real tags, and meta must all match.
+    # it, which is correct) — values, real tags, and meta must all match.
     expect_lossless(ae, back, via = fmt)
   }
 })
