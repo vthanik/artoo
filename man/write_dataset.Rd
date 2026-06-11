@@ -40,7 +40,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() attaches the metadata; write_dataset() carries it into the
 # file so a later read is lossless.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 path <- tempfile(fileext = ".rds")
 write_dataset(adsl, path)
 

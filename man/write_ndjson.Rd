@@ -45,7 +45,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() attaches the metadata; write_ndjson() streams the metadata
 # line and one row per line.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 path <- tempfile(fileext = ".ndjson")
 write_ndjson(adsl, path)
 readLines(path, n = 2)[2]

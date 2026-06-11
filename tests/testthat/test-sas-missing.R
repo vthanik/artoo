@@ -184,7 +184,7 @@ test_that("tags survive apply_spec conformance", {
     )
   )
   df <- .tagged_frame()
-  out <- apply_spec(df, spec, "AE", on_error = "off")
+  out <- apply_spec(df, spec, "AE", conformance = "off")
   expect_identical(
     attr(out$AENDY, "sas_missing"),
     c(NA, ".A", "._", NA, ".Z")

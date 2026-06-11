@@ -8,7 +8,7 @@ apply_spec(
   x,
   spec,
   dataset,
-  on_error = c("warn", "abort", "off"),
+  conformance = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
   on_lossy = c("error", "warn"),
@@ -16,6 +16,7 @@ apply_spec(
   ignore_case = FALSE,
   na_position = c("first", "last"),
   steps = NULL,
+  profile = NULL,
   checks = NULL
 )
 }
@@ -26,15 +27,18 @@ apply_spec(
 
 \item{dataset}{\emph{The dataset whose rules apply.} \verb{<character(1)>: required}. Must name a dataset in \code{spec}.}
 
-\item{on_error}{\emph{What to do with conformance findings.} \verb{<character(1)>}.
-One of:
+\item{conformance}{\emph{What to do with conformance findings.}
+\verb{<character(1)>}. One of:
 \itemize{
-\item \code{"warn"} (default) run \code{\link[=check_spec]{check_spec()}}, attach the findings, warn on
-any error-severity finding.
+\item \code{"warn"} (default) run \code{\link[=check_spec]{check_spec()}}, attach the findings (read
+them with \code{\link[=conformance]{conformance()}}), warn on any error-severity finding.
 \item \code{"abort"} abort with \code{vport_error_conformance} on any error-severity
 finding.
 \item \code{"off"} skip the check entirely.
-}}
+}
+
+\strong{Note:} this governs only the \emph{findings} disposition; pipeline
+errors (an unknown dataset, lossy coercion under \code{on_lossy = "error"}) abort regardless.}
 
 \item{decode}{\emph{Codelist translation direction.} \verb{<character(1)>}. One of
 \code{"none"} (default, no transform), \code{"to_decode"} (code -> decode), or
@@ -82,16 +86,25 @@ When \code{NULL} (default) every step runs; otherwise any of
 \code{"scaffold"}, \code{"drop"}, \code{"coerce"}, \code{"decode"}, \code{"order"}, \code{"sort"},
 \code{"stamp"}, applied in their canonical order.
 
-\strong{Tip:} omit \code{"stamp"} to conform without attaching metadata.}
+\strong{Tip:} omit \code{"stamp"} to conform without attaching metadata.
+\strong{Interaction:} mutually exclusive with \code{profile}.}
+
+\item{profile}{\emph{A named preset of pipeline steps.} \verb{<character(1)> | NULL}. \code{NULL} (default) runs the full pipeline. \code{"xportr"} reproduces
+the legacy metacore + metatools + xportr shape -- drop, order, sort,
+stamp; no scaffolding, no type coercion, no decode -- for teams
+matching an existing pipeline's output during migration.
+
+\strong{Interaction:} mutually exclusive with \code{steps} (a profile \emph{is} a
+steps preset; supplying both aborts).}
 
 \item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<vport_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
 \code{\link[=vport_checks]{vport_checks()}} control to disable some. Has no effect when
-\code{on_error = "off"}.}
+\code{conformance = "off"}.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{vport_meta} (read it with
-\code{\link[=get_meta]{get_meta()}}) and a \code{vport.conformance} attribute when \code{on_error} ran.
-Hand it to any \verb{write_*()} codec.
+\code{\link[=get_meta]{get_meta()}}) and, unless \code{conformance = "off"}, the findings frame
+\code{\link[=conformance]{conformance()}} reads back. Hand it to any \verb{write_*()} codec.
 }
 \description{
 Run the ordered, transactional vport pipeline that turns a raw analysis

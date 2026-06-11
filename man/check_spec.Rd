@@ -46,7 +46,7 @@ rule catalog.
 \details{
 \strong{Findings, not enforcement.} \code{check_spec()} never modifies data; it
 returns every divergence it finds. \code{\link[=apply_spec]{apply_spec()}} runs it and decides what
-to do via its \code{on_error} argument (warn, abort, off). The dimensions
+to do via its \code{conformance} argument (warn, abort, off). The dimensions
 checked are: missing variables (split into mandatory, an error, and
 permissible, a warning), extra variables (data column the spec does not
 declare), type mismatch, ISO 8601 validity of character date/datetime/time
@@ -69,7 +69,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 # against the same spec returns zero rows.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 nrow(check_spec(adsl, spec, "ADSL"))
 
 # ---- Example 2: raw data surfaces divergences ----

@@ -13,7 +13,7 @@ test_that(".format_spec renders counts and a dataset preview", {
 
 test_that(".format_meta renders dataset, records, columns, keys, preview", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   expect_snapshot(cat(vport:::.format_meta(get_meta(adsl)), sep = "\n"))
 })
 
@@ -79,7 +79,7 @@ test_that(".format_meta handles a keyed, label-less dataset", {
 
 test_that("the S7 print and format methods run", {
   spec <- demo_spec()
-  meta <- get_meta(apply_spec(cdisc_dm, spec, "DM", on_error = "off"))
+  meta <- get_meta(apply_spec(cdisc_dm, spec, "DM", conformance = "off"))
   # Dispatch fires under an installed build (covr); harmless under load_all.
   expect_output(print(spec))
   expect_output(print(meta))

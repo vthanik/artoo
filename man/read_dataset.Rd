@@ -48,7 +48,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: round-trip a dataset through rds ----
 #
 # Write a conformed dataset, then read it back; the metadata survives.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 path <- tempfile(fileext = ".rds")
 write_dataset(adsl, path)
 back <- read_dataset(path)

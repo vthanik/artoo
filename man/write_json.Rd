@@ -59,14 +59,14 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 #
 # apply_spec() attaches the metadata; write_json() serializes the full
 # itemGroup plus the data rows.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 path <- tempfile(fileext = ".json")
 write_json(adsl, path)
 
 # ---- Example 2: a frozen timestamp for reproducible bytes ----
 #
 # Fixing `created` makes two writes byte-identical.
-dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
 path2 <- tempfile(fileext = ".json")
 write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
 

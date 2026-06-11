@@ -71,7 +71,7 @@ test_that("a tall frame round-trips through every format with bounded memory", {
       stringsAsFactors = FALSE
     )
   )
-  conf <- apply_spec(df, spec, "LB", on_error = "off")
+  conf <- apply_spec(df, spec, "LB", conformance = "off")
 
   for (fmt in .full_formats_stress()) {
     p <- withr::local_tempfile(fileext = paste0(".", fmt))

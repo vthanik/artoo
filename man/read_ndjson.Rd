@@ -41,7 +41,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: round-trip a conformed dataset through NDJSON ----
 #
 # The variable labels, types, and keys survive the round-trip.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 path <- tempfile(fileext = ".ndjson")
 write_ndjson(adsl, path)
 back <- read_ndjson(path)

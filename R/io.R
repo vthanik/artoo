@@ -93,7 +93,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_dataset() carries it into the
 #' # file so a later read is lossless.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_dataset(adsl, path)
 #'
@@ -176,7 +176,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #' # ---- Example 1: round-trip a dataset through rds ----
 #' #
 #' # Write a conformed dataset, then read it back; the metadata survives.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_dataset(adsl, path)
 #' back <- read_dataset(path)

@@ -1,0 +1,163 @@
+# decode_column(): single-variable codelist translation -- the
+# metatools::create_var_from_codelist() shape driven by the vport_spec.
+# Shares .map_codelist_values() with apply_spec()'s decode step, so the
+# policies (no_match, trim, ignore_case) behave identically.
+
+demo_spec <- function() {
+  vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+}
+
+# Spec extended with a numeric coded variable (the RACEN pattern): SEXN is
+# integer, owning a codelist whose terms are codes and decodes are SEX values.
+sexn_spec <- function() {
+  vars <- rbind(
+    cdisc_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "SEXN",
+      label = "Sex (N)",
+      data_type = "integer",
+      length = 8L,
+      order = NA_integer_,
+      codelist_id = "SEXN",
+      stringsAsFactors = FALSE
+    )
+  )
+  cls <- rbind(
+    cdisc_codelists,
+    data.frame(
+      codelist_id = "SEXN",
+      term = c("1", "2"),
+      decode = c("F", "M"),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  vport_spec(cdisc_datasets, vars, codelists = cls)
+}
+
+test_that("decode_column decodes into a new column, source untouched", {
+  out <- decode_column(
+    cdisc_dm,
+    demo_spec(),
+    "DM",
+    from = "SEX",
+    to = "SEXDECD"
+  )
+  expect_identical(out$SEX, cdisc_dm$SEX)
+  expect_setequal(unique(out$SEXDECD), c("Female", "Male"))
+  # New column appends; everything else is unchanged.
+  expect_identical(names(out), c(names(cdisc_dm), "SEXDECD"))
+})
+
+test_that("decode_column translates in place by default (to = from)", {
+  out <- decode_column(cdisc_dm, demo_spec(), "DM", from = "SEX")
+  expect_setequal(unique(out$SEX), c("Female", "Male"))
+})
+
+test_that("decode_column derives a coded numeric from its decode (RACEN pattern)", {
+  out <- decode_column(
+    cdisc_dm,
+    sexn_spec(),
+    "DM",
+    from = "SEX",
+    to = "SEXN",
+    direction = "to_code"
+  )
+  # Spec dataType integer -> the result is integer, not character.
+  expect_type(out$SEXN, "integer")
+  expect_identical(out$SEXN[out$SEX == "F"][1], 1L)
+  expect_identical(out$SEXN[out$SEX == "M"][1], 2L)
+  # And the spec label rides along.
+  expect_identical(attr(out$SEXN, "label"), "Sex (N)")
+})
+
+test_that("the destination's codelist wins over the source's", {
+  # SEX references C66731, SEXN references SEXN; to = SEXN must map through
+  # SEXN's pairs (F -> 1), not C66731's (F -> Female).
+  out <- decode_column(
+    cdisc_dm,
+    sexn_spec(),
+    "DM",
+    from = "SEX",
+    to = "SEXN",
+    direction = "to_code"
+  )
+  expect_true(all(out$SEXN %in% c(1L, 2L)))
+})
+
+test_that("decode_column honors the no_match policy", {
+  raw <- cdisc_dm
+  raw$SEX[1] <- "X"
+  spec <- demo_spec()
+  expect_error(
+    decode_column(raw, spec, "DM", from = "SEX", to = "SEXDECD"),
+    class = "vport_error_codelist"
+  )
+  kept <- decode_column(
+    raw,
+    spec,
+    "DM",
+    from = "SEX",
+    to = "SEXDECD",
+    no_match = "keep"
+  )
+  expect_identical(kept$SEXDECD[1], "X")
+  nad <- decode_column(
+    raw,
+    spec,
+    "DM",
+    from = "SEX",
+    to = "SEXDECD",
+    no_match = "na"
+  )
+  expect_true(is.na(nad$SEXDECD[1]))
+})
+
+test_that("decode_column soft-matches after trim and reports the variant", {
+  raw <- cdisc_dm
+  raw$SEX[1] <- "F "
+  expect_warning(
+    out <- decode_column(raw, demo_spec(), "DM", from = "SEX", to = "SEXDECD"),
+    class = "vport_warning_codelist"
+  )
+  expect_identical(out$SEXDECD[1], "Female")
+})
+
+test_that("decode_column validates its inputs loudly", {
+  spec <- demo_spec()
+  expect_error(
+    decode_column(1, spec, "DM", from = "SEX"),
+    class = "vport_error_input"
+  )
+  expect_error(
+    decode_column(cdisc_dm, spec, "DM", from = "NOPE"),
+    class = "vport_error_input"
+  )
+  expect_error(
+    decode_column(cdisc_dm, spec, "DM", from = "SEX", to = c("A", "B")),
+    class = "vport_error_input"
+  )
+  # No codelist on either end is an explicit error, not a silent no-op.
+  expect_error(
+    decode_column(cdisc_dm, spec, "DM", from = "USUBJID", to = "USUBJ2"),
+    class = "vport_error_codelist"
+  )
+  expect_snapshot(
+    error = TRUE,
+    decode_column(cdisc_dm, spec, "DM", from = "USUBJID", to = "USUBJ2")
+  )
+})
+
+test_that("decode_column round-trips with apply_spec's decode step", {
+  spec <- demo_spec()
+  via_apply <- apply_spec(
+    cdisc_dm,
+    spec,
+    "DM",
+    decode = "to_decode",
+    conformance = "off"
+  )
+  via_column <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
+  expect_identical(as.vector(via_apply$SEX), as.vector(via_column$SEX))
+})

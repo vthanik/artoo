@@ -11,7 +11,7 @@
 # apply_spec aborts on truncating coercion by default (on_lossy)
 
     Code
-      apply_spec(frac_frame(), frac_spec(), "ADVS", on_error = "off")
+      apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off")
     Condition
       Error:
       ! Coercion to the spec dataTypes would lose data.

@@ -9,7 +9,7 @@ demo_spec <- function() {
 
 test_that("apply_spec conforms ADSL and stamps metadata", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 
   expect_s3_class(adsl, "data.frame")
   # Columns are exactly the spec variables, in spec order.
@@ -23,7 +23,7 @@ test_that("apply_spec conforms ADSL and stamps metadata", {
 test_that("apply_spec scaffolds missing spec variables as typed NA", {
   spec <- demo_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "AGE"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
+  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
 
   expect_true("AGE" %in% names(out))
   expect_true(all(is.na(out$AGE)))
@@ -33,13 +33,13 @@ test_that("apply_spec drops columns the spec does not declare", {
   spec <- demo_spec()
   raw <- cdisc_adsl
   raw$NOTSPEC <- 1
-  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
+  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
   expect_false("NOTSPEC" %in% names(out))
 })
 
 test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guard)", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 
   expect_s3_class(adsl$TRTSDT, "Date")
   # Deflating to SAS days must use the 1960 epoch, not the R 1970 epoch:
@@ -55,7 +55,7 @@ test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
   # storage rule that is ISO 8601 text, so the scaffold is character NA.
   spec <- demo_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", on_error = "off")
+  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
   expect_type(out$TRTSDT, "character")
   expect_true(all(is.na(out$TRTSDT)))
 })
@@ -63,7 +63,7 @@ test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
 test_that("apply_spec does not mutate its input (transactional)", {
   spec <- demo_spec()
   before <- cdisc_adsl
-  apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   expect_identical(cdisc_adsl, before)
 })
 
@@ -102,7 +102,7 @@ test_that("apply_spec validates x and dataset", {
 
 test_that("decode = none leaves coded values untouched", {
   spec <- demo_spec()
-  out <- apply_spec(cdisc_dm, spec, "DM", decode = "none", on_error = "off")
+  out <- apply_spec(cdisc_dm, spec, "DM", decode = "none", conformance = "off")
   raw_sorted <- apply_spec(
     cdisc_dm,
     spec,
@@ -116,7 +116,7 @@ test_that("decode = none leaves coded values untouched", {
 
 test_that("check_spec returns the canonical empty shape on conformance", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   res <- check_spec(adsl, spec, "ADSL")
   expect_identical(
     names(res),
@@ -149,7 +149,7 @@ test_that("apply_spec check = strict aborts on an error finding", {
   raw <- cdisc_dm
   raw$USUBJID <- NULL # forces a missing_variable error
   expect_error(
-    apply_spec(raw, spec, "DM", on_error = "abort", steps = c("coerce")),
+    apply_spec(raw, spec, "DM", conformance = "abort", steps = c("coerce")),
     class = "vport_error_conformance"
   )
 })
@@ -164,7 +164,7 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   raw <- cdisc_dm
   raw$SEX[1] <- "Z{oops"
   expect_error(
-    apply_spec(raw, spec, "DM", on_error = "abort"),
+    apply_spec(raw, spec, "DM", conformance = "abort"),
     class = "vport_error_conformance"
   )
 })
@@ -176,11 +176,11 @@ test_that("truncating integer coercion aborts by default, warns under on_lossy (
   raw <- cdisc_dm
   raw$AGE[1] <- raw$AGE[1] + 0.7
   expect_error(
-    apply_spec(raw, spec, "DM", on_error = "off"),
+    apply_spec(raw, spec, "DM", conformance = "off"),
     class = "vport_error_type"
   )
   expect_warning(
-    apply_spec(raw, spec, "DM", on_error = "off", on_lossy = "warn"),
+    apply_spec(raw, spec, "DM", conformance = "off", on_lossy = "warn"),
     class = "vport_warning_coercion"
   )
 })
@@ -223,17 +223,50 @@ test_that("integer overflow under coercion is named precisely", {
   df <- data.frame(SUBJN = c(1, 9999999999))
   # Overflow is lossy (values become NA): abort by default, named precisely.
   expect_error(
-    apply_spec(df, spec, "DM", on_error = "off"),
+    apply_spec(df, spec, "DM", conformance = "off"),
     class = "vport_error_type",
     regexp = "overflow"
   )
   # Opting out keeps the old two-warning behavior (lossy + NA-introduction).
   expect_warning(
     expect_warning(
-      out <- apply_spec(df, spec, "DM", on_error = "off", on_lossy = "warn"),
+      out <- apply_spec(df, spec, "DM", conformance = "off", on_lossy = "warn"),
       class = "vport_warning_coercion"
     ),
     class = "vport_warning_coercion"
   )
   expect_identical(as.vector(out$SUBJN), c(1L, NA))
+})
+
+# ---- profile presets ---------------------------------------------------------
+
+test_that("profile = 'xportr' runs drop/order/sort/stamp without coercion", {
+  spec <- demo_spec()
+  raw <- cdisc_dm
+  raw$AGE <- as.character(raw$AGE) # would be coerced by the full pipeline
+  raw$NOTSPEC <- 1
+  out <- apply_spec(raw, spec, "DM", profile = "xportr", conformance = "off")
+  # drop ran; coerce did not; stamp did.
+  expect_false("NOTSPEC" %in% names(out))
+  expect_type(out$AGE, "character")
+  expect_true(is_vport_meta(get_meta(out)))
+  # scaffold did not run: a spec variable absent from raw stays absent.
+  missing_var <- setdiff(spec_variables(spec, "DM")$variable, names(raw))[1]
+  expect_false(missing_var %in% names(out))
+})
+
+test_that("profile and steps are mutually exclusive, unknown profile aborts", {
+  spec <- demo_spec()
+  expect_error(
+    apply_spec(cdisc_dm, spec, "DM", profile = "xportr", steps = "drop"),
+    class = "vport_error_input"
+  )
+  expect_error(
+    apply_spec(cdisc_dm, spec, "DM", profile = "metacore"),
+    class = "vport_error_input"
+  )
+  expect_snapshot(
+    error = TRUE,
+    apply_spec(cdisc_dm, spec, "DM", profile = "metacore")
+  )
 })

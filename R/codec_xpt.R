@@ -1523,7 +1523,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_xpt() carries the label, length,
 #' # and SAS format for each variable into the transport file.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".xpt")
 #' write_xpt(adsl, path)
 #'
@@ -1531,7 +1531,7 @@
 #' #
 #' # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
 #' # reproducible.
-#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+#' dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
 #' path8 <- tempfile(fileext = ".xpt")
 #' write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
 #'
@@ -1602,7 +1602,7 @@ write_xpt <- function(
 #' # ---- Example 1: round-trip a conformed dataset through xpt ----
 #' #
 #' # Write ADSL, read it back; the variable labels and lengths survive.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".xpt")
 #' write_xpt(adsl, path)
 #' back <- read_xpt(path)
@@ -1612,7 +1612,7 @@ write_xpt <- function(
 #' #
 #' # Build a two-member file by concatenating two single-member files (every
 #' # member section is 80-byte padded), then read one dataset out of it.
-#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+#' dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
 #' p_dm <- tempfile(fileext = ".xpt")
 #' write_xpt(dm, p_dm)
 #' multi <- tempfile(fileext = ".xpt")
@@ -1673,7 +1673,7 @@ read_xpt <- function(
 #' # ---- Example 1: a single-member file reports one row ----
 #' #
 #' # The FDA convention is one dataset per transport file.
-#' dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+#' dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
 #' p <- tempfile(fileext = ".xpt")
 #' write_xpt(dm, p)
 #' xpt_members(p)
@@ -1681,7 +1681,7 @@ read_xpt <- function(
 #' # ---- Example 2: survey a multi-member file, then read one member ----
 #' #
 #' # Concatenate two single-member files into one library and list it.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' p2 <- tempfile(fileext = ".xpt")
 #' write_xpt(adsl, p2)
 #' multi <- tempfile(fileext = ".xpt")

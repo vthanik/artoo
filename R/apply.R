@@ -69,13 +69,17 @@
 #' @param spec *The specification to conform to.* `<vport_spec>: required`.
 #' @param dataset *The dataset whose rules apply.* `<character(1)>:
 #'   required`. Must name a dataset in `spec`.
-#' @param on_error *What to do with conformance findings.* `<character(1)>`.
-#'   One of:
-#'   * `"warn"` (default) run [check_spec()], attach the findings, warn on
-#'     any error-severity finding.
+#' @param conformance *What to do with conformance findings.*
+#'   `<character(1)>`. One of:
+#'   * `"warn"` (default) run [check_spec()], attach the findings (read
+#'     them with [conformance()]), warn on any error-severity finding.
 #'   * `"abort"` abort with `vport_error_conformance` on any error-severity
 #'     finding.
 #'   * `"off"` skip the check entirely.
+#'
+#'   **Note:** this governs only the *findings* disposition; pipeline
+#'   errors (an unknown dataset, lossy coercion under `on_lossy =
+#'   "error"`) abort regardless.
 #' @param decode *Codelist translation direction.* `<character(1)>`. One of
 #'   `"none"` (default, no transform), `"to_decode"` (code -> decode), or
 #'   `"to_code"` (decode -> code).
@@ -115,14 +119,23 @@
 #'   `"stamp"`, applied in their canonical order.
 #'
 #'   **Tip:** omit `"stamp"` to conform without attaching metadata.
+#'   **Interaction:** mutually exclusive with `profile`.
+#' @param profile *A named preset of pipeline steps.* `<character(1)> |
+#'   NULL`. `NULL` (default) runs the full pipeline. `"xportr"` reproduces
+#'   the legacy metacore + metatools + xportr shape -- drop, order, sort,
+#'   stamp; no scaffolding, no type coercion, no decode -- for teams
+#'   matching an existing pipeline's output during migration.
+#'
+#'   **Interaction:** mutually exclusive with `steps` (a profile *is* a
+#'   steps preset; supplying both aborts).
 #' @param checks *Which conformance dimensions to evaluate.* `<vport_checks>
 #'   | NULL`. When `NULL` (default) every dimension runs; pass a
 #'   [vport_checks()] control to disable some. Has no effect when
-#'   `on_error = "off"`.
+#'   `conformance = "off"`.
 #'
 #' @return *A conformed `<data.frame>`* carrying `vport_meta` (read it with
-#'   [get_meta()]) and a `vport.conformance` attribute when `on_error` ran.
-#'   Hand it to any `write_*()` codec.
+#'   [get_meta()]) and, unless `conformance = "off"`, the findings frame
+#'   [conformance()] reads back. Hand it to any `write_*()` codec.
 #'
 #' @examples
 #' spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -148,7 +161,7 @@ apply_spec <- function(
   x,
   spec,
   dataset,
-  on_error = c("warn", "abort", "off"),
+  conformance = c("warn", "abort", "off"),
   decode = c("none", "to_decode", "to_code"),
   no_match = c("error", "keep", "na"),
   on_lossy = c("error", "warn"),
@@ -156,14 +169,40 @@ apply_spec <- function(
   ignore_case = FALSE,
   na_position = c("first", "last"),
   steps = NULL,
+  profile = NULL,
   checks = NULL
 ) {
   call <- rlang::caller_env()
-  on_error <- match.arg(on_error)
+  conformance <- match.arg(conformance)
   decode <- match.arg(decode)
   no_match <- match.arg(no_match)
   on_lossy <- match.arg(on_lossy)
   na_position <- match.arg(na_position)
+  if (!is.null(profile)) {
+    if (!is.null(steps)) {
+      cli::cli_abort(
+        c(
+          "{.arg profile} and {.arg steps} are mutually exclusive.",
+          "i" = "A profile is a steps preset; pick one."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+    if (
+      !is.character(profile) || length(profile) != 1L || !profile %in% "xportr"
+    ) {
+      cli::cli_abort(
+        c(
+          "{.arg profile} must be {.val xportr} or NULL.",
+          "x" = "You supplied {.obj_type_friendly {profile}}."
+        ),
+        class = "vport_error_input",
+        call = call
+      )
+    }
+    steps <- switch(profile, xportr = c("drop", "order", "sort", "stamp"))
+  }
   for (flag in c("trim", "ignore_case")) {
     fv <- get(flag)
     if (!is.logical(fv) || length(fv) != 1L || is.na(fv)) {
@@ -225,7 +264,7 @@ apply_spec <- function(
     out <- .stamp_meta(out, info, spec, dataset, call)
   }
 
-  if (on_error != "off") {
+  if (conformance != "off") {
     findings <- check_spec(out, spec, dataset, decode = decode, checks = checks)
     attr(out, "vport.conformance") <- findings
     errs <- findings[findings$severity == "error", , drop = FALSE]
@@ -238,13 +277,13 @@ apply_spec <- function(
         "Data does not conform to the spec for {.val {dataset}}.",
         stats::setNames(.cli_escape(shown), rep("x", length(shown)))
       )
-      if (on_error == "abort") {
+      if (conformance == "abort") {
         cli::cli_abort(msg, class = "vport_error_conformance", call = call)
       } else {
         cli::cli_warn(
           c(
             "{nrow(errs)} conformance error{?s} for {.val {dataset}}.",
-            "i" = "See the {.field vport.conformance} attribute of the returned data frame for details."
+            "i" = "Run {.code conformance(x)} on the returned frame to see every finding."
           ),
           class = "vport_warning_conformance",
           call = call

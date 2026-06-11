@@ -232,7 +232,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_ndjson() streams the metadata
 #' # line and one row per line.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".ndjson")
 #' write_ndjson(adsl, path)
 #' readLines(path, n = 2)[2]
@@ -274,7 +274,7 @@ write_ndjson <- function(x, path, created = NULL, strict = FALSE) {
 #' # ---- Example 1: round-trip a conformed dataset through NDJSON ----
 #' #
 #' # The variable labels, types, and keys survive the round-trip.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".ndjson")
 #' write_ndjson(adsl, path)
 #' back <- read_ndjson(path)

@@ -76,7 +76,7 @@
 #' # ---- Example 1: write a conformed dataset to rds ----
 #' #
 #' # apply_spec() attaches the metadata; write_rds() carries it into the file.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_rds(adsl, path)
 #'
@@ -116,7 +116,7 @@ write_rds <- function(x, path, encoding = NULL) {
 #' # ---- Example 1: read a dataset written by write_rds() ----
 #' #
 #' # The restored frame carries the same metadata it was written with.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".rds")
 #' write_rds(adsl, path)
 #' back <- read_rds(path)

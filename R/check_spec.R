@@ -6,7 +6,7 @@
 # catalog-driven .finding() (findings.R), so it emits the same 6-column shape
 # as validate_spec() and its severities come from the same rule catalog. It is
 # distinct from validate_spec(), which checks the spec's own integrity (engine
-# == "spec"). apply_spec(on_error=) runs this and attaches the result.
+# == "spec"). apply_spec(conformance=) runs this and attaches the result.
 
 #' Check a dataset against its spec
 #'
@@ -21,7 +21,7 @@
 #' @details
 #' **Findings, not enforcement.** `check_spec()` never modifies data; it
 #' returns every divergence it finds. [apply_spec()] runs it and decides what
-#' to do via its `on_error` argument (warn, abort, off). The dimensions
+#' to do via its `conformance` argument (warn, abort, off). The dimensions
 #' checked are: missing variables (split into mandatory, an error, and
 #' permissible, a warning), extra variables (data column the spec does not
 #' declare), type mismatch, ISO 8601 validity of character date/datetime/time
@@ -63,7 +63,7 @@
 #' #
 #' # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 #' # against the same spec returns zero rows.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' nrow(check_spec(adsl, spec, "ADSL"))
 #'
 #' # ---- Example 2: raw data surfaces divergences ----
@@ -438,7 +438,7 @@ check_spec <- function(
     }
   }
 
-  .bind_findings(found)
+  .as_vport_findings(.bind_findings(found))
 }
 
 # XPORT naming problems for a vector of names: returns a named character

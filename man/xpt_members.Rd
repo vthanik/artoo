@@ -34,7 +34,7 @@ spec <- vport_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 # ---- Example 1: a single-member file reports one row ----
 #
 # The FDA convention is one dataset per transport file.
-dm <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
 xpt_members(p)
@@ -42,7 +42,7 @@ xpt_members(p)
 # ---- Example 2: survey a multi-member file, then read one member ----
 #
 # Concatenate two single-member files into one library and list it.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 p2 <- tempfile(fileext = ".xpt")
 write_xpt(adsl, p2)
 multi <- tempfile(fileext = ".xpt")

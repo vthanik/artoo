@@ -63,7 +63,7 @@ test_that("apply_spec threads checks through to the conformance step", {
       "DM",
       decode = "none",
       no_match = "error",
-      on_error = "warn",
+      conformance = "warn",
       checks = vport_checks(codelist_membership = FALSE)
     )
   )
@@ -171,7 +171,7 @@ test_that("check_spec(decode=) compares against the matching codelist column (1d
     spec,
     "DM",
     decode = "to_decode",
-    on_error = "off"
+    conformance = "off"
   )
   # Checked with the same decode direction: the decoded values are members.
   f_ok <- check_spec(dec, spec, "DM", decode = "to_decode")
@@ -184,7 +184,7 @@ test_that("check_spec(decode=) compares against the matching codelist column (1d
 test_that("apply_spec threads decode so a clean decode does not warn (1d)", {
   spec <- demo_spec()
   expect_silent(
-    apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", on_error = "warn")
+    apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", conformance = "warn")
   )
 })
 

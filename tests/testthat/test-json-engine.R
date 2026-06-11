@@ -44,7 +44,7 @@ test_that("the literal engine reproduces the demo goldens byte for byte", {
       if (ds == "DM") cdisc_dm else cdisc_adsl,
       spec,
       ds,
-      on_error = "off"
+      conformance = "off"
     )
     p <- withr::local_tempfile(fileext = ".json")
     write_json(src, p, created = frozen)

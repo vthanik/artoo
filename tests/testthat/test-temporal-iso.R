@@ -40,7 +40,7 @@ dtc_frame <- function() {
 
 test_that("write_xpt writes a character ISO date column as text (BRTHDTC regression)", {
   spec <- dtc_spec()
-  dm <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
 
   # apply_spec must NOT promote ISO text to Date: no targetDataType.
   expect_type(dm$BRTHDTC, "character")
@@ -59,7 +59,7 @@ test_that("write_xpt writes a character ISO date column as text (BRTHDTC regress
 
 test_that("ISO-text xpt variables carry no SAS temporal display format", {
   spec <- dtc_spec()
-  dm <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p)
   back <- read_xpt(p)
@@ -69,7 +69,7 @@ test_that("ISO-text xpt variables carry no SAS temporal display format", {
 
 test_that("targetDataType = integer still demands numeric storage and aborts on partials", {
   spec <- dtc_spec(target = "integer")
-  dm <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   # Partials cannot realize -> column stays character; the write must fail
   # loud (never a silent garbage date), with the actionable hint.
   p <- withr::local_tempfile(fileext = ".xpt")
@@ -87,7 +87,7 @@ test_that("targetDataType = integer realizes complete ISO text to Date and write
     "2014-01-04T09:15:00",
     NA
   )
-  dm <- apply_spec(complete, spec, "DM", on_error = "off")
+  dm <- apply_spec(complete, spec, "DM", conformance = "off")
   expect_s3_class(dm$BRTHDTC, "Date")
   expect_s3_class(dm$RFSTDTC, "POSIXct")
 
@@ -102,7 +102,7 @@ test_that("targetDataType = integer realizes complete ISO text to Date and write
 
 test_that("character ISO --DTC stays text across json, ndjson, and rds", {
   spec <- dtc_spec()
-  dm <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   for (ext in c(".json", ".ndjson", ".rds")) {
     p <- withr::local_tempfile(fileext = ext)
     write_dataset(dm, p)
@@ -119,7 +119,7 @@ test_that("character ISO --DTC stays text across json, ndjson, and rds", {
 test_that("character ISO --DTC stays text through parquet", {
   skip_if_not_installed("nanoparquet")
   spec <- dtc_spec()
-  dm <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(dm, p)
   back <- read_parquet(p)
@@ -136,7 +136,7 @@ test_that("a Date column without spec targetDataType gets integer stamped at app
     cdisc_variables,
     codelists = cdisc_codelists
   )
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   m <- get_meta(adsl)
   expect_identical(m@columns$TRTSDT$targetDataType, "integer")
   expect_s3_class(adsl$TRTSDT, "Date")
@@ -155,7 +155,7 @@ test_that("xpt read records targetDataType = integer for numeric temporals", {
     cdisc_variables,
     codelists = cdisc_codelists
   )
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, p)
   back <- read_xpt(p)
@@ -170,7 +170,7 @@ test_that("scaffolded temporal variables honor the storage form", {
     data.frame(USUBJID = "01-001", stringsAsFactors = FALSE),
     spec,
     "DM",
-    on_error = "off"
+    conformance = "off"
   )
   expect_type(out$BRTHDTC, "character")
   expect_true(is.na(out$BRTHDTC))
@@ -180,7 +180,7 @@ test_that("scaffolded temporal variables honor the storage form", {
     data.frame(USUBJID = "01-001", stringsAsFactors = FALSE),
     spec_num,
     "DM",
-    on_error = "off"
+    conformance = "off"
   )
   expect_type(out_num$BRTHDTC, "double")
 })
@@ -238,7 +238,7 @@ test_that("iso8601_format rejects non-ISO and impossible values", {
 
 test_that("check_spec flags invalid ISO text and passes valid partials", {
   spec <- dtc_spec()
-  good <- apply_spec(dtc_frame(), spec, "DM", on_error = "off")
+  good <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   f <- check_spec(good, spec, "DM")
   expect_false("iso8601_format" %in% f$check)
   # And no type_mismatch: character IS the storage form for text temporals.
@@ -246,7 +246,7 @@ test_that("check_spec flags invalid ISO text and passes valid partials", {
 
   bad <- dtc_frame()
   bad$BRTHDTC[1] <- "03DEC1951"
-  badc <- apply_spec(bad, spec, "DM", on_error = "off")
+  badc <- apply_spec(bad, spec, "DM", conformance = "off")
   f2 <- check_spec(badc, spec, "DM")
   row <- f2[f2$check == "iso8601_format", ]
   expect_identical(nrow(row), 1L)
@@ -286,12 +286,12 @@ test_that("check_spec pre-flights fractional values under an integer dataType", 
 
 test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
   expect_error(
-    apply_spec(frac_frame(), frac_spec(), "ADVS", on_error = "off"),
+    apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off"),
     class = "vport_error_type"
   )
   expect_snapshot(
     error = TRUE,
-    apply_spec(frac_frame(), frac_spec(), "ADVS", on_error = "off")
+    apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off")
   )
   # Opt out: the old warning behavior.
   expect_warning(
@@ -299,7 +299,7 @@ test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
       frac_frame(),
       frac_spec(),
       "ADVS",
-      on_error = "off",
+      conformance = "off",
       on_lossy = "warn"
     ),
     class = "vport_warning_coercion"
@@ -314,7 +314,7 @@ test_that("on_lossy = error also covers 32-bit overflow", {
   )
   big <- data.frame(BIGN = 3e9)
   expect_error(
-    apply_spec(big, spec, "X", on_error = "off"),
+    apply_spec(big, spec, "X", conformance = "off"),
     class = "vport_error_type"
   )
 })

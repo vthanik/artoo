@@ -255,7 +255,7 @@
 #' #
 #' # apply_spec() attaches the metadata; write_parquet() stores the data
 #' # natively and the metadata as a CDISC-shaped sidecar.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".parquet")
 #' write_parquet(adsl, path)
 #'
@@ -303,7 +303,7 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #' # ---- Example 1: round-trip a conformed dataset through Parquet ----
 #' #
 #' # The variable labels, types, and keys survive the round-trip.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' path <- tempfile(fileext = ".parquet")
 #' write_parquet(adsl, path)
 #' back <- read_parquet(path)

@@ -640,7 +640,7 @@ set_meta <- function(x, meta) {
 #' #
 #' # Base subsetting drops the metadata; capture it first, transform, then
 #' # sync. The metadata narrows to the kept columns and the new row count.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 #' meta <- get_meta(adsl)
 #' elderly <- adsl[adsl$AGE > 65, c("STUDYID", "USUBJID", "AGE")]
 #' synced <- sync_meta(elderly, meta)

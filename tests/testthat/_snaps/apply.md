@@ -26,3 +26,12 @@
       x "NOPE" is not in the spec.
       i Available: "ADSL" and "DM".
 
+# profile and steps are mutually exclusive, unknown profile aborts
+
+    Code
+      apply_spec(cdisc_dm, spec, "DM", profile = "metacore")
+    Condition
+      Error:
+      ! `profile` must be "xportr" or NULL.
+      x You supplied a string.
+

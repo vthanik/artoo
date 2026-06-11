@@ -224,6 +224,82 @@
   x
 }
 
+# The ONE codelist value-mapper, shared by apply_spec()'s decode step and
+# decode_column(). Maps a column's values through a codelist's term/decode
+# pairs in either direction, with the trim/case soft-match (reported, never
+# silent) and the explicit no-match policy. Returns the mapped character
+# vector; attribute handling stays with the callers.
+#' @noRd
+.map_codelist_values <- function(
+  col,
+  cl,
+  direction,
+  no_match,
+  trim,
+  ignore_case,
+  var,
+  clid,
+  call = rlang::caller_env()
+) {
+  from <- if (direction == "to_decode") cl$term else cl$decode
+  to <- if (direction == "to_decode") cl$decode else cl$term
+  chr <- as.character(col)
+  idx <- match(chr, from)
+  # Real data carries trailing whitespace (trim = TRUE, the default) and
+  # sometimes case variants (ignore_case, opt-in). A value that matches
+  # only after normalization maps, but the variants are reported
+  # (vport_warning_codelist) -- a normalized match is still a CT finding
+  # for check_spec(), which always compares exactly.
+  norm <- function(s) {
+    if (trim) {
+      s <- trimws(s)
+    }
+    if (ignore_case) {
+      s <- toupper(s)
+    }
+    s
+  }
+  soft <- is.na(idx) & !is.na(chr)
+  if ((trim || ignore_case) && any(soft)) {
+    idx2 <- match(norm(chr), norm(from))
+    gained <- soft & !is.na(idx2)
+    if (any(gained)) {
+      idx[gained] <- idx2[gained]
+      variants <- unique(chr[gained])
+      cli::cli_warn(
+        c(
+          "Mapped {sum(gained)} value{?s} in {.var {var}} after trim/case normalization.",
+          "i" = "Variant{?s}: {.val {variants}}.",
+          "i" = "check_spec() still compares exactly; clean the source values for submission."
+        ),
+        class = "vport_warning_codelist",
+        call = call
+      )
+    }
+  }
+  out <- to[idx]
+  unmatched <- !is.na(chr) & is.na(idx)
+  if (any(unmatched)) {
+    if (no_match == "error") {
+      bad <- unique(chr[unmatched])
+      cli::cli_abort(
+        c(
+          "Values in {.var {var}} are not in codelist {.val {clid}}.",
+          "x" = "Unmatched: {.val {bad[seq_len(min(5L, length(bad)))]}}.",
+          "i" = "Set {.code no_match = \"keep\"} or {.code \"na\"} to allow them."
+        ),
+        class = "vport_error_codelist",
+        call = call
+      )
+    } else if (no_match == "keep") {
+      out[unmatched] <- chr[unmatched]
+    }
+    # no_match == "na": leave `out` NA at unmatched positions.
+  }
+  out[is.na(chr)] <- NA
+  out
+}
+
 # 4. Optionally translate coded values via the spec codelists. Default
 # `decode = "none"` is a no-op: apply_spec() keeps submission-coded values
 # and leaves membership to check_spec(). "to_decode" maps code -> decode,
@@ -252,62 +328,17 @@
     # spec_codelists() aborts on an unresolved id (and construction already
     # guarantees resolution), so the rows are always non-empty here.
     cl <- spec_codelists(spec, clid)
-    from <- if (decode == "to_decode") cl$term else cl$decode
-    to <- if (decode == "to_decode") cl$decode else cl$term
-    col <- as.character(x[[v]])
-    idx <- match(col, from)
-    # Real data carries trailing whitespace (trim = TRUE, the default) and
-    # sometimes case variants (ignore_case, opt-in). A value that matches
-    # only after normalization decodes, but the variants are reported
-    # (vport_warning_codelist) -- a normalized match is still a CT finding
-    # for check_spec(), which always compares exactly.
-    norm <- function(s) {
-      if (trim) {
-        s <- trimws(s)
-      }
-      if (ignore_case) {
-        s <- toupper(s)
-      }
-      s
-    }
-    soft <- is.na(idx) & !is.na(col)
-    if ((trim || ignore_case) && any(soft)) {
-      idx2 <- match(norm(col), norm(from))
-      gained <- soft & !is.na(idx2)
-      if (any(gained)) {
-        idx[gained] <- idx2[gained]
-        variants <- unique(col[gained])
-        cli::cli_warn(
-          c(
-            "Decoded {sum(gained)} value{?s} in {.var {v}} after trim/case normalization.",
-            "i" = "Variant{?s}: {.val {variants}}.",
-            "i" = "check_spec() still compares exactly; clean the source values for submission."
-          ),
-          class = "vport_warning_codelist",
-          call = call
-        )
-      }
-    }
-    out <- to[idx]
-    unmatched <- !is.na(col) & is.na(idx)
-    if (any(unmatched)) {
-      if (no_match == "error") {
-        bad <- unique(col[unmatched])
-        cli::cli_abort(
-          c(
-            "Values in {.var {v}} are not in codelist {.val {clid}}.",
-            "x" = "Unmatched: {.val {bad[seq_len(min(5L, length(bad)))]}}.",
-            "i" = "Set {.code no_match = \"keep\"} or {.code \"na\"} to allow them."
-          ),
-          class = "vport_error_codelist",
-          call = call
-        )
-      } else if (no_match == "keep") {
-        out[unmatched] <- col[unmatched]
-      }
-      # no_match == "na": leave `out` NA at unmatched positions.
-    }
-    out[is.na(col)] <- NA
+    out <- .map_codelist_values(
+      x[[v]],
+      cl,
+      direction = decode,
+      no_match = no_match,
+      trim = trim,
+      ignore_case = ignore_case,
+      var = v,
+      clid = clid,
+      call = call
+    )
     # Preserve non-class attributes (e.g. label); only the values change.
     old <- attributes(x[[v]])
     x[[v]] <- out

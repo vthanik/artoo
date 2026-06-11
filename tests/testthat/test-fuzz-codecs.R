@@ -22,7 +22,7 @@
       stringsAsFactors = FALSE
     )
   )
-  conf <- apply_spec(df, spec, "DM", on_error = "off")
+  conf <- apply_spec(df, spec, "DM", conformance = "off")
   fmts <- c("xpt", "json", "ndjson", "rds")
   if (requireNamespace("nanoparquet", quietly = TRUE)) {
     fmts <- c(fmts, "parquet")

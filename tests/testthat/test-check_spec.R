@@ -158,6 +158,6 @@ test_that("a conformed clean dataset still has zero findings", {
     AESEV = c("MILD", "SEVERE"),
     stringsAsFactors = FALSE
   )
-  out <- apply_spec(df, .w3_spec(), "AE", on_error = "off")
+  out <- apply_spec(df, .w3_spec(), "AE", conformance = "off")
   expect_identical(nrow(check_spec(out, .w3_spec(), "AE")), 0L)
 })

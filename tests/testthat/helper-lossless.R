@@ -128,5 +128,5 @@ expect_lossless <- function(a, b, via = "", meta = TRUE) {
   )
   attr(df$AVAL, "sas_missing") <- c(NA, ".A", NA)
   attr(df$ADT, "sas_missing") <- c(NA, ".Z", NA)
-  suppressWarnings(apply_spec(df, .torture_spec(), "TT", on_error = "off"))
+  suppressWarnings(apply_spec(df, .torture_spec(), "TT", conformance = "off"))
 }

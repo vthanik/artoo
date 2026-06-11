@@ -30,7 +30,7 @@ test_that(".codec_for_ext maps extensions to formats", {
 
 test_that("write_dataset / read_dataset resolve the format from the path", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
 
   write_dataset(adsl, path)
@@ -49,7 +49,7 @@ test_that("an unknown extension with no format aborts", {
 
 test_that("explicit format overrides the extension", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".data")
   write_dataset(adsl, path, format = "rds")
   back <- read_dataset(path, format = "rds")
@@ -62,7 +62,7 @@ test_that("rds round-trip preserves vport_meta exactly", {
   spec <- demo_spec()
   for (ds in spec_datasets(spec)) {
     src <- if (ds == "ADSL") cdisc_adsl else cdisc_dm
-    conformed <- apply_spec(src, spec, ds, on_error = "off")
+    conformed <- apply_spec(src, spec, ds, conformance = "off")
     path <- withr::local_tempfile(fileext = ".rds")
     write_rds(conformed, path)
     back <- read_rds(path)
@@ -81,7 +81,7 @@ test_that("rds round-trip preserves vport_meta exactly", {
 
 test_that("rds round-trip preserves the data values", {
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
   write_rds(adsl, path)
   back <- read_rds(path)
@@ -137,7 +137,7 @@ test_that("rds write falls back to copy when rename fails", {
     .package = "base"
   )
   spec <- demo_spec()
-  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", on_error = "off")
+  adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
   write_rds(adsl, path)
   expect_true(file.exists(path))

@@ -55,7 +55,7 @@ test_that("the conformed demo datasets chain through every format pair", {
       if (ds == "DM") cdisc_dm else cdisc_adsl,
       spec,
       ds,
-      on_error = "off"
+      conformance = "off"
     )
     for (f in fmts) {
       a <- .write_read(src, f)

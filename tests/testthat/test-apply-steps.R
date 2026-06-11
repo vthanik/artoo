@@ -23,7 +23,7 @@ test_that("decode = to_decode maps codes to their decodes", {
     spec,
     "DM",
     decode = "to_decode",
-    on_error = "off"
+    conformance = "off"
   )
   # F -> Female, M -> Male (codelist C66731).
   expect_setequal(unique(out$SEX), c("Female", "Male"))
@@ -36,10 +36,10 @@ test_that("decode = to_code reverses to_decode", {
     spec,
     "DM",
     decode = "to_decode",
-    on_error = "off"
+    conformance = "off"
   )
-  back <- apply_spec(dec, spec, "DM", decode = "to_code", on_error = "off")
-  plain <- apply_spec(cdisc_dm, spec, "DM", on_error = "off")
+  back <- apply_spec(dec, spec, "DM", decode = "to_code", conformance = "off")
+  plain <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   expect_identical(back$SEX, plain$SEX)
 })
 
@@ -63,7 +63,7 @@ test_that("decode no_match = keep retains the unmatched value", {
     "DM",
     decode = "to_decode",
     no_match = "keep",
-    on_error = "off"
+    conformance = "off"
   )
   expect_identical(out$SEX[1], "Z")
 })
@@ -78,7 +78,7 @@ test_that("decode no_match = na blanks the unmatched value", {
     "DM",
     decode = "to_decode",
     no_match = "na",
-    on_error = "off"
+    conformance = "off"
   )
   expect_true(is.na(out$SEX[1]))
 })
@@ -91,7 +91,7 @@ test_that("coercion that introduces NA warns with vport_warning_coercion", {
   raw$AGE <- as.character(raw$AGE)
   raw$AGE[1] <- "not-a-number"
   expect_warning(
-    apply_spec(raw, spec, "ADSL", on_error = "off"),
+    apply_spec(raw, spec, "ADSL", conformance = "off"),
     class = "vport_warning_coercion"
   )
 })
@@ -101,7 +101,7 @@ test_that("coercion that introduces NA warns with vport_warning_coercion", {
 test_that("sort_keys orders rows by the dataset keys and records them", {
   spec <- keyed_spec()
   raw <- cdisc_dm[sample.int(nrow(cdisc_dm)), , drop = FALSE]
-  out <- apply_spec(raw, spec, "DM", on_error = "off")
+  out <- apply_spec(raw, spec, "DM", conformance = "off")
   expect_identical(attr(out, "vport.sort"), c("STUDYID", "USUBJID"))
   expect_false(is.unsorted(out$USUBJID))
 })
@@ -126,8 +126,14 @@ test_that("apply_spec exposes na_position to the user", {
   spec <- keyed_spec()
   raw <- cdisc_dm
   raw$USUBJID[1] <- NA
-  first <- apply_spec(raw, spec, "DM", on_error = "off", na_position = "first")
-  last <- apply_spec(raw, spec, "DM", on_error = "off", na_position = "last")
+  first <- apply_spec(
+    raw,
+    spec,
+    "DM",
+    conformance = "off",
+    na_position = "first"
+  )
+  last <- apply_spec(raw, spec, "DM", conformance = "off", na_position = "last")
   expect_true(is.na(first$USUBJID[1])) # missing leads
   expect_true(is.na(last$USUBJID[nrow(last)])) # missing trails
 })
@@ -140,7 +146,7 @@ test_that("a partial variables$order warns and trails the unnumbered vars", {
   v$order[v$dataset == "DM" & v$variable == "DOMAIN"] <- NA_integer_
   spec <- vport_spec(cdisc_datasets, v, codelists = cdisc_codelists)
   expect_warning(
-    out <- apply_spec(cdisc_dm, spec, "DM", on_error = "off"),
+    out <- apply_spec(cdisc_dm, spec, "DM", conformance = "off"),
     class = "vport_warning_order"
   )
   # DOMAIN lost its order, so it now trails the still-numbered USUBJID.
@@ -150,7 +156,7 @@ test_that("a partial variables$order warns and trails the unnumbered vars", {
 test_that("a fully numbered order does not warn", {
   spec <- demo_spec()
   expect_no_warning(
-    suppressMessages(apply_spec(cdisc_dm, spec, "DM", on_error = "off"))
+    suppressMessages(apply_spec(cdisc_dm, spec, "DM", conformance = "off"))
   )
 })
 
@@ -160,7 +166,7 @@ test_that("scaffold and drop progress carry class vport_message_apply", {
   raw$NOTSPEC <- "x" # not in the spec -> dropped
   raw$AGE <- NULL # in the spec -> scaffolded back
   expect_message(
-    apply_spec(raw, spec, "DM", on_error = "off"),
+    apply_spec(raw, spec, "DM", conformance = "off"),
     class = "vport_message_apply"
   )
 })
@@ -171,7 +177,7 @@ test_that("a duplicated spec variable aborts with vport_error_spec", {
   vars2 <- rbind(vars, dup)
   spec <- vport_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
   expect_error(
-    apply_spec(cdisc_dm, spec, "DM", on_error = "off"),
+    apply_spec(cdisc_dm, spec, "DM", conformance = "off"),
     class = "vport_error_spec"
   )
 })
@@ -215,7 +221,7 @@ test_that("apply_spec check = warn attaches findings and warns on errors", {
       "DM",
       decode = "none",
       no_match = "error",
-      on_error = "warn"
+      conformance = "warn"
     ),
     class = "vport_warning_conformance"
   )
@@ -272,7 +278,7 @@ test_that("decode trims whitespace by default and warns about the variants", {
       .trim_spec(),
       "DM",
       decode = "to_decode",
-      on_error = "off"
+      conformance = "off"
     ),
     class = "vport_warning_codelist"
   )
@@ -288,7 +294,7 @@ test_that("trim = FALSE restores exact matching", {
       "DM",
       decode = "to_decode",
       trim = FALSE,
-      on_error = "off"
+      conformance = "off"
     ),
     class = "vport_error_codelist"
   )
@@ -297,7 +303,13 @@ test_that("trim = FALSE restores exact matching", {
 test_that("ignore_case = TRUE matches case variants and warns", {
   df <- data.frame(SEX = c("m", "F"), stringsAsFactors = FALSE)
   expect_error(
-    apply_spec(df, .trim_spec(), "DM", decode = "to_decode", on_error = "off"),
+    apply_spec(
+      df,
+      .trim_spec(),
+      "DM",
+      decode = "to_decode",
+      conformance = "off"
+    ),
     class = "vport_error_codelist"
   )
   expect_warning(
@@ -307,7 +319,7 @@ test_that("ignore_case = TRUE matches case variants and warns", {
       "DM",
       decode = "to_decode",
       ignore_case = TRUE,
-      on_error = "off"
+      conformance = "off"
     ),
     class = "vport_warning_codelist"
   )
@@ -317,7 +329,13 @@ test_that("ignore_case = TRUE matches case variants and warns", {
 test_that("exact matches never warn", {
   df <- data.frame(SEX = c("M", "F"), stringsAsFactors = FALSE)
   expect_no_warning(
-    apply_spec(df, .trim_spec(), "DM", decode = "to_decode", on_error = "off")
+    apply_spec(
+      df,
+      .trim_spec(),
+      "DM",
+      decode = "to_decode",
+      conformance = "off"
+    )
   )
 })
 
@@ -328,7 +346,7 @@ test_that("decode skips a coded variable absent from the data", {
     "DM",
     decode = "to_decode",
     steps = c("decode"),
-    on_error = "off"
+    conformance = "off"
   ))
   expect_identical(out$OTHER, "x")
 })
