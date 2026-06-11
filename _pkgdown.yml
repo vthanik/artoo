@@ -52,11 +52,12 @@ reference:
 - title: Spec
   desc: >
     Build, read, write, and inspect a artoo_spec -- the canonical
-    CDISC-shaped description of your datasets.
+    CDISC-shaped description of your datasets, one CDISC standard each.
   contents:
   - artoo_spec
   - read_spec
   - write_spec
+  - spec_standard
   - spec_datasets
   - spec_variables
   - spec_codelists
@@ -86,6 +87,13 @@ reference:
   - validate_spec
   - artoo_checks
 
+- title: Columns
+  desc: >
+    The SAS-viewer-style variable pane, on a frame or a file.
+  contents:
+  - columns
+  - xpt_members
+
 - title: Read and write
   desc: >
     Lossless I/O across every supported format. Generic dispatch on the
@@ -104,7 +112,6 @@ reference:
   - read_rds
   - write_rds
   - artoo_formats
-  - xpt_members
 
 - title: Classes and predicates
   contents:
@@ -114,32 +121,20 @@ reference:
 
 - title: Demo data
   desc: >
-    Bundled CDISC pilot metadata and datasets used throughout the docs.
+    Bundled CDISC pilot specs, metadata tables, and datasets used
+    throughout the docs -- all rebuilt from public sources.
   contents:
+  - cdisc_specs
   - cdisc_spec
   - cdisc_adsl
+  - cdisc_adae
   - cdisc_dm
+  - cdisc_vs
+  - cdisc_ts
+  - cdisc_suppdm
 
 articles:
 - title: Get started
   navbar: ~
   contents:
-  - from-spec-to-submission
-  - one-dataset-every-format
-
-- title: Migrate
-  navbar: Migrate
-  contents:
-  - articles/migrate-from-pharmaverse
-
-- title: Deep dives
-  navbar: Deep dives
-  contents:
-  - articles/dtc-and-partial-dates
-  - articles/common-errors
-
-- title: Trust
-  navbar: Trust
-  contents:
-  - articles/why-artoo
-  - articles/validation-and-qualification
+  - getting-started

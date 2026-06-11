@@ -1,0 +1,118 @@
+---
+title: "Getting started with artoo"
+vignette: >
+  %\VignetteIndexEntry{Getting started with artoo}
+  %\VignetteEngine{quarto::format}
+  %\VignetteEncoding{UTF-8}
+format: html
+---
+
+```{r}
+#| include: false
+library(artoo)
+```
+
+`artoo` carries clinical-trial datasets losslessly across SAS XPORT,
+CDISC Dataset-JSON, NDJSON, Apache Parquet, and RDS through one canonical,
+CDISC-shaped metadata model. This vignette walks the whole workflow once,
+start to finish: **spec → apply → inspect → write → read back**.
+
+## 1. Get a spec
+
+A `artoo_spec` is the canonical description of your datasets: variables,
+CDISC data types, lengths, labels, controlled-terminology codelists, and
+sort keys — always for exactly **one** CDISC standard. `read_spec()` reads
+one from Define-XML, a Pinnacle 21 workbook, or artoo's native JSON;
+`artoo_spec()` assembles one from metadata frames.
+
+The package bundles ready-made specs built from the official CDISC
+Define-XML 2.1 release examples. `adam_spec` covers the ADaM datasets; the
+same spec also ships as a P21 workbook you can open in Excel:
+
+```{r}
+adam_spec
+
+p21 <- system.file("extdata", "adam-spec.xlsx", package = "artoo")
+identical(spec_standard(read_spec(p21)), spec_standard(adam_spec))
+```
+
+Because `read_spec()` and `write_spec()` are inverses on each format,
+format conversion is one composition — Define-XML in, P21 workbook out:
+
+```r
+read_spec("define.xml") |> write_spec("spec.xlsx")
+```
+
+## 2. Apply the spec
+
+`apply_spec()` is the conform pipeline: it scaffolds the variables the spec
+declares (typed `NA`), coerces each column to its CDISC data type, orders
+the columns, sorts by the dataset keys, and stamps the result with its
+metadata. The input is never mutated, no column is ever dropped, and a
+coercion that would damage values aborts before it runs.
+
+```{r}
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
+```
+
+The conformance findings ride along on the result — read them back as a
+frame with `conformance()`:
+
+```{r}
+nrow(conformance(adsl))
+```
+
+## 3. Inspect the columns
+
+`columns()` is the quick look a SAS programmer expects from
+`PROC CONTENTS`: one row per variable with position, type, length, format,
+label, and the CDISC key sequence. It works on a conformed frame, any
+plain data frame, or a file path:
+
+```{r}
+columns(adsl)
+```
+
+## 4. Write to any format — losslessly
+
+Every writer carries the full metadata model, so the write is lossless by
+construction. The writers return their input invisibly, so one conformed
+frame fans out to every deliverable:
+
+```{r}
+xpt <- tempfile(fileext = ".xpt")
+json <- tempfile(fileext = ".json")
+
+adsl |>
+  write_xpt(xpt) |>
+  write_json(json)
+```
+
+Any file converts to any other without re-applying the spec — the
+metadata travels inside (or beside) the container:
+
+```{r}
+parquet <- tempfile(fileext = ".parquet")
+write_parquet(read_json(json), parquet)
+```
+
+## 5. Read back, intact
+
+Reading restores the values, the R classes (dates as `Date`, times as
+`hms`), the labels, and the metadata — identically from every format:
+
+```{r}
+back <- read_xpt(xpt)
+get_meta(back)@dataset$records
+columns(back)
+```
+
+That round-trip identity is the whole point: what you submit is what you
+archived is what you analysed.
+
+## Where to next
+
+- `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
+- `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
+- `?read_dataset` — generic I/O and the per-format wrappers.
+- `?adam_spec` — the bundled demo specs and datasets.
