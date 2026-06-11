@@ -161,3 +161,44 @@ test_that("decode_column round-trips with apply_spec's decode step", {
   via_column <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
   expect_identical(as.vector(via_apply$SEX), as.vector(via_column$SEX))
 })
+
+test_that("decode_column warns when the spec dataType coercion introduces NA", {
+  # Destination is integer but the codelist terms are not numeric: the
+  # coercion cannot represent them and must say so, never silently.
+  vars <- rbind(
+    cdisc_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "SEXN",
+      label = "Sex (N)",
+      data_type = "integer",
+      length = 8L,
+      order = NA_integer_,
+      codelist_id = "SEXTXT",
+      stringsAsFactors = FALSE
+    )
+  )
+  cls <- rbind(
+    cdisc_codelists,
+    data.frame(
+      codelist_id = "SEXTXT",
+      term = c("MALE", "FEMALE"),
+      decode = c("M", "F"),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- vport_spec(cdisc_datasets, vars, codelists = cls)
+  expect_warning(
+    out <- decode_column(
+      cdisc_dm,
+      spec,
+      "DM",
+      from = "SEX",
+      to = "SEXN",
+      direction = "to_code"
+    ),
+    class = "vport_warning_coercion"
+  )
+  expect_true(all(is.na(out$SEXN)))
+})

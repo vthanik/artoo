@@ -24,3 +24,19 @@
       <vport_findings>: 0 errors, 0 warnings, 0 notes
       No findings. The data conforms to the spec.
 
+# print renders sections when findings exist, and falls back on subsets
+
+    Code
+      print(f)
+    Output
+      <vport_findings> DM: 1 error, 1 warning, 0 notes
+      Errors
+      ------
+      [codelist_membership] 'SEX' has 1 value(s) outside codelist 'C66731': X.  (DM.SEX)
+      
+      Warnings
+      --------
+      [extra_variable] Column 'NOTSPEC' is not declared in the spec.  (DM.NOTSPEC)
+      
+      
+

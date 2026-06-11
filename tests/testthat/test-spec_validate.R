@@ -99,3 +99,37 @@ test_that("the S7 validator rejects an unresolved codelist (bare class)", {
     "unresolved codelist"
   )
 })
+
+test_that("the S7 validator rejects duplicate (dataset, variable) rows directly", {
+  # Last line of defence behind the friendly constructor: building the S7
+  # class directly with duplicates must still fail.
+  vars <- data.frame(
+    dataset = c("DM", "DM"),
+    variable = c("SEX", "SEX"),
+    data_type = c("string", "string"),
+    stringsAsFactors = FALSE
+  )
+  expect_error(
+    vport:::vport_spec_class(
+      study = data.frame(),
+      datasets = data.frame(dataset = "DM", stringsAsFactors = FALSE),
+      variables = vars,
+      codelists = data.frame(),
+      methods = data.frame(),
+      comments = data.frame(),
+      documents = data.frame(),
+      values = NULL
+    ),
+    regexp = "duplicate"
+  )
+})
+
+test_that("the meta validator rejects an unnamed columns list", {
+  expect_error(
+    vport:::vport_meta_class(
+      dataset = list(itemGroupOID = "IG.X", name = "X"),
+      columns = list(list(name = "A", dataType = "string"))
+    ),
+    regexp = "named list"
+  )
+})

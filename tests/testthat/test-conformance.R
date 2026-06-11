@@ -46,3 +46,16 @@ test_that("the vport_findings print renders a sectioned report", {
   )
   expect_snapshot(print(check_spec(clean, spec, "ADSL")))
 })
+
+test_that("print renders sections when findings exist, and falls back on subsets", {
+  spec <- demo_spec()
+  raw <- cdisc_dm
+  raw$NOTSPEC <- 1
+  raw$SEX[1] <- "X"
+  f <- check_spec(raw, spec, "DM")
+  expect_gt(nrow(f), 0L)
+  expect_snapshot(print(f))
+  # A column subset keeps the class but not the report shape: plain print.
+  sub <- f[, c("check", "severity")]
+  expect_output(print(sub), "check")
+})
