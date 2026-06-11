@@ -21,23 +21,23 @@
 .check_steps <- function(steps, call = rlang::caller_env()) {
   available <- .apply_step_ids
   if (!is.character(steps) || anyNA(steps) || !length(steps)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg steps} must be a character vector of step names.",
         "i" = "Available: {.val {available}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
   bad <- setdiff(steps, available)
   if (length(bad)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unknown {.arg steps} value{?s}: {.val {bad}}.",
         "i" = "Available: {.val {available}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -180,24 +180,24 @@ apply_spec <- function(
   na_position <- match.arg(na_position)
   if (!is.null(profile)) {
     if (!is.null(steps)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg profile} and {.arg steps} are mutually exclusive.",
           "i" = "A profile is a steps preset; pick one."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
     if (
       !is.character(profile) || length(profile) != 1L || !profile %in% "xportr"
     ) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg profile} must be {.val xportr} or NULL.",
           "x" = "You supplied {.obj_type_friendly {profile}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
@@ -206,24 +206,24 @@ apply_spec <- function(
   for (flag in c("trim", "ignore_case")) {
     fv <- get(flag)
     if (!is.logical(fv) || length(fv) != 1L || is.na(fv)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg {flag}} must be a single TRUE or FALSE.",
           "x" = "You supplied {.obj_type_friendly {fv}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
   }
 
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -278,14 +278,14 @@ apply_spec <- function(
         stats::setNames(.cli_escape(shown), rep("x", length(shown)))
       )
       if (conformance == "abort") {
-        cli::cli_abort(msg, class = "artoo_error_conformance", call = call)
+        .artoo_abort(msg, kind = "conformance", call = call)
       } else {
-        cli::cli_warn(
+        .artoo_warn(
           c(
             "{nrow(errs)} conformance error{?s} for {.val {dataset}}.",
             "i" = "Run {.code conformance(x)} on the returned frame to see every finding."
           ),
-          class = "artoo_warning_conformance",
+          kind = "conformance",
           call = call
         )
       }

@@ -442,13 +442,13 @@
   } else {
     "Cannot write column {.var {var}} as a SAS {data_type} numeric."
   }
-  cli::cli_abort(
+  .artoo_abort(
     c(
       headline,
       "x" = "It is {.obj_type_friendly {col}}; with targetDataType {.val integer} a {data_type} column must be {expected} or already a SAS-epoch numeric.",
       "i" = "Partial ISO 8601 values cannot be SAS numerics. Drop the spec's targetDataType to write them as ISO text, or complete the values."
     ),
-    class = "artoo_error_codec",
+    kind = "codec",
     call = call
   )
 }

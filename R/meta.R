@@ -495,13 +495,13 @@ get_meta <- function(x) {
   call <- rlang::caller_env()
   json <- attr(x, "metadata_json", exact = TRUE)
   if (!is.character(json) || length(json) != 1L) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} carries no artoo metadata.",
         "x" = "No {.field metadata_json} attribute was found.",
         "i" = "Run {.fn apply_spec} or {.fn set_meta} to attach metadata first."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -548,23 +548,23 @@ get_meta <- function(x) {
 set_meta <- function(x, meta) {
   call <- rlang::caller_env()
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
   if (!is_artoo_meta(meta)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg meta} must be a {.cls artoo_meta}.",
         "x" = "You supplied {.obj_type_friendly {meta}}.",
         "i" = "Get one from {.fn get_meta} or {.fn apply_spec}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -662,36 +662,36 @@ set_meta <- function(x, meta) {
 sync_meta <- function(x, meta = NULL) {
   call <- rlang::caller_env()
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
   if (is.null(meta)) {
     json <- attr(x, "metadata_json", exact = TRUE)
     if (!is.character(json) || length(json) != 1L) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg x} carries no metadata and {.arg meta} was not supplied.",
           "i" = "Capture {.code meta <- get_meta(x)} before the transform, then {.code sync_meta(x, meta)}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
     meta <- .meta_from_datasetjson(json)
   }
   if (!is_artoo_meta(meta)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg meta} must be a {.cls artoo_meta}.",
         "x" = "You supplied {.obj_type_friendly {meta}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -707,11 +707,12 @@ sync_meta <- function(x, meta = NULL) {
     ds <- synced@dataset
     ds$keys <- .meta_keys(cols)
     synced <- artoo_meta_class(dataset = ds, columns = cols)
-    cli::cli_inform(
+    .artoo_inform(
       c(
         "Synthesized metadata for {length(fresh)} new column{?s}: {.var {fresh}}.",
         "i" = "Edit the spec (or the meta) if the inferred types need refining."
-      )
+      ),
+      kind = "meta"
     )
   }
   synced <- .meta_set_records(synced, nrow(x))

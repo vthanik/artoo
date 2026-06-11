@@ -54,12 +54,12 @@
 .parse_type <- function(raw, variable = NULL, call = rlang::caller_env()) {
   where <- if (!is.null(variable)) paste0(" for ", variable) else ""
   if (length(raw) != 1L || is.na(raw) || !nzchar(trimws(raw))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Missing variable type{where}.",
         "x" = "A type is required and must be a non-empty string."
       ),
-      class = "artoo_error_type",
+      kind = "type",
       call = call
     )
   }
@@ -75,13 +75,13 @@
     return(unname(hit))
   }
   types <- .cdisc_datatypes
-  cli::cli_abort(
+  .artoo_abort(
     c(
       "Unknown variable type {.val {raw}}{where}.",
       "x" = "artoo maps types to the closed CDISC set: {.val {types}}.",
       "i" = "Edit the spec's {.field type} column, or file an issue if {.val {raw}} is a standard token."
     ),
-    class = "artoo_error_type",
+    kind = "type",
     call = call
   )
 }

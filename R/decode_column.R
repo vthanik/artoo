@@ -113,12 +113,12 @@ decode_column <- function(
   direction <- match.arg(direction)
   no_match <- match.arg(no_match)
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -127,24 +127,24 @@ decode_column <- function(
   for (arg in c("from", "to")) {
     val <- get(arg)
     if (!is.character(val) || length(val) != 1L || is.na(val) || !nzchar(val)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg {arg}} must be a single variable name.",
           "x" = "You supplied {.obj_type_friendly {val}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
   }
   if (!(from %in% names(x))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg from} must be a column of {.arg x}.",
         "x" = "{.val {from}} is not present.",
         "i" = "Columns: {.val {names(x)}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -156,12 +156,12 @@ decode_column <- function(
   }
   clid <- cl_of(to) %||% cl_of(from)
   if (is.null(clid)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Neither {.val {to}} nor {.val {from}} references a codelist in dataset {.val {dataset}}.",
         "i" = "Add a {.field codelist_id} to one of them in the spec."
       ),
-      class = "artoo_error_codelist",
+      kind = "codelist",
       call = call
     )
   }
@@ -187,12 +187,12 @@ decode_column <- function(
     if (!is.na(dt)) {
       res <- .coerce_to_type(out, dt)
       if (res$n_na_introduced > 0L) {
-        cli::cli_warn(
+        .artoo_warn(
           c(
             "Coercing {.var {to}} to dataType {.val {dt}} introduced {res$n_na_introduced} NA value{?s}.",
             "i" = "Check the codelist terms against the spec dataType."
           ),
-          class = "artoo_warning_coercion",
+          kind = "coercion",
           call = call
         )
       }

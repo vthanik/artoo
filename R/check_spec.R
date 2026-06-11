@@ -87,12 +87,12 @@ check_spec <- function(
   decode <- match.arg(decode)
   checks <- .check_checks_arg(checks, call = call)
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

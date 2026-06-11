@@ -20,12 +20,12 @@
     # rather than silently abandoning the spec's ordering intent.
     if (anyNA(ord) && !all(is.na(ord))) {
       n_missing <- sum(is.na(ord))
-      cli::cli_warn(
+      .artoo_warn(
         c(
           "{n_missing} variable{?s} in dataset {.val {dataset}} {?has/have} no {.field order}.",
           "i" = "Ordering the numbered variables first; unnumbered ones trail in spec order."
         ),
-        class = "artoo_warning_order",
+        kind = "order",
         call = call
       )
       vars <- vars[order(ord, na.last = TRUE), , drop = FALSE]
@@ -71,9 +71,9 @@
       .na_for_type(types[i], n)
     }
   }
-  cli::cli_inform(
+  .artoo_inform(
     "Scaffolded {length(missing)} variable{?s}: {.var {missing}}",
-    class = "artoo_message_apply"
+    kind = "apply"
   )
   x
 }
@@ -83,9 +83,9 @@
 .drop_unspec <- function(x, info, call = rlang::caller_env()) {
   to_drop <- setdiff(names(x), info$spec_vars)
   if (length(to_drop)) {
-    cli::cli_inform(
+    .artoo_inform(
       "Dropped {length(to_drop)} variable{?s}: {.var {to_drop}}",
-      class = "artoo_message_apply"
+      kind = "apply"
     )
   }
   keep <- info$spec_vars[info$spec_vars %in% names(x)]
@@ -181,33 +181,33 @@
       }
     )
     if (identical(on_lossy, "error")) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Coercion to the spec dataTypes would lose data.",
           stats::setNames(lossy, rep("x", length(lossy))),
           "i" = "Fix the spec (dataType {.val float} or {.val decimal} keeps fractions), or accept the loss with {.code on_lossy = \"warn\"}."
         ),
-        class = "artoo_error_type",
+        kind = "type",
         call = call
       )
     }
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Coercion to the spec dataTypes lost data.",
         stats::setNames(lossy, rep("x", length(lossy))),
         "i" = "Use dataType {.val float} or {.val decimal} to keep these values."
       ),
-      class = "artoo_warning_coercion",
+      kind = "coercion",
       call = call
     )
   }
   if (length(introduced)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Coercion introduced NA in {length(introduced)} variable{?s}.",
         "i" = "{introduced}"
       ),
-      class = "artoo_warning_coercion",
+      kind = "coercion",
       call = call
     )
   }
@@ -256,13 +256,13 @@
     if (any(gained)) {
       idx[gained] <- idx2[gained]
       variants <- unique(chr[gained])
-      cli::cli_warn(
+      .artoo_warn(
         c(
           "Mapped {sum(gained)} value{?s} in {.var {var}} after trim/case normalization.",
           "i" = "Variant{?s}: {.val {variants}}.",
           "i" = "check_spec() still compares exactly; clean the source values for submission."
         ),
-        class = "artoo_warning_codelist",
+        kind = "codelist",
         call = call
       )
     }
@@ -272,13 +272,13 @@
   if (any(unmatched)) {
     if (no_match == "error") {
       bad <- unique(chr[unmatched])
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Values in {.var {var}} are not in codelist {.val {clid}}.",
           "x" = "Unmatched: {.val {bad[seq_len(min(5L, length(bad)))]}}.",
           "i" = "Set {.code no_match = \"keep\"} or {.code \"na\"} to allow them."
         ),
-        class = "artoo_error_codelist",
+        kind = "codelist",
         call = call
       )
     } else if (no_match == "keep") {

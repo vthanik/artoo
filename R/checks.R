@@ -150,12 +150,12 @@ artoo_checks <- function(
   for (nm in names(toggles)) {
     v <- toggles[[nm]]
     if (!is.logical(v) || length(v) != 1L || is.na(v)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg {nm}} must be a single TRUE or FALSE.",
           "x" = "You supplied {.obj_type_friendly {v}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
@@ -202,13 +202,13 @@ print.artoo_checks <- function(x, ...) {
     return(artoo_checks())
   }
   if (!is_artoo_checks(checks)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg checks} must be a {.cls artoo_checks} control or NULL.",
         "x" = "You supplied {.obj_type_friendly {checks}}.",
         "i" = "Build one with {.fn artoo_checks}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

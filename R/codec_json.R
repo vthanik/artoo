@@ -67,12 +67,12 @@
   call = rlang::caller_env()
 ) {
   if (!is_artoo_meta(meta)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Cannot write Dataset-JSON without metadata.",
         "x" = "The frame carries no columns to describe."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -216,12 +216,12 @@
     bytes <- bytes[-(1:3)]
   }
   if (any(bytes == as.raw(0x00))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} is not a valid Dataset-JSON file.",
         "x" = "It contains an embedded NUL byte."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -238,12 +238,12 @@
       # The parser message can contain braces; pass it as a value so cli does
       # not treat it as glue markup.
       msg <- .safe_msg(e)
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.path {path}} is not valid JSON.",
           "x" = "{msg}"
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -255,12 +255,12 @@
       is.null(p[["datasetJSONVersion"]]) ||
       is.null(p[["columns"]])
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} is not a Dataset-JSON v1.1 file.",
         "x" = "It lacks the {.field datasetJSONVersion} and {.field columns} keys."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -276,12 +276,12 @@
     lens <- lengths(rows)
     bad <- which(lens != nc)
     if (length(bad)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.path {path}} has a malformed row.",
           "x" = "Row {bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }

@@ -133,9 +133,9 @@ as.character.artoo_time <- function(x, ...) {
 #' @exportS3Method `[<-` artoo_time
 `[<-.artoo_time` <- function(x, i, value) {
   if (!.is_time_rhs(value)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Cannot assign {.obj_type_friendly {value}} into a {.cls artoo_time}.",
-      class = "artoo_error_input",
+      kind = "input",
       call = rlang::caller_env()
     )
   }
@@ -147,9 +147,9 @@ as.character.artoo_time <- function(x, ...) {
 #' @exportS3Method `[[<-` artoo_time
 `[[<-.artoo_time` <- function(x, i, value) {
   if (!.is_time_rhs(value)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Cannot assign {.obj_type_friendly {value}} into a {.cls artoo_time}.",
-      class = "artoo_error_input",
+      kind = "input",
       call = rlang::caller_env()
     )
   }
@@ -163,9 +163,9 @@ c.artoo_time <- function(...) {
   call <- rlang::caller_env()
   parts <- lapply(list(...), function(a) {
     if (!.is_time_rhs(a)) {
-      cli::cli_abort(
+      .artoo_abort(
         "Cannot combine {.cls artoo_time} with {.obj_type_friendly {a}}.",
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
@@ -204,12 +204,12 @@ Ops.artoo_time <- function(e1, e2) {
   if (comparison && (is.character(e1) || (!missing(e2) && is.character(e2)))) {
     # t == "08:30:00" used to unclass to numeric, then R coerced both to
     # character and compared "30600" with "08:30:00" -- silently wrong.
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Cannot compare a {.cls artoo_time} with a character value.",
         "i" = "Build a {.cls artoo_time} with {.fn artoo_time}, or compare on seconds."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = rlang::caller_env()
     )
   }

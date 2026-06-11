@@ -76,13 +76,13 @@ write_spec <- function(spec, path) {
   call <- rlang::caller_env()
   .check_path(path, call = call)
   if (!is_artoo_spec(spec)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg spec} must be a {.cls artoo_spec}.",
         "x" = "You supplied {.obj_type_friendly {spec}}.",
         "i" = "Build one with {.fn artoo_spec}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

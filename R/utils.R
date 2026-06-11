@@ -1,6 +1,64 @@
 # utils.R -- small base-R helpers shared across the package.
 # `%||%` is imported from rlang (see artoo-package.R); do not redefine.
 
+# Condition family helpers -- every condition artoo raises flows through one
+# of these, so each carries a three-level class chain and is catchable at any
+# altitude: the specific kind ("artoo_error_input"), the severity
+# ("artoo_error" / "artoo_warning" / "artoo_message"), and the package root
+# ("artoo_condition"). `.envir` is threaded through so glue interpolation in
+# the message resolves in the RAISING function's frame, not the helper's.
+#' @noRd
+.artoo_abort <- function(
+  message,
+  kind,
+  ...,
+  call = rlang::caller_env(),
+  .envir = parent.frame()
+) {
+  cli::cli_abort(
+    message,
+    class = c(paste0("artoo_error_", kind), "artoo_error", "artoo_condition"),
+    ...,
+    call = call,
+    .envir = .envir
+  )
+}
+
+#' @noRd
+.artoo_warn <- function(
+  message,
+  kind,
+  ...,
+  call = rlang::caller_env(),
+  .envir = parent.frame()
+) {
+  cli::cli_warn(
+    message,
+    class = c(
+      paste0("artoo_warning_", kind),
+      "artoo_warning",
+      "artoo_condition"
+    ),
+    ...,
+    call = call,
+    .envir = .envir
+  )
+}
+
+#' @noRd
+.artoo_inform <- function(message, kind, ..., .envir = parent.frame()) {
+  cli::cli_inform(
+    message,
+    class = c(
+      paste0("artoo_message_", kind),
+      "artoo_message",
+      "artoo_condition"
+    ),
+    ...,
+    .envir = .envir
+  )
+}
+
 # Coerce a vector to a target storage mode, preserving NA. Returns the bare
 # coerced vector; lossy-coercion accounting (NA introduction, fractional
 # truncation) lives in .coerce_to_type().
@@ -86,12 +144,12 @@
   if (!.rename_file(tmp, path)) {
     if (!file.copy(tmp, path, overwrite = TRUE)) {
       unlink(tmp)
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Could not move the temporary file into place.",
           "x" = "Failed to write {.path {path}}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -106,12 +164,12 @@
   if (
     !is.character(path) || length(path) != 1L || is.na(path) || !nzchar(path)
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg path} must be a single non-empty string.",
         "x" = "You supplied {.obj_type_friendly {path}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

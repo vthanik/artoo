@@ -219,23 +219,23 @@ read_spec <- function(
     !is.null(datasets) &&
       (!is.character(datasets) || !length(datasets) || anyNA(datasets))
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg datasets} must be a character vector of dataset names.",
         "x" = "You supplied {.obj_type_friendly {datasets}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
   .check_path(path, call = call)
   if (!file.exists(path)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Spec file {.path {path}} does not exist.",
         "i" = "Pass a path to a {.val .json} or {.val .xlsx} spec."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -246,12 +246,12 @@ read_spec <- function(
     xlsx = ,
     xls = .read_spec_xlsx(path, datasets, on_duplicate, call),
     xml = .read_spec_define(path, datasets, on_duplicate, call),
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unsupported spec file type {.val {ext}}.",
         "i" = "read_spec() reads {.val .json}, Pinnacle 21 {.val .xlsx}, and Define-XML 2.x {.val .xml}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   )
@@ -277,12 +277,12 @@ read_spec <- function(
   }
   unknown <- setdiff(datasets, avail)
   if (length(unknown)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unknown dataset{?s} in {.arg datasets}: {.val {unknown}}.",
         "i" = "The spec defines: {.val {avail}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -341,29 +341,29 @@ read_spec <- function(
     character(1)
   )
   if (on_duplicate == "error") {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "The spec defines {length(dup_keys)} variable{?s} more than once.",
         stats::setNames(lines, rep("x", length(lines))),
         "i" = "Fix the source, or keep the first definition of each with {.code on_duplicate = \"first\"}."
       ),
-      class = "artoo_error_spec",
+      kind = "spec",
       call = call
     )
   }
   if (on_duplicate == "warn") {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Keeping the first definition of {length(dup_keys)} duplicated variable{?s}.",
         stats::setNames(lines, rep("x", length(lines)))
       ),
-      class = "artoo_warning_spec",
+      kind = "spec",
       call = call
     )
   } else {
-    cli::cli_inform(
+    .artoo_inform(
       "Kept the first definition of {length(dup_keys)} duplicated variable{?s}.",
-      class = "artoo_message_spec"
+      kind = "spec"
     )
   }
   drop <- keyed & duplicated(key) & key %in% dup_keys
@@ -432,12 +432,12 @@ read_spec <- function(
   v <- as.character(v)[1L]
   supported <- .spec_json_version
   if (!identical(v, supported)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Spec JSON version {.val {v}} is not the supported version {.val {supported}}.",
         "i" = "Reading anyway; some fields may not be recognised."
       ),
-      class = "artoo_warning_spec",
+      kind = "spec",
       call = call
     )
   }
@@ -558,12 +558,12 @@ read_spec <- function(
   used <- sheets[idx[1L]]
   if (length(idx) > 1L) {
     ignored <- sheets[idx[-1L]]
-    cli::cli_inform(
+    .artoo_inform(
       c(
         "Several sheets match one Pinnacle 21 role.",
         "i" = "Using {.val {used}}; ignoring {.val {ignored}}."
       ),
-      class = "artoo_message_p21_sheet"
+      kind = "p21_sheet"
     )
   }
   used
@@ -605,12 +605,12 @@ read_spec <- function(
 #' @noRd
 .require_p21_sheet <- function(df, sheet_name, label, sheets, call) {
   if (is.null(sheet_name) || is.null(df) || !nrow(df)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Required sheet {.val {label}} is missing or has no data rows.",
         "i" = "Available sheets: {.val {sheets}}."
       ),
-      class = "artoo_error_spec",
+      kind = "spec",
       call = call
     )
   }
@@ -685,13 +685,13 @@ read_spec <- function(
   }
   bad <- which(is.na(df[[col]]) | !nzchar(df[[col]]))
   if (length(bad)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Could not resolve {.field {col}} for some {label} rows.",
         "x" = "{cli::qty(bad)}Blank {.field {col}} on row{?s} {.val {bad}}.",
         "i" = "Check {.val {label}} for a blank first row or a broken merge."
       ),
-      class = "artoo_error_spec",
+      kind = "spec",
       call = call
     )
   }

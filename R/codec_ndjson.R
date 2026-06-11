@@ -20,12 +20,12 @@
   call = rlang::caller_env()
 ) {
   if (!is_artoo_meta(meta)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Cannot write Dataset-JSON NDJSON without metadata.",
         "x" = "The frame carries no columns to describe."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -93,12 +93,12 @@
 
   first <- readLines(con, n = 1L, warn = FALSE)
   bad_file <- function(why) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} is not a Dataset-JSON NDJSON file.",
         "x" = why
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -145,12 +145,12 @@
         simplifyVector = FALSE
       ),
       error = function(e) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "{.path {path}} has a malformed row line.",
             "x" = "Rows {total + 1} to {total + length(lines)} did not parse as JSON."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
@@ -158,12 +158,12 @@
     lens <- lengths(rows)
     bad <- which(lens != nc)
     if (length(bad)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.path {path}} has a malformed row.",
           "x" = "Row {total + bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }

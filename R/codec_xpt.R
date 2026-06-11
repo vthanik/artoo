@@ -310,22 +310,22 @@
     cm <- if (has_meta) meta@columns[[nm]] else NULL
 
     if (is.factor(col)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Column {.var {nm}} is a factor.",
           "i" = "Convert it with {.fn as.character} before writing."
         ),
-        class = "artoo_error_type",
+        kind = "type",
         call = call
       )
     }
     if (is.list(col)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Column {.var {nm}} is a list column.",
           "i" = "xpt cannot store list columns."
         ),
-        class = "artoo_error_type",
+        kind = "type",
         call = call
       )
     }
@@ -375,35 +375,35 @@
       lost <- is.na(num) & !is.na(col) & !blank
       if (any(lost)) {
         bad <- utils::head(unique(as.character(col[lost])), 3L)
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Cannot coerce column {.var {nm}} to numeric for xpt.",
             "x" = "Offending value{?s}: {.val {bad}}."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
       # xpt cannot represent infinity; fail loud rather than silently writing a
       # SAS missing (consistent with the finite-overflow guard below).
       if (any(is.infinite(num))) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Column {.var {nm}} contains infinite values.",
             "i" = "xpt cannot represent infinity; remove or recode them first."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
       fin <- is.finite(num)
       if (any(abs(num[fin]) >= .xpt_ibm_max)) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Column {.var {nm}} exceeds the IBM-370 magnitude limit.",
             "i" = "xpt numerics cap near 7.2e75."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
@@ -429,12 +429,12 @@
       }
       nlng <- max(declared, max(bw, 1L))
       if (version == 5L && nlng > 200L) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Column {.var {nm}} needs {nlng} bytes, over the v5 limit of 200.",
             "i" = "Use {.code version = 8} or shorten the data."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
@@ -445,12 +445,12 @@
     if (version == 5L) {
       up <- toupper(nm)
       if (!grepl("^[A-Z_][A-Z0-9_]{0,7}$", up)) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Variable name {.var {nm}} is not valid for xpt v5.",
             "i" = "v5 names are 1-8 chars of letters, digits, or underscore, not starting with a digit."
           ),
-          class = "artoo_error_codec",
+          kind = "codec",
           call = call
         )
       }
@@ -480,23 +480,23 @@
     )
   }
   if (length(label_trunc)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Truncated {length(label_trunc)} label{?s} to 40 bytes for xpt v5: {.var {label_trunc}}.",
         "i" = "Use {.code version = 8} to keep long labels."
       ),
-      class = "artoo_warning_encoding",
+      kind = "encoding",
       call = call
     )
   }
   if (length(fda_cols)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Wrote bytes 160-191 in {length(fda_cols)} column{?s}: {.var {fda_cols}}.",
         "i" = "The FDA Study Data TCG prohibits these bytes in submission xpt; write with {.code encoding = \"US-ASCII\"} for a submission.",
         "i" = "See https://www.fda.gov/media/153632/download."
       ),
-      class = "artoo_warning_encoding",
+      kind = "encoding",
       call = call
     )
   }
@@ -520,12 +520,12 @@
   created <- created %||% Sys.time()
   version <- as.integer(version)
   if (!version %in% c(5L, 8L)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg version} must be 5 or 8.",
         "x" = "You supplied {.val {version}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -535,12 +535,12 @@
     dup <- unique(names(x)[duplicated(toupper(names(x)))])
     if (length(dup)) {
       collided <- names(x)[toupper(names(x)) %in% toupper(dup)]
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Variable names collide when uppercased for xpt v5: {.var {collided}}.",
           "i" = "v5 names are case-insensitive; rename or use {.code version = 8}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -564,12 +564,12 @@
   # SAS member names are ASCII letters/digits/underscore; anything else would
   # be packed by character count and corrupt the 80-byte header framing.
   if (!grepl("^[A-Za-z_][A-Za-z0-9_]*$", ds_name)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Dataset name {.val {ds_name}} is not valid for xpt.",
         "i" = "Member names are ASCII letters, digits, or underscore, not starting with a digit."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -579,12 +579,12 @@
   ds_label <- .to_target(ds_label, target_enc, "replace", call)
   ds_label40 <- .trunc_bytes_boundary(ds_label, target_enc, 40L)
   if (!identical(ds_label40, ds_label)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "Truncated the dataset label to 40 bytes for xpt.",
         "i" = "XPORT stores at most 40 bytes of dataset label."
       ),
-      class = "artoo_warning_encoding",
+      kind = "encoding",
       call = call
     )
   }
@@ -618,13 +618,13 @@
       logical(1)
     ))
     if (last_blank) {
-      cli::cli_warn(
+      .artoo_warn(
         c(
           "The final row of this all-character v5 frame is entirely blank.",
           "x" = "v5 cannot distinguish a trailing blank row from padding; it will not read back.",
           "i" = "Use {.code version = 8}, which records the row count."
         ),
-        class = "artoo_warning_encoding",
+        kind = "encoding",
         call = call
       )
     }
@@ -681,12 +681,12 @@
   } else if (grepl("LIBV8", s, fixed = TRUE)) {
     8L
   } else {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Not a valid XPORT transport file.",
         "x" = "Unrecognised library header."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -699,9 +699,9 @@
 .xpt_parse_member <- function(con, version, call = rlang::caller_env()) {
   s <- rawToChar(.read_bytes(con, 80L, call))
   if (!grepl("MEMBER", s, fixed = TRUE) && !grepl("MEMBV8", s, fixed = TRUE)) {
-    cli::cli_abort(
+    .artoo_abort(
       c("Not a valid XPORT member.", "x" = "Missing MEMBER header."),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -728,12 +728,12 @@
     58L
   ))))
   if (is.na(nvars) || nvars < 0L) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Not a valid XPORT member.",
         "x" = "Could not read the variable count from the NAMESTR header."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -960,12 +960,12 @@
       length(sig) >= length(expected) &&
         all(sig[seq_along(expected)] == expected)
     ) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "This XPORT file has more than one member.",
           "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -988,12 +988,12 @@
   want <- as.character(col_select)
   missing_cols <- setdiff(want, all_names)
   if (length(missing_cols)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
         "i" = "The file has {.val {all_names}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -1019,12 +1019,12 @@
   cand <- starts[all_data[starts] == sig[1L]]
   for (s in cand) {
     if (all(all_data[s:(s + nb - 1L)] == sig)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "This XPORT file has more than one member.",
           "i" = "Run {.code xpt_members(path)} to list them, then pick one with {.code read_xpt(path, member = ...)}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -1196,12 +1196,12 @@
     seek(con, where = obs_end)
   }
   if (!length(members)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Not a valid XPORT transport file.",
         "x" = "No member header follows the library header."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -1246,12 +1246,12 @@
     if (i >= 1L && i <= length(members)) {
       return(i)
     }
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg member} index {.val {i}} is out of range.",
         "i" = "The file has {length(members)} member{?s}: {.val {nms}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -1260,21 +1260,21 @@
     if (!is.na(i)) {
       return(i)
     }
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unknown member {.val {member}}.",
         "i" = "The file has: {.val {nms}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
-  cli::cli_abort(
+  .artoo_abort(
     c(
       "{.arg member} must be a single member name or index.",
       "x" = "You supplied {.obj_type_friendly {member}}."
     ),
-    class = "artoo_error_input",
+    kind = "input",
     call = call
   )
 }
@@ -1700,12 +1700,12 @@ xpt_members <- function(path) {
   call <- rlang::caller_env()
   .check_path(path, call)
   if (!file.exists(path)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg path} does not exist.",
         "x" = "No file at {.path {path}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

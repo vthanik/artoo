@@ -789,13 +789,13 @@
   }
   if (is.data.frame(data)) {
     if (length(scope) != 1L) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "A single {.arg data} frame needs a length-1 {.arg dataset}.",
           "x" = "Got {length(scope)} datasets in scope.",
           "i" = "Name the dataset, or pass a named list of data frames."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
@@ -804,12 +804,12 @@
   if (is.list(data) && !is.null(names(data))) {
     return(data[[ds]])
   }
-  cli::cli_abort(
+  .artoo_abort(
     c(
       "{.arg data} must be a data frame or a named list of data frames.",
       "x" = "You supplied {.obj_type_friendly {data}}."
     ),
-    class = "artoo_error_input",
+    kind = "input",
     call = call
   )
 }
@@ -1171,22 +1171,22 @@ validate_spec <- function(
         msgs <- utils::head(findings$message[findings$severity == "error"], 3L)
         # Finding messages embed spec values; escape so a "{" renders literally
         # instead of crashing cli interpolation.
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Spec is not submission-ready, {nerr} error-severity finding{?s}.",
             stats::setNames(.cli_escape(msgs), rep("x", length(msgs))),
             "i" = "Inspect every finding in the returned artoo_check."
           ),
-          class = "artoo_error_validation",
+          kind = "validation",
           call = call
         )
       } else {
-        cli::cli_warn(
+        .artoo_warn(
           c(
             "Spec has {nerr} error-severity finding{?s}.",
             "i" = "Inspect every finding in the returned artoo_check."
           ),
-          class = "artoo_warning_validation",
+          kind = "validation",
           call = call
         )
       }

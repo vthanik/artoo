@@ -12,12 +12,12 @@
   df <- as.data.frame(df, stringsAsFactors = FALSE, check.names = FALSE)
   missing <- setdiff(req, names(df))
   if (length(missing)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg {slot}} is missing a required column{cli::qty(missing)}{?s}: {.val {missing}}.",
         "i" = "Required: {.val {req}}."
       ),
-      class = "artoo_error_spec",
+      kind = "spec",
       call = call
     )
   }
@@ -125,12 +125,12 @@ artoo_spec <- function(
 ) {
   call <- rlang::caller_env()
   if (is.null(datasets) || is.null(variables)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Both {.arg datasets} and {.arg variables} are required.",
         "i" = "Pass at least a {.code dataset} table and a variable table."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -249,26 +249,26 @@ artoo_spec <- function(
         },
         character(1)
       )
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg variables} defines {length(dup_keys)} variable{?s} more than once.",
           stats::setNames(lines, rep("x", length(lines))),
           "i" = "Remove the duplicate rows, or read the file with {.code read_spec(path, on_duplicate = \"first\")}."
         ),
-        class = "artoo_error_spec",
+        kind = "spec",
         call = call
       )
     }
     orphan <- setdiff(unique(variables$dataset), datasets$dataset)
     orphan <- orphan[!is.na(orphan)]
     if (length(orphan)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Some variables reference a dataset not in {.arg datasets}.",
           "x" = "Unknown dataset{?s}: {.val {orphan}}.",
           "i" = "Add the dataset to {.arg datasets}, or fix {.arg variables}."
         ),
-        class = "artoo_error_spec",
+        kind = "spec",
         call = call
       )
     }
@@ -282,13 +282,13 @@ artoo_spec <- function(
     }
     unresolved <- setdiff(used, known)
     if (length(unresolved)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Some variables reference a codelist not in {.arg codelists}.",
           "x" = "Unresolved codelist_id{?s}: {.val {unresolved}}.",
           "i" = "Add the codelist's terms to {.arg codelists}."
         ),
-        class = "artoo_error_spec",
+        kind = "spec",
         call = call
       )
     }

@@ -98,13 +98,13 @@
       bad <- is.nan(num) | is.infinite(num)
       if (any(bad)) {
         offenders <- utils::head(unique(as.character(num[bad])), 3L)
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "Column {.var {nm}} contains {.val {offenders}}.",
             "x" = "NaN and infinite values are not valid in CDISC Dataset-JSON.",
             "i" = "Recode them to NA, or use a string dataType."
           ),
-          class = "artoo_error_type",
+          kind = "type",
           call = call
         )
       }
@@ -135,13 +135,13 @@
     dropped <- c(dropped, "informats")
   }
   if (length(dropped)) {
-    cli::cli_warn(
+    .artoo_warn(
       c(
         "strict = TRUE drops artoo extensions from {.path {path}}.",
         "x" = "Not carried: {dropped}.",
         "i" = "Write with strict = FALSE to keep them in the _artoo block."
       ),
-      class = "artoo_warning_codec",
+      kind = "codec",
       call = call
     )
   }

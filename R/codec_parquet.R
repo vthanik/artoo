@@ -51,12 +51,12 @@
       length(compression) != 1L ||
       !compression %in% valid_comp
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg compression} must be one of {.val {valid_comp}}.",
         "x" = "You supplied {.val {compression}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

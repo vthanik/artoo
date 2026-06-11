@@ -40,23 +40,23 @@
   codec <- tryCatch(
     .codec_for_ext(ext, call),
     artoo_error_codec = function(e) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Cannot determine the dataset format from {.path {path}}.",
           "i" = "Pass {.arg format} explicitly, one of {.val {known}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
   )
   if (gz && !codec$format %in% c("json", "ndjson")) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "gz compression is not supported for the {.val {codec$format}} format.",
         "i" = "Only {.val json} and {.val ndjson} stream through gzip."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -109,12 +109,12 @@
 write_dataset <- function(x, path, format = NULL, ...) {
   call <- rlang::caller_env()
   if (!is.data.frame(x)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} must be a data frame.",
         "x" = "You supplied {.obj_type_friendly {x}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -122,12 +122,12 @@ write_dataset <- function(x, path, format = NULL, ...) {
   fmt <- .resolve_format(path, format, call)
   codec <- .resolve_codec(fmt, call)
   if (codec$mode == "r") {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Format {.val {fmt}} is read-only.",
         "i" = "It cannot be written."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -200,12 +200,12 @@ read_dataset <- function(
   call <- rlang::caller_env()
   .check_path(path, call)
   if (!file.exists(path)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg path} does not exist.",
         "x" = "No file at {.path {path}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -250,7 +250,7 @@ read_dataset <- function(
         if (identical(fmt, "rds")) {
           msg <- c(msg, "i" = "Use {.fn readRDS} for arbitrary R objects.")
         }
-        cli::cli_abort(msg, class = "artoo_error_codec", call = call)
+        .artoo_abort(msg, kind = "codec", call = call)
       }
       # The single source of partial-read correctness (which columns, what
       # order, which error). Idempotent on a frame a codec already narrowed.
@@ -271,12 +271,12 @@ read_dataset <- function(
         stop(e)
       }
       msg <- .safe_msg(e)
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Could not read {.path {path}} as {.val {fmt}}.",
           "x" = "{msg}"
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -290,12 +290,12 @@ read_dataset <- function(
 .validate_partial_args <- function(col_select, n_max, call) {
   if (!is.null(col_select)) {
     if (!is.character(col_select) || anyNA(col_select)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.arg col_select} must be a character vector of column names.",
           "x" = "You supplied {.obj_type_friendly {col_select}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
@@ -306,12 +306,12 @@ read_dataset <- function(
       is.na(n_max) ||
       n_max < 0
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg n_max} must be a single non-negative number or {.code Inf}.",
         "x" = "You supplied {.obj_type_friendly {n_max}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -327,12 +327,12 @@ read_dataset <- function(
   if (!is.null(col_select)) {
     missing_cols <- setdiff(as.character(col_select), names(data))
     if (length(missing_cols)) {
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Unknown column{?s} in {.arg col_select}: {.val {missing_cols}}.",
           "i" = "The dataset has {.val {names(data)}}."
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }

@@ -72,12 +72,12 @@
       !exists(format, envir = .artoo_codecs, inherits = FALSE)
   ) {
     known <- .registered_formats()
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unknown format {.val {format}}.",
         "i" = "Registered formats: {.val {known}}."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -97,12 +97,12 @@
   exts <- unlist(lapply(.registered_formats(), function(f) {
     .artoo_codecs[[f]]$extensions
   }))
-  cli::cli_abort(
+  .artoo_abort(
     c(
       "No codec handles the {.val {ext}} extension.",
       "i" = "Known extensions: {.val {sort(unique(exts))}}."
     ),
-    class = "artoo_error_codec",
+    kind = "codec",
     call = call
   )
 }

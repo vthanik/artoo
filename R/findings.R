@@ -35,9 +35,9 @@
   if (is.null(.spec_rules_env$rules)) {
     path <- system.file("spec_rules.json", package = "artoo")
     if (!nzchar(path)) {
-      cli::cli_abort(
+      .artoo_abort(
         "Rule catalog {.file spec_rules.json} is missing from the install.",
-        class = "artoo_error_validation"
+        kind = "validation"
       )
     }
     r <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE)
@@ -61,45 +61,45 @@
   )
   miss <- setdiff(need, names(r))
   if (length(miss)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog is missing column{?s}: {.val {miss}}.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   bad_sev <- unique(r$severity[!r$severity %in% .spec_severities])
   if (length(bad_sev)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog has unknown severit{?y/ies}: {.val {bad_sev}}.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   bad_dim <- unique(r$dimension[!r$dimension %in% .spec_dimensions])
   if (length(bad_dim)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog has unknown dimension{?s}: {.val {bad_dim}}.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   bad_eng <- unique(r$engine[!r$engine %in% .spec_engines])
   if (length(bad_eng)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog has unknown engine{?s}: {.val {bad_eng}}.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   # A data-engine rule cannot run without data.
   no_data <- unique(r$id[r$engine == "data" & !r$requires_data])
   if (length(no_data)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog data-engine rule{?s} {.val {no_data}} must require data.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   dup_id <- unique(r$id[duplicated(r$id)])
   if (length(dup_id)) {
-    cli::cli_abort(
+    .artoo_abort(
       "Rule catalog has duplicate id{?s}: {.val {dup_id}}.",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   invisible(r)
@@ -110,9 +110,9 @@
   r <- .spec_rules()
   row <- r[r$id == id, , drop = FALSE]
   if (nrow(row) != 1L) {
-    cli::cli_abort(
+    .artoo_abort(
       "Unknown check id {.val {id}} (not in the rule catalog).",
-      class = "artoo_error_validation"
+      kind = "validation"
     )
   }
   row

@@ -65,36 +65,36 @@
     xml2::read_xml(path),
     error = function(e) {
       msg <- .safe_msg(e)
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "{.path {path}} is not parseable XML.",
           "x" = "{msg}"
         ),
-        class = "artoo_error_input",
+        kind = "input",
         call = call
       )
     }
   )
   ns_uris <- unlist(xml2::xml_ns(doc))
   if (any(grepl("cdisc.org/ns/def/v1", ns_uris, fixed = FALSE))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} is a Define-XML v1.0 document.",
         "x" = "artoo reads Define-XML 2.0 and 2.1.",
         "i" = "Re-export the define from a 2.x-capable tool."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
   mdv <- xml2::xml_find_first(doc, "//*[local-name()='MetaDataVersion']")
   if (is.na(mdv) || !any(grepl("cdisc.org/ns/def/v2", ns_uris))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} is not a Define-XML document.",
         "x" = "No MetaDataVersion in the Define-XML 2.x namespaces was found."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -177,12 +177,12 @@
   # ---- ItemGroupDefs -> datasets + variables -----------------------------
   ig_nodes <- .dx_find_all(mdv, "ItemGroupDef")
   if (!length(ig_nodes)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.path {path}} defines no datasets.",
         "x" = "The MetaDataVersion has no ItemGroupDef."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -217,12 +217,12 @@
     for (j in seq_along(refs)) {
       it <- items[[ref_oid[j]]]
       if (is.null(it)) {
-        cli::cli_abort(
+        .artoo_abort(
           c(
             "{.path {path}} is inconsistent.",
             "x" = "ItemRef {.val {ref_oid[j]}} has no ItemDef."
           ),
-          class = "artoo_error_input",
+          kind = "input",
           call = call
         )
       }

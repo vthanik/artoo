@@ -60,13 +60,13 @@ conformance <- function(x) {
   call <- rlang::caller_env()
   f <- attr(x, "artoo.conformance", exact = TRUE)
   if (is.null(f)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg x} carries no conformance findings.",
         "x" = "No {.field artoo.conformance} attribute was found.",
         "i" = "Run {.fn apply_spec} with {.code conformance = \"warn\"} or {.code \"abort\"}, or call {.fn check_spec} directly."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }

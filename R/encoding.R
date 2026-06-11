@@ -140,12 +140,12 @@
   if (
     !is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg encoding} must be a single charset name.",
         "x" = "You supplied {.obj_type_friendly {name}}."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }
@@ -167,12 +167,12 @@
       return(cand)
     }
   }
-  cli::cli_abort(
+  .artoo_abort(
     c(
       "Encoding {.val {name}} is not available on this system.",
       "i" = "The host {.code iconv} provides no spelling of it or a known alias."
     ),
-    class = "artoo_error_codec",
+    kind = "codec",
     call = call
   )
 }
@@ -255,13 +255,13 @@
     bad <- is.na(rt) & !is.na(x)
     if (any(bad)) {
       offenders <- utils::head(unique(x[bad]), 3L)
-      cli::cli_abort(
+      .artoo_abort(
         c(
           "Cannot encode {sum(bad)} value{?s} to {.val {to}}.",
           "x" = "Offending value{?s}: {.val {offenders}}.",
           "i" = "Write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
         ),
-        class = "artoo_error_codec",
+        kind = "codec",
         call = call
       )
     }
@@ -274,12 +274,12 @@
     lost <- iconv(x, from = "UTF-8", to = cs)
     n <- sum(is.na(lost) & !is.na(x))
     if (n > 0L) {
-      cli::cli_warn(
+      .artoo_warn(
         c(
           "Replaced {n} unencodable value{?s} with {.val ?} for {.val {to}}.",
           "i" = "Use {.code on_invalid = \"error\"} to fail loudly instead."
         ),
-        class = "artoo_warning_encoding",
+        kind = "encoding",
         call = call
       )
     }

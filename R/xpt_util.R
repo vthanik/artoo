@@ -71,12 +71,12 @@
   bw <- nchar(chr, type = "bytes")
   if (any(bw > width)) {
     over <- utils::head(which(bw > width), 1L)
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Internal packing error: a value needs {bw[over]} bytes in a {width}-byte field.",
         "i" = "The OBS writer sizes fields to the max byte length; please report this."
       ),
-      class = "artoo_error_codec"
+      kind = "codec"
     )
   }
   buf <- rep(as.raw(0x20), width * n)
@@ -183,12 +183,12 @@
 .read_bytes <- function(con, n, call = rlang::caller_env()) {
   raw_vec <- readBin(con, what = "raw", n = n)
   if (length(raw_vec) < n) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "Unexpected end of XPORT file.",
         "x" = "Expected {n} byte{?s}, got {length(raw_vec)}."
       ),
-      class = "artoo_error_codec",
+      kind = "codec",
       call = call
     )
   }

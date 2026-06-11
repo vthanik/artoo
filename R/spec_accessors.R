@@ -4,13 +4,13 @@
 #' @noRd
 .check_spec_arg <- function(spec, call = rlang::caller_env()) {
   if (!is_artoo_spec(spec)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg spec} must be a {.cls artoo_spec}.",
         "x" = "You supplied {.obj_type_friendly {spec}}.",
         "i" = "Build one with {.fn artoo_spec}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -22,13 +22,13 @@
 .check_dataset_arg <- function(spec, dataset, call = rlang::caller_env()) {
   known <- spec_datasets(spec)
   if (length(dataset) != 1L || is.na(dataset) || !(dataset %in% known)) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg dataset} must be one of the spec's datasets.",
         "x" = "{.val {dataset}} is not in the spec.",
         "i" = "Available: {.val {known}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = call
     )
   }
@@ -188,13 +188,13 @@ spec_codelists <- function(spec, codelist_id = NULL) {
   if (
     length(codelist_id) != 1L || is.na(codelist_id) || !(codelist_id %in% known)
   ) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg codelist_id} must be a codelist in the spec.",
         "x" = "{.val {codelist_id}} is not present.",
         "i" = "Available: {.val {known}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = rlang::caller_env()
     )
   }
@@ -280,13 +280,13 @@ spec_study <- function(spec, field = NULL) {
     return(study)
   }
   if (length(field) != 1L || !(field %in% names(study))) {
-    cli::cli_abort(
+    .artoo_abort(
       c(
         "{.arg field} must be a study-level field.",
         "x" = "{.val {field}} is not present.",
         "i" = "Available: {.val {names(study)}}."
       ),
-      class = "artoo_error_input",
+      kind = "input",
       call = rlang::caller_env()
     )
   }
