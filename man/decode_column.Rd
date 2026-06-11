@@ -34,7 +34,7 @@ dataType coercion and label; an undeclared `to` is plain character.}
 \itemize{
 \item \code{"to_decode"} (default) map codes to their decoded values
 (\code{"M"} becomes \code{"Male"}).
-\item \code{"to_code"} map decoded values to their submission codes -- the
+\item \code{"to_code"} map decoded values to their submission codes — the
 \code{RACEN}-from-\code{RACE} derivation.
 }}
 
@@ -52,8 +52,8 @@ opt-in.}
 replaced (in place), ready for the next pipeline step.
 }
 \description{
-Map one column's values through a spec codelist -- code to decode or
-decode to code -- writing the result to a new variable or in place. This
+Map one column's values through a spec codelist — code to decode or
+decode to code — writing the result to a new variable or in place. This
 is the everyday companion to \code{\link[=apply_spec]{apply_spec()}}'s whole-dataset \code{decode}
 step: deriving \code{RACEN} from \code{RACE}, recovering submission codes from
 decoded values, or decoding a single variable for display, without
@@ -66,11 +66,27 @@ new column lands conformed.
 wins (the natural direction for \code{RACEN}-style derivations, where the
 numeric variable owns the code/decode pairs); when \code{to} declares none,
 \code{from}'s codelist is used. If neither variable references a codelist
-the call aborts -- there is nothing to map through.
+the call aborts — there is nothing to map through.
+
+\strong{Mismatched surfaces chain.} A single call maps through ONE codelist,
+so the winning codelist's terms (or decodes) must line up with the
+\code{from} values — the CDISC \verb{*N} convention guarantees this for
+\code{RACEN}-style pairs, whose decodes are the character variable's
+submission values. When the two codelists share no value surface (say
+\code{SEXN}'s decodes are \code{"Female"}/\code{"Male"} but \code{SEX} holds \code{"F"}/\code{"M"}),
+the unmatched values hit the \code{no_match} policy; translate in two hops
+instead — decode through \code{from}'s codelist first, then \code{to_code}
+through the destination's:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{dm |>
+  decode_column(spec, "DM", from = "SEX", to = "SEXDECD") |>
+  decode_column(spec, "DM", from = "SEXDECD", to = "SEXN",
+                direction = "to_code")
+}\if{html}{\out{</div>}}
 
 \strong{Soft matches are reported, never silent.} Values that match only
 after trimming whitespace (or case-folding, when \code{ignore_case = TRUE})
-still map, with a \code{artoo_warning_codelist} naming the variants --
+still map, with a \code{artoo_warning_codelist} naming the variants —
 \code{\link[=check_spec]{check_spec()}} always compares exactly, so clean the source for
 submission.
 }

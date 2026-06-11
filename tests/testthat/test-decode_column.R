@@ -1,4 +1,4 @@
-# decode_column(): single-variable codelist translation -- the
+# decode_column(): single-variable codelist translation — the
 # metatools::create_var_from_codelist() shape driven by the artoo_spec.
 # Shares .map_codelist_values() with apply_spec()'s decode step, so the
 # policies (no_match, trim, ignore_case) behave identically.
@@ -96,6 +96,73 @@ test_that("the destination's codelist wins over the source's", {
     direction = "to_code"
   )
   expect_true(all(out$SEXN %in% c(1L, 2L)))
+})
+
+test_that("decode_column chains two hops when from and to codelists share no values", {
+  # SEXN's decodes are the LONG decodes ("Female"/"Male"), not SEX's
+  # submission values ("F"/"M"): the single hop through the destination's
+  # codelist matches nothing and must hit the no_match policy, and the
+  # documented two-hop chain (decode via from's list, then to_code via
+  # to's) is the way through.
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "SEXN",
+      label = "Sex (N)",
+      data_type = "integer",
+      length = 8L,
+      order = NA_integer_,
+      codelist_id = "SEXN",
+      stringsAsFactors = FALSE
+    )
+  )
+  cls <- rbind(
+    cdisc_codelists,
+    data.frame(
+      codelist_id = "SEXN",
+      term = c("1", "2"),
+      decode = c("Female", "Male"),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cls)
+  expect_error(
+    decode_column(
+      cdisc_dm,
+      spec,
+      "DM",
+      from = "SEX",
+      to = "SEXN",
+      direction = "to_code"
+    ),
+    class = "artoo_error_codelist"
+  )
+  expect_snapshot(
+    error = TRUE,
+    decode_column(
+      cdisc_dm,
+      spec,
+      "DM",
+      from = "SEX",
+      to = "SEXN",
+      direction = "to_code"
+    )
+  )
+  out <- cdisc_dm |>
+    decode_column(spec, "DM", from = "SEX", to = "SEXDECD") |>
+    decode_column(
+      spec,
+      "DM",
+      from = "SEXDECD",
+      to = "SEXN",
+      direction = "to_code"
+    )
+  expect_type(out$SEXN, "integer")
+  expect_identical(out$SEXN[out$SEX == "F"][1], 1L)
+  expect_identical(out$SEXN[out$SEX == "M"][1], 2L)
+  expect_identical(attr(out$SEXN, "label"), "Sex (N)")
 })
 
 test_that("decode_column honors the no_match policy", {

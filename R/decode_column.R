@@ -1,14 +1,14 @@
-# decode_column.R -- create or translate one variable through a spec
+# decode_column.R — create or translate one variable through a spec
 # codelist. The single-column companion to apply_spec()'s decode step: the
 # same mapper (.map_codelist_values), the same policies, but aimed at the
 # everyday ADaM task of deriving a coded variable from its decode (RACEN
-# from RACE) or vice versa -- the metatools::create_var_from_codelist()
+# from RACE) or vice versa — the metatools::create_var_from_codelist()
 # shape, driven by the artoo_spec instead of a metacore object.
 
 #' Derive or translate a variable through its codelist
 #'
-#' Map one column's values through a spec codelist -- code to decode or
-#' decode to code -- writing the result to a new variable or in place. This
+#' Map one column's values through a spec codelist — code to decode or
+#' decode to code — writing the result to a new variable or in place. This
 #' is the everyday companion to [apply_spec()]'s whole-dataset `decode`
 #' step: deriving `RACEN` from `RACE`, recovering submission codes from
 #' decoded values, or decoding a single variable for display, without
@@ -21,11 +21,28 @@
 #' wins (the natural direction for `RACEN`-style derivations, where the
 #' numeric variable owns the code/decode pairs); when `to` declares none,
 #' `from`'s codelist is used. If neither variable references a codelist
-#' the call aborts -- there is nothing to map through.
+#' the call aborts — there is nothing to map through.
+#'
+#' **Mismatched surfaces chain.** A single call maps through ONE codelist,
+#' so the winning codelist's terms (or decodes) must line up with the
+#' `from` values — the CDISC `*N` convention guarantees this for
+#' `RACEN`-style pairs, whose decodes are the character variable's
+#' submission values. When the two codelists share no value surface (say
+#' `SEXN`'s decodes are `"Female"`/`"Male"` but `SEX` holds `"F"`/`"M"`),
+#' the unmatched values hit the `no_match` policy; translate in two hops
+#' instead — decode through `from`'s codelist first, then `to_code`
+#' through the destination's:
+#'
+#' ```r
+#' dm |>
+#'   decode_column(spec, "DM", from = "SEX", to = "SEXDECD") |>
+#'   decode_column(spec, "DM", from = "SEXDECD", to = "SEXN",
+#'                 direction = "to_code")
+#' ```
 #'
 #' **Soft matches are reported, never silent.** Values that match only
 #' after trimming whitespace (or case-folding, when `ignore_case = TRUE`)
-#' still map, with a `artoo_warning_codelist` naming the variants --
+#' still map, with a `artoo_warning_codelist` naming the variants —
 #' [check_spec()] always compares exactly, so clean the source for
 #' submission.
 #'
@@ -42,7 +59,7 @@
 #' @param direction *Which way to map.* `<character(1)>`. One of:
 #'   * `"to_decode"` (default) map codes to their decoded values
 #'     (`"M"` becomes `"Male"`).
-#'   * `"to_code"` map decoded values to their submission codes -- the
+#'   * `"to_code"` map decoded values to their submission codes — the
 #'     `RACEN`-from-`RACE` derivation.
 #' @param no_match *Policy for values absent from the codelist.*
 #'   `<character(1)>`. One of `"error"` (default), `"keep"` (carry the
