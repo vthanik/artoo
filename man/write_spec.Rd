@@ -2,7 +2,7 @@
 % Please edit documentation in R/spec_write.R
 \name{write_spec}
 \alias{write_spec}
-\title{Write a specification to native artoo JSON}
+\title{Write a specification to native JSON or a P21 Excel workbook}
 \usage{
 write_spec(spec, path)
 }
@@ -10,28 +10,41 @@ write_spec(spec, path)
 \item{spec}{\emph{The specification to serialise.} \verb{<artoo_spec>: required}.
 Build one with \code{\link[=artoo_spec]{artoo_spec()}} or \code{\link[=read_spec]{read_spec()}}.}
 
-\item{path}{\emph{Destination file.} \verb{<character(1)>: required}. Written as
-UTF-8; conventionally ends in \code{.json}.}
+\item{path}{\emph{Destination file.} \verb{<character(1)>: required}. The extension
+picks the format: \code{.json} (native, lossless) or \code{.xlsx} (P21
+interchange; needs the \code{writexl} package). Any other extension aborts
+with \code{artoo_error_input}.}
 }
 \value{
 \emph{The output \code{path}, invisibly.} Read it back with \code{\link[=read_spec]{read_spec()}}.
 }
 \description{
-Serialise a \code{artoo_spec} to artoo's native JSON format: one lossless,
-UTF-8 document carrying every slot (study, datasets, variables,
-codelists, value-level) verbatim. It is the inverse of \code{\link[=read_spec]{read_spec()}}
-on the JSON path, and the canonical way to persist a spec or move it
-between sessions. artoo never writes a spec to xlsx.
+Serialise a \code{artoo_spec}, dispatching on the file extension: a \code{.json}
+path writes artoo's native, lossless JSON; a \code{.xlsx} path writes a
+Pinnacle 21 (P21) style Excel workbook. Both are inverses of
+\code{\link[=read_spec]{read_spec()}} on their format, which makes the spec converters free
+compositions: \code{read_spec("define.xml") |> write_spec("spec.xlsx")} is a
+Define-XML to P21 bridge in one line.
 }
 \details{
-\strong{Lossless by reconstruction.} Each slot is written as an array of row
-objects, with \code{NA} encoded as JSON \code{null} and numbers at full precision,
-so \code{\link[=read_spec]{read_spec()}} rebuilds an identical \code{artoo_spec} through
+\strong{Native JSON is the lossless format.} Each slot is written as an array
+of row objects, with \code{NA} encoded as JSON \code{null} and numbers at full
+precision, so \code{\link[=read_spec]{read_spec()}} rebuilds an identical \code{artoo_spec} through
 \code{\link[=artoo_spec]{artoo_spec()}}. Object keys are emitted in a fixed order, so writing the
 same spec twice yields byte-identical output.
+
+\strong{P21 xlsx is the interchange format.} Sheets are emitted with the
+headers the P21 reader recognises (Datasets, Variables, ValueLevel,
+Codelists, Methods, Comments, Documents; empty optional sheets are
+omitted), foreign keys repeated on every row (no merged cells), and the
+spec's \code{\link[=spec_standard]{spec_standard()}} as the Datasets sheet's \code{Standard} column.
+
+\strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
+per-variable \code{key_sequence}, the study table) do not survive an xlsx
+round-trip; persist to JSON when you need the spec back exactly.
 }
 \examples{
-# ---- Example 1: persist a spec, then read it back ----
+# ---- Example 1: persist a spec to JSON, then read it back ----
 #
 # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 # JSON file, and confirm read_spec() reconstructs it intact.
@@ -40,24 +53,21 @@ path <- tempfile(fileext = ".json")
 write_spec(spec, path)
 identical(read_spec(path), spec)
 
-# ---- Example 2: round-trip a single-dataset spec ----
+# ---- Example 2: the same spec as a P21 workbook ----
 #
-# Slice the bundled tables to DM, write, and read back -- the datasets
-# accessor reports the same dataset.
-dm <- artoo_spec(
-  cdisc_datasets[cdisc_datasets$dataset == "DM", ],
-  cdisc_variables[cdisc_variables$dataset == "DM", ],
-  codelists = cdisc_codelists
-)
-dm_path <- tempfile(fileext = ".json")
-write_spec(dm, dm_path)
-spec_datasets(read_spec(dm_path))
+# The .xlsx path emits P21-shaped sheets; reading the workbook back
+# recovers the P21-representable surface (here: the dataset names).
+if (requireNamespace("writexl", quietly = TRUE)) {
+  xlsx <- tempfile(fileext = ".xlsx")
+  write_spec(spec, xlsx)
+  spec_datasets(read_spec(xlsx))
+}
 
 }
 \seealso{
-\strong{Inverse:} \code{\link[=read_spec]{read_spec()}} reads native JSON or a P21 Excel spec back
-into a \code{artoo_spec}.
+\strong{Inverse:} \code{\link[=read_spec]{read_spec()}} reads native JSON, a P21 Excel workbook, or
+Define-XML back into a \code{artoo_spec}.
 
 \strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
-\code{\link[=spec_variables]{spec_variables()}}.
+\code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_standard]{spec_standard()}}.
 }

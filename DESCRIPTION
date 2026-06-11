@@ -33,6 +33,7 @@ Suggests:
     testthat (>= 3.0.0),
     tibble,
     withr,
+    writexl,
     xml2
 VignetteBuilder: quarto
 Config/testthat/edition: 3

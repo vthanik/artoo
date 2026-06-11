@@ -20,30 +20,43 @@
 #' @noRd
 .spec_json_version <- "1"
 
-#' Write a specification to native artoo JSON
+#' Write a specification to native JSON or a P21 Excel workbook
 #'
-#' Serialise a `artoo_spec` to artoo's native JSON format: one lossless,
-#' UTF-8 document carrying every slot (study, datasets, variables,
-#' codelists, value-level) verbatim. It is the inverse of [read_spec()]
-#' on the JSON path, and the canonical way to persist a spec or move it
-#' between sessions. artoo never writes a spec to xlsx.
+#' Serialise a `artoo_spec`, dispatching on the file extension: a `.json`
+#' path writes artoo's native, lossless JSON; a `.xlsx` path writes a
+#' Pinnacle 21 (P21) style Excel workbook. Both are inverses of
+#' [read_spec()] on their format, which makes the spec converters free
+#' compositions: `read_spec("define.xml") |> write_spec("spec.xlsx")` is a
+#' Define-XML to P21 bridge in one line.
 #'
 #' @details
-#' **Lossless by reconstruction.** Each slot is written as an array of row
-#' objects, with `NA` encoded as JSON `null` and numbers at full precision,
-#' so [read_spec()] rebuilds an identical `artoo_spec` through
+#' **Native JSON is the lossless format.** Each slot is written as an array
+#' of row objects, with `NA` encoded as JSON `null` and numbers at full
+#' precision, so [read_spec()] rebuilds an identical `artoo_spec` through
 #' [artoo_spec()]. Object keys are emitted in a fixed order, so writing the
 #' same spec twice yields byte-identical output.
 #'
+#' **P21 xlsx is the interchange format.** Sheets are emitted with the
+#' headers the P21 reader recognises (Datasets, Variables, ValueLevel,
+#' Codelists, Methods, Comments, Documents; empty optional sheets are
+#' omitted), foreign keys repeated on every row (no merged cells), and the
+#' spec's [spec_standard()] as the Datasets sheet's `Standard` column.
+#'
+#' **Note:** fields with no P21 column (`itemoid`, `target_data_type`,
+#' per-variable `key_sequence`, the study table) do not survive an xlsx
+#' round-trip; persist to JSON when you need the spec back exactly.
+#'
 #' @param spec *The specification to serialise.* `<artoo_spec>: required`.
 #'   Build one with [artoo_spec()] or [read_spec()].
-#' @param path *Destination file.* `<character(1)>: required`. Written as
-#'   UTF-8; conventionally ends in `.json`.
+#' @param path *Destination file.* `<character(1)>: required`. The extension
+#'   picks the format: `.json` (native, lossless) or `.xlsx` (P21
+#'   interchange; needs the `writexl` package). Any other extension aborts
+#'   with `artoo_error_input`.
 #'
 #' @return *The output `path`, invisibly.* Read it back with [read_spec()].
 #'
 #' @examples
-#' # ---- Example 1: persist a spec, then read it back ----
+#' # ---- Example 1: persist a spec to JSON, then read it back ----
 #' #
 #' # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 #' # JSON file, and confirm read_spec() reconstructs it intact.
@@ -52,25 +65,22 @@
 #' write_spec(spec, path)
 #' identical(read_spec(path), spec)
 #'
-#' # ---- Example 2: round-trip a single-dataset spec ----
+#' # ---- Example 2: the same spec as a P21 workbook ----
 #' #
-#' # Slice the bundled tables to DM, write, and read back -- the datasets
-#' # accessor reports the same dataset.
-#' dm <- artoo_spec(
-#'   cdisc_datasets[cdisc_datasets$dataset == "DM", ],
-#'   cdisc_variables[cdisc_variables$dataset == "DM", ],
-#'   codelists = cdisc_codelists
-#' )
-#' dm_path <- tempfile(fileext = ".json")
-#' write_spec(dm, dm_path)
-#' spec_datasets(read_spec(dm_path))
+#' # The .xlsx path emits P21-shaped sheets; reading the workbook back
+#' # recovers the P21-representable surface (here: the dataset names).
+#' if (requireNamespace("writexl", quietly = TRUE)) {
+#'   xlsx <- tempfile(fileext = ".xlsx")
+#'   write_spec(spec, xlsx)
+#'   spec_datasets(read_spec(xlsx))
+#' }
 #'
 #' @seealso
-#' **Inverse:** [read_spec()] reads native JSON or a P21 Excel spec back
-#' into a `artoo_spec`.
+#' **Inverse:** [read_spec()] reads native JSON, a P21 Excel workbook, or
+#' Define-XML back into a `artoo_spec`.
 #'
 #' **Build / inspect:** [artoo_spec()], [spec_datasets()],
-#' [spec_variables()].
+#' [spec_variables()], [spec_standard()].
 #' @export
 write_spec <- function(spec, path) {
   call <- rlang::caller_env()
@@ -86,7 +96,24 @@ write_spec <- function(spec, path) {
       call = call
     )
   }
+  ext <- tolower(tools::file_ext(path))
+  switch(
+    ext,
+    json = .write_spec_json(spec, path, call),
+    xlsx = .write_spec_xlsx(spec, path, call),
+    .artoo_abort(
+      c(
+        "Unsupported spec file type {.val {ext}}.",
+        "i" = "write_spec() writes native {.val .json} (lossless) and Pinnacle 21 {.val .xlsx} (interchange)."
+      ),
+      kind = "input",
+      call = call
+    )
+  )
+}
 
+#' @noRd
+.write_spec_json <- function(spec, path, call = rlang::caller_env()) {
   # Fixed key order: version, then the scalar standard, then each slot in
   # canonical order. A NULL `values` slot is emitted as JSON null
   # (null = "null"); an NA standard likewise serialises to null.
