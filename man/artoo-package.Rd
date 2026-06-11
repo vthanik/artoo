@@ -4,7 +4,7 @@
 \name{artoo-package}
 \alias{artoo}
 \alias{artoo-package}
-\title{artoo: Versatile Lossless Port for Clinical Datasets}
+\title{artoo: Lossless CDISC-Native Input and Output for Clinical Datasets}
 \description{
 \if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
 

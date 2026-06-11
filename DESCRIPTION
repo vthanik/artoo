@@ -1,5 +1,5 @@
 Package: artoo
-Title: Versatile Lossless Port for Clinical Datasets
+Title: Lossless CDISC-Native Input and Output for Clinical Datasets
 Version: 0.0.0.9000
 Authors@R:
     person("Vignesh", "Thanikachalam", , "about.vignesh@gmail.com",
