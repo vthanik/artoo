@@ -2,8 +2,20 @@
 # special missings, temporal + encoding round-trips, and the F1/F2/C4
 # invariants. Internals via artoo:::; a frozen `created` keeps bytes stable.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 frozen <- as.POSIXct("2020-01-01", tz = "UTC")
@@ -22,7 +34,7 @@ expect_values_equal <- function(back, orig) {
 # ---- v5 / v8 round-trip on bundled CDISC data ------------------------------
 
 test_that("v5 round-trips DM values and per-column metadata", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, created = frozen)
@@ -37,7 +49,7 @@ test_that("v5 round-trips DM values and per-column metadata", {
 })
 
 test_that("v5 round-trips ADSL including Date columns", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, p, created = frozen)
@@ -50,7 +62,7 @@ test_that("v5 round-trips ADSL including Date columns", {
 })
 
 test_that("v8 round-trips DM (extended member format)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, version = 8, created = frozen)
@@ -62,7 +74,7 @@ test_that("v8 round-trips DM (extended member format)", {
 # ---- byte stability ---------------------------------------------------------
 
 test_that("two writes with a frozen timestamp are byte-identical", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p1 <- withr::local_tempfile(fileext = ".xpt")
   p2 <- withr::local_tempfile(fileext = ".xpt")
@@ -361,7 +373,7 @@ test_that("a v5 char column over 200 bytes aborts", {
 })
 
 test_that("a truncated xpt file aborts on read", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p, created = frozen)

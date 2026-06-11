@@ -63,21 +63,19 @@ against the \code{decode}s. \code{\link[=apply_spec]{apply_spec()}} threads its 
 a decoded column is not wrongly flagged.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-
 # ---- Example 1: a conformed dataset has no findings ----
 #
 # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 # against the same spec returns zero rows.
-adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
-nrow(check_spec(adsl, spec, "ADSL"))
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
+nrow(check_spec(adsl, adam_spec, "ADSL"))
 
 # ---- Example 2: raw data surfaces divergences ----
 #
-# Checking a frame with an undeclared column flags it as an extra variable.
+# Checking a raw frame with an undeclared column flags the extras.
 raw <- cdisc_adsl
 raw$NOTASPEC <- 1
-check_spec(raw, spec, "DM")[, c("check", "variable", "severity")]
+head(check_spec(raw, adam_spec, "ADSL")[, c("check", "variable", "severity")])
 
 }
 \seealso{

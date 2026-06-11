@@ -50,7 +50,7 @@ spec. Each row carries the variable's CDISC \code{data_type}, label, length,
 display format, key sequence, and codelist reference.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: one dataset's variables ----
 #

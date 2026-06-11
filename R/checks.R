@@ -102,7 +102,7 @@
 #' #
 #' # Turn off the length check (e.g. while a spec's lengths are provisional)
 #' # and reuse the control across every dataset.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 #' ck <- artoo_checks(length_overflow = FALSE)
 #' nrow(check_spec(cdisc_dm, spec, "DM", checks = ck))
 #'

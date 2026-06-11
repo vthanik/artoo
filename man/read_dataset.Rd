@@ -43,7 +43,7 @@ metadata the file carries is re-attached, so a value written by
 I/O layer; the per-format wrappers like \code{\link[=read_rds]{read_rds()}} call it.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a dataset through rds ----
 #

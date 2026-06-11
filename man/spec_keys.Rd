@@ -28,9 +28,9 @@ written to each output format.
 #
 # Declare DM's keys, then read them back as the ordered vector apply_spec()
 # sorts by. (STUDYID and USUBJID are real DM variables in the demo data.)
-ds <- cdisc_datasets
+ds <- cdisc_sdtm_datasets
 ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
 spec_keys(spec, "DM")
 
 }

@@ -3,8 +3,20 @@
 # string (9.A.9), vectorized ragged-row guard (C5), and the structural probe
 # (E2). Internals via artoo:::; a frozen `created` keeps bytes stable.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 frozen <- as.POSIXct("2020-01-01", tz = "UTC")
@@ -19,7 +31,7 @@ expect_values_equal <- function(back, orig) {
 # ---- round-trip on bundled CDISC data --------------------------------------
 
 test_that("write_json/read_json round-trips ADSL values and metadata", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(adsl, p, created = frozen)
@@ -33,7 +45,7 @@ test_that("write_json/read_json round-trips ADSL values and metadata", {
 })
 
 test_that("read_json realizes Date columns from ISO strings", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(adsl, p, created = frozen)
@@ -44,7 +56,7 @@ test_that("read_json realizes Date columns from ISO strings", {
 })
 
 test_that("DM round-trips through the generic dispatcher by extension", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_dataset(dm, p, created = frozen)
@@ -56,7 +68,7 @@ test_that("DM round-trips through the generic dispatcher by extension", {
 # ---- byte stability ---------------------------------------------------------
 
 test_that("a frozen created makes two writes byte-identical", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p1 <- withr::local_tempfile(fileext = ".json")
   p2 <- withr::local_tempfile(fileext = ".json")
@@ -69,7 +81,7 @@ test_that("a frozen created makes two writes byte-identical", {
 })
 
 test_that("the file carries datasetJSONCreationDateTime from created", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
@@ -195,7 +207,7 @@ test_that("a partial ISO date stays a character string", {
 # ---- empty frame ------------------------------------------------------------
 
 test_that("a zero-row dataset round-trips with an empty rows array", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm[0, ], spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
@@ -266,7 +278,7 @@ test_that("an embedded NUL byte aborts (B5)", {
 })
 
 test_that("a leading UTF-8 BOM is stripped on read (B5)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)

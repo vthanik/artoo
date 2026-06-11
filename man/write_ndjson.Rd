@@ -39,7 +39,7 @@ array the way the \code{.json} codec must. A \code{.ndjson.gz} path gzips the st
 transparently.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset as NDJSON ----
 #

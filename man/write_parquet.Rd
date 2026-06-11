@@ -50,7 +50,7 @@ between any two formats stays lossless. A reader without artoo still opens
 the data and can see the \code{metadata_json} block.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset to Parquet ----
 #

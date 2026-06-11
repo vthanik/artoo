@@ -23,7 +23,7 @@ inspect its \verb{@dataset} and \verb{@columns} slots.
 #
 # get_meta() yields a artoo_meta; is_artoo_meta() confirms the type before
 # you reach into its slots.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 meta <- get_meta(adsl)
 is_artoo_meta(meta)

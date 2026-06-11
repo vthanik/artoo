@@ -34,15 +34,20 @@
 
 test_that("the literal engine reproduces the demo goldens byte for byte", {
   frozen <- as.POSIXct("2024-01-15 10:30:00", tz = "UTC")
-  spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+  adam <- artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+  sdtm <- artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   for (ds in c("DM", "ADSL")) {
     src <- apply_spec(
       if (ds == "DM") cdisc_dm else cdisc_adsl,
-      spec,
+      if (ds == "DM") sdtm else adam,
       ds,
       conformance = "off"
     )

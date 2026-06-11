@@ -253,7 +253,7 @@
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset to Parquet ----
 #' #
@@ -305,7 +305,7 @@ write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
 #'   (read it with [get_meta()]); otherwise a plain data frame.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through Parquet ----
 #' #

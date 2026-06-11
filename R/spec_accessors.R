@@ -51,7 +51,10 @@
 #' #
 #' # Build the spec from the bundled CDISC-pilot tables and list its
 #' # datasets -- the names you pass to the other accessors.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #' spec_datasets(spec)
 #'
 #' @seealso [spec_variables()] for one dataset's variables; [spec_keys()]
@@ -107,7 +110,7 @@ spec_datasets <- function(spec) {
 #'   Filter or arrange it with ordinary base / `dplyr` verbs.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: one dataset's variables ----
 #' #
@@ -164,7 +167,10 @@ spec_variables <- function(spec, dataset = NULL) {
 #' #
 #' # SEX is coded against C66731; spec_codelists() returns the terms and their
 #' # decodes that apply_spec() will enforce or decode.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #' spec_codelists(spec, "C66731")
 #'
 #' # ---- Example 2: the whole codelists table ----
@@ -222,9 +228,9 @@ spec_codelists <- function(spec, codelist_id = NULL) {
 #' #
 #' # Declare DM's keys, then read them back as the ordered vector apply_spec()
 #' # sorts by. (STUDYID and USUBJID are real DM variables in the demo data.)
-#' ds <- cdisc_datasets
+#' ds <- cdisc_sdtm_datasets
 #' ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-#' spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
 #' spec_keys(spec, "DM")
 #'
 #' @seealso [spec_datasets()] for the dataset names; [spec_variables()] for
@@ -268,7 +274,7 @@ spec_keys <- function(spec, dataset) {
 #' # Pass the standard explicitly (or let it resolve from a P21 workbook's
 #' # Standard column / a Define-XML study block) and read it back.
 #' spec <- artoo_spec(
-#'   cdisc_datasets, cdisc_variables,
+#'   cdisc_adam_datasets, cdisc_adam_variables,
 #'   codelists = cdisc_codelists,
 #'   standard = "ADaMIG 1.1"
 #' )
@@ -277,7 +283,10 @@ spec_keys <- function(spec, dataset) {
 #' # ---- Example 2: unspecified resolves to NA ----
 #' #
 #' # A spec built without any standard source carries NA.
-#' bare <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' bare <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #' spec_standard(bare)
 #'
 #' @seealso [spec_study()] for the rest of the study-level metadata;
@@ -309,7 +318,7 @@ spec_standard <- function(spec) {
 #' # spec_study() with no field returns the study-level table; pass a field
 #' # name to pull a single value such as the study identifier.
 #' spec <- artoo_spec(
-#'   cdisc_datasets, cdisc_variables,
+#'   cdisc_adam_datasets, cdisc_adam_variables,
 #'   codelists = cdisc_codelists,
 #'   study = data.frame(studyid = "CDISCPILOT01")
 #' )

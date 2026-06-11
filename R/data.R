@@ -1,21 +1,27 @@
 # data.R -- documentation for the bundled CDISC-pilot demo data.
 # Regenerate the .rda files with data-raw/bundle-demo.R.
 
-#' CDISC demo specification tables
+#' CDISC demo specification tables (one standard per pair)
 #'
-#' The dataset-level (`cdisc_datasets`) and variable-level (`cdisc_variables`)
-#' metadata for the bundled `cdisc_adsl` and `cdisc_dm` datasets, in the shape
-#' [artoo_spec()] expects. The variable table is *derived from the data*
-#' (names, labels, inferred CDISC types, byte lengths) by `data-raw/`. Pass
-#' both to [artoo_spec()] to build a specification for examples and tests.
+#' The constructor-shaped metadata tables for the bundled demo data, split
+#' by CDISC standard because a `artoo_spec` carries exactly one:
+#' `cdisc_adam_datasets` + `cdisc_adam_variables` describe ADSL
+#' (ADaMIG 1.1), and `cdisc_sdtm_datasets` + `cdisc_sdtm_variables`
+#' describe DM (SDTMIG 3.1.2). Each variables table is *derived from the
+#' data* (names, labels, inferred CDISC types, byte lengths) by
+#' `data-raw/`. Pass one standard's pair to [artoo_spec()]; passing both
+#' pairs together aborts with `artoo_error_spec` -- mixing standards in
+#' one spec is the mistake the split exists to prevent.
 #'
 #' @format
-#' `cdisc_datasets` is a data frame with one row per dataset:
+#' Each `*_datasets` table is a data frame with one row per dataset:
 #' \describe{
-#'   \item{dataset}{Dataset name (`"ADSL"`, `"DM"`).}
+#'   \item{dataset}{Dataset name (`"ADSL"` or `"DM"`).}
 #'   \item{label}{Dataset label.}
+#'   \item{standard}{The CDISC standard, consumed into the spec's
+#'     [spec_standard()].}
 #' }
-#' `cdisc_variables` is a data frame with one row per variable:
+#' Each `*_variables` table is a data frame with one row per variable:
 #' \describe{
 #'   \item{dataset}{Owning dataset name.}
 #'   \item{variable}{Variable name.}
@@ -24,17 +30,26 @@
 #'   \item{length}{Storage length (max byte width for character, 8 for
 #'     numeric).}
 #'   \item{order}{Variable order within the dataset.}
+#'   \item{codelist_id}{NCI codelist reference (`"C66731"` on `SEX`).}
 #' }
 #' @source Derived from the CDISC pilot `.xpt` files in the public PHUSE
 #'   Test Data Factory (`phuse-org/phuse-scripts`) by
 #'   `data-raw/bundle-demo.R`.
 #' @keywords datasets
 #' @name cdisc_spec
-"cdisc_datasets"
+"cdisc_adam_datasets"
 
 #' @rdname cdisc_spec
 #' @format NULL
-"cdisc_variables"
+"cdisc_adam_variables"
+
+#' @rdname cdisc_spec
+#' @format NULL
+"cdisc_sdtm_datasets"
+
+#' @rdname cdisc_spec
+#' @format NULL
+"cdisc_sdtm_variables"
 
 #' @rdname cdisc_spec
 #' @format

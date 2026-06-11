@@ -1,13 +1,33 @@
 # Tests for artoo_spec() construction and is_artoo_spec().
 
-test_that("artoo_spec() builds a valid spec from the bundled tables", {
-  spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+test_that("artoo_spec() builds a valid spec from each bundled pair", {
+  adam <- artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
-  expect_true(is_artoo_spec(spec))
-  expect_setequal(spec_datasets(spec), c("ADSL", "DM"))
+  expect_true(is_artoo_spec(adam))
+  expect_setequal(spec_datasets(adam), "ADSL")
+  expect_identical(spec_standard(adam), "ADaMIG 1.1")
+
+  sdtm <- artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
+  expect_setequal(spec_datasets(sdtm), "DM")
+  expect_identical(spec_standard(sdtm), "SDTMIG 3.1.2")
+})
+
+test_that("mixing the ADaM and SDTM demo tables aborts (one spec, one standard)", {
+  expect_error(
+    artoo_spec(
+      rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
+      rbind(cdisc_adam_variables, cdisc_sdtm_variables),
+      codelists = cdisc_codelists
+    ),
+    class = "artoo_error_spec"
+  )
 })
 
 test_that("artoo_spec() coerces a tibble slot to a plain data frame", {

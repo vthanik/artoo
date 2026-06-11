@@ -61,22 +61,22 @@
 #'   [conformance()] reads back. Hand it to any `write_*()` codec.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-#'
 #' # ---- Example 1: conform ADSL, then read its metadata ----
 #' #
-#' # The raw frame is scaffolded, coerced, ordered, sorted, and stamped; the
-#' # result carries the CDISC metadata get_meta() reads back.
-#' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
+#' # The bundled adam_spec describes ADSL; the raw frame is scaffolded,
+#' # coerced, ordered, sorted, and stamped with the CDISC metadata
+#' # get_meta() reads back.
+#' adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 #' get_meta(adsl)@dataset$records
 #'
 #' # ---- Example 2: an undeclared column survives, and is reported ----
 #' #
 #' # apply_spec() never drops data: a column outside the spec rides along
 #' # (reported by the extra_variable finding) and still writes losslessly.
+#' # DM is SDTM, so it conforms against the bundled sdtm_spec.
 #' raw <- cdisc_dm
 #' raw$DERIVED <- seq_len(nrow(raw))
-#' dm <- apply_spec(raw, spec, "DM")
+#' dm <- apply_spec(raw, sdtm_spec, "DM")
 #' findings <- conformance(dm)
 #' findings[findings$check == "extra_variable", c("variable", "message")]
 #'

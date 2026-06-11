@@ -39,7 +39,10 @@ Read an R \code{.rds} file written by \code{\link[=write_rds]{write_rds()}} (or 
 restored. A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "rds"}.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: read a dataset written by write_rds() ----
 #

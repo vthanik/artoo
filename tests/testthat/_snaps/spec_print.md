@@ -1,15 +1,15 @@
 # .format_spec renders counts and a dataset preview
 
     Code
-      cat(artoo:::.format_spec(demo_spec()), sep = "\n")
+      cat(artoo:::.format_spec(demo_adam_spec()), sep = "\n")
     Output
       <artoo_spec>
       Study: (unspecified)
-      Standard: (unspecified)
-      Datasets:  2
-      Variables: 73
+      Standard: ADaMIG 1.1
+      Datasets:  1
+      Variables: 48
       Codelists: 1
-      Spec for: ADSL, DM
+      Spec for: ADSL
 
 # .format_meta renders dataset, records, columns, keys, preview
 

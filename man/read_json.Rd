@@ -43,7 +43,7 @@ JSON tokens, so the round-trip is lossless. The ingest end of the I/O layer;
 a thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "json"}.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a conformed dataset through Dataset-JSON ----
 #

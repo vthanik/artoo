@@ -2,8 +2,8 @@
 
 test_that("write_spec() writes the canonical key order with a null values slot", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   p <- withr::local_tempfile(fileext = ".json")
@@ -32,8 +32,8 @@ test_that("write_spec() writes the canonical key order with a null values slot",
 
 test_that("write_spec() is deterministic (byte-identical on rewrite)", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   p1 <- withr::local_tempfile(fileext = ".json")

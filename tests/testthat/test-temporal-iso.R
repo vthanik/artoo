@@ -132,8 +132,8 @@ test_that("a Date column without spec targetDataType gets integer stamped at app
   # no targetDataType: the truthful exchange form is numeric, and the stamp
   # records it so every codec and sidecar agrees.
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
@@ -151,8 +151,8 @@ test_that("a Date column without spec targetDataType gets integer stamped at app
 
 test_that("xpt read records targetDataType = integer for numeric temporals", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")

@@ -15,7 +15,7 @@
       Error:
       ! `dataset` must be one of the spec's datasets.
       x "NOPE" is not in the spec.
-      i Available: "ADSL" and "DM".
+      i Available: "ADSL".
 
 # truncating integer coercion always aborts (lossless or abort)
 

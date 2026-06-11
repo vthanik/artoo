@@ -3,22 +3,33 @@
 # shared codelist mapper through decode_column(). Driven by bundled CDISC
 # demo data.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 # spec with DM sort keys declared, to exercise .sort_keys().
 keyed_spec <- function() {
-  ds <- cdisc_datasets
-  ds$keys <- NA_character_
-  ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  ds <- cdisc_sdtm_datasets
+  ds$keys <- "STUDYID USUBJID"
+  artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
 }
 
 # ---- coerce_types -----------------------------------------------------------
 
 test_that("coercion that introduces NA warns with artoo_warning_coercion", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$AGE <- as.character(raw$AGE)
   raw$AGE[1] <- "not-a-number"
@@ -73,10 +84,10 @@ test_that("apply_spec exposes na_position to the user", {
 # ---- .apply_info ------------------------------------------------------------
 
 test_that("a partial variables$order warns and trails the unnumbered vars", {
-  v <- cdisc_variables
+  v <- cdisc_sdtm_variables
   # Blank one DM variable's order so the column is only partially numbered.
   v$order[v$dataset == "DM" & v$variable == "DOMAIN"] <- NA_integer_
-  spec <- artoo_spec(cdisc_datasets, v, codelists = cdisc_codelists)
+  spec <- artoo_spec(cdisc_sdtm_datasets, v, codelists = cdisc_codelists)
   expect_warning(
     out <- apply_spec(cdisc_dm, spec, "DM", conformance = "off"),
     class = "artoo_warning_order"
@@ -86,14 +97,14 @@ test_that("a partial variables$order warns and trails the unnumbered vars", {
 })
 
 test_that("a fully numbered order does not warn", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   expect_no_warning(
     suppressMessages(apply_spec(cdisc_dm, spec, "DM", conformance = "off"))
   )
 })
 
 test_that("scaffold progress carries class artoo_message_apply", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$AGE <- NULL # in the spec -> scaffolded back
   expect_message(
@@ -106,23 +117,23 @@ test_that("a duplicated spec variable aborts at construction, with the rows", {
   # Fail fast, fail locatably: the duplicate surfaces when the spec is
   # built, naming the offending rows, not deep inside apply_spec() after
   # every derivation has already run.
-  vars <- cdisc_variables
+  vars <- cdisc_sdtm_variables
   dup <- vars[vars$dataset == "DM" & vars$variable == "SEX", , drop = FALSE]
   vars2 <- rbind(vars, dup)
   expect_error(
-    artoo_spec(cdisc_datasets, vars2, codelists = cdisc_codelists),
+    artoo_spec(cdisc_sdtm_datasets, vars2, codelists = cdisc_codelists),
     class = "artoo_error_spec"
   )
   expect_snapshot(
     error = TRUE,
-    artoo_spec(cdisc_datasets, vars2, codelists = cdisc_codelists)
+    artoo_spec(cdisc_sdtm_datasets, vars2, codelists = cdisc_codelists)
   )
 })
 
 # ---- check_spec dimensions --------------------------------------------------
 
 test_that("check_spec flags type_mismatch", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$AGE <- as.character(raw$AGE) # spec wants integer storage
   res <- check_spec(raw, spec, "ADSL")
@@ -130,7 +141,7 @@ test_that("check_spec flags type_mismatch", {
 })
 
 test_that("check_spec flags length_overflow", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$SUBJID <- paste0(raw$SUBJID, "EXTRALONG") # spec length is 4
   res <- check_spec(raw, spec, "ADSL")
@@ -138,7 +149,7 @@ test_that("check_spec flags length_overflow", {
 })
 
 test_that("check_spec flags codelist_membership", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z" # not in C66731
   res <- check_spec(raw, spec, "DM")
@@ -148,7 +159,7 @@ test_that("check_spec flags codelist_membership", {
 })
 
 test_that("apply_spec conformance = warn attaches findings and warns on errors", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z"
   expect_warning(
@@ -160,7 +171,7 @@ test_that("apply_spec conformance = warn attaches findings and warns on errors",
 })
 
 test_that("check_spec rejects a non-data-frame x", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   expect_error(check_spec(list(1), spec, "DM"), class = "artoo_error_input")
 })
 

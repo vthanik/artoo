@@ -5,8 +5,20 @@
 
 skip_if_not_installed("nanoparquet")
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 expect_values_equal <- function(back, orig) {
@@ -18,7 +30,7 @@ expect_values_equal <- function(back, orig) {
 # ---- round-trip on bundled CDISC data --------------------------------------
 
 test_that("write_parquet/read_parquet round-trips ADSL values and metadata", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(adsl, p)
@@ -32,7 +44,7 @@ test_that("write_parquet/read_parquet round-trips ADSL values and metadata", {
 })
 
 test_that("read_parquet realizes Date columns natively", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(adsl, p)
@@ -43,7 +55,7 @@ test_that("read_parquet realizes Date columns natively", {
 })
 
 test_that("DM round-trips through the generic dispatcher by extension", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_dataset(dm, p)
@@ -79,7 +91,7 @@ test_that("decimal stays an exact string and time becomes hms", {
 # ---- the metadata_json sidecar ----------------------------------------------
 
 test_that("the sidecar is embedded under the metadata_json key", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(dm, p)
@@ -124,7 +136,7 @@ test_that("encode without meta writes a sidecar-free parquet", {
 # ---- cross-format chain -----------------------------------------------------
 
 test_that("xpt -> parquet -> json preserves metadata across the chain", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   px <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, px, created = as.POSIXct("2020-01-01", tz = "UTC"))
@@ -161,7 +173,7 @@ test_that("a file with KV metadata but no metadata_json key has no sidecar", {
 
 test_that("a failed encode leaves any prior file untouched (9.A.4)", {
   p <- withr::local_tempfile(fileext = ".parquet")
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   write_parquet(dm, p)
   before <- readBin(p, "raw", file.info(p)$size)

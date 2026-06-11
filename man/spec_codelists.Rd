@@ -40,7 +40,10 @@ is allowed to take before applying the spec. Mirrors the
 #
 # SEX is coded against C66731; spec_codelists() returns the terms and their
 # decodes that apply_spec() will enforce or decode.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 spec_codelists(spec, "C66731")
 
 # ---- Example 2: the whole codelists table ----

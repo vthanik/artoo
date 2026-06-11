@@ -187,7 +187,7 @@
 #' #
 #' # write_spec() and read_spec() are inverses on the JSON path: the spec
 #' # that comes back is identical to the one written.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 #' path <- tempfile(fileext = ".json")
 #' write_spec(spec, path)
 #' back <- read_spec(path)

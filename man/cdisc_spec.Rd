@@ -3,17 +3,21 @@
 \docType{data}
 \name{cdisc_spec}
 \alias{cdisc_spec}
-\alias{cdisc_datasets}
-\alias{cdisc_variables}
+\alias{cdisc_adam_datasets}
+\alias{cdisc_adam_variables}
+\alias{cdisc_sdtm_datasets}
+\alias{cdisc_sdtm_variables}
 \alias{cdisc_codelists}
-\title{CDISC demo specification tables}
+\title{CDISC demo specification tables (one standard per pair)}
 \format{
-\code{cdisc_datasets} is a data frame with one row per dataset:
+Each \verb{*_datasets} table is a data frame with one row per dataset:
 \describe{
-\item{dataset}{Dataset name (\code{"ADSL"}, \code{"DM"}).}
+\item{dataset}{Dataset name (\code{"ADSL"} or \code{"DM"}).}
 \item{label}{Dataset label.}
+\item{standard}{The CDISC standard, consumed into the spec's
+\code{\link[=spec_standard]{spec_standard()}}.}
 }
-\code{cdisc_variables} is a data frame with one row per variable:
+Each \verb{*_variables} table is a data frame with one row per variable:
 \describe{
 \item{dataset}{Owning dataset name.}
 \item{variable}{Variable name.}
@@ -22,6 +26,7 @@
 \item{length}{Storage length (max byte width for character, 8 for
 numeric).}
 \item{order}{Variable order within the dataset.}
+\item{codelist_id}{NCI codelist reference (\code{"C66731"} on \code{SEX}).}
 }
 
 \code{cdisc_codelists} is a data frame of controlled-terminology terms (the
@@ -39,17 +44,25 @@ Test Data Factory (\code{phuse-org/phuse-scripts}) by
 \code{data-raw/bundle-demo.R}.
 }
 \usage{
-cdisc_datasets
+cdisc_adam_datasets
 
-cdisc_variables
+cdisc_adam_variables
+
+cdisc_sdtm_datasets
+
+cdisc_sdtm_variables
 
 cdisc_codelists
 }
 \description{
-The dataset-level (\code{cdisc_datasets}) and variable-level (\code{cdisc_variables})
-metadata for the bundled \code{cdisc_adsl} and \code{cdisc_dm} datasets, in the shape
-\code{\link[=artoo_spec]{artoo_spec()}} expects. The variable table is \emph{derived from the data}
-(names, labels, inferred CDISC types, byte lengths) by \verb{data-raw/}. Pass
-both to \code{\link[=artoo_spec]{artoo_spec()}} to build a specification for examples and tests.
+The constructor-shaped metadata tables for the bundled demo data, split
+by CDISC standard because a \code{artoo_spec} carries exactly one:
+\code{cdisc_adam_datasets} + \code{cdisc_adam_variables} describe ADSL
+(ADaMIG 1.1), and \code{cdisc_sdtm_datasets} + \code{cdisc_sdtm_variables}
+describe DM (SDTMIG 3.1.2). Each variables table is \emph{derived from the
+data} (names, labels, inferred CDISC types, byte lengths) by
+\verb{data-raw/}. Pass one standard's pair to \code{\link[=artoo_spec]{artoo_spec()}}; passing both
+pairs together aborts with \code{artoo_error_spec} -- mixing standards in
+one spec is the mistake the split exists to prevent.
 }
 \keyword{datasets}

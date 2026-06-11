@@ -30,7 +30,7 @@ metadata both as live R attributes and as the language-agnostic
 \code{metadata_json} string, so \code{\link[=read_rds]{read_rds()}} restores it exactly.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset to rds ----
 #

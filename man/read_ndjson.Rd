@@ -36,7 +36,7 @@ line loop early, so a partial read of a huge file never parses the tail.
 A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with \code{format = "ndjson"}.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a conformed dataset through NDJSON ----
 #

@@ -19,7 +19,7 @@
 ---
 
     Code
-      print(check_spec(clean, spec, "ADSL"))
+      print(check_spec(clean, adam, "ADSL"))
     Output
       <artoo_findings>: 0 errors, 0 warnings, 0 notes
       No findings. The data conforms to the spec.

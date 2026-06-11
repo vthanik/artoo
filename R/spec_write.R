@@ -60,7 +60,10 @@
 #' #
 #' # Build a spec from the bundled CDISC-pilot tables, write it to a temp
 #' # JSON file, and confirm read_spec() reconstructs it intact.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #' path <- tempfile(fileext = ".json")
 #' write_spec(spec, path)
 #' identical(read_spec(path), spec)

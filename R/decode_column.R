@@ -57,7 +57,7 @@
 #'   replaced (in place), ready for the next pipeline step.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: decode a coded variable into a display column ----
 #' #
@@ -72,7 +72,7 @@
 #' # derive it from SEX's decoded values: to_code maps each decode to its
 #' # submission code, and the spec dataType makes the result integer.
 #' vars <- rbind(
-#'   cdisc_variables,
+#'   cdisc_sdtm_variables,
 #'   data.frame(
 #'     dataset = "DM", variable = "SEXN", label = "Sex (N)",
 #'     data_type = "integer", length = 8L, order = NA_integer_,
@@ -86,7 +86,7 @@
 #'     decode = c("F", "M"), order = 1:2
 #'   )
 #' )
-#' spec_n <- artoo_spec(cdisc_datasets, vars, codelists = cls)
+#' spec_n <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cls)
 #' dm_n <- decode_column(cdisc_dm, spec_n, "DM",
 #'   from = "SEX", to = "SEXN", direction = "to_code"
 #' )

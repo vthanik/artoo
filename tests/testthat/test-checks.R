@@ -1,8 +1,20 @@
 # Tests for the artoo_checks() conformance control: construction, validation,
 # and its effect on which check_spec() dimensions fire.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 test_that("artoo_checks() defaults every conformance dimension on", {
@@ -32,7 +44,7 @@ test_that("print.artoo_checks renders the toggle grid", {
 })
 
 test_that("disabling a dimension suppresses its findings", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z" # would trip codelist_membership
   raw$NOTSPEC <- 1 # would trip extra_variable
@@ -52,7 +64,7 @@ test_that("disabling a dimension suppresses its findings", {
 })
 
 test_that("check_spec honors a checks control on a conformed frame", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z"
   out <- apply_spec(raw, spec, "DM", conformance = "off")
@@ -118,7 +130,7 @@ test_that("check_spec does not flag a valid temporal format", {
 })
 
 test_that("check_spec rejects a non-artoo_checks checks argument", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   expect_error(
     check_spec(cdisc_dm, spec, "DM", checks = list(missing_variable = TRUE)),
     class = "artoo_error_input"
@@ -160,7 +172,7 @@ test_that("codelist_membership treats NA in a mandatory variable as a violation 
 # ---- 1d: decode-aware membership -------------------------------------------
 
 test_that("check_spec(decode=) compares against the matching codelist column (1d)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dec <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
   # Checked with the same decode direction: the decoded values are members.
   f_ok <- check_spec(dec, spec, "DM", decode = "to_decode")
@@ -219,9 +231,9 @@ test_that("char_length_limit flags over-200-byte values independent of declared 
 })
 
 test_that("key_uniqueness flags duplicate keys and short-circuits on a missing key", {
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   keys <- spec_keys(spec, "DM")
   expect_true(length(keys) > 0L) # DM now declares keys
 

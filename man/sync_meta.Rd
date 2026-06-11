@@ -36,7 +36,7 @@ when it survived, or an explicit \code{meta}) and makes it agree with the data
 again, so the round trip stays lossless without hand-editing.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: re-attach after an attribute-dropping subset ----
 #

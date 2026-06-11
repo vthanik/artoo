@@ -87,7 +87,7 @@
 #'   Called for the side effect of writing `path`.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset, inferring rds from the path ----
 #' #
@@ -171,7 +171,7 @@ write_dataset <- function(x, path, format = NULL, ...) {
 #'   a `artoo_error_codec`.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a dataset through rds ----
 #' #

@@ -2,8 +2,20 @@
 # artoo_formats(), and the rds codec round-trip (the spine: a conformed
 # frame survives a write/read trip with its artoo_meta intact).
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 # ---- registry ---------------------------------------------------------------
@@ -29,7 +41,7 @@ test_that(".codec_for_ext maps extensions to formats", {
 # ---- format resolution ------------------------------------------------------
 
 test_that("write_dataset / read_dataset resolve the format from the path", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
 
@@ -48,7 +60,7 @@ test_that("an unknown extension with no format aborts", {
 })
 
 test_that("explicit format overrides the extension", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".data")
   write_dataset(adsl, path, format = "rds")
@@ -59,10 +71,10 @@ test_that("explicit format overrides the extension", {
 # ---- rds codec round-trip (the lossless invariant) --------------------------
 
 test_that("rds round-trip preserves artoo_meta exactly", {
-  spec <- demo_spec()
-  for (ds in spec_datasets(spec)) {
+  specs <- list(ADSL = demo_adam_spec(), DM = demo_sdtm_spec())
+  for (ds in names(specs)) {
     src <- if (ds == "ADSL") cdisc_adsl else cdisc_dm
-    conformed <- apply_spec(src, spec, ds, conformance = "off")
+    conformed <- apply_spec(src, specs[[ds]], ds, conformance = "off")
     path <- withr::local_tempfile(fileext = ".rds")
     write_rds(conformed, path)
     back <- read_rds(path)
@@ -80,7 +92,7 @@ test_that("rds round-trip preserves artoo_meta exactly", {
 })
 
 test_that("rds round-trip preserves the data values", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
   write_rds(adsl, path)
@@ -136,7 +148,7 @@ test_that("rds write falls back to copy when rename fails", {
     file.rename = function(from, to) FALSE,
     .package = "base"
   )
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   path <- withr::local_tempfile(fileext = ".rds")
   write_rds(adsl, path)

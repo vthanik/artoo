@@ -29,12 +29,15 @@ row is entirely blank reports one row fewer (the documented v5 ambiguity,
 see \code{\link[=write_xpt]{write_xpt()}}).
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: a single-member file reports one row ----
 #
 # The FDA convention is one dataset per transport file.
-dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
 xpt_members(p)

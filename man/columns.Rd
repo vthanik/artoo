@@ -51,7 +51,7 @@ conformed frame show it; re-apply the spec after an xpt read to
 restore it.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: the column pane of a conformed frame ----
 #

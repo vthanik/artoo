@@ -3,15 +3,27 @@
 # Shares .map_codelist_values() with apply_spec()'s decode step, so the
 # policies (no_match, trim, ignore_case) behave identically.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 # Spec extended with a numeric coded variable (the RACEN pattern): SEXN is
 # integer, owning a codelist whose terms are codes and decodes are SEX values.
 sexn_spec <- function() {
   vars <- rbind(
-    cdisc_variables,
+    cdisc_sdtm_variables,
     data.frame(
       dataset = "DM",
       variable = "SEXN",
@@ -33,13 +45,13 @@ sexn_spec <- function() {
       stringsAsFactors = FALSE
     )
   )
-  artoo_spec(cdisc_datasets, vars, codelists = cls)
+  artoo_spec(cdisc_sdtm_datasets, vars, codelists = cls)
 }
 
 test_that("decode_column decodes into a new column, source untouched", {
   out <- decode_column(
     cdisc_dm,
-    demo_spec(),
+    demo_sdtm_spec(),
     "DM",
     from = "SEX",
     to = "SEXDECD"
@@ -51,7 +63,7 @@ test_that("decode_column decodes into a new column, source untouched", {
 })
 
 test_that("decode_column translates in place by default (to = from)", {
-  out <- decode_column(cdisc_dm, demo_spec(), "DM", from = "SEX")
+  out <- decode_column(cdisc_dm, demo_sdtm_spec(), "DM", from = "SEX")
   expect_setequal(unique(out$SEX), c("Female", "Male"))
 })
 
@@ -89,7 +101,7 @@ test_that("the destination's codelist wins over the source's", {
 test_that("decode_column honors the no_match policy", {
   raw <- cdisc_dm
   raw$SEX[1] <- "X"
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   expect_error(
     decode_column(raw, spec, "DM", from = "SEX", to = "SEXDECD"),
     class = "artoo_error_codelist"
@@ -118,14 +130,20 @@ test_that("decode_column soft-matches after trim and reports the variant", {
   raw <- cdisc_dm
   raw$SEX[1] <- "F "
   expect_warning(
-    out <- decode_column(raw, demo_spec(), "DM", from = "SEX", to = "SEXDECD"),
+    out <- decode_column(
+      raw,
+      demo_sdtm_spec(),
+      "DM",
+      from = "SEX",
+      to = "SEXDECD"
+    ),
     class = "artoo_warning_codelist"
   )
   expect_identical(out$SEXDECD[1], "Female")
 })
 
 test_that("decode_column validates its inputs loudly", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   expect_error(
     decode_column(1, spec, "DM", from = "SEX"),
     class = "artoo_error_input"
@@ -150,7 +168,7 @@ test_that("decode_column validates its inputs loudly", {
 })
 
 test_that("decode_column to_decode then to_code restores the codes", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dec <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
   back <- decode_column(dec, spec, "DM", from = "SEX", direction = "to_code")
   expect_identical(as.vector(back$SEX), as.vector(cdisc_dm$SEX))
@@ -160,7 +178,7 @@ test_that("decode_column warns when the spec dataType coercion introduces NA", {
   # Destination is integer but the codelist terms are not numeric: the
   # coercion cannot represent them and must say so, never silently.
   vars <- rbind(
-    cdisc_variables,
+    cdisc_sdtm_variables,
     data.frame(
       dataset = "DM",
       variable = "SEXN",
@@ -182,7 +200,7 @@ test_that("decode_column warns when the spec dataType coercion introduces NA", {
       stringsAsFactors = FALSE
     )
   )
-  spec <- artoo_spec(cdisc_datasets, vars, codelists = cls)
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cls)
   expect_warning(
     out <- decode_column(
       cdisc_dm,

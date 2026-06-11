@@ -4,8 +4,8 @@
 
 demo_spec <- function() {
   artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
 }
@@ -133,7 +133,11 @@ test_that("the _artoo sourceEncoding round-trips back into @dataset$encoding", {
 
 test_that("a meta without encoding is byte-identical across the round-trip", {
   # No regression: extensions default FALSE and encoding drops as NULL.
-  spec <- demo_spec()
+  spec <- artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
   meta <- artoo:::.meta_from_spec(spec, "DM")
   back <- artoo:::.meta_from_datasetjson(artoo:::.meta_to_datasetjson(meta))
   expect_identical(back@dataset, meta@dataset)
@@ -276,8 +280,8 @@ test_that("set_meta projects informat.sas like format.sas", {
 
 test_that("sync_meta narrows, reorders, and refreshes records", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
@@ -297,8 +301,8 @@ test_that("sync_meta narrows, reorders, and refreshes records", {
 
 test_that("sync_meta synthesizes entries for new columns with a message", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
@@ -316,8 +320,8 @@ test_that("sync_meta with no meta and no attribute aborts with guidance", {
 
 test_that("sync_meta defaults to the frame's own metadata", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")

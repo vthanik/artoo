@@ -74,7 +74,7 @@
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset to rds ----
 #' #
@@ -117,7 +117,10 @@ write_rds <- function(x, path, encoding = NULL) {
 #'   `artoo_error_codec`; use `readRDS()` for arbitrary objects.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #'
 #' # ---- Example 1: read a dataset written by write_rds() ----
 #' #

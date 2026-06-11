@@ -61,9 +61,12 @@ validates the whole spec.
 \examples{
 # ---- Example 1: validate one dataset ----
 #
-# Build a spec from the bundled tables and validate just ADSL; the
+# Build a spec from the bundled ADaM tables and validate it; the
 # result prints a sectioned report and keeps the findings table.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_adam_datasets, cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
 chk <- validate_spec(spec, dataset = "ADSL")
 chk@findings
 
@@ -71,9 +74,9 @@ chk@findings
 #
 # Point a key at a missing variable, then validate with on_error = "abort"
 # and catch the resulting error.
-bad_ds <- cdisc_datasets
-bad_ds$keys[bad_ds$dataset == "DM"] <- "NOTAVAR"
-bad <- artoo_spec(bad_ds, cdisc_variables, codelists = cdisc_codelists)
+bad_ds <- cdisc_sdtm_datasets
+bad_ds$keys <- "NOTAVAR"
+bad <- artoo_spec(bad_ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
 tryCatch(
   validate_spec(bad, dataset = "DM", on_error = "abort"),
   artoo_error_validation = function(e) conditionMessage(e)[1]

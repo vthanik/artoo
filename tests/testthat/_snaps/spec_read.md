@@ -22,5 +22,5 @@
     Condition
       Error:
       ! Unknown dataset in `datasets`: "ADAE".
-      i The spec defines: "ADSL" and "DM".
+      i The spec defines: "DM".
 

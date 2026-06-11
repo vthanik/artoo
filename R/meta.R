@@ -434,7 +434,7 @@
 #' #
 #' # get_meta() yields a artoo_meta; is_artoo_meta() confirms the type before
 #' # you reach into its slots.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
 #' is_artoo_meta(meta)
@@ -475,7 +475,7 @@ is_artoo_meta <- function(x) {
 #' #
 #' # apply_spec() stamps the metadata; get_meta() reads it back as the S7
 #' # object whose @columns holds one CDISC attribute set per variable.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
 #' meta@columns$STUDYID
@@ -528,7 +528,10 @@ get_meta <- function(x) {
 #' #
 #' # Conform a dataset, capture its metadata, then re-attach after an
 #' # attribute-dropping transform so the write stays lossless.
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(
+#'   cdisc_adam_datasets, cdisc_adam_variables,
+#'   codelists = cdisc_codelists
+#' )
 #' adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 #' meta <- get_meta(adsl)
 #' trimmed <- head(as.data.frame(adsl), 5)
@@ -538,8 +541,12 @@ get_meta <- function(x) {
 #' # ---- Example 2: stamp a bare frame straight from a spec ----
 #' #
 #' # A writer with a raw frame and no apply step can build metadata from the
-#' # spec and attach it directly.
-#' meta_dm <- artoo:::.meta_from_spec(spec, "DM")
+#' # spec and attach it directly (DM is SDTM, so its spec is sdtm-shaped).
+#' sdtm <- artoo_spec(
+#'   cdisc_sdtm_datasets, cdisc_sdtm_variables,
+#'   codelists = cdisc_codelists
+#' )
+#' meta_dm <- artoo:::.meta_from_spec(sdtm, "DM")
 #' dm <- set_meta(cdisc_dm, meta_dm)
 #' is_artoo_meta(get_meta(dm))
 #'
@@ -634,7 +641,7 @@ set_meta <- function(x, meta) {
 #'   `artoo_meta`. Hand it to any `write_*()` codec.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: re-attach after an attribute-dropping subset ----
 #' #

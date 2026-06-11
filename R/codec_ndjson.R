@@ -226,7 +226,7 @@
 #' @return *The input `x`*, invisibly, so a write can sit mid-pipeline.
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: write a conformed dataset as NDJSON ----
 #' #
@@ -269,7 +269,7 @@ write_ndjson <- function(x, path, created = NULL, strict = FALSE) {
 #'   [get_meta()]).
 #'
 #' @examples
-#' spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+#' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 #'
 #' # ---- Example 1: round-trip a conformed dataset through NDJSON ----
 #' #

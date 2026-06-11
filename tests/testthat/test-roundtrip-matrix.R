@@ -44,16 +44,23 @@ test_that("every ordered pair of full-metadata formats chains losslessly", {
 })
 
 test_that("the conformed demo datasets chain through every format pair", {
-  spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
-    codelists = cdisc_codelists
+  specs <- list(
+    DM = artoo_spec(
+      cdisc_sdtm_datasets,
+      cdisc_sdtm_variables,
+      codelists = cdisc_codelists
+    ),
+    ADSL = artoo_spec(
+      cdisc_adam_datasets,
+      cdisc_adam_variables,
+      codelists = cdisc_codelists
+    )
   )
   fmts <- .full_formats()
   for (ds in c("DM", "ADSL")) {
     src <- apply_spec(
       if (ds == "DM") cdisc_dm else cdisc_adsl,
-      spec,
+      specs[[ds]],
       ds,
       conformance = "off"
     )

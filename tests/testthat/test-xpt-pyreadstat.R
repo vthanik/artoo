@@ -10,8 +10,8 @@ test_that("a artoo-written xpt reads correctly in pyreadstat", {
   skip_if(py == "", "python3 + pyreadstat not available")
 
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")

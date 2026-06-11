@@ -1,8 +1,20 @@
 # Tests for apply_spec() and check_spec(): the transactional conform
 # pipeline and the thin conformance check, on bundled CDISC demo data.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 # ---- apply_spec surface -----------------------------------------------------
@@ -17,7 +29,7 @@ test_that("apply_spec exposes exactly the five load-bearing arguments", {
 # ---- apply_spec core --------------------------------------------------------
 
 test_that("apply_spec conforms ADSL and stamps metadata", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 
   expect_s3_class(adsl, "data.frame")
@@ -30,7 +42,7 @@ test_that("apply_spec conforms ADSL and stamps metadata", {
 })
 
 test_that("apply_spec scaffolds missing spec variables as typed NA", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "AGE"), drop = FALSE]
   out <- apply_spec(raw, spec, "ADSL", conformance = "off")
 
@@ -39,7 +51,7 @@ test_that("apply_spec scaffolds missing spec variables as typed NA", {
 })
 
 test_that("apply_spec never drops an undeclared column", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$NOTSPEC <- seq_len(nrow(raw))
   out <- apply_spec(raw, spec, "ADSL")
@@ -57,7 +69,7 @@ test_that("apply_spec never drops an undeclared column", {
 })
 
 test_that("an undeclared column round-trips through write/read (no-drop gate)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$DERIVED <- seq_len(nrow(raw)) + 0.5
   out <- apply_spec(raw, spec, "DM", conformance = "off")
@@ -74,7 +86,7 @@ test_that("an undeclared column round-trips through write/read (no-drop gate)", 
 })
 
 test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guard)", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
 
   expect_s3_class(adsl$TRTSDT, "Date")
@@ -89,7 +101,7 @@ test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guar
 test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
   # The spec types TRTSDT "date" with no targetDataType: by the CDISC
   # storage rule that is ISO 8601 text, so the scaffold is character NA.
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
   out <- apply_spec(raw, spec, "ADSL", conformance = "off")
   expect_type(out$TRTSDT, "character")
@@ -97,14 +109,14 @@ test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
 })
 
 test_that("apply_spec does not mutate its input (transactional)", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   before <- cdisc_adsl
   apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   expect_identical(cdisc_adsl, before)
 })
 
 test_that("apply_spec validates x and dataset", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   expect_error(
     apply_spec(list(1), spec, "ADSL"),
     class = "artoo_error_input"
@@ -118,7 +130,7 @@ test_that("apply_spec validates x and dataset", {
 })
 
 test_that("apply_spec keeps coded values untouched (decode is its own verb)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   out <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   expect_setequal(unique(out$SEX), unique(cdisc_dm$SEX))
 })
@@ -126,7 +138,7 @@ test_that("apply_spec keeps coded values untouched (decode is its own verb)", {
 # ---- check_spec -------------------------------------------------------------
 
 test_that("check_spec returns the canonical empty shape on conformance", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   res <- check_spec(adsl, spec, "ADSL")
   expect_identical(
@@ -136,7 +148,7 @@ test_that("check_spec returns the canonical empty shape on conformance", {
 })
 
 test_that("check_spec flags an extra variable as a warning", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$NOTSPEC <- 1
   res <- check_spec(raw, spec, "DM")
@@ -146,7 +158,7 @@ test_that("check_spec flags an extra variable as a warning", {
 })
 
 test_that("check_spec flags a missing variable as an error", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm[, setdiff(names(cdisc_dm), "USUBJID"), drop = FALSE]
   res <- check_spec(raw, spec, "DM")
   hit <- res[res$check == "missing_variable", , drop = FALSE]
@@ -155,7 +167,7 @@ test_that("check_spec flags a missing variable as an error", {
 })
 
 test_that("conformance = 'abort' aborts on an error finding", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "X9" # not in codelist C66731 -> error-severity finding
   expect_error(
@@ -170,7 +182,7 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   # check_spec findings embed raw data values; a "{" must render literally in
   # the abort, not be parsed as cli interpolation (which crashed with a raw
   # glue error and lost the conformance report and error class).
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z{oops"
   expect_error(
@@ -180,9 +192,9 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
 })
 
 test_that("truncating integer coercion always aborts (lossless or abort)", {
-  vars <- cdisc_variables
+  vars <- cdisc_sdtm_variables
   vars$data_type[vars$dataset == "DM" & vars$variable == "AGE"] <- "integer"
-  spec <- artoo_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
   raw <- cdisc_dm
   raw$AGE[1] <- raw$AGE[1] + 0.7
   expect_error(

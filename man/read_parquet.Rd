@@ -41,7 +41,7 @@ bare frame. A thin wrapper over \code{\link[=read_dataset]{read_dataset()}} with
 Requires the lightweight \code{nanoparquet} package.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: round-trip a conformed dataset through Parquet ----
 #

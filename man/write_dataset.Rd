@@ -34,7 +34,7 @@ This is the emit end of the artoo workflow; the per-format wrappers like
 \code{\link[=write_rds]{write_rds()}} are thin sugar over it.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
 
 # ---- Example 1: write a conformed dataset, inferring rds from the path ----
 #

@@ -3,16 +3,28 @@
 # (.format_spec / .format_meta) are plain functions, so they are snapshot-
 # tested directly here (mirrors test-spec_check_report.R).
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 test_that(".format_spec renders counts and a dataset preview", {
-  expect_snapshot(cat(artoo:::.format_spec(demo_spec()), sep = "\n"))
+  expect_snapshot(cat(artoo:::.format_spec(demo_adam_spec()), sep = "\n"))
 })
 
 test_that(".format_meta renders dataset, records, columns, keys, preview", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   expect_snapshot(cat(artoo:::.format_meta(get_meta(adsl)), sep = "\n"))
 })
@@ -28,8 +40,8 @@ test_that(".preview_names truncates a long list and handles the empty case", {
 
 test_that(".format_spec surfaces study, support metadata, and value-level", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists,
     study = data.frame(studyid = "CDISCPILOT01", stringsAsFactors = FALSE),
     methods = data.frame(method_id = "MT.AGE", stringsAsFactors = FALSE),
@@ -51,8 +63,8 @@ test_that(".format_spec surfaces study, support metadata, and value-level", {
 
 test_that(".format_spec treats a blank studyid as unspecified", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists,
     study = data.frame(studyid = NA_character_, stringsAsFactors = FALSE)
   )
@@ -78,7 +90,7 @@ test_that(".format_meta handles a keyed, label-less dataset", {
 })
 
 test_that("the S7 print and format methods run", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   meta <- get_meta(apply_spec(cdisc_dm, spec, "DM", conformance = "off"))
   # Dispatch fires under an installed build (covr); harmless under load_all.
   expect_output(print(spec))

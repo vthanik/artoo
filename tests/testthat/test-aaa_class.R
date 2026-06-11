@@ -85,8 +85,8 @@ test_that("the closed CDISC vocabularies are exactly the spec set", {
 
 test_that("property mutation re-runs the validator (no silent corruption)", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   # A wrong property type is refused by the S7 property check.
@@ -98,5 +98,5 @@ test_that("property mutation re-runs the validator (no silent corruption)", {
     "variables reference dataset"
   )
   # The object is untouched after the failed mutations.
-  expect_identical(spec@datasets$dataset, cdisc_datasets$dataset)
+  expect_identical(spec@datasets$dataset, cdisc_sdtm_datasets$dataset)
 })

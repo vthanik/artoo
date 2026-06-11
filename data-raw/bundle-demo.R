@@ -11,7 +11,8 @@
 # Run from the package root:  Rscript data-raw/bundle-demo.R
 #
 # Produces (data/): cdisc_adsl, cdisc_adae, cdisc_dm, cdisc_vs, cdisc_ts,
-# cdisc_suppdm, cdisc_datasets, cdisc_variables, cdisc_codelists. Each raw
+# cdisc_suppdm, cdisc_adam_datasets, cdisc_adam_variables,
+# cdisc_sdtm_datasets, cdisc_sdtm_variables, cdisc_codelists. Each raw
 # dataset is trimmed to its first 60 rows (deterministic). Companion script
 # bundle-spec.R builds the matching adam_spec / sdtm_spec objects and gates
 # every pairing with apply_spec(conformance = "abort").
@@ -107,24 +108,38 @@ cdisc_suppdm <- trim_rows(
   60L
 )
 
-# ---- Derived spec tables -------------------------------------------------
+# ---- Derived spec tables (ONE standard per pair -- never mixed) -----------
+# A artoo_spec carries exactly one CDISC standard, so the demo constructor
+# tables are split by standard: the ADaM pair (ADSL) and the SDTM pair
+# (DM). The shared NCI codelist table is controlled terminology, which is
+# standard-agnostic.
 
-cdisc_datasets <- data.frame(
-  dataset = c("ADSL", "DM"),
-  label = c("Subject-Level Analysis Dataset", "Demographics"),
+cdisc_adam_datasets <- data.frame(
+  dataset = "ADSL",
+  label = "Subject-Level Analysis Dataset",
+  standard = "ADaMIG 1.1",
   stringsAsFactors = FALSE
 )
 
-cdisc_variables <- rbind(
-  derive_variables(cdisc_adsl, "ADSL"),
-  derive_variables(cdisc_dm, "DM")
+cdisc_adam_variables <- derive_variables(cdisc_adsl, "ADSL")
+cdisc_adam_variables$codelist_id <- NA_character_
+cdisc_adam_variables$codelist_id[cdisc_adam_variables$variable == "SEX"] <-
+  "C66731"
+
+cdisc_sdtm_datasets <- data.frame(
+  dataset = "DM",
+  label = "Demographics",
+  standard = "SDTMIG 3.1.2",
+  stringsAsFactors = FALSE
 )
 
-# Wire the SEX variables to the real NCI controlled-terminology codelist
-# C66731 (reference terminology, not fabricated data).
-cdisc_variables$codelist_id <- NA_character_
-cdisc_variables$codelist_id[cdisc_variables$variable == "SEX"] <- "C66731"
+cdisc_sdtm_variables <- derive_variables(cdisc_dm, "DM")
+cdisc_sdtm_variables$codelist_id <- NA_character_
+cdisc_sdtm_variables$codelist_id[cdisc_sdtm_variables$variable == "SEX"] <-
+  "C66731"
 
+# The real NCI controlled-terminology codelist C66731 (reference
+# terminology, not fabricated data), shared by both standards' SEX.
 cdisc_codelists <- data.frame(
   codelist_id = "C66731",
   term = c("F", "M", "U", "UNDIFFERENTIATED"),
@@ -133,9 +148,34 @@ cdisc_codelists <- data.frame(
   stringsAsFactors = FALSE
 )
 
-stopifnot(is_artoo_spec(
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
-))
+# BUILD GATES: each pair builds a validated single-standard spec, and
+# mixing the two standards' tables ABORTS (the invariant the split
+# exists to teach).
+adam_demo <- artoo_spec(
+  cdisc_adam_datasets,
+  cdisc_adam_variables,
+  codelists = cdisc_codelists
+)
+sdtm_demo <- artoo_spec(
+  cdisc_sdtm_datasets,
+  cdisc_sdtm_variables,
+  codelists = cdisc_codelists
+)
+stopifnot(
+  identical(spec_standard(adam_demo), "ADaMIG 1.1"),
+  identical(spec_standard(sdtm_demo), "SDTMIG 3.1.2"),
+  inherits(
+    tryCatch(
+      artoo_spec(
+        rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
+        rbind(cdisc_adam_variables, cdisc_sdtm_variables),
+        codelists = cdisc_codelists
+      ),
+      error = function(e) e
+    ),
+    "artoo_error_spec"
+  )
+)
 
 usethis::use_data(
   cdisc_adsl,
@@ -144,8 +184,10 @@ usethis::use_data(
   cdisc_vs,
   cdisc_ts,
   cdisc_suppdm,
-  cdisc_datasets,
-  cdisc_variables,
+  cdisc_adam_datasets,
+  cdisc_adam_variables,
+  cdisc_sdtm_datasets,
+  cdisc_sdtm_variables,
   cdisc_codelists,
   overwrite = TRUE
 )

@@ -1,12 +1,24 @@
 # Tests for columns(): the SAS-viewer-style variable attribute pane on a
 # stamped frame, a plain frame, and a file path.
 
-demo_spec <- function() {
-  artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+demo_adam_spec <- function() {
+  artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+}
+
+demo_sdtm_spec <- function() {
+  artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
 }
 
 test_that("columns() on a stamped frame is one row per variable", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   pane <- columns(adsl)
 
@@ -32,7 +44,7 @@ test_that("columns() on a stamped frame is one row per variable", {
 })
 
 test_that("an undeclared frame column still appears, attrs inferred", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$DERIVED <- seq_len(nrow(raw)) + 0.5
   out <- apply_spec(raw, spec, "ADSL", conformance = "off")
@@ -54,7 +66,7 @@ test_that("a plain unstamped data.frame works (all inferred)", {
 })
 
 test_that("columns(path) reads through the codec registry", {
-  spec <- demo_spec()
+  spec <- demo_adam_spec()
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".json")
   write_json(adsl, p)
@@ -65,7 +77,7 @@ test_that("columns(path) reads through the codec registry", {
 })
 
 test_that("columns(path) honors member= and inherits the multi-member abort", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(dm, p)
@@ -97,10 +109,10 @@ test_that("columns() rejects a non-frame non-path input", {
 })
 
 test_that("the Key column carries the spec keySequence in order", {
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys <- NA_character_
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   pane <- columns(dm)
   expect_identical(pane$Key[pane$Variable == "STUDYID"], 1L)
@@ -118,13 +130,13 @@ test_that("a zero-column frame yields the canonical empty pane", {
 })
 
 test_that("print is the left-aligned SAS pane (snapshot)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   expect_snapshot(print(columns(dm)))
 })
 
 test_that("a subset artoo_columns still prints (attrs dropped by `[`)", {
-  spec <- demo_spec()
+  spec <- demo_sdtm_spec()
   dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
   pane <- columns(dm)
   # A 0-row subset (this spec declares no keys) and a populated subset must

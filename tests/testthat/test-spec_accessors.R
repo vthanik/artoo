@@ -1,25 +1,32 @@
 # Tests for the spec accessors.
 
 demo_spec <- function() {
-  ds <- cdisc_datasets
-  ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
+  ds <- cdisc_sdtm_datasets
+  ds$keys <- "STUDYID USUBJID"
   artoo_spec(
     ds,
-    cdisc_variables,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists,
-    study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
+    study = data.frame(studyid = "CDISCPILOT01")
   )
 }
 
 test_that("spec_datasets() returns the declared dataset names", {
-  expect_setequal(spec_datasets(demo_spec()), c("ADSL", "DM"))
+  expect_setequal(spec_datasets(demo_spec()), "DM")
+  # Multi-dataset (single-standard) coverage rides the bundled SDTM spec.
+  expect_setequal(spec_datasets(sdtm_spec), c("TS", "DM", "VS", "SUPPDM"))
 })
 
 test_that("spec_variables() filters to one dataset or returns all", {
   spec <- demo_spec()
   dm <- spec_variables(spec, "DM")
   expect_true(all(dm$dataset == "DM"))
-  expect_equal(nrow(spec_variables(spec)), nrow(cdisc_variables))
+  expect_equal(nrow(spec_variables(spec)), nrow(cdisc_sdtm_variables))
+  # Across a multi-dataset spec, the unfiltered table spans every domain.
+  expect_setequal(
+    unique(spec_variables(sdtm_spec)$dataset),
+    c("TS", "DM", "VS", "SUPPDM")
+  )
 })
 
 test_that("spec_variables() rejects an unknown dataset", {
@@ -45,7 +52,12 @@ test_that("spec_keys() parses whitespace-separated keys", {
 })
 
 test_that("spec_keys() returns empty when no keys are declared", {
-  expect_equal(spec_keys(demo_spec(), "ADSL"), character(0))
+  keyless <- artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists
+  )
+  expect_equal(spec_keys(keyless, "ADSL"), character(0))
 })
 
 test_that("spec_study() returns the row or one field", {

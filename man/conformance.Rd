@@ -30,7 +30,10 @@ divergence), with a print method that renders a sectioned report, so
 \code{artoo_warning_conformance} warning points you at.
 }
 \examples{
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(
+  cdisc_sdtm_datasets, cdisc_sdtm_variables,
+  codelists = cdisc_codelists
+)
 
 # ---- Example 1: inspect what the conform step found ----
 #

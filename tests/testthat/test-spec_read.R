@@ -4,8 +4,8 @@
 
 test_that("read_spec() round-trips a spec through JSON identically (F1)", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   p <- withr::local_tempfile(fileext = ".json")
@@ -22,10 +22,10 @@ test_that("read_spec() round-trips value-level and study slots (F1)", {
     stringsAsFactors = FALSE
   )
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists,
-    study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1"),
+    study = data.frame(studyid = "CDISCPILOT01"),
     values = vlm
   )
   p <- withr::local_tempfile(fileext = ".json")
@@ -39,8 +39,8 @@ test_that("artoo_spec() demotes a tibble value-level table to plain df (H2)", {
   skip_if_not_installed("tibble")
   vlm <- tibble::tibble(dataset = "ADSL", variable = "PARAMCD", label = "L")
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists,
     values = vlm
   )
@@ -272,13 +272,10 @@ test_that(".match_p21_sheet on a single match is silent", {
 # ---- datasets = scoping + on_duplicate (read-time hardening) ----------------
 
 test_that("read_spec(datasets=) scopes a native JSON spec to one dataset", {
-  spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
-    codelists = cdisc_codelists
-  )
+  # The bundled SDTM spec spans four datasets (one standard), so scoping
+  # to DM genuinely narrows it.
   p <- withr::local_tempfile(fileext = ".json")
-  write_spec(spec, p)
+  write_spec(sdtm_spec, p)
   dm_only <- read_spec(p, datasets = "DM")
   expect_identical(spec_datasets(dm_only), "DM")
   expect_identical(unique(spec_variables(dm_only)$dataset), "DM")
@@ -286,8 +283,8 @@ test_that("read_spec(datasets=) scopes a native JSON spec to one dataset", {
 
 test_that("read_spec(datasets=) rejects an unknown dataset, listing what exists", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists
   )
   p <- withr::local_tempfile(fileext = ".json")
@@ -307,13 +304,10 @@ test_that("read_spec(datasets=) scopes a P21 workbook", {
 # A native JSON spec with one variable defined twice (hand-built: the
 # artoo_spec() constructor itself refuses duplicates, which is the point).
 .dup_spec_json <- function() {
-  spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
-    codelists = cdisc_codelists
-  )
+  # The bundled SDTM spec spans four domains, so a duplicate confined to DM
+  # can coexist with clean domains for the scoping test below.
   p <- withr::local_tempfile(fileext = ".json", .local_envir = parent.frame())
-  write_spec(spec, p)
+  write_spec(sdtm_spec, p)
   raw <- jsonlite::fromJSON(p, simplifyDataFrame = TRUE)
   v <- raw$variables
   dup <- v[v$dataset == "DM" & v$variable == "SEX", , drop = FALSE]
@@ -351,8 +345,8 @@ test_that("scoping runs before the duplicate guard (broken domain elsewhere)", {
   # The dogfood scenario: a duplicate confined to one domain must not block
   # reading a different, clean domain.
   p <- .dup_spec_json() # duplicate lives in DM
-  adsl_only <- read_spec(p, datasets = "ADSL")
-  expect_identical(spec_datasets(adsl_only), "ADSL")
+  vs_only <- read_spec(p, datasets = "VS")
+  expect_identical(spec_datasets(vs_only), "VS")
 })
 
 test_that(".resolve_duplicate_variables reports source rows (Excel-style)", {

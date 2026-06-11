@@ -1,13 +1,13 @@
 # Tests for validate_spec() -- dataset-scoped, returns a artoo_check.
 
 clean_spec <- function() {
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
   artoo_spec(
     ds,
-    cdisc_variables,
+    cdisc_sdtm_variables,
     codelists = cdisc_codelists,
-    study = data.frame(studyid = "CDISCPILOT01", standard = "ADaMIG 1.1")
+    study = data.frame(studyid = "CDISCPILOT01")
   )
 }
 
@@ -23,17 +23,17 @@ test_that("validate_spec() returns a artoo_check with a findings data frame", {
 })
 
 test_that("validate_spec() does not throw by default, even with errors", {
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   chk <- expect_no_error(validate_spec(spec, dataset = "DM"))
   expect_true(any(chk@findings$check == "dataset_keys_resolve"))
 })
 
 test_that("validate_spec(on_error = 'abort') throws on an error-severity finding", {
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   expect_error(
     validate_spec(spec, dataset = "DM", on_error = "abort"),
     class = "artoo_error_validation"
@@ -511,9 +511,9 @@ test_that("a brace in spec content cannot break the strict gate (review B5)", {
   # Finding messages embed spec values; a "{" must render literally, not be
   # parsed as cli interpolation (which crashed with a raw glue error and lost
   # both the report and the documented error class).
-  ds <- cdisc_datasets
+  ds <- cdisc_sdtm_datasets
   ds$keys[ds$dataset == "DM"] <- "NOT{AVAR"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   expect_error(
     validate_spec(spec, dataset = "DM", on_error = "abort"),
     class = "artoo_error_validation"
@@ -521,9 +521,9 @@ test_that("a brace in spec content cannot break the strict gate (review B5)", {
 })
 
 test_that("on_error = 'warn' signals a classed warning but still returns (1e)", {
-  ds <- cdisc_datasets
-  ds$keys[ds$dataset == "DM"] <- "NOTAVAR"
-  spec <- artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
+  ds <- cdisc_sdtm_datasets
+  ds$keys <- "NOTAVAR"
+  spec <- artoo_spec(ds, cdisc_sdtm_variables, codelists = cdisc_codelists)
   expect_warning(
     chk <- validate_spec(spec, dataset = "DM", on_error = "warn"),
     class = "artoo_warning_validation"
@@ -534,8 +534,8 @@ test_that("on_error = 'warn' signals a classed warning but still returns (1e)", 
 
 test_that("as.data.frame returns the 6-column findings frame (1f)", {
   spec <- artoo_spec(
-    cdisc_datasets,
-    cdisc_variables,
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
     codelists = cdisc_codelists
   )
   chk <- validate_spec(spec, dataset = "ADSL")

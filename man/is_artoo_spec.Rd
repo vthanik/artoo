@@ -23,7 +23,7 @@ pass it to \code{\link[=apply_spec]{apply_spec()}} or reach into it with the spe
 #
 # artoo_spec() assembles and validates a spec; is_artoo_spec() confirms the
 # type before you drive apply_spec() with it.
-spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
+spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)
 is_artoo_spec(spec)
 
 # ---- Example 2: an ordinary object is not a spec ----
