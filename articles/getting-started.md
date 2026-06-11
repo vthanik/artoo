@@ -27,7 +27,7 @@ adam_spec
 ```
 
     <artoo_spec>
-    Study: (unspecified)
+    Study: CDISC-Sample
     Standard: ADaMIG 1.1
     Datasets:  2
     Variables: 104

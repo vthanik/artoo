@@ -47,13 +47,13 @@ write_parquet(x, path, encoding = NULL, compression = "snappy")
   *Column compression codec.* `<character(1)>: default "snappy"`. One
   of:
 
-  - `"snappy"` (default) – fast, the parquet ecosystem default.
+  - `"snappy"` (default) — fast, the parquet ecosystem default.
 
-  - `"gzip"` – smaller files, slower.
+  - `"gzip"` — smaller files, slower.
 
-  - `"zstd"` – the best size/speed trade-off where supported.
+  - `"zstd"` — the best size/speed trade-off where supported.
 
-  - `"uncompressed"` – raw pages.
+  - `"uncompressed"` — raw pages.
 
 ## Value
 

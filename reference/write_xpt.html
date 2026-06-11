@@ -117,13 +117,13 @@ Parquet, rds). XPORT also cannot distinguish an empty string from <code>NA</code
 (both store as blanks) and drops trailing spaces.</p>
 <p><strong>Character ISO dates (<code>--DTC</code>) write as text.</strong> A character column whose
 <code>dataType</code> is <code>date</code>/<code>datetime</code>/<code>time</code> with no numeric <code>targetDataType</code> is
-the CDISC ISO 8601 text form – the SDTM <code>--DTC</code> convention – and stores
+the CDISC ISO 8601 text form — the SDTM <code>--DTC</code> convention — and stores
 as a character variable, partial dates (<code>"1951"</code>, <code>"1951-12"</code>) included,
 byte for byte. The SAS-numeric encoding (with <code>DATE9.</code>-style formats) is
 used for columns that are R <code>Date</code>/<code>POSIXct</code>/<code>hms</code> or whose
 metadata records <code>targetDataType = "integer"</code> (the ADaM numeric-date
 convention). A character column <em>under</em> <code>targetDataType = "integer"</code>
-aborts loudly – a partial date can never become a SAS numeric silently.</p>
+aborts loudly — a partial date can never become a SAS numeric silently.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

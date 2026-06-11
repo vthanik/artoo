@@ -1,7 +1,7 @@
 # Derive or translate a variable through its codelist
 
-Map one column's values through a spec codelist – code to decode or
-decode to code – writing the result to a new variable or in place. This
+Map one column's values through a spec codelist — code to decode or
+decode to code — writing the result to a new variable or in place. This
 is the everyday companion to
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)'s
 whole-dataset `decode` step: deriving `RACEN` from `RACE`, recovering
@@ -59,7 +59,7 @@ decode_column(
   - `"to_decode"` (default) map codes to their decoded values (`"M"`
     becomes `"Male"`).
 
-  - `"to_code"` map decoded values to their submission codes – the
+  - `"to_code"` map decoded values to their submission codes — the
     `RACEN`-from-`RACE` derivation.
 
 - no_match:
@@ -88,11 +88,26 @@ decode_column(
 wins (the natural direction for `RACEN`-style derivations, where the
 numeric variable owns the code/decode pairs); when `to` declares none,
 `from`'s codelist is used. If neither variable references a codelist the
-call aborts – there is nothing to map through.
+call aborts — there is nothing to map through.
+
+**Mismatched surfaces chain.** A single call maps through ONE codelist,
+so the winning codelist's terms (or decodes) must line up with the
+`from` values — the CDISC `*N` convention guarantees this for
+`RACEN`-style pairs, whose decodes are the character variable's
+submission values. When the two codelists share no value surface (say
+`SEXN`'s decodes are `"Female"`/`"Male"` but `SEX` holds `"F"`/`"M"`),
+the unmatched values hit the `no_match` policy; translate in two hops
+instead — decode through `from`'s codelist first, then `to_code` through
+the destination's:
+
+    dm |>
+      decode_column(spec, "DM", from = "SEX", to = "SEXDECD") |>
+      decode_column(spec, "DM", from = "SEXDECD", to = "SEXN",
+                    direction = "to_code")
 
 **Soft matches are reported, never silent.** Values that match only
 after trimming whitespace (or case-folding, when `ignore_case = TRUE`)
-still map, with a `artoo_warning_codelist` naming the variants –
+still map, with a `artoo_warning_codelist` naming the variants —
 [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
 always compares exactly, so clean the source for submission.
 

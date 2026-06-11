@@ -58,7 +58,7 @@ Print it for the sectioned report.
 ## Details
 
 **Dataset-scoped.** A spec workbook carries many datasets. Pass
-`dataset` to validate only the one(s) you are working on – the methods,
+`dataset` to validate only the one(s) you are working on — the methods,
 comments, and codelists those datasets reference are checked for
 completeness, but unrelated datasets are not. `dataset = NULL` validates
 the whole spec.

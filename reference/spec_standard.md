@@ -2,9 +2,9 @@
 
 Return the one CDISC standard the specification carries (e.g.
 `"ADaMIG 1.1"`, `"SDTMIG 3.2"`). A `artoo_spec` is single-standard by
-construction –
+construction —
 [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
-aborts when its sources mix standards – so this is always a scalar; `NA`
+aborts when its sources mix standards — so this is always a scalar; `NA`
 when no source named one.
 
 ## Usage

@@ -88,13 +88,16 @@ precision, so <code><a href="read_spec.html">read_spec()</a></code> rebuilds an 
 <code><a href="artoo_spec.html">artoo_spec()</a></code>. Object keys are emitted in a fixed order, so writing the
 same spec twice yields byte-identical output.</p>
 <p><strong>P21 xlsx is the interchange format.</strong> Sheets are emitted with the
-headers the P21 reader recognises (Datasets, Variables, ValueLevel,
-Codelists, Methods, Comments, Documents; empty optional sheets are
-omitted), foreign keys repeated on every row (no merged cells), and the
-spec's <code><a href="spec_standard.html">spec_standard()</a></code> as the Datasets sheet's <code>Standard</code> column.</p>
+headers the P21 reader recognises (Define, Datasets, Variables,
+ValueLevel, Codelists, Methods, Comments, Documents; empty optional
+sheets are omitted), foreign keys repeated on every row (no merged
+cells), and the spec's <code><a href="spec_standard.html">spec_standard()</a></code> as the Datasets sheet's
+<code>Standard</code> column. The study row writes back as the Define sheet's
+Attribute/Value pairs (<code>StudyName</code>, <code>StudyDescription</code>,
+<code>ProtocolName</code>).</p>
 <p><strong>Note:</strong> fields with no P21 column (<code>itemoid</code>, <code>target_data_type</code>,
-per-variable <code>key_sequence</code>, the study table) do not survive an xlsx
-round-trip; persist to JSON when you need the spec back exactly.</p>
+per-variable <code>key_sequence</code>) do not survive an xlsx round-trip;
+persist to JSON when you need the spec back exactly.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -1,11 +1,11 @@
-# Encodings for clinical datasets, across SAS, R, and Python
+# Encodings for clinical datasets, across R, SAS, and Python
 
 List the character encodings clinical data actually travels in, with the
-name each ecosystem uses for the same thing: the SAS session-encoding
-name, the R name (the standard IANA name, which
-[`iconv()`](https://rdrr.io/r/base/iconv.html) and the wider R ecosystem
-use), and the Python codec. Any spelling from the `sas` or `r` column
-works as the `encoding` argument of every artoo reader and writer.
+name each ecosystem uses for the same thing: the R name (the standard
+IANA name, which [`iconv()`](https://rdrr.io/r/base/iconv.html) and the
+wider R ecosystem use), the SAS session-encoding name, and the Python
+codec. Any spelling from the `r` or `sas` column works as the `encoding`
+argument of every artoo reader and writer.
 
 ## Usage
 
@@ -16,7 +16,7 @@ artoo_encodings()
 ## Value
 
 *A `<data.frame>`* with one row per encoding and columns `r` (the R name
-– the standard IANA name [`iconv()`](https://rdrr.io/r/base/iconv.html)
+— the standard IANA name [`iconv()`](https://rdrr.io/r/base/iconv.html)
 uses, and what artoo records in the metadata), `sas` (the SAS
 session-encoding name), `python` (the Python codec name), and
 `description`.
@@ -25,14 +25,14 @@ session-encoding name), `python` (the Python codec name), and
 
 **What an encoding is.** Text is stored as bytes; an encoding is the
 rule that maps those bytes to characters. Plain A-Z digits and
-punctuation are the same bytes in every encoding listed here – the
+punctuation are the same bytes in every encoding listed here — the
 differences only show in accented letters (a-umlaut, e-acute), special
 symbols (micro, degree), and non-Latin scripts. Reading bytes with the
 wrong rule is what turns a degree sign into garbage.
 
 **Which one do I have?** In SAS, run
 `PROC OPTIONS OPTION=ENCODING; RUN;` and look up the reported name in
-the `sas` column. Most US/EU Windows SAS installs report `WLATIN1` –
+the `sas` column. Most US/EU Windows SAS installs report `WLATIN1` —
 that is `windows-1252` here.
 
 **Which one should I write?** Usually none: `write_*(encoding = NULL)`
@@ -41,10 +41,10 @@ a round-trip is byte-faithful. The regulatory defaults artoo applies
 when nothing is recorded: SAS XPORT writes `US-ASCII` (the FDA Study
 Data Technical Conformance Guide expectation) and Dataset-JSON / NDJSON
 write `UTF-8` (required by CDISC and RFC 8259). A value that cannot be
-represented in the target encoding aborts loudly – see `on_invalid` on
+represented in the target encoding aborts loudly — see `on_invalid` on
 the writers.
 
-**Note:** in memory, artoo text is always UTF-8 (NFC-normalised) –
+**Note:** in memory, artoo text is always UTF-8 (NFC-normalised) —
 encodings only matter at the file boundary, exactly as in Python 3.
 
 ## See also

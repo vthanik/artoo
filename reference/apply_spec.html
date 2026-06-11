@@ -118,9 +118,9 @@ pipeline (ordered after the declared ones), is <em>reported</em> by the
 <code>extra_variable</code> conformance finding, and round-trips through every
 <code>write_*()</code> codec with metadata inferred from its R class. Membership is
 reported, not enforced by destruction.</p>
-<p><strong>Lossless or abort.</strong> A coercion that would damage values – an
+<p><strong>Lossless or abort.</strong> A coercion that would damage values — an
 <code>integer</code> dataType truncating fractions or overflowing R's 32-bit range
-– aborts with <code>artoo_error_type</code> before any value is touched. There is
+— aborts with <code>artoo_error_type</code> before any value is touched. There is
 no opt-out: fix the spec (dataType <code>"float"</code> or <code>"decimal"</code> keeps
 fractions) rather than accept silent damage.</p>
 <p><strong>Values are never translated.</strong> Coded variables keep their submission

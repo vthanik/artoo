@@ -1,8 +1,11 @@
 # Study-level metadata
 
 Return the study-level metadata row, or a single field from it. Holds
-the study identifier and any other study-scoped fields a source provides
-(the CDISC standard lives on its own property – see
+the canonical study fields (`study_name`, `study_description`,
+`protocol_name` — every source spelling is canonicalised by
+[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md))
+plus any other study-scoped fields a source provides (the CDISC standard
+lives on its own property — see
 [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md)).
 
 ## Usage
@@ -42,15 +45,15 @@ for the spec's CDISC standard.
 # ---- Example 1: the whole study row, then one field ----
 #
 # spec_study() with no field returns the study-level table; pass a field
-# name to pull a single value such as the study identifier.
+# name to pull a single value such as the study name.
 spec <- artoo_spec(
   cdisc_adam_datasets, cdisc_adam_variables,
   codelists = cdisc_codelists,
-  study = data.frame(studyid = "CDISCPILOT01")
+  study = data.frame(study_name = "CDISCPILOT01")
 )
 spec_study(spec)
-#>        studyid
+#>     study_name
 #> 1 CDISCPILOT01
-spec_study(spec, "studyid")
+spec_study(spec, "study_name")
 #> [1] "CDISCPILOT01"
 ```

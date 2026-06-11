@@ -11,6 +11,21 @@ no backward compatibility is kept with the vport surface.
 ### Object model
 
 - [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
+  canonicalises study-level fields to the CDISC ODM GlobalVariables
+  vocabulary, snake_cased: `study_name`, `study_description`,
+  `protocol_name`. Source spellings resolve automatically (`StudyName`
+  from the P21 Define sheet, `studyid` from hand-built specs); unknown
+  fields pass through verbatim; aliases that disagree abort with
+  `artoo_error_spec`. The spec print header, the metadata `studyOID`,
+  and
+  [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
+  all read the one canonical field, so a Define-sourced spec no longer
+  prints `Study: (unspecified)` while holding the study name. The
+  Define-XML reader now also extracts `StudyDescription`, and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  writes the study row back as the P21 Define sheet, so study metadata
+  survives the xlsx round-trip.
+- [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
   is single-standard by construction: `standard` was promoted from a
   per-dataset column to the scalar `@standard` property, resolved from
   the explicit argument, a P21-style `datasets$standard` column, or a
@@ -25,7 +40,7 @@ no backward compatibility is kept with the vport surface.
   when the source provides none (the P21 workbook shape), so the
   metadata `keySequence` is populated regardless of spec source.
 - Every condition artoo raises now carries a three-level class chain –
-  `artoo_<severity>_<kind>`, `artoo_<severity>`, `artoo_condition` – so
+  `artoo_<severity>_<kind>`, `artoo_<severity>`, `artoo_condition` — so
   `tryCatch(artoo_error = )` catches every error kind and
   `expect_error(class = "artoo_error")` works family-wide.
 - SAS `TIME` variables now import as
@@ -41,7 +56,7 @@ no backward compatibility is kept with the vport surface.
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   was reduced to five load-bearing arguments:
   `apply_spec(x, spec, dataset, conformance =, na_position =)`. The
-  pipeline is fixed – scaffold, coerce, order, sort, stamp – with no
+  pipeline is fixed — scaffold, coerce, order, sort, stamp — with no
   subsetting knob (`steps`, `profile` dropped); codelist translation
   lives in
   [`decode_column()`](https://vthanik.github.io/artoo/reference/decode_column.md)
@@ -75,9 +90,9 @@ no backward compatibility is kept with the vport surface.
 - New
   [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md):
   the encodings clinical data travels in, one row per encoding with the
-  name under each ecosystem – `sas` (session encoding), `r` (the
+  name under each ecosystem — `sas` (session encoding), `r` (the
   standard IANA name [`iconv()`](https://rdrr.io/r/base/iconv.html)
-  uses), and `python` (codec) – written for SAS programmers who have
+  uses), and `python` (codec) — written for SAS programmers who have
   never had to think about encodings. Every reader/writer `encoding`
   argument accepts the `sas` or `r` spelling.
 
@@ -92,11 +107,11 @@ no backward compatibility is kept with the vport surface.
 
 ### Data
 
-- The demo constructor tables are split by standard –
+- The demo constructor tables are split by standard —
   `cdisc_adam_datasets`
   - `cdisc_adam_variables` (ADSL, ADaMIG 1.1) and
     `cdisc_sdtm_datasets` + `cdisc_sdtm_variables` (DM, SDTMIG 3.1.2),
-    each carrying its `standard` column – replacing the removed
+    each carrying its `standard` column — replacing the removed
     `cdisc_datasets`/`cdisc_variables`, which mixed both standards in
     one spec (the exact shape the single-standard model forbids).
     Stacking the two pairs into one
@@ -109,7 +124,7 @@ no backward compatibility is kept with the vport surface.
   workbooks under `inst/extdata/`. New demo datasets `cdisc_adae`,
   `cdisc_vs`, `cdisc_ts`, `cdisc_suppdm` from the PHUSE Test Data
   Factory. Every bundled dataset conforms to its bundled spec under
-  `apply_spec(conformance = "abort")` – gated at build time and at test
+  `apply_spec(conformance = "abort")` — gated at build time and at test
   time.
 
 ### Fixes

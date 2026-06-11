@@ -2,7 +2,7 @@
 
 Pull the conformance findings
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
-attached to a conformed data frame – the readable answer to "what did
+attached to a conformed data frame — the readable answer to "what did
 the check find?". The result is the same findings frame
 [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
 returns (one row per divergence), with a print method that renders a

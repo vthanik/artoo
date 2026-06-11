@@ -99,8 +99,11 @@ resolve here.</p></dd>
 
 <dt id="arg-study">study<a class="anchor" aria-label="anchor" href="#arg-study"></a></dt>
 <dd><p><em>Study-level metadata.</em> <code>&lt;data.frame&gt; | NULL</code>. A single row
-of named study fields (e.g. <code>studyid</code>). A <code>standard</code> field, when
-present, is consumed into <code>@standard</code>.</p></dd>
+of named study fields. Well-known fields are canonicalised to
+<code>study_name</code>, <code>study_description</code>, and <code>protocol_name</code> (aliases such
+as <code>StudyName</code> or <code>studyid</code> resolve automatically); other fields pass
+through verbatim. A <code>standard</code> field, when present, is consumed into
+<code>@standard</code>.</p></dd>
 
 
 <dt id="arg-values">values<a class="anchor" aria-label="anchor" href="#arg-values"></a></dt>
@@ -159,10 +162,16 @@ variable names a dataset absent from <code>datasets</code>, or references a
 standard, stored as the scalar <code>@standard</code> property. The constructor
 resolves it from the <code>standard</code> argument, a <code>standard</code> column in
 <code>datasets</code> (the P21 workbook shape), and a <code>standard</code> field in <code>study</code>
-(the Define-XML shape) – those columns are consumed, so <code>@standard</code> is
+(the Define-XML shape) — those columns are consumed, so <code>@standard</code> is
 the single home. More than one distinct value aborts with
 <code>artoo_error_spec</code>; scope the source to one standard (e.g.
 <code>read_spec(path, datasets = ...)</code>) instead of mixing.</p>
+<p><strong>One study vocabulary.</strong> Well-known study fields are canonicalised to
+the CDISC ODM GlobalVariables names, snake_cased: <code>study_name</code>,
+<code>study_description</code>, <code>protocol_name</code>. Source spellings resolve
+automatically (<code>StudyName</code>, <code>studyid</code>, ...); fields the vocabulary does
+not know pass through verbatim. Aliases that disagree on a value abort
+with <code>artoo_error_spec</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

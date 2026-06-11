@@ -118,7 +118,7 @@ artoo_checks(
 
   *Flag an integer-typed variable holding fractional values.*
   `<logical(1)>: default TRUE`. Coercion would truncate them (162.6
-  becomes 162) – a data-integrity event; fix the spec dataType (`float`
+  becomes 162) — a data-integrity event; fix the spec dataType (`float`
   / `decimal`) or the data before conforming.
 
 - iso8601_format:

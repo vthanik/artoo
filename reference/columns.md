@@ -1,6 +1,6 @@
 # View a dataset's variable attributes, SAS-style
 
-Return a one-row-per-variable attribute table – the pane a SAS
+Return a one-row-per-variable attribute table — the pane a SAS
 programmer reads in `PROC CONTENTS` or the Universal Viewer: position,
 name, Char/Num type, length, format, informat, label, and the CDISC key
 sequence. This is the quick look after
@@ -30,7 +30,7 @@ columns(x, member = NULL)
 
 *A `<artoo_columns>` data frame* with columns `#`, `Variable`, `Type`,
 `Len`, `Format`, `Informat`, `Label`, `Key`, printed left-aligned. It is
-an ordinary data frame underneath – filter or inspect it like one.
+an ordinary data frame underneath — filter or inspect it like one.
 
 ## Details
 
@@ -38,7 +38,7 @@ an ordinary data frame underneath – filter or inspect it like one.
 column the spec never declared (which
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
 keeps, never drops) still appears, its attributes inferred from the R
-class. A plain, never-stamped data frame works the same way – every
+class. A plain, never-stamped data frame works the same way — every
 attribute is inferred.
 
 **A path reads through the codec.** A file path is dispatched by

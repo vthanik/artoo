@@ -8,7 +8,7 @@ by CDISC standard because a `artoo_spec` carries exactly one:
 labels, inferred CDISC types, byte lengths) by `data-raw/`. Pass one
 standard's pair to
 [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md);
-passing both pairs together aborts with `artoo_error_spec` – mixing
+passing both pairs together aborts with `artoo_error_spec` — mixing
 standards in one spec is the mistake the split exists to prevent.
 
 ## Usage

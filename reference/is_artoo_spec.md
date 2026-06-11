@@ -1,6 +1,6 @@
 # Test for a artoo_spec object
 
-Report whether an object is a `artoo_spec` – the validated CDISC
+Report whether an object is a `artoo_spec` — the validated CDISC
 specification that drives the artoo workflow (spec -\> apply_spec -\>
 read\_/write\_).
 [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
@@ -44,7 +44,7 @@ is_artoo_spec(spec)
 
 # ---- Example 2: an ordinary object is not a spec ----
 #
-# Any non-artoo_spec value -- a bare data frame, say -- returns FALSE.
+# Any non-artoo_spec value — a bare data frame, say — returns FALSE.
 is_artoo_spec(cdisc_dm)
 #> [1] FALSE
 ```

@@ -76,13 +76,13 @@ Parquet, rds). XPORT also cannot distinguish an empty string from `NA`
 
 **Character ISO dates (`--DTC`) write as text.** A character column
 whose `dataType` is `date`/`datetime`/`time` with no numeric
-`targetDataType` is the CDISC ISO 8601 text form – the SDTM `--DTC`
-convention – and stores as a character variable, partial dates
+`targetDataType` is the CDISC ISO 8601 text form — the SDTM `--DTC`
+convention — and stores as a character variable, partial dates
 (`"1951"`, `"1951-12"`) included, byte for byte. The SAS-numeric
 encoding (with `DATE9.`-style formats) is used for columns that are R
 `Date`/`POSIXct`/`hms` or whose metadata records
 `targetDataType = "integer"` (the ADaM numeric-date convention). A
-character column *under* `targetDataType = "integer"` aborts loudly – a
+character column *under* `targetDataType = "integer"` aborts loudly — a
 partial date can never become a SAS numeric silently.
 
 ## See also

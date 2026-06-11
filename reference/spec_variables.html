@@ -71,25 +71,25 @@ the named dataset's rows.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><em>A data frame of variable metadata</em>, one row per variable, with
-22 columns (absent ones are filled with typed <code>NA</code> at construction):</p><ul><li><p><code>dataset</code>, <code>variable</code> – the identifying pair (unique within a spec).</p></li>
-<li><p><code>itemoid</code> – the Define-XML / Dataset-JSON item OID, when recorded.</p></li>
-<li><p><code>label</code> – the variable label (&lt;= 40 bytes for XPORT v5).</p></li>
-<li><p><code>data_type</code> – canonical CDISC dataType (<code>string</code>, <code>integer</code>,
+22 columns (absent ones are filled with typed <code>NA</code> at construction):</p><ul><li><p><code>dataset</code>, <code>variable</code> — the identifying pair (unique within a spec).</p></li>
+<li><p><code>itemoid</code> — the Define-XML / Dataset-JSON item OID, when recorded.</p></li>
+<li><p><code>label</code> — the variable label (&lt;= 40 bytes for XPORT v5).</p></li>
+<li><p><code>data_type</code> — canonical CDISC dataType (<code>string</code>, <code>integer</code>,
 <code>decimal</code>, <code>float</code>, <code>double</code>, <code>boolean</code>, <code>date</code>, <code>datetime</code>, <code>time</code>,
 <code>URI</code>).</p></li>
-<li><p><code>target_data_type</code> – <code>integer</code>/<code>decimal</code> when a temporal variable
+<li><p><code>target_data_type</code> — <code>integer</code>/<code>decimal</code> when a temporal variable
 stores as a SAS-epoch numeric; <code>NA</code> means ISO 8601 text (<code>--DTC</code>).</p></li>
-<li><p><code>length</code> – declared storage length (bytes for character).</p></li>
-<li><p><code>display_format</code>, <code>informat</code> – SAS format / informat strings.</p></li>
-<li><p><code>key_sequence</code> – 1-based position in the dataset sort key.</p></li>
-<li><p><code>order</code> – column position in the dataset.</p></li>
-<li><p><code>codelist_id</code>, <code>method_id</code>, <code>comment_id</code> – references into the
+<li><p><code>length</code> — declared storage length (bytes for character).</p></li>
+<li><p><code>display_format</code>, <code>informat</code> — SAS format / informat strings.</p></li>
+<li><p><code>key_sequence</code> — 1-based position in the dataset sort key.</p></li>
+<li><p><code>order</code> — column position in the dataset.</p></li>
+<li><p><code>codelist_id</code>, <code>method_id</code>, <code>comment_id</code> — references into the
 codelists / methods / comments slots.</p></li>
-<li><p><code>mandatory</code> – logical obligation flag (<code>NA</code> is treated as
+<li><p><code>mandatory</code> — logical obligation flag (<code>NA</code> is treated as
 mandatory by <code><a href="check_spec.html">check_spec()</a></code>).</p></li>
-<li><p><code>significant_digits</code> – for <code>decimal</code> variables.</p></li>
+<li><p><code>significant_digits</code> — for <code>decimal</code> variables.</p></li>
 <li><p><code>origin</code>, <code>source</code>, <code>predecessor</code>, <code>assigned_value</code>, <code>pages</code>,
-<code>role</code> – Define-XML provenance fields, carried as-is.</p></li>
+<code>role</code> — Define-XML provenance fields, carried as-is.</p></li>
 </ul><p>Filter or arrange it with ordinary base / <code>dplyr</code> verbs.</p>
     </div>
     <div class="section level2">

@@ -52,8 +52,11 @@ artoo_spec(
 - study:
 
   *Study-level metadata.* `<data.frame> | NULL`. A single row of named
-  study fields (e.g. `studyid`). A `standard` field, when present, is
-  consumed into `@standard`.
+  study fields. Well-known fields are canonicalised to `study_name`,
+  `study_description`, and `protocol_name` (aliases such as `StudyName`
+  or `studyid` resolve automatically); other fields pass through
+  verbatim. A `standard` field, when present, is consumed into
+  `@standard`.
 
 - values:
 
@@ -120,10 +123,17 @@ variable names a dataset absent from `datasets`, or references a
 standard, stored as the scalar `@standard` property. The constructor
 resolves it from the `standard` argument, a `standard` column in
 `datasets` (the P21 workbook shape), and a `standard` field in `study`
-(the Define-XML shape) – those columns are consumed, so `@standard` is
+(the Define-XML shape) — those columns are consumed, so `@standard` is
 the single home. More than one distinct value aborts with
 `artoo_error_spec`; scope the source to one standard (e.g.
 `read_spec(path, datasets = ...)`) instead of mixing.
+
+**One study vocabulary.** Well-known study fields are canonicalised to
+the CDISC ODM GlobalVariables names, snake_cased: `study_name`,
+`study_description`, `protocol_name`. Source spellings resolve
+automatically (`StudyName`, `studyid`, ...); fields the vocabulary does
+not know pass through verbatim. Aliases that disagree on a value abort
+with `artoo_error_spec`.
 
 ## See also
 

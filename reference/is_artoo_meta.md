@@ -1,6 +1,6 @@
 # Test for a artoo_meta object
 
-Report whether an object is a `artoo_meta` – the CDISC-shaped metadata a
+Report whether an object is a `artoo_meta` — the CDISC-shaped metadata a
 conformed dataset carries through the artoo workflow (spec -\>
 apply_spec -\> read\_/write\_).
 [`get_meta()`](https://vthanik.github.io/artoo/reference/get_meta.md)
@@ -45,7 +45,7 @@ is_artoo_meta(meta)
 
 # ---- Example 2: a bare data frame carries no meta object ----
 #
-# The raw frame itself is not a artoo_meta -- only the object get_meta()
+# The raw frame itself is not a artoo_meta — only the object get_meta()
 # returns is.
 is_artoo_meta(cdisc_adsl)
 #> [1] FALSE

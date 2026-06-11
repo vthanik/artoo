@@ -35,9 +35,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="spec">Spec<a class="anchor" aria-label="anchor" href="#spec"></a></h2>
+      <h2 id="specification">Specification<a class="anchor" aria-label="anchor" href="#specification"></a></h2>
 
-      <div class="section-desc"><p>Build, read, write, and inspect a artoo_spec – the canonical CDISC-shaped description of your datasets, one CDISC standard each.</p></div>
+      <div class="section-desc"><p>Build a artoo_spec — the canonical CDISC-shaped description of your datasets, one CDISC standard each — or read one from native JSON, a Pinnacle 21 workbook, or Define-XML, and write it back out.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -67,10 +67,33 @@
 
         <dt>
 
+          <code><a href="is_artoo_spec.html">is_artoo_spec()</a></code>
+
+        </dt>
+        <dd>Test for a artoo_spec object</dd>
+      </dl></div><div class="section level2">
+      <h2 id="spec-accessors">Spec accessors<a class="anchor" aria-label="anchor" href="#spec-accessors"></a></h2>
+
+      <div class="section-desc"><p>One slot each from the spec — the standard, the study block, and the per-dataset metadata tables.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
           <code><a href="spec_standard.html">spec_standard()</a></code>
 
         </dt>
         <dd>The CDISC standard a spec implements</dd>
+
+        <dt>
+
+          <code><a href="spec_study.html">spec_study()</a></code>
+
+        </dt>
+        <dd>Study-level metadata</dd>
 
         <dt>
 
@@ -102,13 +125,6 @@
 
         <dt>
 
-          <code><a href="spec_study.html">spec_study()</a></code>
-
-        </dt>
-        <dd>Study-level metadata</dd>
-
-        <dt>
-
           <code><a href="spec_methods.html">spec_methods()</a></code>
 
         </dt>
@@ -130,7 +146,7 @@
       </dl></div><div class="section level2">
       <h2 id="conform">Conform<a class="anchor" aria-label="anchor" href="#conform"></a></h2>
 
-      <div class="section-desc"><p>Apply a spec to a raw frame, derive through codelists, and carry the metadata.</p></div>
+      <div class="section-desc"><p>Apply the spec to a raw frame — scaffold, coerce, order, sort, stamp metadata — and derive single variables through spec codelists.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -150,8 +166,17 @@
 
         </dt>
         <dd>Derive or translate a variable through its codelist</dd>
+      </dl></div><div class="section level2">
+      <h2 id="metadata">Metadata<a class="anchor" aria-label="anchor" href="#metadata"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>The artoo_meta every conformed frame carries: read it, replace it, and keep it in step with the data.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="get_meta.html">get_meta()</a></code>
 
@@ -171,10 +196,17 @@
 
         </dt>
         <dd>Re-align metadata with a transformed data frame</dd>
+
+        <dt>
+
+          <code><a href="is_artoo_meta.html">is_artoo_meta()</a></code>
+
+        </dt>
+        <dd>Test for a artoo_meta object</dd>
       </dl></div><div class="section level2">
       <h2 id="check">Check<a class="anchor" aria-label="anchor" href="#check"></a></h2>
 
-      <div class="section-desc"><p>Conformance findings for the data, and integrity of the spec itself.</p></div>
+      <div class="section-desc"><p>Conformance findings for the data, integrity findings for the spec itself, and the control object that scopes both.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -197,44 +229,28 @@
 
         <dt>
 
-          <code><a href="validate_spec.html">validate_spec()</a></code>
-
-        </dt>
-        <dd>Validate a specification for submission-readiness</dd>
-
-        <dt>
-
           <code><a href="artoo_checks.html">artoo_checks()</a></code>
 
         </dt>
         <dd>Control which conformance checks run</dd>
-      </dl></div><div class="section level2">
-      <h2 id="columns">Columns<a class="anchor" aria-label="anchor" href="#columns"></a></h2>
-
-      <div class="section-desc"><p>The SAS-viewer-style variable pane, on a frame or a file.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="columns.html">columns()</a></code>
-
-        </dt>
-        <dd>View a dataset's variable attributes, SAS-style</dd>
 
         <dt>
 
-          <code><a href="xpt_members.html">xpt_members()</a></code>
+          <code><a href="is_artoo_checks.html">is_artoo_checks()</a></code>
 
         </dt>
-        <dd>List the members of a SAS XPORT transport file</dd>
+        <dd>Test for a artoo_checks control</dd>
+
+        <dt>
+
+          <code><a href="validate_spec.html">validate_spec()</a></code>
+
+        </dt>
+        <dd>Validate a specification for submission-readiness</dd>
       </dl></div><div class="section level2">
       <h2 id="read-and-write">Read and write<a class="anchor" aria-label="anchor" href="#read-and-write"></a></h2>
 
-      <div class="section-desc"><p>Lossless I/O across every supported format. Generic dispatch on the file extension, plus a short wrapper per format.</p></div>
+      <div class="section-desc"><p>Lossless dataset I/O across every supported format. Generic dispatch on the file extension, plus a short wrapper per format.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -324,8 +340,40 @@
 
         </dt>
         <dd>Write a dataset to rds</dd>
+      </dl></div><div class="section level2">
+      <h2 id="inspect">Inspect<a class="anchor" aria-label="anchor" href="#inspect"></a></h2>
+
+      <div class="section-desc"><p>The SAS-viewer-style variable pane, on a frame or a file.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="columns.html">columns()</a></code>
+
+        </dt>
+        <dd>View a dataset's variable attributes, SAS-style</dd>
 
         <dt>
+
+          <code><a href="xpt_members.html">xpt_members()</a></code>
+
+        </dt>
+        <dd>List the members of a SAS XPORT transport file</dd>
+      </dl></div><div class="section level2">
+      <h2 id="formats-and-encodings">Formats and encodings<a class="anchor" aria-label="anchor" href="#formats-and-encodings"></a></h2>
+
+      <div class="section-desc"><p>Reference tables: which codecs this session can read and write, and the encoding names R, SAS, and Python use for the same bytes.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="artoo_formats.html">artoo_formats()</a></code>
 
@@ -337,41 +385,11 @@
           <code><a href="artoo_encodings.html">artoo_encodings()</a></code>
 
         </dt>
-        <dd>Encodings for clinical datasets, across SAS, R, and Python</dd>
-      </dl></div><div class="section level2">
-      <h2 id="classes-and-predicates">Classes and predicates<a class="anchor" aria-label="anchor" href="#classes-and-predicates"></a></h2>
-
-
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="is_artoo_spec.html">is_artoo_spec()</a></code>
-
-        </dt>
-        <dd>Test for a artoo_spec object</dd>
-
-        <dt>
-
-          <code><a href="is_artoo_meta.html">is_artoo_meta()</a></code>
-
-        </dt>
-        <dd>Test for a artoo_meta object</dd>
-
-        <dt>
-
-          <code><a href="is_artoo_checks.html">is_artoo_checks()</a></code>
-
-        </dt>
-        <dd>Test for a artoo_checks control</dd>
+        <dd>Encodings for clinical datasets, across R, SAS, and Python</dd>
       </dl></div><div class="section level2">
       <h2 id="demo-data">Demo data<a class="anchor" aria-label="anchor" href="#demo-data"></a></h2>
 
-      <div class="section-desc"><p>Bundled CDISC pilot specs, metadata tables, and datasets used throughout the docs – all rebuilt from public sources.</p></div>
+      <div class="section-desc"><p>Bundled CDISC pilot specs, metadata tables, and datasets used throughout the docs — all rebuilt from public sources.</p></div>
 
       <dl></dl></div><div class="section level2">
 

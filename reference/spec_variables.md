@@ -32,36 +32,36 @@ spec_variables(spec, dataset = NULL)
 *A data frame of variable metadata*, one row per variable, with 22
 columns (absent ones are filled with typed `NA` at construction):
 
-- `dataset`, `variable` – the identifying pair (unique within a spec).
+- `dataset`, `variable` — the identifying pair (unique within a spec).
 
-- `itemoid` – the Define-XML / Dataset-JSON item OID, when recorded.
+- `itemoid` — the Define-XML / Dataset-JSON item OID, when recorded.
 
-- `label` – the variable label (\<= 40 bytes for XPORT v5).
+- `label` — the variable label (\<= 40 bytes for XPORT v5).
 
-- `data_type` – canonical CDISC dataType (`string`, `integer`,
+- `data_type` — canonical CDISC dataType (`string`, `integer`,
   `decimal`, `float`, `double`, `boolean`, `date`, `datetime`, `time`,
   `URI`).
 
-- `target_data_type` – `integer`/`decimal` when a temporal variable
+- `target_data_type` — `integer`/`decimal` when a temporal variable
   stores as a SAS-epoch numeric; `NA` means ISO 8601 text (`--DTC`).
 
-- `length` – declared storage length (bytes for character).
+- `length` — declared storage length (bytes for character).
 
-- `display_format`, `informat` – SAS format / informat strings.
+- `display_format`, `informat` — SAS format / informat strings.
 
-- `key_sequence` – 1-based position in the dataset sort key.
+- `key_sequence` — 1-based position in the dataset sort key.
 
-- `order` – column position in the dataset.
+- `order` — column position in the dataset.
 
-- `codelist_id`, `method_id`, `comment_id` – references into the
+- `codelist_id`, `method_id`, `comment_id` — references into the
   codelists / methods / comments slots.
 
-- `mandatory` – logical obligation flag (`NA` is treated as mandatory by
+- `mandatory` — logical obligation flag (`NA` is treated as mandatory by
   [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)).
 
-- `significant_digits` – for `decimal` variables.
+- `significant_digits` — for `decimal` variables.
 
-- `origin`, `source`, `predecessor`, `assigned_value`, `pages`, `role` –
+- `origin`, `source`, `predecessor`, `assigned_value`, `pages`, `role` —
   Define-XML provenance fields, carried as-is.
 
 Filter or arrange it with ordinary base / `dplyr` verbs.

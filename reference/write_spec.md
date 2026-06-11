@@ -48,16 +48,18 @@ Object keys are emitted in a fixed order, so writing the same spec twice
 yields byte-identical output.
 
 **P21 xlsx is the interchange format.** Sheets are emitted with the
-headers the P21 reader recognises (Datasets, Variables, ValueLevel,
-Codelists, Methods, Comments, Documents; empty optional sheets are
-omitted), foreign keys repeated on every row (no merged cells), and the
-spec's
+headers the P21 reader recognises (Define, Datasets, Variables,
+ValueLevel, Codelists, Methods, Comments, Documents; empty optional
+sheets are omitted), foreign keys repeated on every row (no merged
+cells), and the spec's
 [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md)
-as the Datasets sheet's `Standard` column.
+as the Datasets sheet's `Standard` column. The study row writes back as
+the Define sheet's Attribute/Value pairs (`StudyName`,
+`StudyDescription`, `ProtocolName`).
 
 **Note:** fields with no P21 column (`itemoid`, `target_data_type`,
-per-variable `key_sequence`, the study table) do not survive an xlsx
-round-trip; persist to JSON when you need the spec back exactly.
+per-variable `key_sequence`) do not survive an xlsx round-trip; persist
+to JSON when you need the spec back exactly.
 
 ## See also
 

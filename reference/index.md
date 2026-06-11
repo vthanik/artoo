@@ -1,9 +1,10 @@
 # Package index
 
-## Spec
+## Specification
 
-Build, read, write, and inspect a artoo_spec – the canonical
-CDISC-shaped description of your datasets, one CDISC standard each.
+Build a artoo_spec — the canonical CDISC-shaped description of your
+datasets, one CDISC standard each — or read one from native JSON, a
+Pinnacle 21 workbook, or Define-XML, and write it back out.
 
 - [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
   : Construct a CDISC specification
@@ -11,8 +12,18 @@ CDISC-shaped description of your datasets, one CDISC standard each.
   : Read a specification from JSON, Excel, or Define-XML
 - [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
   : Write a specification to native JSON or a P21 Excel workbook
+- [`is_artoo_spec()`](https://vthanik.github.io/artoo/reference/is_artoo_spec.md)
+  : Test for a artoo_spec object
+
+## Spec accessors
+
+One slot each from the spec — the standard, the study block, and the
+per-dataset metadata tables.
+
 - [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md)
   : The CDISC standard a spec implements
+- [`spec_study()`](https://vthanik.github.io/artoo/reference/spec_study.md)
+  : Study-level metadata
 - [`spec_datasets()`](https://vthanik.github.io/artoo/reference/spec_datasets.md)
   : Dataset names in a spec
 - [`spec_variables()`](https://vthanik.github.io/artoo/reference/spec_variables.md)
@@ -21,8 +32,6 @@ CDISC-shaped description of your datasets, one CDISC standard each.
   : Codelist terms
 - [`spec_keys()`](https://vthanik.github.io/artoo/reference/spec_keys.md)
   : Sort keys for a dataset
-- [`spec_study()`](https://vthanik.github.io/artoo/reference/spec_study.md)
-  : Study-level metadata
 - [`spec_methods()`](https://vthanik.github.io/artoo/reference/spec_methods.md)
   : Derivation methods in a spec
 - [`spec_comments()`](https://vthanik.github.io/artoo/reference/spec_comments.md)
@@ -32,46 +41,48 @@ CDISC-shaped description of your datasets, one CDISC standard each.
 
 ## Conform
 
-Apply a spec to a raw frame, derive through codelists, and carry the
-metadata.
+Apply the spec to a raw frame — scaffold, coerce, order, sort, stamp
+metadata — and derive single variables through spec codelists.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   : Conform a data frame to its spec
 - [`decode_column()`](https://vthanik.github.io/artoo/reference/decode_column.md)
   : Derive or translate a variable through its codelist
+
+## Metadata
+
+The artoo_meta every conformed frame carries: read it, replace it, and
+keep it in step with the data.
+
 - [`get_meta()`](https://vthanik.github.io/artoo/reference/get_meta.md)
   : Read the metadata a dataset carries
 - [`set_meta()`](https://vthanik.github.io/artoo/reference/set_meta.md)
   : Attach metadata to a dataset
 - [`sync_meta()`](https://vthanik.github.io/artoo/reference/sync_meta.md)
   : Re-align metadata with a transformed data frame
+- [`is_artoo_meta()`](https://vthanik.github.io/artoo/reference/is_artoo_meta.md)
+  : Test for a artoo_meta object
 
 ## Check
 
-Conformance findings for the data, and integrity of the spec itself.
+Conformance findings for the data, integrity findings for the spec
+itself, and the control object that scopes both.
 
 - [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
   : Check a dataset against its spec
 - [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
   : Read the conformance findings a dataset carries
-- [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
-  : Validate a specification for submission-readiness
 - [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
   : Control which conformance checks run
-
-## Columns
-
-The SAS-viewer-style variable pane, on a frame or a file.
-
-- [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) :
-  View a dataset's variable attributes, SAS-style
-- [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md)
-  : List the members of a SAS XPORT transport file
+- [`is_artoo_checks()`](https://vthanik.github.io/artoo/reference/is_artoo_checks.md)
+  : Test for a artoo_checks control
+- [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
+  : Validate a specification for submission-readiness
 
 ## Read and write
 
-Lossless I/O across every supported format. Generic dispatch on the file
-extension, plus a short wrapper per format.
+Lossless dataset I/O across every supported format. Generic dispatch on
+the file extension, plus a short wrapper per format.
 
 - [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)
   : Read a dataset from any supported format
@@ -97,24 +108,30 @@ extension, plus a short wrapper per format.
   : Read a dataset from rds
 - [`write_rds()`](https://vthanik.github.io/artoo/reference/write_rds.md)
   : Write a dataset to rds
+
+## Inspect
+
+The SAS-viewer-style variable pane, on a frame or a file.
+
+- [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) :
+  View a dataset's variable attributes, SAS-style
+- [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md)
+  : List the members of a SAS XPORT transport file
+
+## Formats and encodings
+
+Reference tables: which codecs this session can read and write, and the
+encoding names R, SAS, and Python use for the same bytes.
+
 - [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
   : Report which formats are available
 - [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
-  : Encodings for clinical datasets, across SAS, R, and Python
-
-## Classes and predicates
-
-- [`is_artoo_spec()`](https://vthanik.github.io/artoo/reference/is_artoo_spec.md)
-  : Test for a artoo_spec object
-- [`is_artoo_meta()`](https://vthanik.github.io/artoo/reference/is_artoo_meta.md)
-  : Test for a artoo_meta object
-- [`is_artoo_checks()`](https://vthanik.github.io/artoo/reference/is_artoo_checks.md)
-  : Test for a artoo_checks control
+  : Encodings for clinical datasets, across R, SAS, and Python
 
 ## Demo data
 
 Bundled CDISC pilot specs, metadata tables, and datasets used throughout
-the docs – all rebuilt from public sources.
+the docs — all rebuilt from public sources.
 
 - [`adam_spec`](https://vthanik.github.io/artoo/reference/cdisc_specs.md)
   [`sdtm_spec`](https://vthanik.github.io/artoo/reference/cdisc_specs.md)

@@ -1,7 +1,7 @@
 # List the members of a SAS XPORT transport file
 
 Report every dataset (member) a SAS Transport (`.xpt`) file holds, with
-its label, variable count, and row count – the survey step before
+its label, variable count, and row count — the survey step before
 [`read_xpt()`](https://vthanik.github.io/artoo/reference/read_xpt.md)
 with `member =` picks one. A single-member file (the FDA submission
 convention) returns one row.

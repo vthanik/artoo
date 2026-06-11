@@ -33,19 +33,19 @@ spec_codelists(spec, codelist_id = NULL)
 *A data frame of codelist terms*, one row per term: every term when
 `codelist_id` is `NULL`, else the named codelist's terms. Columns:
 
-- `codelist_id` – the codelist identifier variables reference.
+- `codelist_id` — the codelist identifier variables reference.
 
-- `term` – the submission value (what conformed data carries).
+- `term` — the submission value (what conformed data carries).
 
-- `decode` – the human-readable decoded value.
+- `decode` — the human-readable decoded value.
 
-- `order` – display order within the codelist.
+- `order` — display order within the codelist.
 
-- `extended` – `TRUE` marks an extensible codelist (sponsor terms
+- `extended` — `TRUE` marks an extensible codelist (sponsor terms
   allowed; non-members downgrade to notes in
   [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)).
 
-- `comment_id` – reference into the comments slot.
+- `comment_id` — reference into the comments slot.
 
 ## See also
 

@@ -4,7 +4,7 @@ Ready-made `artoo_spec` objects built from the official CDISC Define-XML
 2.1 release examples: `adam_spec` (ADaMIG 1.1; datasets ADSL, ADAE) and
 `sdtm_spec` (SDTMIG 3.1.2; datasets TS, DM, VS, SUPPDM). Every bundled
 demo dataset conforms to its spec under
-`apply_spec(conformance = "abort")` – the pairing is gated at build
+`apply_spec(conformance = "abort")` — the pairing is gated at build
 time. The same specs ship as P21 workbooks in
 `system.file("extdata", "adam-spec.xlsx", package = "artoo")` and
 `"sdtm-spec.xlsx"`, written by

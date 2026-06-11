@@ -83,9 +83,9 @@ the pipeline (ordered after the declared ones), is *reported* by the
 `write_*()` codec with metadata inferred from its R class. Membership is
 reported, not enforced by destruction.
 
-**Lossless or abort.** A coercion that would damage values – an
+**Lossless or abort.** A coercion that would damage values — an
 `integer` dataType truncating fractions or overflowing R's 32-bit range
-– aborts with `artoo_error_type` before any value is touched. There is
+— aborts with `artoo_error_type` before any value is touched. There is
 no opt-out: fix the spec (dataType `"float"` or `"decimal"` keeps
 fractions) rather than accept silent damage.
 

@@ -114,7 +114,7 @@ identical(back, spec)
 
 # ---- Example 2: scope the read to one dataset ----
 #
-# `datasets =` reads just the domain you are working on -- validation is
+# `datasets =` reads just the domain you are working on — validation is
 # scoped with it, so a problem elsewhere in the workbook cannot block
 # this dataset.
 dm_spec <- read_spec(path, datasets = "DM")
