@@ -102,3 +102,42 @@ test_that("xpt legs preserve values, tags, and the carried metadata", {
     )
   }
 })
+
+# ---- design-quality edge matrix (7b): 0-row + all-NA across every format ----
+
+test_that("a 0-row conformed frame round-trips every full-metadata format", {
+  empty <- .torture_frame()[0, , drop = FALSE]
+  empty <- sync_meta(empty, get_meta(.torture_frame()))
+  for (ext in c(".json", ".ndjson", ".rds", ".parquet")) {
+    if (ext == ".parquet") {
+      skip_if_not_installed("nanoparquet")
+    }
+    p <- withr::local_tempfile(fileext = ext)
+    write_dataset(empty, p)
+    back <- read_dataset(p)
+    expect_identical(nrow(back), 0L, info = ext)
+    expect_identical(names(back), names(empty), info = ext)
+    expect_identical(
+      names(get_meta(back)@columns),
+      names(get_meta(empty)@columns),
+      info = ext
+    )
+  }
+})
+
+test_that("an all-NA column survives every full-metadata format", {
+  df <- .torture_frame()
+  df$AVAL <- NA_real_
+  attr(df$AVAL, "label") <- "Analysis Value"
+  df <- sync_meta(df, get_meta(.torture_frame()))
+  for (ext in c(".json", ".ndjson", ".rds", ".parquet", ".xpt")) {
+    if (ext == ".parquet") {
+      skip_if_not_installed("nanoparquet")
+    }
+    p <- withr::local_tempfile(fileext = ext)
+    write_dataset(df, p)
+    back <- read_dataset(p)
+    expect_true(all(is.na(back$AVAL)), info = ext)
+    expect_identical(length(back$AVAL), nrow(df), info = ext)
+  }
+})

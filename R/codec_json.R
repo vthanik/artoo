@@ -219,7 +219,8 @@
     .artoo_abort(
       c(
         "{.path {path}} is not a valid Dataset-JSON file.",
-        "x" = "It contains an embedded NUL byte."
+        "x" = "It contains an embedded NUL byte.",
+        "i" = "The file is corrupt or binary; re-export it from the source system."
       ),
       kind = "codec",
       call = call
@@ -241,7 +242,8 @@
       .artoo_abort(
         c(
           "{.path {path}} is not valid JSON.",
-          "x" = "{msg}"
+          "x" = "{msg}",
+          "i" = "The file may be truncated or not Dataset-JSON; re-export it."
         ),
         kind = "codec",
         call = call
@@ -258,7 +260,8 @@
     .artoo_abort(
       c(
         "{.path {path}} is not a Dataset-JSON v1.1 file.",
-        "x" = "It lacks the {.field datasetJSONVersion} and {.field columns} keys."
+        "x" = "It lacks the {.field datasetJSONVersion} and {.field columns} keys.",
+        "i" = "artoo reads CDISC Dataset-JSON v1.1; check the producing tool and version."
       ),
       kind = "codec",
       call = call
@@ -279,7 +282,8 @@
       .artoo_abort(
         c(
           "{.path {path}} has a malformed row.",
-          "x" = "Row {bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}."
+          "x" = "Row {bad[1]} has {lens[bad[1]]} value{?s}, expected {nc}.",
+          "i" = "Every row must match the {.field columns} declaration; the file is corrupt or hand-edited."
         ),
         kind = "codec",
         call = call

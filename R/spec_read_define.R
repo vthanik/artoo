@@ -180,7 +180,8 @@
     .artoo_abort(
       c(
         "{.path {path}} defines no datasets.",
-        "x" = "The MetaDataVersion has no ItemGroupDef."
+        "x" = "The MetaDataVersion has no ItemGroupDef.",
+        "i" = "Check that this is a study Define-XML, not a standards or CT document."
       ),
       kind = "input",
       call = call

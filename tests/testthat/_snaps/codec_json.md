@@ -16,4 +16,5 @@
       Error in `read_json()`:
       ! '<path>' is not a Dataset-JSON v1.1 file.
       x It lacks the datasetJSONVersion and columns keys.
+      i artoo reads CDISC Dataset-JSON v1.1; check the producing tool and version.
 

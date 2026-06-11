@@ -186,7 +186,8 @@
     .artoo_abort(
       c(
         "Unexpected end of XPORT file.",
-        "x" = "Expected {n} byte{?s}, got {length(raw_vec)}."
+        "x" = "Expected {n} byte{?s}, got {length(raw_vec)}.",
+        "i" = "The file is truncated; re-export or re-transfer it in binary mode."
       ),
       kind = "codec",
       call = call

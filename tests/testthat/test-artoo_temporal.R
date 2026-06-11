@@ -34,13 +34,6 @@ test_that(".resolve_display_format defaults by dataType when missing", {
   )
 })
 
-test_that(".presentation_class maps temporal dataType to R class", {
-  expect_identical(artoo:::.presentation_class("date"), "Date")
-  expect_identical(artoo:::.presentation_class("datetime"), "POSIXct")
-  expect_identical(artoo:::.presentation_class("time"), "hms")
-  expect_identical(artoo:::.presentation_class("string"), "character")
-})
-
 # ---- realize: numeric SAS-epoch -> R class ---------------------------------
 
 test_that("realize date uses the SAS 1960 epoch (the bug guard)", {

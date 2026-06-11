@@ -175,3 +175,28 @@ test_that("write_spec rejects an unknown extension", {
   expect_error(write_spec(spec, p), class = "artoo_error_input")
   expect_snapshot(error = TRUE, write_spec(spec, p))
 })
+
+test_that("an empty spec cannot become a P21 workbook", {
+  empty <- artoo_spec(
+    data.frame(dataset = character(0)),
+    data.frame(
+      dataset = character(0),
+      variable = character(0),
+      data_type = character(0)
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  expect_error(write_spec(empty, p), class = "artoo_error_spec")
+  expect_snapshot(error = TRUE, write_spec(empty, p))
+})
+
+test_that("a values slot with no P21-mapped columns omits the sheet", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+    values = data.frame(bespoke = "x", stringsAsFactors = FALSE)
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  expect_false("ValueLevel" %in% readxl::excel_sheets(p))
+})

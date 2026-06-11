@@ -378,7 +378,8 @@
         .artoo_abort(
           c(
             "Cannot coerce column {.var {nm}} to numeric for xpt.",
-            "x" = "Offending value{?s}: {.val {bad}}."
+            "x" = "Offending value{?s}: {.val {bad}}.",
+            "i" = "The meta types this column numeric; fix the values or the spec dataType."
           ),
           kind = "codec",
           call = call
@@ -684,7 +685,8 @@
     .artoo_abort(
       c(
         "Not a valid XPORT transport file.",
-        "x" = "Unrecognised library header."
+        "x" = "Unrecognised library header.",
+        "i" = "The file is not SAS XPORT (v5/v8), or was corrupted in transfer; check the source and transfer mode (binary, not text)."
       ),
       kind = "codec",
       call = call
@@ -1224,7 +1226,8 @@
     .artoo_abort(
       c(
         "Not a valid XPORT transport file.",
-        "x" = "No member header follows the library header."
+        "x" = "No member header follows the library header.",
+        "i" = "The file is truncated or was corrupted in transfer; re-export or re-transfer it in binary mode."
       ),
       kind = "codec",
       call = call

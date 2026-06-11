@@ -195,18 +195,6 @@
 
 # ---- resolvers (shared by coerce, encode, meta_from_frame) ------------------
 
-# The R class a dataType presents as (vs .type_storage's on-disk mode).
-#' @noRd
-.presentation_class <- function(data_type) {
-  switch(
-    data_type,
-    date = "Date",
-    datetime = "POSIXct",
-    time = "hms",
-    .type_storage(data_type)
-  )
-}
-
 # The xpt storage length: the meta length when set, else max(nchar) for a
 # character column, else 8 (full IEEE precision) for a numeric one.
 #' @noRd
