@@ -18,22 +18,24 @@ table; an unknown field aborts with \code{artoo_error_input}.}
 \emph{The study data frame}, or the value of one \code{field}.
 }
 \description{
-Return the study-level metadata row, or a single field from it. Holds the
-study identifier and any other study-scoped fields a source provides
-(the CDISC standard lives on its own property -- see \code{\link[=spec_standard]{spec_standard()}}).
+Return the study-level metadata row, or a single field from it. Holds
+the canonical study fields (\code{study_name}, \code{study_description},
+\code{protocol_name} — every source spelling is canonicalised by
+\code{\link[=artoo_spec]{artoo_spec()}}) plus any other study-scoped fields a source provides
+(the CDISC standard lives on its own property — see \code{\link[=spec_standard]{spec_standard()}}).
 }
 \examples{
 # ---- Example 1: the whole study row, then one field ----
 #
 # spec_study() with no field returns the study-level table; pass a field
-# name to pull a single value such as the study identifier.
+# name to pull a single value such as the study name.
 spec <- artoo_spec(
   cdisc_adam_datasets, cdisc_adam_variables,
   codelists = cdisc_codelists,
-  study = data.frame(studyid = "CDISCPILOT01")
+  study = data.frame(study_name = "CDISCPILOT01")
 )
 spec_study(spec)
-spec_study(spec, "studyid")
+spec_study(spec, "study_name")
 
 }
 \seealso{

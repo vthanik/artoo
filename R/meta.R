@@ -1,4 +1,4 @@
-# meta.R -- the artoo_meta spine.
+# meta.R — the artoo_meta spine.
 #
 # artoo_meta is the CDISC-shaped metadata a conformed dataset carries: it
 # is built once from a spec by .meta_from_spec(), serialized once to a
@@ -51,7 +51,7 @@
 
 # One column entry (a list of present Dataset-JSON column attributes) from a
 # single-row variable data frame slice. Absent (NA) attributes are dropped,
-# matching Dataset-JSON's omit-when-absent convention -- which also makes the
+# matching Dataset-JSON's omit-when-absent convention — which also makes the
 # serializer round-trip an identity.
 #' @noRd
 .col_from_var_row <- function(row, dataset) {
@@ -139,8 +139,8 @@
   }
 
   study <- spec@study
-  study_oid <- if ("studyid" %in% names(study) && nrow(study)) {
-    .na_to_null(study$studyid[[1]])
+  study_oid <- if ("study_name" %in% names(study) && nrow(study)) {
+    .na_to_null(study$study_name[[1]])
   } else {
     NULL
   }
@@ -159,12 +159,12 @@
 
 # Resolve the storage form of each temporal column where metadata meets
 # data. A spec's date/datetime/time variable with no targetDataType is, by
-# CDISC definition, ISO 8601 text -- correct for a character --DTC column.
+# CDISC definition, ISO 8601 text — correct for a character --DTC column.
 # But when the data column is actually numeric-backed (R Date/POSIXct/
 # hms, or a never-realized SAS-epoch numeric), the truthful exchange
 # form is numeric: stamp targetDataType = "integer" so every codec writes a
 # SAS-epoch number and every reader realizes the same R class back
-# (lossless by construction). Character columns are left untouched -- their
+# (lossless by construction). Character columns are left untouched — their
 # exchange form IS the ISO text. Runs once, at stamp time, so the recorded
 # meta and every emitted sidecar agree.
 #' @noRd
@@ -242,8 +242,8 @@
   .drop_null(col_meta)
 }
 
-# Build a artoo_meta from a data frame that carries no metadata_json -- from
-# its per-column attributes and R classes -- so write_*() preserves labels,
+# Build a artoo_meta from a data frame that carries no metadata_json — from
+# its per-column attributes and R classes — so write_*() preserves labels,
 # formats, and types even without a spec. Returns NULL for a 0-column frame.
 #' @noRd
 .meta_from_frame <- function(x) {
@@ -277,7 +277,7 @@
 # ---- serializer: artoo_meta <-> Dataset-JSON metadata string ----------------
 
 # The ONE serializer's structural core. Builds the Dataset-JSON v1.1 itemGroup
-# metadata block as a named list (no `rows` -- the data lives natively in each
+# metadata block as a named list (no `rows` — the data lives natively in each
 # container; the .json file codec appends `rows` to this same list). Sharing
 # this single payload builder between the sidecar string and the .json file
 # codec is what keeps the formats from drifting (plan F4/4.0).
@@ -285,7 +285,7 @@
 # Dataset-JSON v1.1 has closed vocabularies at the top level AND inside the
 # `columns` array, so everything artoo-specific rides a single namespaced
 # `_artoo` object instead of the standard block: `sourceEncoding` (the on-disk
-# source-charset record), `informats` (a {variable: "DATE9."} map -- the
+# source-charset record), `informats` (a {variable: "DATE9."} map — the
 # column entries carry `informat` in-memory but it is stripped from the
 # emitted array), and `specialMissings` (row-aligned .A-.Z/._ tags, passed by
 # codecs as `special=`; see sas_missing.R for why they never enter the
@@ -420,7 +420,7 @@
 
 #' Test for a artoo_meta object
 #'
-#' Report whether an object is a `artoo_meta` -- the CDISC-shaped metadata a
+#' Report whether an object is a `artoo_meta` — the CDISC-shaped metadata a
 #' conformed dataset carries through the artoo workflow (spec -> apply_spec ->
 #' read_/write_). [get_meta()] returns one; this is the type guard before you
 #' inspect its `@dataset` and `@columns` slots.
@@ -441,7 +441,7 @@
 #'
 #' # ---- Example 2: a bare data frame carries no meta object ----
 #' #
-#' # The raw frame itself is not a artoo_meta -- only the object get_meta()
+#' # The raw frame itself is not a artoo_meta — only the object get_meta()
 #' # returns is.
 #' is_artoo_meta(cdisc_adsl)
 #'
@@ -581,7 +581,7 @@ set_meta <- function(x, meta) {
 
 # Project the per-column label and SAS display format from the meta onto the
 # matching frame columns, so labelled/gtsummary/viewer tooling reads them like
-# haven. The meta stays the SSOT; the attrs are a projection -- set when the
+# haven. The meta stays the SSOT; the attrs are a projection — set when the
 # meta carries a value, strip when it does not, so a meta update never leaves a
 # stale attr that .col_meta_from_attrs would later resurrect on a bare-frame
 # write. Idempotent: set_meta(set_meta(x, m), m) == set_meta(x, m).

@@ -103,7 +103,14 @@ test_that("the study block carries the name; the standard rides @standard", {
   spec <- read_spec(.define_fixture())
   st <- spec@study
   expect_identical(st$study_name, "CDISC01_1")
-  # The Define standard is consumed into the scalar property -- @standard
+  # GlobalVariables carries all three ODM fields; StudyDescription must not
+  # be dropped on the Define-XML route.
+  expect_identical(
+    st$study_description,
+    "CDISC Test Study Modified to illustrate Define-XML 2.1 features"
+  )
+  expect_identical(st$protocol_name, "CDISC01-1")
+  # The Define standard is consumed into the scalar property — @standard
   # is its single home, not the study data frame.
   expect_false("standard" %in% names(st))
   expect_match(spec_standard(spec), "SDTMIG")

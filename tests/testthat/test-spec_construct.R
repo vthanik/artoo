@@ -152,7 +152,86 @@ test_that("a Define-style study$standard field is consumed into @standard", {
   )
   expect_identical(spec_standard(spec), "SDTMIG 3.2")
   expect_false("standard" %in% names(spec@study))
-  expect_identical(spec_study(spec, "studyid"), "CDISC01")
+  expect_identical(spec_study(spec, "study_name"), "CDISC01")
+})
+
+test_that("artoo_spec() canonicalises study fields to the ODM vocabulary", {
+  # The P21 Define sheet's verbatim attribute names (StudyName,
+  # StudyDescription, ProtocolName) land as the canonical snake_case
+  # fields; unknown fields (Language) pass through verbatim.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+    study = data.frame(
+      StudyName = "CDISC01",
+      StudyDescription = "A study",
+      ProtocolName = "CDISC01-01",
+      Language = "en",
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  )
+  st <- spec_study(spec)
+  expect_identical(st$study_name, "CDISC01")
+  expect_identical(st$study_description, "A study")
+  expect_identical(st$protocol_name, "CDISC01-01")
+  expect_identical(st$Language, "en")
+  expect_false(any(
+    c("StudyName", "StudyDescription", "ProtocolName") %in% names(st)
+  ))
+})
+
+test_that("artoo_spec() accepts studyid as a study_name alias", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+    study = data.frame(studyid = "CDISCPILOT01", stringsAsFactors = FALSE)
+  )
+  expect_identical(spec_study(spec, "study_name"), "CDISCPILOT01")
+  expect_false("studyid" %in% names(spec_study(spec)))
+})
+
+test_that("agreeing study-name aliases collapse to the one value", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+    study = data.frame(
+      studyid = "CDISC01",
+      StudyName = "CDISC01",
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+  )
+  expect_identical(spec_study(spec, "study_name"), "CDISC01")
+})
+
+test_that("conflicting study-name fields abort at construction", {
+  expect_error(
+    artoo_spec(
+      data.frame(dataset = "DM"),
+      data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+      study = data.frame(
+        studyid = "CDISC01",
+        StudyName = "OTHER",
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    ),
+    class = "artoo_error_spec"
+  )
+  expect_snapshot(
+    error = TRUE,
+    artoo_spec(
+      data.frame(dataset = "DM"),
+      data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+      study = data.frame(
+        studyid = "CDISC01",
+        StudyName = "OTHER",
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+    )
+  )
 })
 
 test_that("agreeing sources resolve to the one standard", {

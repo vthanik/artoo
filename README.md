@@ -30,7 +30,7 @@ library(artoo)
 # 2.1 example (one spec = one standard; this one is ADaMIG 1.1)
 adam_spec
 #> <artoo_spec>
-#> Study: (unspecified)
+#> Study: CDISC-Sample
 #> Standard: ADaMIG 1.1
 #> Datasets:  2
 #> Variables: 104
@@ -40,7 +40,7 @@ adam_spec
 #> Documents: 9
 #> Spec for: ADSL, ADAE
 
-# Scaffold, coerce, order, sort, stamp metadata, then write -- the writers
+# Scaffold, coerce, order, sort, stamp metadata, then write — the writers
 # return their input invisibly, so one conformed frame fans out to every
 # deliverable format.
 path <- tempfile(fileext = ".xpt")
@@ -50,7 +50,7 @@ adsl <- cdisc_adsl |>
 #> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`,
 #> and `MMS1TSBL`
 
-# Read it back -- labels, formats, types, and record count intact
+# Read it back — labels, formats, types, and record count intact
 get_meta(read_xpt(path))@dataset$records
 #> [1] 60
 ```

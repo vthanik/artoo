@@ -1,4 +1,4 @@
-# spec_accessors.R -- pure, total accessors onto a artoo_spec.
+# spec_accessors.R — pure, total accessors onto a artoo_spec.
 
 # Abort unless `spec` is a artoo_spec.
 #' @noRd
@@ -50,7 +50,7 @@
 #' # ---- Example 1: the datasets the pilot ADaM spec defines ----
 #' #
 #' # Build the spec from the bundled CDISC-pilot tables and list its
-#' # datasets -- the names you pass to the other accessors.
+#' # datasets — the names you pass to the other accessors.
 #' spec <- artoo_spec(
 #'   cdisc_adam_datasets, cdisc_adam_variables,
 #'   codelists = cdisc_codelists
@@ -87,25 +87,25 @@ spec_datasets <- function(spec) {
 #' @return *A data frame of variable metadata*, one row per variable, with
 #'   22 columns (absent ones are filled with typed `NA` at construction):
 #'
-#'   - `dataset`, `variable` -- the identifying pair (unique within a spec).
-#'   - `itemoid` -- the Define-XML / Dataset-JSON item OID, when recorded.
-#'   - `label` -- the variable label (<= 40 bytes for XPORT v5).
-#'   - `data_type` -- canonical CDISC dataType (`string`, `integer`,
+#'   - `dataset`, `variable` — the identifying pair (unique within a spec).
+#'   - `itemoid` — the Define-XML / Dataset-JSON item OID, when recorded.
+#'   - `label` — the variable label (<= 40 bytes for XPORT v5).
+#'   - `data_type` — canonical CDISC dataType (`string`, `integer`,
 #'     `decimal`, `float`, `double`, `boolean`, `date`, `datetime`, `time`,
 #'     `URI`).
-#'   - `target_data_type` -- `integer`/`decimal` when a temporal variable
+#'   - `target_data_type` — `integer`/`decimal` when a temporal variable
 #'     stores as a SAS-epoch numeric; `NA` means ISO 8601 text (`--DTC`).
-#'   - `length` -- declared storage length (bytes for character).
-#'   - `display_format`, `informat` -- SAS format / informat strings.
-#'   - `key_sequence` -- 1-based position in the dataset sort key.
-#'   - `order` -- column position in the dataset.
-#'   - `codelist_id`, `method_id`, `comment_id` -- references into the
+#'   - `length` — declared storage length (bytes for character).
+#'   - `display_format`, `informat` — SAS format / informat strings.
+#'   - `key_sequence` — 1-based position in the dataset sort key.
+#'   - `order` — column position in the dataset.
+#'   - `codelist_id`, `method_id`, `comment_id` — references into the
 #'     codelists / methods / comments slots.
-#'   - `mandatory` -- logical obligation flag (`NA` is treated as
+#'   - `mandatory` — logical obligation flag (`NA` is treated as
 #'     mandatory by [check_spec()]).
-#'   - `significant_digits` -- for `decimal` variables.
+#'   - `significant_digits` — for `decimal` variables.
 #'   - `origin`, `source`, `predecessor`, `assigned_value`, `pages`,
-#'     `role` -- Define-XML provenance fields, carried as-is.
+#'     `role` — Define-XML provenance fields, carried as-is.
 #'
 #'   Filter or arrange it with ordinary base / `dplyr` verbs.
 #'
@@ -154,13 +154,13 @@ spec_variables <- function(spec, dataset = NULL) {
 #' @return *A data frame of codelist terms*, one row per term: every term
 #'   when `codelist_id` is `NULL`, else the named codelist's terms. Columns:
 #'
-#'   - `codelist_id` -- the codelist identifier variables reference.
-#'   - `term` -- the submission value (what conformed data carries).
-#'   - `decode` -- the human-readable decoded value.
-#'   - `order` -- display order within the codelist.
-#'   - `extended` -- `TRUE` marks an extensible codelist (sponsor terms
+#'   - `codelist_id` — the codelist identifier variables reference.
+#'   - `term` — the submission value (what conformed data carries).
+#'   - `decode` — the human-readable decoded value.
+#'   - `order` — display order within the codelist.
+#'   - `extended` — `TRUE` marks an extensible codelist (sponsor terms
 #'     allowed; non-members downgrade to notes in [check_spec()]).
-#'   - `comment_id` -- reference into the comments slot.
+#'   - `comment_id` — reference into the comments slot.
 #'
 #' @examples
 #' # ---- Example 1: the terms behind a coded variable ----
@@ -261,7 +261,7 @@ spec_keys <- function(spec, dataset) {
 #'
 #' Return the one CDISC standard the specification carries (e.g.
 #' `"ADaMIG 1.1"`, `"SDTMIG 3.2"`). A `artoo_spec` is single-standard by
-#' construction -- [artoo_spec()] aborts when its sources mix standards --
+#' construction — [artoo_spec()] aborts when its sources mix standards —
 #' so this is always a scalar; `NA` when no source named one.
 #'
 #' @param spec *The specification to read.* `<artoo_spec>: required`.
@@ -299,9 +299,11 @@ spec_standard <- function(spec) {
 
 #' Study-level metadata
 #'
-#' Return the study-level metadata row, or a single field from it. Holds the
-#' study identifier and any other study-scoped fields a source provides
-#' (the CDISC standard lives on its own property -- see [spec_standard()]).
+#' Return the study-level metadata row, or a single field from it. Holds
+#' the canonical study fields (`study_name`, `study_description`,
+#' `protocol_name` — every source spelling is canonicalised by
+#' [artoo_spec()]) plus any other study-scoped fields a source provides
+#' (the CDISC standard lives on its own property — see [spec_standard()]).
 #'
 #' @param spec *The specification to read.* `<artoo_spec>: required`.
 #' @param field *Return one field instead of the row.* `<character(1)> |
@@ -316,14 +318,14 @@ spec_standard <- function(spec) {
 #' # ---- Example 1: the whole study row, then one field ----
 #' #
 #' # spec_study() with no field returns the study-level table; pass a field
-#' # name to pull a single value such as the study identifier.
+#' # name to pull a single value such as the study name.
 #' spec <- artoo_spec(
 #'   cdisc_adam_datasets, cdisc_adam_variables,
 #'   codelists = cdisc_codelists,
-#'   study = data.frame(studyid = "CDISCPILOT01")
+#'   study = data.frame(study_name = "CDISCPILOT01")
 #' )
 #' spec_study(spec)
-#' spec_study(spec, "studyid")
+#' spec_study(spec, "study_name")
 #'
 #' @seealso [spec_datasets()] for the datasets the study scopes;
 #'   [spec_standard()] for the spec's CDISC standard.

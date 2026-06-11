@@ -44,3 +44,29 @@ test_that("the shipped P21 workbooks read back to the bundled specs", {
     expect_identical(back@variables$data_type, spec@variables$data_type)
   }
 })
+
+test_that("the bundled specs carry the Define study block (canonical fields)", {
+  # Regression: adam_spec printed "Study: (unspecified)" because the
+  # Define-XML reader's study_name never reached the print/meta consumers.
+  expect_identical(spec_study(adam_spec, "study_name"), "CDISC-Sample")
+  expect_identical(spec_study(adam_spec, "protocol_name"), "CDISC-Sample")
+  expect_identical(
+    spec_study(adam_spec, "study_description"),
+    "CDISC-Sample Data Definition"
+  )
+  expect_identical(spec_study(sdtm_spec, "study_name"), "CDISC01_1")
+  expect_true(any(grepl(
+    "Study: CDISC-Sample",
+    artoo:::.format_spec(adam_spec),
+    fixed = TRUE
+  )))
+})
+
+test_that("the shipped P21 workbooks carry the study through their Define sheet", {
+  skip_if_not_installed("readxl")
+  p <- system.file("extdata", "adam-spec.xlsx", package = "artoo")
+  skip_if_not(nzchar(p))
+  expect_true("Define" %in% readxl::excel_sheets(p))
+  back <- read_spec(p)
+  expect_identical(spec_study(back, "study_name"), "CDISC-Sample")
+})

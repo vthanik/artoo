@@ -200,3 +200,44 @@ test_that("a values slot with no P21-mapped columns omits the sheet", {
   write_spec(spec, p)
   expect_false("ValueLevel" %in% readxl::excel_sheets(p))
 })
+
+test_that("the study table round-trips through the P21 Define sheet", {
+  # The writer emits the study row as a Define sheet (Attribute/Value, P21
+  # spellings); the reader pivots it back and the constructor canonicalises
+  # the names, so study metadata survives the xlsx interchange.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(
+      study_name = "CDISC-Sample",
+      study_description = "CDISC-Sample Data Definition",
+      protocol_name = "CDISC-Sample",
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  expect_true("Define" %in% readxl::excel_sheets(p))
+  back <- read_spec(p)
+  expect_identical(spec_study(back, "study_name"), "CDISC-Sample")
+  expect_identical(
+    spec_study(back, "study_description"),
+    "CDISC-Sample Data Definition"
+  )
+  expect_identical(spec_study(back, "protocol_name"), "CDISC-Sample")
+})
+
+test_that("a spec with no study row writes no Define sheet", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(dataset = "DM", variable = "USUBJID", data_type = "string")
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  expect_false("Define" %in% readxl::excel_sheets(p))
+})

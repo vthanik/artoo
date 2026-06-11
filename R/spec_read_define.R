@@ -1,4 +1,4 @@
-# spec_read_define.R -- read_spec() on a native Define-XML v2.x document.
+# spec_read_define.R — read_spec() on a native Define-XML v2.x document.
 #
 # Maps the CDISC Define-XML 2.0/2.1 metadata model onto the artoo_spec slots
 # (the slots are already Define-shaped, so the walk is mostly mechanical):
@@ -103,6 +103,9 @@
   study_name <- xml2::xml_text(
     xml2::xml_find_first(doc, "//*[local-name()='StudyName']")
   )
+  study_desc <- xml2::xml_text(
+    xml2::xml_find_first(doc, "//*[local-name()='StudyDescription']")
+  )
   protocol <- xml2::xml_text(
     xml2::xml_find_first(doc, "//*[local-name()='ProtocolName']")
   )
@@ -121,6 +124,7 @@
   }
   study <- data.frame(
     study_name = study_name,
+    study_description = study_desc,
     protocol_name = protocol,
     standard = standard,
     define_version = .dx_attr(mdv, "DefineVersion"),

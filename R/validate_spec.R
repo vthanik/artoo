@@ -1,4 +1,4 @@
-# validate_spec.R -- dataset-scoped spec validation -> artoo_check.
+# validate_spec.R — dataset-scoped spec validation -> artoo_check.
 #
 # Each check is a small vectorized `.chk_*` that returns a 0+ row findings
 # frame via `.finding()` (the shared constructor in findings.R); validate_spec()
@@ -94,22 +94,16 @@
   )
 }
 
+# The constructor canonicalises every study-name spelling to study_name,
+# so one field lookup suffices here.
 #' @noRd
 .study_label <- function(spec) {
   study <- spec@study
-  if (!nrow(study)) {
+  if (!nrow(study) || !"study_name" %in% names(study)) {
     return("(unspecified)")
   }
-  hit <- names(study)[
-    tolower(names(study)) %in% c("studyname", "study_name", "studyid")
-  ]
-  for (nm in hit) {
-    v <- as.character(study[[nm]])[1]
-    if (!.blank(v)) {
-      return(v)
-    }
-  }
-  "(unspecified)"
+  v <- as.character(study$study_name)[1]
+  if (.blank(v)) "(unspecified)" else v
 }
 
 # ---- Checks (Wave 2: all dimensions, headline coverage) -----------------
@@ -1017,7 +1011,7 @@
   .bind_findings(parts)
 }
 
-# The set of check ids the engine can emit -- consumed by the parity test.
+# The set of check ids the engine can emit — consumed by the parity test.
 #' @noRd
 .engine_check_ids <- function() {
   c(
@@ -1075,7 +1069,7 @@
 #'
 #' @details
 #' **Dataset-scoped.** A spec workbook carries many datasets. Pass
-#' `dataset` to validate only the one(s) you are working on -- the
+#' `dataset` to validate only the one(s) you are working on — the
 #' methods, comments, and codelists those datasets reference are checked
 #' for completeness, but unrelated datasets are not. `dataset = NULL`
 #' validates the whole spec.

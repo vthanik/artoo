@@ -110,7 +110,7 @@ test_that("source encoding rides the _artoo extension, never a CDISC key", {
   expect_false("encoding" %in% names(ext))
 
   # extensions = FALSE (the default, Dataset-JSON FILE path): no _artoo,
-  # and no stray encoding key -- strict CDISC.
+  # and no stray encoding key — strict CDISC.
   strict <- jsonlite::fromJSON(
     artoo:::.meta_to_datasetjson(meta, extensions = FALSE),
     simplifyVector = FALSE
@@ -356,4 +356,22 @@ test_that(".meta_from_spec respects a spec-supplied itemOID and studyid", {
   meta <- artoo:::.meta_from_spec(spec, "DM")
   expect_identical(meta@columns$USUBJID$itemOID, "IT.CUSTOM.OID")
   expect_identical(meta@dataset$studyOID, "ARTOO-001")
+})
+
+test_that(".meta_from_spec stamps studyOID from a Define-sourced study frame", {
+  # Regression: the Define-XML reader emits study_name; the studyOID must
+  # come from the canonical field, not the legacy studyid spelling.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      label = "Subject",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(study_name = "CDISC-Sample", stringsAsFactors = FALSE)
+  )
+  meta <- artoo:::.meta_from_spec(spec, "DM")
+  expect_identical(meta@dataset$studyOID, "CDISC-Sample")
 })

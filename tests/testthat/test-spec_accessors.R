@@ -63,7 +63,8 @@ test_that("spec_keys() returns empty when no keys are declared", {
 test_that("spec_study() returns the row or one field", {
   spec <- demo_spec()
   expect_s3_class(spec_study(spec), "data.frame")
-  expect_equal(spec_study(spec, "studyid"), "CDISCPILOT01")
+  # demo_spec() supplies studyid; the constructor canonicalises it.
+  expect_equal(spec_study(spec, "study_name"), "CDISCPILOT01")
 })
 
 test_that("spec_study() rejects an unknown field", {

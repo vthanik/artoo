@@ -1,4 +1,4 @@
-# spec_construct.R -- the friendly artoo_spec() constructor.
+# spec_construct.R — the friendly artoo_spec() constructor.
 
 # Coerce one slot to its schema: drop to a plain data frame, error on a
 # missing required column, coerce known columns to their storage mode, fill
@@ -62,10 +62,17 @@
 #' standard, stored as the scalar `@standard` property. The constructor
 #' resolves it from the `standard` argument, a `standard` column in
 #' `datasets` (the P21 workbook shape), and a `standard` field in `study`
-#' (the Define-XML shape) -- those columns are consumed, so `@standard` is
+#' (the Define-XML shape) — those columns are consumed, so `@standard` is
 #' the single home. More than one distinct value aborts with
 #' `artoo_error_spec`; scope the source to one standard (e.g.
 #' `read_spec(path, datasets = ...)`) instead of mixing.
+#'
+#' **One study vocabulary.** Well-known study fields are canonicalised to
+#' the CDISC ODM GlobalVariables names, snake_cased: `study_name`,
+#' `study_description`, `protocol_name`. Source spellings resolve
+#' automatically (`StudyName`, `studyid`, ...); fields the vocabulary does
+#' not know pass through verbatim. Aliases that disagree on a value abort
+#' with `artoo_error_spec`.
 #'
 #' @param datasets *Dataset-level metadata table.*
 #'   `<data.frame>: required`. One row per dataset; must carry a `dataset`
@@ -84,8 +91,11 @@
 #'   **Interaction:** every `codelist_id` referenced by `variables` must
 #'   resolve here.
 #' @param study *Study-level metadata.* `<data.frame> | NULL`. A single row
-#'   of named study fields (e.g. `studyid`). A `standard` field, when
-#'   present, is consumed into `@standard`.
+#'   of named study fields. Well-known fields are canonicalised to
+#'   `study_name`, `study_description`, and `protocol_name` (aliases such
+#'   as `StudyName` or `studyid` resolve automatically); other fields pass
+#'   through verbatim. A `standard` field, when present, is consumed into
+#'   `@standard`.
 #' @param standard *The CDISC standard the spec implements.*
 #'   `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
 #'   `NULL` (default) it is resolved from `datasets$standard` or
@@ -199,6 +209,7 @@ artoo_spec <- function(
   } else {
     as.data.frame(study, stringsAsFactors = FALSE, check.names = FALSE)
   }
+  study <- .canonicalize_study(study, call)
 
   # Demote a tibble (or other data-frame subclass) value-level table to a
   # plain data frame, so every slot is a uniform data.frame and a spec
@@ -213,13 +224,13 @@ artoo_spec <- function(
 
   # Derive per-variable key_sequence from the dataset-level keys string when
   # the source does not provide one (the P21 shape: keys live only on the
-  # Datasets sheet). One canonical model: the meta keySequence -- and so the
-  # Dataset-JSON output -- then carries the keys regardless of source.
+  # Datasets sheet). One canonical model: the meta keySequence — and so the
+  # Dataset-JSON output — then carries the keys regardless of source.
   variables <- .derive_key_sequence(datasets, variables)
 
   # Resolve the one CDISC standard from every place a source can carry it
   # (explicit argument, P21 datasets column, Define-XML study field), then
-  # strip those columns -- @standard is the single home.
+  # strip those columns — @standard is the single home.
   standard <- .resolve_standard(standard, datasets, study, call)
   datasets$standard <- NULL
   study$standard <- NULL
@@ -278,6 +289,56 @@ artoo_spec <- function(
     variables$key_sequence[set] <- as.integer(idx[set])
   }
   variables
+}
+
+# The canonical study vocabulary: CDISC ODM GlobalVariables, snake_cased.
+# Keys are the canonical field names; values are the normalised (lowercase,
+# punctuation-stripped) alias spellings each source uses — the P21 Define
+# sheet's verbatim attributes (StudyName), the Define-XML reader
+# (study_name), and the legacy hand-built shape (studyid).
+#' @noRd
+.study_field_aliases <- list(
+  study_name = c("studyname", "studyid"),
+  study_description = c("studydescription"),
+  protocol_name = c("protocolname")
+)
+
+# Canonicalise the study frame's well-known fields so every consumer
+# (print, meta studyOID, validate_spec) reads ONE vocabulary. Unknown
+# fields pass through verbatim (losslessness); aliases that disagree on a
+# non-blank value abort, mirroring .resolve_standard.
+#' @noRd
+.canonicalize_study <- function(study, call) {
+  if (!length(names(study)) || !nrow(study)) {
+    return(study)
+  }
+  norm <- gsub("[^a-z0-9]", "", tolower(names(study)))
+  for (canon in names(.study_field_aliases)) {
+    hit <- which(norm %in% c(canon, .study_field_aliases[[canon]]))
+    if (!length(hit)) {
+      next
+    }
+    vals <- unlist(lapply(hit, function(i) as.character(study[[i]])))
+    vals <- trimws(vals)
+    vals <- unique(vals[!is.na(vals) & nzchar(vals)])
+    if (length(vals) > 1L) {
+      fields <- names(study)[hit]
+      .artoo_abort(
+        c(
+          "Study fields that name the {.field {canon}} disagree.",
+          "x" = "{.val {fields}} carry {length(vals)} distinct values: {.val {vals}}.",
+          "i" = "Reconcile them to one value, or drop the stale field."
+        ),
+        kind = "spec",
+        call = call
+      )
+    }
+    keep <- setdiff(seq_along(study), hit)
+    study <- study[, keep, drop = FALSE]
+    study[[canon]] <- if (length(vals)) vals else NA_character_
+    norm <- gsub("[^a-z0-9]", "", tolower(names(study)))
+  }
+  study
 }
 
 # Resolve the spec's one CDISC standard. Unions the explicit argument, a
@@ -383,7 +444,7 @@ artoo_spec <- function(
 
 #' Test for a artoo_spec object
 #'
-#' Report whether an object is a `artoo_spec` -- the validated CDISC
+#' Report whether an object is a `artoo_spec` — the validated CDISC
 #' specification that drives the artoo workflow (spec -> apply_spec ->
 #' read_/write_). [artoo_spec()] builds one; this is the type guard before you
 #' pass it to [apply_spec()] or reach into it with the spec accessors.
@@ -402,7 +463,7 @@ artoo_spec <- function(
 #'
 #' # ---- Example 2: an ordinary object is not a spec ----
 #' #
-#' # Any non-artoo_spec value -- a bare data frame, say -- returns FALSE.
+#' # Any non-artoo_spec value — a bare data frame, say — returns FALSE.
 #' is_artoo_spec(cdisc_dm)
 #'
 #' @seealso [artoo_spec()] to build one; [is_artoo_meta()] for the metadata

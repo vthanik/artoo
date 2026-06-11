@@ -61,6 +61,27 @@ test_that(".format_spec surfaces study, support metadata, and value-level", {
   expect_true(any(grepl("^Value-level: 1", out)))
 })
 
+test_that(".format_spec shows the study from a Define-sourced study frame", {
+  # Regression: a spec read from Define-XML carries study_name, and the
+  # bundled adam_spec printed "Study: (unspecified)" despite holding
+  # "CDISC-Sample" — print must read the canonical field.
+  spec <- artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists,
+    study = data.frame(
+      study_name = "CDISC-Sample",
+      protocol_name = "CDISC-Sample",
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_true(any(grepl(
+    "Study: CDISC-Sample",
+    artoo:::.format_spec(spec),
+    fixed = TRUE
+  )))
+})
+
 test_that(".format_spec treats a blank studyid as unspecified", {
   spec <- artoo_spec(
     cdisc_adam_datasets,

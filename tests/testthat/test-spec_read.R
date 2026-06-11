@@ -192,7 +192,8 @@ test_that("read_spec() round-trips the new slots through JSON (F1)", {
 test_that("read_spec() pivots the P21 Define sheet into a study row", {
   skip_if_not_installed("readxl")
   spec <- read_spec(test_path("fixtures", "p21_adam_spec.xlsx"))
-  expect_identical(spec_study(spec, "StudyName"), "CDISCPILOT01")
+  # The sheet's verbatim StudyName attribute lands as the canonical field.
+  expect_identical(spec_study(spec, "study_name"), "CDISCPILOT01")
 })
 
 # ---- P21 internals (fast unit tests of the hardening branches) ----------

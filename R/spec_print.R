@@ -1,4 +1,4 @@
-# spec_print.R -- print/format methods for the two front-door S7 objects,
+# spec_print.R — print/format methods for the two front-door S7 objects,
 # artoo_spec and artoo_meta.
 #
 # The renderers are plain functions (.format_spec / .format_meta) so they are
@@ -48,10 +48,10 @@
   cl_ids <- x@codelists$codelist_id
   n_cl <- length(unique(cl_ids[!is.na(cl_ids)]))
 
-  studyid <- .study_scalar(x@study, "studyid")
+  study_name <- .study_scalar(x@study, "study_name")
   header <- sprintf(
     "Study: %s",
-    if (is.na(studyid)) "(unspecified)" else studyid
+    if (is.na(study_name)) "(unspecified)" else study_name
   )
   standard <- sprintf(
     "Standard: %s",

@@ -1,4 +1,4 @@
-# spec_write_xlsx.R -- .write_spec_xlsx(): artoo_spec -> Pinnacle 21 Excel.
+# spec_write_xlsx.R — .write_spec_xlsx(): artoo_spec -> Pinnacle 21 Excel.
 #
 # The symmetric inverse of the P21 reader (spec_read.R). Every header and
 # sheet name is DERIVED from the reader's authoritative .p21_*_map /
@@ -9,8 +9,8 @@
 #
 # Honest contract: native JSON is the lossless format; P21 xlsx is the
 # interchange format. Spec fields with no P21 column (itemoid,
-# target_data_type, per-variable key_sequence, the study table, codelist
-# `extended`) are not emitted and do not survive an xlsx round-trip.
+# target_data_type, per-variable key_sequence, codelist `extended`) are
+# not emitted and do not survive an xlsx round-trip.
 
 # Reverse a reader map (P21 header -> artoo column) into a writer map
 # (artoo column -> P21 header), preserving the reader's column order.
@@ -43,6 +43,41 @@
   out
 }
 
+# The study row as the P21 Define sheet (Attribute/Value, one attribute
+# per row). Canonical fields write back under their P21 spellings; the
+# round-trip closes because the reader's .p21_study pivot feeds the
+# constructor, whose .study_field_aliases recognise exactly these names.
+# Unknown study fields are emitted verbatim (losslessness). NULL when the
+# study row is empty or all-blank, so the sheet is omitted entirely.
+#' @noRd
+.p21_study_attr <- c(
+  study_name = "StudyName",
+  study_description = "StudyDescription",
+  protocol_name = "ProtocolName"
+)
+
+#' @noRd
+.p21_study_sheet <- function(study) {
+  if (is.null(study) || !is.data.frame(study) || !nrow(study)) {
+    return(NULL)
+  }
+  attrs <- ifelse(
+    names(study) %in% names(.p21_study_attr),
+    .p21_study_attr[names(study)],
+    names(study)
+  )
+  vals <- vapply(study, function(v) as.character(v)[1L], character(1))
+  keep <- !is.na(vals) & nzchar(trimws(vals))
+  if (!any(keep)) {
+    return(NULL)
+  }
+  data.frame(
+    Attribute = unname(attrs[keep]),
+    Value = unname(vals[keep]),
+    stringsAsFactors = FALSE
+  )
+}
+
 #' @noRd
 .write_spec_xlsx <- function(spec, path, call = rlang::caller_env()) {
   rlang::check_installed(
@@ -59,6 +94,7 @@
   }
 
   sheets <- list(
+    Define = .p21_study_sheet(spec@study),
     Datasets = .p21_sheet_frame(datasets, .p21_ds_map),
     Variables = .p21_sheet_frame(spec@variables, .p21_var_map),
     ValueLevel = .p21_sheet_frame(spec@values, .p21_value_map),

@@ -34,14 +34,17 @@ precision, so \code{\link[=read_spec]{read_spec()}} rebuilds an identical \code{
 same spec twice yields byte-identical output.
 
 \strong{P21 xlsx is the interchange format.} Sheets are emitted with the
-headers the P21 reader recognises (Datasets, Variables, ValueLevel,
-Codelists, Methods, Comments, Documents; empty optional sheets are
-omitted), foreign keys repeated on every row (no merged cells), and the
-spec's \code{\link[=spec_standard]{spec_standard()}} as the Datasets sheet's \code{Standard} column.
+headers the P21 reader recognises (Define, Datasets, Variables,
+ValueLevel, Codelists, Methods, Comments, Documents; empty optional
+sheets are omitted), foreign keys repeated on every row (no merged
+cells), and the spec's \code{\link[=spec_standard]{spec_standard()}} as the Datasets sheet's
+\code{Standard} column. The study row writes back as the Define sheet's
+Attribute/Value pairs (\code{StudyName}, \code{StudyDescription},
+\code{ProtocolName}).
 
 \strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
-per-variable \code{key_sequence}, the study table) do not survive an xlsx
-round-trip; persist to JSON when you need the spec back exactly.
+per-variable \code{key_sequence}) do not survive an xlsx round-trip;
+persist to JSON when you need the spec back exactly.
 }
 \examples{
 # ---- Example 1: persist a spec to JSON, then read it back ----

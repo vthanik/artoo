@@ -37,8 +37,11 @@ supplied.
 resolve here.}
 
 \item{study}{\emph{Study-level metadata.} \verb{<data.frame> | NULL}. A single row
-of named study fields (e.g. \code{studyid}). A \code{standard} field, when
-present, is consumed into \verb{@standard}.}
+of named study fields. Well-known fields are canonicalised to
+\code{study_name}, \code{study_description}, and \code{protocol_name} (aliases such
+as \code{StudyName} or \code{studyid} resolve automatically); other fields pass
+through verbatim. A \code{standard} field, when present, is consumed into
+\verb{@standard}.}
 
 \item{values}{\emph{Value-level (VLM) metadata.} \verb{<data.frame> | NULL}.}
 
@@ -96,10 +99,17 @@ variable names a dataset absent from \code{datasets}, or references a
 standard, stored as the scalar \verb{@standard} property. The constructor
 resolves it from the \code{standard} argument, a \code{standard} column in
 \code{datasets} (the P21 workbook shape), and a \code{standard} field in \code{study}
-(the Define-XML shape) -- those columns are consumed, so \verb{@standard} is
+(the Define-XML shape) — those columns are consumed, so \verb{@standard} is
 the single home. More than one distinct value aborts with
 \code{artoo_error_spec}; scope the source to one standard (e.g.
 \code{read_spec(path, datasets = ...)}) instead of mixing.
+
+\strong{One study vocabulary.} Well-known study fields are canonicalised to
+the CDISC ODM GlobalVariables names, snake_cased: \code{study_name},
+\code{study_description}, \code{protocol_name}. Source spellings resolve
+automatically (\code{StudyName}, \code{studyid}, ...); fields the vocabulary does
+not know pass through verbatim. Aliases that disagree on a value abort
+with \code{artoo_error_spec}.
 }
 \examples{
 # ---- Example 1: build a spec from the bundled CDISC-pilot tables ----
