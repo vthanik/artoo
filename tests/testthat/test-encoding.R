@@ -198,7 +198,7 @@ test_that(".recode_col transcodes a character column and preserves its attribute
 test_that("artoo_encodings() returns the documented shape", {
   enc <- artoo_encodings()
   expect_s3_class(enc, "data.frame")
-  expect_identical(names(enc), c("sas", "r", "python", "description"))
+  expect_identical(names(enc), c("r", "sas", "python", "description"))
   expect_gt(nrow(enc), 10L)
   expect_false(anyNA(unlist(enc)))
 })

@@ -357,9 +357,9 @@
 #' encodings only matter at the file boundary, exactly as in Python 3.
 #'
 #' @return *A `<data.frame>`* with one row per encoding and columns
-#'   `sas` (the SAS session-encoding name), `r` (the R name -- the
-#'   standard IANA name `iconv()` uses, and what artoo records in the
-#'   metadata), `python` (the Python codec name), and `description`.
+#'   `r` (the R name -- the standard IANA name `iconv()` uses, and what
+#'   artoo records in the metadata), `sas` (the SAS session-encoding
+#'   name), `python` (the Python codec name), and `description`.
 #'
 #' @examples
 #' # ---- Example 1: the full cross-ecosystem table ----
@@ -382,21 +382,6 @@
 #' @export
 artoo_encodings <- function() {
   data.frame(
-    sas = c(
-      "UTF-8",
-      "ASCII",
-      "WLATIN1",
-      "WLATIN2",
-      "WCYRILLIC",
-      "LATIN1",
-      "LATIN9",
-      "SHIFT-JIS",
-      "MS-932",
-      "EUC-JP",
-      "EUC-KR",
-      "MS-936",
-      "MS-950"
-    ),
     r = c(
       "UTF-8",
       "US-ASCII",
@@ -411,6 +396,21 @@ artoo_encodings <- function() {
       "EUC-KR",
       "CP936",
       "CP950"
+    ),
+    sas = c(
+      "UTF-8",
+      "ASCII",
+      "WLATIN1",
+      "WLATIN2",
+      "WCYRILLIC",
+      "LATIN1",
+      "LATIN9",
+      "SHIFT-JIS",
+      "MS-932",
+      "EUC-JP",
+      "EUC-KR",
+      "MS-936",
+      "MS-950"
     ),
     python = c(
       "utf_8",

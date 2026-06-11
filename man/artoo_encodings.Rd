@@ -8,9 +8,9 @@ artoo_encodings()
 }
 \value{
 \emph{A \verb{<data.frame>}} with one row per encoding and columns
-\code{sas} (the SAS session-encoding name), \code{r} (the R name -- the
-standard IANA name \code{iconv()} uses, and what artoo records in the
-metadata), \code{python} (the Python codec name), and \code{description}.
+\code{r} (the R name -- the standard IANA name \code{iconv()} uses, and what
+artoo records in the metadata), \code{sas} (the SAS session-encoding
+name), \code{python} (the Python codec name), and \code{description}.
 }
 \description{
 List the character encodings clinical data actually travels in, with
