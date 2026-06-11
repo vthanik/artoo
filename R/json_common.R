@@ -17,7 +17,15 @@
 # strsplit drops TRAILING empty strings (a trailing "" value), so the parts
 # are right-padded back to the expected count.
 
-# Serialize a vector (no NAs) to per-element JSON literals.
+# Serialize a vector (no NAs) to per-element JSON literals. jsonlite owns
+# every token: its formatter and parser are self-consistent, so a value it
+# writes at digits = 17 it also reads back to the identical double (an
+# important property for extreme magnitudes a hand-rolled sprintf cannot
+# guarantee). digits = I(17) is the round-trip precision for IEEE doubles
+# (digits = NA delegates to R's 15-digit default, which loses the last ulp:
+# 0.1 + 0.2 came back 0.3). The exact 16th/17th digit of an extreme value
+# can differ across platforms, so the byte-golden tests pin only clean
+# clinical data; the edge values are checked by round-trip equality instead.
 #' @noRd
 .json_array_literals <- function(v, quoted) {
   n <- length(v)
