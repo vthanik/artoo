@@ -73,3 +73,87 @@
 #'   from the PHUSE Test Data Factory (`phuse-org/phuse-scripts`).
 #' @keywords datasets
 "cdisc_dm"
+
+#' Demo adverse events analysis dataset (ADaM ADAE)
+#'
+#' A 60-row sample of the CDISC pilot ADaM adverse events analysis dataset
+#' (ADAE): one row per reported event, with treatment-emergent flags,
+#' severity, and coding variables (labels preserved as attributes).
+#'
+#' @format A data frame with 60 rows (`STUDYID`, `USUBJID`, `AETERM`,
+#'   `AESEV`, `TRTEMFL`, `ASTDT`, ...).
+#' @source First 60 rows of the CDISC pilot `adam/cdisc/adae.xpt` from the
+#'   PHUSE Test Data Factory (`phuse-org/phuse-scripts`).
+#' @keywords datasets
+"cdisc_adae"
+
+#' Demo vital signs dataset (SDTM VS)
+#'
+#' A 60-row sample of the CDISC pilot SDTM vital signs domain (VS): repeated
+#' measurements per subject across visits, positions, and planned
+#' timepoints.
+#'
+#' @format A data frame with 60 rows (`STUDYID`, `USUBJID`, `VSTESTCD`,
+#'   `VSORRES`, `VISITNUM`, `VSPOS`, `VSTPTNUM`, ...).
+#' @source First 60 rows of the CDISC pilot `sdtm/cdiscpilot01/vs.xpt` from
+#'   the PHUSE Test Data Factory (`phuse-org/phuse-scripts`).
+#' @keywords datasets
+"cdisc_vs"
+
+#' Demo trial summary dataset (SDTM TS)
+#'
+#' The CDISC pilot SDTM trial summary domain (TS): one row per trial
+#' characteristic (33 rows in the pilot), the study-design parameters a
+#' submission carries.
+#'
+#' @format A data frame with 33 rows (`STUDYID`, `TSPARMCD`, `TSPARM`,
+#'   `TSVAL`, ...).
+#' @source The CDISC pilot `sdtm/cdiscpilot01/ts.xpt` from the PHUSE Test
+#'   Data Factory (`phuse-org/phuse-scripts`).
+#' @keywords datasets
+"cdisc_ts"
+
+#' Demo supplemental qualifiers dataset (SDTM SUPPDM)
+#'
+#' A 60-row sample of the CDISC pilot SDTM supplemental qualifiers for DM
+#' (SUPPDM): the non-standard qualifier values that ride alongside the DM
+#' domain.
+#'
+#' @format A data frame with 60 rows (`STUDYID`, `RDOMAIN`, `USUBJID`,
+#'   `QNAM`, `QVAL`, ...).
+#' @source First 60 rows of the CDISC pilot `sdtm/cdiscpilot01/suppdm.xpt`
+#'   from the PHUSE Test Data Factory (`phuse-org/phuse-scripts`).
+#' @keywords datasets
+"cdisc_suppdm"
+
+#' Bundled CDISC specifications (ADaM and SDTM)
+#'
+#' Ready-made `artoo_spec` objects built from the official CDISC Define-XML
+#' 2.1 release examples: `adam_spec` (ADaMIG 1.1; datasets ADSL, ADAE) and
+#' `sdtm_spec` (SDTMIG 3.1.2; datasets TS, DM, VS, SUPPDM). Every bundled
+#' demo dataset conforms to its spec under
+#' `apply_spec(conformance = "abort")` -- the pairing is gated at build
+#' time. The same specs ship as P21 workbooks in
+#' `system.file("extdata", "adam-spec.xlsx", package = "artoo")` and
+#' `"sdtm-spec.xlsx"`, written by [write_spec()].
+#'
+#' @details
+#' **Demo adaptations** (each an ADR in `data-raw/bundle-spec.R`): the
+#' sponsor-defined codelists (`CL.ARM`, `CL.ARMCD`, `CL.BMICAT`, and the
+#' extensible NCI VS codelists) are marked `extended`; `VISITNUM` is typed
+#' `float` (the pilot data has fractional visit numbers); VS declares the
+#' SDTMIG timepoint variables `VSTPT`/`VSTPTNUM`, with `VSTPTNUM` in the VS
+#' key.
+#'
+#' @format A validated [artoo_spec()] object; inspect it with
+#'   [spec_datasets()], [spec_variables()], and [spec_standard()].
+#' @source The CDISC Define-XML 2.1 release example defines (ADaM + SDTM),
+#'   pinned by sha256 in `data-raw/bundle-spec.R`; data from the PHUSE Test
+#'   Data Factory.
+#' @keywords datasets
+#' @name cdisc_specs
+"adam_spec"
+
+#' @rdname cdisc_specs
+#' @format NULL
+"sdtm_spec"

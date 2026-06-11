@@ -10,8 +10,11 @@
 #
 # Run from the package root:  Rscript data-raw/bundle-demo.R
 #
-# Produces (data/): cdisc_adsl, cdisc_dm, cdisc_datasets, cdisc_variables,
-# cdisc_codelists.
+# Produces (data/): cdisc_adsl, cdisc_adae, cdisc_dm, cdisc_vs, cdisc_ts,
+# cdisc_suppdm, cdisc_datasets, cdisc_variables, cdisc_codelists. Each raw
+# dataset is trimmed to its first 60 rows (deterministic). Companion script
+# bundle-spec.R builds the matching adam_spec / sdtm_spec objects and gates
+# every pairing with apply_spec(conformance = "abort").
 
 devtools::load_all(quiet = TRUE)
 
@@ -95,7 +98,14 @@ derive_variables <- function(df, dataset) {
 # ---- Raw datasets (first 60 subjects, deterministic) ---------------------
 
 cdisc_adsl <- trim_rows(unhaven(read_phuse_xpt("adam/cdisc/adsl.xpt")), 60L)
+cdisc_adae <- trim_rows(unhaven(read_phuse_xpt("adam/cdisc/adae.xpt")), 60L)
 cdisc_dm <- trim_rows(unhaven(read_phuse_xpt("sdtm/TDF_SDTM_v1.0/dm.xpt")), 60L)
+cdisc_vs <- trim_rows(unhaven(read_phuse_xpt("sdtm/cdiscpilot01/vs.xpt")), 60L)
+cdisc_ts <- trim_rows(unhaven(read_phuse_xpt("sdtm/cdiscpilot01/ts.xpt")), 60L)
+cdisc_suppdm <- trim_rows(
+  unhaven(read_phuse_xpt("sdtm/cdiscpilot01/suppdm.xpt")),
+  60L
+)
 
 # ---- Derived spec tables -------------------------------------------------
 
@@ -129,7 +139,11 @@ stopifnot(is_artoo_spec(
 
 usethis::use_data(
   cdisc_adsl,
+  cdisc_adae,
   cdisc_dm,
+  cdisc_vs,
+  cdisc_ts,
+  cdisc_suppdm,
   cdisc_datasets,
   cdisc_variables,
   cdisc_codelists,
