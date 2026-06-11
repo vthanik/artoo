@@ -91,20 +91,20 @@ SDTMIG hyphen placeholders (\code{"2003---15"}) all pass, while
 }
 \value{
 \emph{A \verb{<artoo_checks>} control object}. Pass it as the \code{checks}
-argument to \code{\link[=check_spec]{check_spec()}} or \code{\link[=apply_spec]{apply_spec()}}.
+argument to \code{\link[=check_spec]{check_spec()}}.
 }
 \description{
 Build a reusable control that selects which dimensions \code{\link[=check_spec]{check_spec()}}
-evaluates, and therefore which findings \code{\link[=apply_spec]{apply_spec()}} produces. Construct
-one per study and thread it through every conform call so the conformance
-surface is consistent. Each toggle is validated at construction, so a
+evaluates. Construct one per study and thread it through every
+check_spec() call so the conformance surface is consistent. Each toggle is validated at construction, so a
 mistyped name or value aborts early rather than being silently ignored.
 }
 \details{
 \strong{Selection, not severity.} This control decides which findings are
-\emph{produced}; \code{\link[=apply_spec]{apply_spec()}}'s \code{check} argument (warn, strict, off) decides
-what to \emph{do} with them. A disabled dimension is skipped entirely, so the
-findings frame stays clean.
+\emph{produced}; \code{\link[=apply_spec]{apply_spec()}}'s \code{conformance} argument (warn, abort, off)
+decides what to \emph{do} with the findings its full-default check raises. A
+disabled dimension is skipped entirely, so the findings frame stays
+clean.
 }
 \examples{
 # ---- Example 1: the default runs every conformance dimension ----
@@ -122,5 +122,6 @@ nrow(check_spec(cdisc_dm, spec, "DM", checks = ck))
 
 }
 \seealso{
-\code{\link[=check_spec]{check_spec()}} and \code{\link[=apply_spec]{apply_spec()}} which consume it.
+\code{\link[=check_spec]{check_spec()}}, which consumes it; \code{\link[=apply_spec]{apply_spec()}} for the
+findings disposition.
 }

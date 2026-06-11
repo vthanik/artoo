@@ -4,8 +4,8 @@
 # (see .apply_info) and returns a new data frame; the original is never
 # mutated, so any step aborting leaves the caller's input untouched
 # (the transactional guarantee). Steps are NOT exported: they are not
-# independently meaningful and inviting mis-composition. apply_spec()'s
-# `steps =` arg selects a subset of the pipeline for surgical use.
+# independently meaningful and inviting mis-composition. The pipeline is
+# fixed -- scaffold, coerce, order, sort, stamp -- with no subsetting knob.
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort
@@ -78,31 +78,12 @@
   x
 }
 
-# 2. Drop columns the spec does not declare.
+# 2. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
+# Lossy numeric coercion (truncated fractions, 32-bit overflow) always
+# aborts: silent data damage in a submission dataset is a data-integrity
+# event, and the cure is fixing the spec's dataType, not accepting the loss.
 #' @noRd
-.drop_unspec <- function(x, info, call = rlang::caller_env()) {
-  to_drop <- setdiff(names(x), info$spec_vars)
-  if (length(to_drop)) {
-    .artoo_inform(
-      "Dropped {length(to_drop)} variable{?s}: {.var {to_drop}}",
-      kind = "apply"
-    )
-  }
-  keep <- info$spec_vars[info$spec_vars %in% names(x)]
-  x[keep]
-}
-
-# 3. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
-# Lossy numeric coercion (truncated fractions, 32-bit overflow) follows the
-# `on_lossy` policy: "error" (the default -- silent data damage in a
-# submission dataset is a data-integrity event) or "warn".
-#' @noRd
-.coerce_types <- function(
-  x,
-  info,
-  on_lossy = "error",
-  call = rlang::caller_env()
-) {
+.coerce_types <- function(x, info, call = rlang::caller_env()) {
   vars <- info$vars
   introduced <- character(0)
   truncated <- character(0)
@@ -161,10 +142,10 @@
     }
   }
   # Truncation and overflow damage values (a fractional height losing its
-  # decimals is a data-integrity event, not a nuisance); under the default
-  # on_lossy = "error" the pipeline aborts BEFORE any write can happen.
-  # Checked ahead of the NA-introduction warning so an abort is never
-  # preceded by a half-report of the same values.
+  # decimals is a data-integrity event, not a nuisance); the pipeline aborts
+  # BEFORE any value is touched -- there is no opt-out. Checked ahead of the
+  # NA-introduction warning so an abort is never preceded by a half-report
+  # of the same values.
   if (length(truncated) || length(overflowed)) {
     lossy <- c(
       if (length(truncated)) {
@@ -180,24 +161,13 @@
         )
       }
     )
-    if (identical(on_lossy, "error")) {
-      .artoo_abort(
-        c(
-          "Coercion to the spec dataTypes would lose data.",
-          stats::setNames(lossy, rep("x", length(lossy))),
-          "i" = "Fix the spec (dataType {.val float} or {.val decimal} keeps fractions), or accept the loss with {.code on_lossy = \"warn\"}."
-        ),
-        kind = "type",
-        call = call
-      )
-    }
-    .artoo_warn(
+    .artoo_abort(
       c(
-        "Coercion to the spec dataTypes lost data.",
+        "Coercion to the spec dataTypes would lose data.",
         stats::setNames(lossy, rep("x", length(lossy))),
-        "i" = "Use dataType {.val float} or {.val decimal} to keep these values."
+        "i" = "Fix the spec: dataType {.val float} or {.val decimal} keeps fractions; a wider type avoids overflow."
       ),
-      kind = "coercion",
+      kind = "type",
       call = call
     )
   }
@@ -214,11 +184,12 @@
   x
 }
 
-# The ONE codelist value-mapper, shared by apply_spec()'s decode step and
-# decode_column(). Maps a column's values through a codelist's term/decode
-# pairs in either direction, with the trim/case soft-match (reported, never
-# silent) and the explicit no-match policy. Returns the mapped character
-# vector; attribute handling stays with the callers.
+# The ONE codelist value-mapper. decode_column() is its only caller in the
+# pipeline (apply_spec never mutates values); it lives here beside the other
+# per-column machinery. Maps a column's values through a codelist's
+# term/decode pairs in either direction, with the trim/case soft-match
+# (reported, never silent) and the explicit no-match policy. Returns the
+# mapped character vector; attribute handling stays with the callers.
 #' @noRd
 .map_codelist_values <- function(
   col,
@@ -290,63 +261,15 @@
   out
 }
 
-# 4. Optionally translate coded values via the spec codelists. Default
-# `decode = "none"` is a no-op: apply_spec() keeps submission-coded values
-# and leaves membership to check_spec(). "to_decode" maps code -> decode,
-# "to_code" maps decode -> code, with an explicit no-match policy.
-#' @noRd
-.decode_codelists <- function(
-  x,
-  info,
-  spec,
-  decode = "none",
-  no_match = "error",
-  trim = TRUE,
-  ignore_case = FALSE,
-  call = rlang::caller_env()
-) {
-  if (decode == "none") {
-    return(x)
-  }
-  vars <- info$vars
-  for (i in which(!is.na(vars$codelist_id))) {
-    v <- vars$variable[i]
-    clid <- vars$codelist_id[i]
-    if (!(v %in% names(x))) {
-      next
-    }
-    # spec_codelists() aborts on an unresolved id (and construction already
-    # guarantees resolution), so the rows are always non-empty here.
-    cl <- spec_codelists(spec, clid)
-    out <- .map_codelist_values(
-      x[[v]],
-      cl,
-      direction = decode,
-      no_match = no_match,
-      trim = trim,
-      ignore_case = ignore_case,
-      var = v,
-      clid = clid,
-      call = call
-    )
-    # Preserve non-class attributes (e.g. label); only the values change.
-    old <- attributes(x[[v]])
-    x[[v]] <- out
-    for (a in setdiff(names(old), c("class", "levels", "names"))) {
-      attr(x[[v]], a) <- old[[a]]
-    }
-  }
-  x
-}
-
-# 5. Reorder columns to the spec's variable order.
+# 3. Reorder columns to the spec's variable order. Columns the spec does
+# not declare are never dropped; they trail the declared ones.
 #' @noRd
 .order_cols <- function(x, info, call = rlang::caller_env()) {
   ordered <- info$spec_vars[info$spec_vars %in% names(x)]
   x[c(ordered, setdiff(names(x), ordered))]
 }
 
-# 6. Sort rows by the dataset's keys; record the keys used in `artoo.sort`.
+# 4. Sort rows by the dataset's keys; record the keys used in `artoo.sort`.
 # `na_position` controls where missing key values land: "first" (SAS PROC
 # SORT / FDA convention, the default) or "last" (R / pandas / Polars).
 #' @noRd
@@ -368,14 +291,27 @@
   x
 }
 
-# 7. Build the artoo_meta from the spec, stamp records, attach it. Temporal
+# 5. Build the artoo_meta from the spec, stamp records, attach it. Temporal
 # storage forms are resolved here, where the metadata meets the data: a
 # numeric-backed date/datetime/time column with no spec targetDataType gets
 # targetDataType = "integer" recorded (see .meta_resolve_temporal_targets),
-# so every codec and sidecar agrees on the exchange form.
+# so every codec and sidecar agrees on the exchange form. Columns the spec
+# does not declare (apply_spec never drops them) get a meta entry inferred
+# from their R class, so the meta describes the WHOLE frame and every codec
+# writes it losslessly without per-codec fallbacks.
 #' @noRd
 .stamp_meta <- function(x, info, spec, dataset, call = rlang::caller_env()) {
   meta <- .meta_from_spec(spec, dataset, records = nrow(x), call = call)
   meta <- .meta_resolve_temporal_targets(meta, x)
+  extra <- setdiff(names(x), names(meta@columns))
+  if (length(extra)) {
+    cols <- meta@columns
+    for (nm in extra) {
+      cols[[nm]] <- .col_from_frame_col(nm, x[[nm]], meta@dataset$name)
+    }
+    # Meta entries follow the frame's column order (extras trail).
+    cols <- cols[intersect(names(x), names(cols))]
+    meta <- artoo_meta_class(dataset = meta@dataset, columns = cols)
+  }
   set_meta(x, meta)
 }

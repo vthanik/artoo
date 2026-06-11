@@ -57,14 +57,6 @@ meta <- get_meta(adsl)
 meta@dataset$records
 ```
 
-You can run a surgical subset of the pipeline with `steps =` when you only
-want, say, the columns typed and in spec order:
-
-```{r}
-typed <- apply_spec(cdisc_dm, spec, "DM", steps = c("coerce", "order"))
-names(typed)[1:5]
-```
-
 ## 3. Check conformance
 
 `check_spec()` returns a tidy findings frame: every place the data departs

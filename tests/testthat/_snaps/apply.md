@@ -1,12 +1,3 @@
-# apply_spec rejects an unknown step
-
-    Code
-      apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope")
-    Condition
-      Error:
-      ! Unknown `steps` value: "nope".
-      i Available: "scaffold", "drop", "coerce", "decode", "order", "sort", and "stamp".
-
 # apply_spec validates x and dataset
 
     Code
@@ -26,12 +17,13 @@
       x "NOPE" is not in the spec.
       i Available: "ADSL" and "DM".
 
-# profile and steps are mutually exclusive, unknown profile aborts
+# truncating integer coercion always aborts (lossless or abort)
 
     Code
-      apply_spec(cdisc_dm, spec, "DM", profile = "metacore")
+      apply_spec(raw, spec, "DM", conformance = "off")
     Condition
       Error:
-      ! `profile` must be "xportr" or NULL.
-      x You supplied a string.
+      ! Coercion to the spec dataTypes would lose data.
+      x Integer coercion would truncate fractional values in: AGE (1).
+      i Fix the spec: dataType "float" or "decimal" keeps fractions; a wider type avoids overflow.
 

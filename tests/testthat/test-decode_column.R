@@ -149,17 +149,11 @@ test_that("decode_column validates its inputs loudly", {
   )
 })
 
-test_that("decode_column round-trips with apply_spec's decode step", {
+test_that("decode_column to_decode then to_code restores the codes", {
   spec <- demo_spec()
-  via_apply <- apply_spec(
-    cdisc_dm,
-    spec,
-    "DM",
-    decode = "to_decode",
-    conformance = "off"
-  )
-  via_column <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
-  expect_identical(as.vector(via_apply$SEX), as.vector(via_column$SEX))
+  dec <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
+  back <- decode_column(dec, spec, "DM", from = "SEX", direction = "to_code")
+  expect_identical(as.vector(back$SEX), as.vector(cdisc_dm$SEX))
 })
 
 test_that("decode_column warns when the spec dataType coercion introduces NA", {

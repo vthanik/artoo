@@ -284,7 +284,7 @@ test_that("check_spec pre-flights fractional values under an integer dataType", 
   expect_identical(row$variable, "HEIGHTBL")
 })
 
-test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
+test_that("apply_spec always aborts on truncating coercion (lossless or abort)", {
   expect_error(
     apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off"),
     class = "artoo_error_type"
@@ -293,21 +293,9 @@ test_that("apply_spec aborts on truncating coercion by default (on_lossy)", {
     error = TRUE,
     apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off")
   )
-  # Opt out: the old warning behavior.
-  expect_warning(
-    out <- apply_spec(
-      frac_frame(),
-      frac_spec(),
-      "ADVS",
-      conformance = "off",
-      on_lossy = "warn"
-    ),
-    class = "artoo_warning_coercion"
-  )
-  expect_identical(out$HEIGHTBL, c(162L, 171L))
 })
 
-test_that("on_lossy = error also covers 32-bit overflow", {
+test_that("the lossless gate also covers 32-bit overflow", {
   spec <- artoo_spec(
     data.frame(dataset = "X"),
     data.frame(dataset = "X", variable = "BIGN", data_type = "integer")

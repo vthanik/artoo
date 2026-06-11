@@ -51,23 +51,18 @@ test_that("disabling a dimension suppresses its findings", {
   expect_false(any(off$check == "extra_variable"))
 })
 
-test_that("apply_spec threads checks through to the conformance step", {
+test_that("check_spec honors a checks control on a conformed frame", {
   spec <- demo_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z"
-  # codelist check off -> no error finding -> no conformance warning.
-  expect_silent(
-    out <- apply_spec(
-      raw,
-      spec,
-      "DM",
-      decode = "none",
-      no_match = "error",
-      conformance = "warn",
-      checks = artoo_checks(codelist_membership = FALSE)
-    )
+  out <- apply_spec(raw, spec, "DM", conformance = "off")
+  # codelist check off -> no codelist_membership finding.
+  findings <- check_spec(
+    out,
+    spec,
+    "DM",
+    checks = artoo_checks(codelist_membership = FALSE)
   )
-  findings <- attr(out, "artoo.conformance")
   expect_false(any(findings$check == "codelist_membership"))
 })
 
@@ -166,26 +161,13 @@ test_that("codelist_membership treats NA in a mandatory variable as a violation 
 
 test_that("check_spec(decode=) compares against the matching codelist column (1d)", {
   spec <- demo_spec()
-  dec <- apply_spec(
-    cdisc_dm,
-    spec,
-    "DM",
-    decode = "to_decode",
-    conformance = "off"
-  )
+  dec <- decode_column(cdisc_dm, spec, "DM", from = "SEX")
   # Checked with the same decode direction: the decoded values are members.
   f_ok <- check_spec(dec, spec, "DM", decode = "to_decode")
   expect_false(any(f_ok$check == "codelist_membership"))
   # Checked as if not decoded: the decode values are no longer terms.
   f_bad <- check_spec(dec, spec, "DM", decode = "none")
   expect_true(any(f_bad$check == "codelist_membership"))
-})
-
-test_that("apply_spec threads decode so a clean decode does not warn (1d)", {
-  spec <- demo_spec()
-  expect_silent(
-    apply_spec(cdisc_dm, spec, "DM", decode = "to_decode", conformance = "warn")
-  )
 })
 
 # ---- Part A: submission-readiness data checks ------------------------------

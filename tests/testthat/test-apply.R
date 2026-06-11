@@ -5,6 +5,15 @@ demo_spec <- function() {
   artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 }
 
+# ---- apply_spec surface -----------------------------------------------------
+
+test_that("apply_spec exposes exactly the five load-bearing arguments", {
+  expect_named(
+    formals(apply_spec),
+    c("x", "spec", "dataset", "conformance", "na_position")
+  )
+})
+
 # ---- apply_spec core --------------------------------------------------------
 
 test_that("apply_spec conforms ADSL and stamps metadata", {
@@ -29,12 +38,39 @@ test_that("apply_spec scaffolds missing spec variables as typed NA", {
   expect_true(all(is.na(out$AGE)))
 })
 
-test_that("apply_spec drops columns the spec does not declare", {
+test_that("apply_spec never drops an undeclared column", {
   spec <- demo_spec()
   raw <- cdisc_adsl
-  raw$NOTSPEC <- 1
-  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
-  expect_false("NOTSPEC" %in% names(out))
+  raw$NOTSPEC <- seq_len(nrow(raw))
+  out <- apply_spec(raw, spec, "ADSL")
+
+  # The column survives, ordered after the declared variables, and the
+  # extra_variable finding reports it.
+  expect_true("NOTSPEC" %in% names(out))
+  expect_identical(
+    names(out),
+    c(spec_variables(spec, "ADSL")$variable, "NOTSPEC")
+  )
+  findings <- conformance(out)
+  hit <- findings[findings$check == "extra_variable", , drop = FALSE]
+  expect_true("NOTSPEC" %in% hit$variable)
+})
+
+test_that("an undeclared column round-trips through write/read (no-drop gate)", {
+  spec <- demo_spec()
+  raw <- cdisc_dm
+  raw$DERIVED <- seq_len(nrow(raw)) + 0.5
+  out <- apply_spec(raw, spec, "DM", conformance = "off")
+
+  for (ext in c(".json", ".parquet", ".rds")) {
+    p <- withr::local_tempfile(fileext = ext)
+    write_dataset(out, p)
+    back <- read_dataset(p)
+    expect_true("DERIVED" %in% names(back))
+    expect_identical(as.vector(back$DERIVED), as.vector(out$DERIVED))
+    # The codec inferred metadata for the undeclared column.
+    expect_true("DERIVED" %in% names(get_meta(back)@columns))
+  }
 })
 
 test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guard)", {
@@ -67,25 +103,6 @@ test_that("apply_spec does not mutate its input (transactional)", {
   expect_identical(cdisc_adsl, before)
 })
 
-test_that("apply_spec steps= runs only the requested steps", {
-  spec <- demo_spec()
-  # No "stamp" -> no metadata attached.
-  out <- apply_spec(cdisc_dm, spec, "DM", steps = c("coerce", "order"))
-  expect_null(attr(out, "metadata_json"))
-})
-
-test_that("apply_spec rejects an unknown step", {
-  spec <- demo_spec()
-  expect_error(
-    apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
-    class = "artoo_error_input"
-  )
-  expect_snapshot(
-    apply_spec(cdisc_adsl, spec, "ADSL", steps = "nope"),
-    error = TRUE
-  )
-})
-
 test_that("apply_spec validates x and dataset", {
   spec <- demo_spec()
   expect_error(
@@ -100,16 +117,10 @@ test_that("apply_spec validates x and dataset", {
   expect_snapshot(apply_spec(cdisc_adsl, spec, "NOPE"), error = TRUE)
 })
 
-test_that("decode = none leaves coded values untouched", {
+test_that("apply_spec keeps coded values untouched (decode is its own verb)", {
   spec <- demo_spec()
-  out <- apply_spec(cdisc_dm, spec, "DM", decode = "none", conformance = "off")
-  raw_sorted <- apply_spec(
-    cdisc_dm,
-    spec,
-    "DM",
-    steps = c("scaffold", "drop", "coerce", "order", "sort")
-  )
-  expect_identical(out$SEX, raw_sorted$SEX)
+  out <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  expect_setequal(unique(out$SEX), unique(cdisc_dm$SEX))
 })
 
 # ---- check_spec -------------------------------------------------------------
@@ -143,13 +154,12 @@ test_that("check_spec flags a missing variable as an error", {
   expect_identical(unique(hit$severity), "error")
 })
 
-test_that("apply_spec check = strict aborts on an error finding", {
+test_that("conformance = 'abort' aborts on an error finding", {
   spec <- demo_spec()
-  # USUBJID coerces fine, but inject an out-of-codelist value if SEX is coded.
   raw <- cdisc_dm
-  raw$USUBJID <- NULL # forces a missing_variable error
+  raw$SEX[1] <- "X9" # not in codelist C66731 -> error-severity finding
   expect_error(
-    apply_spec(raw, spec, "DM", conformance = "abort", steps = c("coerce")),
+    apply_spec(raw, spec, "DM", conformance = "abort"),
     class = "artoo_error_conformance"
   )
 })
@@ -169,7 +179,7 @@ test_that("a brace in a data value cannot break the strict gate (review B5)", {
   )
 })
 
-test_that("truncating integer coercion aborts by default, warns under on_lossy (review B6)", {
+test_that("truncating integer coercion always aborts (lossless or abort)", {
   vars <- cdisc_variables
   vars$data_type[vars$dataset == "DM" & vars$variable == "AGE"] <- "integer"
   spec <- artoo_spec(cdisc_datasets, vars, codelists = cdisc_codelists)
@@ -179,37 +189,13 @@ test_that("truncating integer coercion aborts by default, warns under on_lossy (
     apply_spec(raw, spec, "DM", conformance = "off"),
     class = "artoo_error_type"
   )
-  expect_warning(
-    apply_spec(raw, spec, "DM", conformance = "off", on_lossy = "warn"),
-    class = "artoo_warning_coercion"
+  expect_snapshot(
+    error = TRUE,
+    apply_spec(raw, spec, "DM", conformance = "off")
   )
 })
 
-# ---- decode flag validation + overflow warning (checks expansion) -----------
-
-test_that("apply_spec validates trim and ignore_case as single flags", {
-  spec <- artoo_spec(
-    data.frame(dataset = "DM", label = "Demographics"),
-    data.frame(
-      dataset = "DM",
-      variable = "USUBJID",
-      label = "Subject",
-      data_type = "string",
-      stringsAsFactors = FALSE
-    )
-  )
-  df <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
-  expect_error(
-    apply_spec(df, spec, "DM", trim = "yes"),
-    class = "artoo_error_input"
-  )
-  expect_error(
-    apply_spec(df, spec, "DM", ignore_case = NA),
-    class = "artoo_error_input"
-  )
-})
-
-test_that("integer overflow under coercion is named precisely", {
+test_that("integer overflow under coercion is named precisely and aborts", {
   spec <- artoo_spec(
     data.frame(dataset = "DM", label = "Demographics"),
     data.frame(
@@ -221,52 +207,10 @@ test_that("integer overflow under coercion is named precisely", {
     )
   )
   df <- data.frame(SUBJN = c(1, 9999999999))
-  # Overflow is lossy (values become NA): abort by default, named precisely.
+  # Overflow is lossy (values become NA): always abort, named precisely.
   expect_error(
     apply_spec(df, spec, "DM", conformance = "off"),
     class = "artoo_error_type",
     regexp = "overflow"
-  )
-  # Opting out keeps the old two-warning behavior (lossy + NA-introduction).
-  expect_warning(
-    expect_warning(
-      out <- apply_spec(df, spec, "DM", conformance = "off", on_lossy = "warn"),
-      class = "artoo_warning_coercion"
-    ),
-    class = "artoo_warning_coercion"
-  )
-  expect_identical(as.vector(out$SUBJN), c(1L, NA))
-})
-
-# ---- profile presets ---------------------------------------------------------
-
-test_that("profile = 'xportr' runs drop/order/sort/stamp without coercion", {
-  spec <- demo_spec()
-  raw <- cdisc_dm
-  raw$AGE <- as.character(raw$AGE) # would be coerced by the full pipeline
-  raw$NOTSPEC <- 1
-  out <- apply_spec(raw, spec, "DM", profile = "xportr", conformance = "off")
-  # drop ran; coerce did not; stamp did.
-  expect_false("NOTSPEC" %in% names(out))
-  expect_type(out$AGE, "character")
-  expect_true(is_artoo_meta(get_meta(out)))
-  # scaffold did not run: a spec variable absent from raw stays absent.
-  missing_var <- setdiff(spec_variables(spec, "DM")$variable, names(raw))[1]
-  expect_false(missing_var %in% names(out))
-})
-
-test_that("profile and steps are mutually exclusive, unknown profile aborts", {
-  spec <- demo_spec()
-  expect_error(
-    apply_spec(cdisc_dm, spec, "DM", profile = "xportr", steps = "drop"),
-    class = "artoo_error_input"
-  )
-  expect_error(
-    apply_spec(cdisc_dm, spec, "DM", profile = "metacore"),
-    class = "artoo_error_input"
-  )
-  expect_snapshot(
-    error = TRUE,
-    apply_spec(cdisc_dm, spec, "DM", profile = "metacore")
   )
 })

@@ -30,16 +30,16 @@
 #' Control which conformance checks run
 #'
 #' Build a reusable control that selects which dimensions [check_spec()]
-#' evaluates, and therefore which findings [apply_spec()] produces. Construct
-#' one per study and thread it through every conform call so the conformance
-#' surface is consistent. Each toggle is validated at construction, so a
+#' evaluates. Construct one per study and thread it through every
+#' check_spec() call so the conformance surface is consistent. Each toggle is validated at construction, so a
 #' mistyped name or value aborts early rather than being silently ignored.
 #'
 #' @details
 #' **Selection, not severity.** This control decides which findings are
-#' *produced*; [apply_spec()]'s `check` argument (warn, strict, off) decides
-#' what to *do* with them. A disabled dimension is skipped entirely, so the
-#' findings frame stays clean.
+#' *produced*; [apply_spec()]'s `conformance` argument (warn, abort, off)
+#' decides what to *do* with the findings its full-default check raises. A
+#' disabled dimension is skipped entirely, so the findings frame stays
+#' clean.
 #'
 #' @param missing_variable *Flag mandatory spec variables absent from the
 #'   data.* `<logical(1)>: default TRUE`.
@@ -90,7 +90,7 @@
 #'   `"12NOV2019"` or an impossible calendar date is flagged.
 #'
 #' @return *A `<artoo_checks>` control object*. Pass it as the `checks`
-#'   argument to [check_spec()] or [apply_spec()].
+#'   argument to [check_spec()].
 #'
 #' @examples
 #' # ---- Example 1: the default runs every conformance dimension ----
@@ -106,7 +106,8 @@
 #' ck <- artoo_checks(length_overflow = FALSE)
 #' nrow(check_spec(cdisc_dm, spec, "DM", checks = ck))
 #'
-#' @seealso [check_spec()] and [apply_spec()] which consume it.
+#' @seealso [check_spec()], which consumes it; [apply_spec()] for the
+#'   findings disposition.
 #' @export
 artoo_checks <- function(
   missing_variable = TRUE,

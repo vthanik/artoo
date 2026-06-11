@@ -8,7 +8,7 @@
       x It is a character vector; with targetDataType "integer" a date column must be a Date or already a SAS-epoch numeric.
       i Partial ISO 8601 values cannot be SAS numerics. Drop the spec's targetDataType to write them as ISO text, or complete the values.
 
-# apply_spec aborts on truncating coercion by default (on_lossy)
+# apply_spec always aborts on truncating coercion (lossless or abort)
 
     Code
       apply_spec(frac_frame(), frac_spec(), "ADVS", conformance = "off")
@@ -16,5 +16,5 @@
       Error:
       ! Coercion to the spec dataTypes would lose data.
       x Integer coercion would truncate fractional values in: HEIGHTBL (2).
-      i Fix the spec (dataType "float" or "decimal" keeps fractions), or accept the loss with `on_lossy = "warn"`.
+      i Fix the spec: dataType "float" or "decimal" keeps fractions; a wider type avoids overflow.
 

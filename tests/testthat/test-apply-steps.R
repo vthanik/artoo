@@ -1,6 +1,7 @@
 # Branch coverage for the apply_spec steps and check_spec dimensions:
-# decode directions + no-match policy, coercion warnings, key sorting, and
-# each conformance finding. Driven by bundled CDISC demo data.
+# coercion aborts/warnings, key sorting, the conformance findings, and the
+# shared codelist mapper through decode_column(). Driven by bundled CDISC
+# demo data.
 
 demo_spec <- function() {
   artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -13,75 +14,6 @@ keyed_spec <- function() {
   ds$keys[ds$dataset == "DM"] <- "STUDYID USUBJID"
   artoo_spec(ds, cdisc_variables, codelists = cdisc_codelists)
 }
-
-# ---- decode_codelists -------------------------------------------------------
-
-test_that("decode = to_decode maps codes to their decodes", {
-  spec <- demo_spec()
-  out <- apply_spec(
-    cdisc_dm,
-    spec,
-    "DM",
-    decode = "to_decode",
-    conformance = "off"
-  )
-  # F -> Female, M -> Male (codelist C66731).
-  expect_setequal(unique(out$SEX), c("Female", "Male"))
-})
-
-test_that("decode = to_code reverses to_decode", {
-  spec <- demo_spec()
-  dec <- apply_spec(
-    cdisc_dm,
-    spec,
-    "DM",
-    decode = "to_decode",
-    conformance = "off"
-  )
-  back <- apply_spec(dec, spec, "DM", decode = "to_code", conformance = "off")
-  plain <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
-  expect_identical(back$SEX, plain$SEX)
-})
-
-test_that("decode no_match = error aborts on an unknown coded value", {
-  spec <- demo_spec()
-  raw <- cdisc_dm
-  raw$SEX[1] <- "Z"
-  expect_error(
-    apply_spec(raw, spec, "DM", decode = "to_decode", no_match = "error"),
-    class = "artoo_error_codelist"
-  )
-})
-
-test_that("decode no_match = keep retains the unmatched value", {
-  spec <- demo_spec()
-  raw <- cdisc_dm
-  raw$SEX[1] <- "Z"
-  out <- apply_spec(
-    raw,
-    spec,
-    "DM",
-    decode = "to_decode",
-    no_match = "keep",
-    conformance = "off"
-  )
-  expect_identical(out$SEX[1], "Z")
-})
-
-test_that("decode no_match = na blanks the unmatched value", {
-  spec <- demo_spec()
-  raw <- cdisc_dm
-  raw$SEX[1] <- "Z"
-  out <- apply_spec(
-    raw,
-    spec,
-    "DM",
-    decode = "to_decode",
-    no_match = "na",
-    conformance = "off"
-  )
-  expect_true(is.na(out$SEX[1]))
-})
 
 # ---- coerce_types -----------------------------------------------------------
 
@@ -160,10 +92,9 @@ test_that("a fully numbered order does not warn", {
   )
 })
 
-test_that("scaffold and drop progress carry class artoo_message_apply", {
+test_that("scaffold progress carries class artoo_message_apply", {
   spec <- demo_spec()
   raw <- cdisc_dm
-  raw$NOTSPEC <- "x" # not in the spec -> dropped
   raw$AGE <- NULL # in the spec -> scaffolded back
   expect_message(
     apply_spec(raw, spec, "DM", conformance = "off"),
@@ -216,31 +147,16 @@ test_that("check_spec flags codelist_membership", {
   expect_identical(unique(hit$severity), "error")
 })
 
-test_that("apply_spec check = warn attaches findings and warns on errors", {
+test_that("apply_spec conformance = warn attaches findings and warns on errors", {
   spec <- demo_spec()
   raw <- cdisc_dm
   raw$SEX[1] <- "Z"
   expect_warning(
-    out <- apply_spec(
-      raw,
-      spec,
-      "DM",
-      decode = "none",
-      no_match = "error",
-      conformance = "warn"
-    ),
+    out <- apply_spec(raw, spec, "DM", conformance = "warn"),
     class = "artoo_warning_conformance"
   )
   findings <- attr(out, "artoo.conformance")
   expect_true(any(findings$check == "codelist_membership"))
-})
-
-test_that("apply_spec rejects a non-character steps argument", {
-  spec <- demo_spec()
-  expect_error(
-    apply_spec(cdisc_dm, spec, "DM", steps = 1L),
-    class = "artoo_error_input"
-  )
 })
 
 test_that("check_spec rejects a non-data-frame x", {
@@ -254,7 +170,7 @@ test_that(".storage_of recognises integer and logical columns", {
   expect_identical(artoo:::.storage_of(complex(1)), NA_character_)
 })
 
-# ---- decode matching: trim + case options (checks expansion) ----------------
+# ---- shared codelist mapper: trim + case via decode_column() ----------------
 
 .trim_spec <- function() {
   artoo_spec(
@@ -276,83 +192,45 @@ test_that(".storage_of recognises integer and logical columns", {
   )
 }
 
-test_that("decode trims whitespace by default and warns about the variants", {
+test_that("decode_column trims whitespace by default and warns about variants", {
   df <- data.frame(SEX = c("M ", " F", "M"), stringsAsFactors = FALSE)
   expect_warning(
-    out <- apply_spec(
-      df,
-      .trim_spec(),
-      "DM",
-      decode = "to_decode",
-      conformance = "off"
-    ),
+    out <- decode_column(df, .trim_spec(), "DM", from = "SEX"),
     class = "artoo_warning_codelist"
   )
   expect_identical(as.vector(out$SEX), c("Male", "Female", "Male"))
 })
 
-test_that("trim = FALSE restores exact matching", {
+test_that("decode_column trim = FALSE restores exact matching", {
   df <- data.frame(SEX = c("M ", "F"), stringsAsFactors = FALSE)
   expect_error(
-    apply_spec(
-      df,
-      .trim_spec(),
-      "DM",
-      decode = "to_decode",
-      trim = FALSE,
-      conformance = "off"
-    ),
+    decode_column(df, .trim_spec(), "DM", from = "SEX", trim = FALSE),
     class = "artoo_error_codelist"
   )
 })
 
-test_that("ignore_case = TRUE matches case variants and warns", {
+test_that("decode_column ignore_case = TRUE matches case variants and warns", {
   df <- data.frame(SEX = c("m", "F"), stringsAsFactors = FALSE)
   expect_error(
-    apply_spec(
-      df,
-      .trim_spec(),
-      "DM",
-      decode = "to_decode",
-      conformance = "off"
-    ),
+    decode_column(df, .trim_spec(), "DM", from = "SEX"),
     class = "artoo_error_codelist"
   )
   expect_warning(
-    out <- apply_spec(
+    out <- decode_column(
       df,
       .trim_spec(),
       "DM",
-      decode = "to_decode",
-      ignore_case = TRUE,
-      conformance = "off"
+      from = "SEX",
+      ignore_case = TRUE
     ),
     class = "artoo_warning_codelist"
   )
   expect_identical(as.vector(out$SEX), c("Male", "Female"))
 })
 
-test_that("exact matches never warn", {
+test_that("decode_column exact matches never warn", {
   df <- data.frame(SEX = c("M", "F"), stringsAsFactors = FALSE)
   expect_no_warning(
-    apply_spec(
-      df,
-      .trim_spec(),
-      "DM",
-      decode = "to_decode",
-      conformance = "off"
-    )
+    decode_column(df, .trim_spec(), "DM", from = "SEX")
   )
-})
-
-test_that("decode skips a coded variable absent from the data", {
-  out <- suppressWarnings(apply_spec(
-    data.frame(OTHER = "x", stringsAsFactors = FALSE),
-    .trim_spec(),
-    "DM",
-    decode = "to_decode",
-    steps = c("decode"),
-    conformance = "off"
-  ))
-  expect_identical(out$OTHER, "x")
 })

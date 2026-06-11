@@ -9,15 +9,7 @@ apply_spec(
   spec,
   dataset,
   conformance = c("warn", "abort", "off"),
-  decode = c("none", "to_decode", "to_code"),
-  no_match = c("error", "keep", "na"),
-  on_lossy = c("error", "warn"),
-  trim = TRUE,
-  ignore_case = FALSE,
-  na_position = c("first", "last"),
-  steps = NULL,
-  profile = NULL,
-  checks = NULL
+  na_position = c("first", "last")
 )
 }
 \arguments{
@@ -38,68 +30,13 @@ finding.
 }
 
 \strong{Note:} this governs only the \emph{findings} disposition; pipeline
-errors (an unknown dataset, lossy coercion under \code{on_lossy = "error"}) abort regardless.}
-
-\item{decode}{\emph{Codelist translation direction.} \verb{<character(1)>}. One of
-\code{"none"} (default, no transform), \code{"to_decode"} (code -> decode), or
-\code{"to_code"} (decode -> code).}
-
-\item{no_match}{\emph{Policy for values absent from a codelist when decoding.}
-\verb{<character(1)>}. One of \code{"error"} (default), \code{"keep"}, or \code{"na"}. Has
-no effect when \code{decode = "none"}.}
-
-\item{on_lossy}{\emph{Policy when coercion would damage values.}
-\verb{<character(1)>}. One of:
-\itemize{
-\item \code{"error"} (default) abort before any value is damaged: an \code{integer}
-dataType truncating fractional values (a height losing its decimals)
-or overflowing R's 32-bit range (values becoming \code{NA}) is a
-data-integrity event, not a nuisance.
-\item \code{"warn"} apply the lossy coercion and warn
-(\code{artoo_warning_coercion}).
-}
-
-\strong{Tip:} \code{\link[=check_spec]{check_spec()}} flags the same conditions before any coercion
-runs (\code{integer_fraction}, \code{integer_overflow}), so a pre-flight check
-catches them without touching the data.}
-
-\item{trim}{\emph{Match codelist values after trimming whitespace.}
-\verb{<logical(1)>: default TRUE}. Real data carries trailing blanks; a value
-that matches only after trimming still decodes, with a
-\code{artoo_warning_codelist} naming the variants. Membership \emph{checking}
-(\code{\link[=check_spec]{check_spec()}}) always compares exactly. Has no effect when
-\code{decode = "none"}.}
-
-\item{ignore_case}{\emph{Match codelist values case-insensitively.}
-\verb{<logical(1)>: default FALSE}. Case differences are usually genuine CT
-violations, so this is opt-in; a case-only match warns like \code{trim}. Has
-no effect when \code{decode = "none"}.}
+errors (an unknown dataset, lossy coercion) abort regardless.}
 
 \item{na_position}{\emph{Where missing key values sort.} \verb{<character(1)>}. One
 of \code{"first"} (default) or \code{"last"}. \code{"first"} matches SAS \verb{PROC SORT}
 (and the FDA submission convention) by ordering missings before present
 values; \code{"last"} matches R's \code{order()} and the pandas/Polars default.
-Affects only the \code{"sort"} step.}
-
-\item{steps}{\emph{Run only a subset of the pipeline.} \verb{<character> | NULL}.
-When \code{NULL} (default) every step runs; otherwise any of
-\code{"scaffold"}, \code{"drop"}, \code{"coerce"}, \code{"decode"}, \code{"order"}, \code{"sort"},
-\code{"stamp"}, applied in their canonical order.
-
-\strong{Tip:} omit \code{"stamp"} to conform without attaching metadata.
-\strong{Interaction:} mutually exclusive with \code{profile}.}
-
-\item{profile}{\emph{A named preset of pipeline steps.} \verb{<character(1)> | NULL}. \code{NULL} (default) runs the full pipeline. \code{"xportr"} reproduces
-the legacy metacore + metatools + xportr shape -- drop, order, sort,
-stamp; no scaffolding, no type coercion, no decode -- for teams
-matching an existing pipeline's output during migration.
-
-\strong{Interaction:} mutually exclusive with \code{steps} (a profile \emph{is} a
-steps preset; supplying both aborts).}
-
-\item{checks}{\emph{Which conformance dimensions to evaluate.} \verb{<artoo_checks> | NULL}. When \code{NULL} (default) every dimension runs; pass a
-\code{\link[=artoo_checks]{artoo_checks()}} control to disable some. Has no effect when
-\code{conformance = "off"}.}
+Both are lossless; pick the one your comparison target uses.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{artoo_meta} (read it with
@@ -115,15 +52,26 @@ the metadata it now carries makes that write lossless. The input is never
 mutated; if any step aborts, the call leaves your data untouched.
 }
 \details{
-\strong{Ordered pipeline.} The steps run in a fixed order: scaffold missing
-variables (typed NA), drop columns the spec does not declare, coerce each
-column to its CDISC dataType, optionally decode codelists (see \code{decode}),
-reorder columns to the spec, sort rows by the dataset keys, then stamp the
-metadata. Use \code{steps} to run a subset for surgical work.
+\strong{Ordered pipeline.} Five fixed steps run in order: scaffold missing
+spec variables (typed \code{NA}), coerce each column to its CDISC dataType,
+reorder columns to the spec, sort rows by the dataset keys, then stamp
+the metadata.
 
-\strong{Decode is off by default.} Coded variables keep their submission values
-(e.g. \code{SEX} stays \code{"M"}); membership is reported by \code{\link[=check_spec]{check_spec()}}, not
-enforced by mutation. Opt in with \code{decode = "to_decode"} or \code{"to_code"}.
+\strong{Never drops a column.} A column the spec does not declare survives the
+pipeline (ordered after the declared ones), is \emph{reported} by the
+\code{extra_variable} conformance finding, and round-trips through every
+\verb{write_*()} codec with metadata inferred from its R class. Membership is
+reported, not enforced by destruction.
+
+\strong{Lossless or abort.} A coercion that would damage values -- an
+\code{integer} dataType truncating fractions or overflowing R's 32-bit range
+-- aborts with \code{artoo_error_type} before any value is touched. There is
+no opt-out: fix the spec (dataType \code{"float"} or \code{"decimal"} keeps
+fractions) rather than accept silent damage.
+
+\strong{Values are never translated.} Coded variables keep their submission
+values (\code{SEX} stays \code{"M"}); codelist translation is its own verb,
+\code{\link[=decode_column]{decode_column()}}.
 }
 \examples{
 spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
@@ -135,15 +83,22 @@ spec <- artoo_spec(cdisc_datasets, cdisc_variables, codelists = cdisc_codelists)
 adsl <- apply_spec(cdisc_adsl, spec, "ADSL")
 get_meta(adsl)@dataset$records
 
-# ---- Example 2: a surgical subset of the pipeline ----
+# ---- Example 2: an undeclared column survives, and is reported ----
 #
-# Run only coercion and column ordering, skipping the metadata stamp, when
-# you just want the columns typed and in spec order.
-typed <- apply_spec(cdisc_dm, spec, "DM", steps = c("coerce", "order"))
-names(typed)[1:3]
+# apply_spec() never drops data: a column outside the spec rides along
+# (reported by the extra_variable finding) and still writes losslessly.
+raw <- cdisc_dm
+raw$DERIVED <- seq_len(nrow(raw))
+dm <- apply_spec(raw, spec, "DM")
+findings <- conformance(dm)
+findings[findings$check == "extra_variable", c("variable", "message")]
 
 }
 \seealso{
-\code{\link[=check_spec]{check_spec()}} for the conformance findings; \code{\link[=get_meta]{get_meta()}} /
-\code{\link[=set_meta]{set_meta()}} for the metadata it stamps.
+\strong{Check:} \code{\link[=check_spec]{check_spec()}} for the findings; \code{\link[=conformance]{conformance()}} to read them
+back.
+
+\strong{Translate:} \code{\link[=decode_column]{decode_column()}} for codelist value mapping.
+
+\strong{Metadata:} \code{\link[=get_meta]{get_meta()}} / \code{\link[=set_meta]{set_meta()}} for what the stamp attaches.
 }
