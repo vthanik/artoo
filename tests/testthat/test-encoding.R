@@ -107,7 +107,7 @@ test_that("read/write round-trips byte-for-byte for ANY single-byte encoding", {
   expect_gt(tested, 0L)
 })
 
-test_that(".to_target fast-paths UTF-8 and honours on_invalid policies", {
+test_that(".to_target passes valid UTF-8 through and honours on_invalid policies", {
   x <- intToUtf8(c(0x2122)) # trademark, not in ASCII
   expect_identical(artoo:::.to_target(x, "UTF-8", "error"), x)
   # error: trademark is not encodable in US-ASCII.
@@ -226,4 +226,50 @@ test_that("SAS and IANA spellings of one row resolve to the same charset", {
       label = enc$r[i]
     )
   }
+})
+
+test_that(".to_target validates a UTF-8 target (invalid bytes hit on_invalid)", {
+  # A lone latin1 byte in an unmarked string is invalid UTF-8: the UTF-8
+  # branch must gate it through on_invalid instead of passing it to the
+  # serializers (where utf8_normalize fails with a foreign error).
+  bad <- rawToChar(as.raw(c(0x63, 0xE9)))
+  expect_error(
+    artoo:::.to_target(bad, "UTF-8", "error"),
+    class = "artoo_error_codec"
+  )
+  expect_snapshot(artoo:::.to_target(bad, "UTF-8", "error"), error = TRUE)
+  expect_warning(
+    out <- artoo:::.to_target(bad, "UTF-8", "replace"),
+    class = "artoo_warning_encoding"
+  )
+  expect_true(all(validUTF8(out)))
+  expect_match(out, "[?]")
+  expect_identical(artoo:::.to_target(bad, "UTF-8", "ignore"), "c")
+})
+
+test_that(".to_target UTF-8 validation honours declared marks and NA", {
+  # A column legitimately marked latin1 transcodes cleanly -- never flagged.
+  lat <- rawToChar(as.raw(c(0x63, 0xE9)))
+  Encoding(lat) <- "latin1"
+  expect_identical(artoo:::.to_target(lat, "UTF-8", "error"), "cé")
+  # NA-only and empty vectors pass untouched.
+  expect_identical(
+    artoo:::.to_target(NA_character_, "UTF-8", "error"),
+    NA_character_
+  )
+  expect_identical(
+    artoo:::.to_target(character(0), "UTF-8", "error"),
+    character(0)
+  )
+  # The all-valid path returns the input as-is, attributes intact.
+  ok <- c(USUBJID = "01-701-1015")
+  attr(ok, "label") <- "Unique Subject Identifier"
+  expect_identical(artoo:::.to_target(ok, "UTF-8", "error"), ok)
+  # The replace path must also keep attributes (iconv strips them).
+  labelled_bad <- rawToChar(as.raw(c(0x63, 0xE9)))
+  attr(labelled_bad, "label") <- "Free text"
+  suppressWarnings(
+    rep_out <- artoo:::.to_target(labelled_bad, "UTF-8", "replace")
+  )
+  expect_identical(attr(rep_out, "label"), "Free text")
 })

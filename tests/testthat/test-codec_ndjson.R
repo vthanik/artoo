@@ -226,3 +226,23 @@ test_that("the jsonl extension resolves to the ndjson codec", {
   write_dataset(df, p)
   expect_identical(read_dataset(p)$A, 1:2)
 })
+
+# ---- on_invalid: UTF-8 validation parity with write_xpt --------------------
+test_that("write_ndjson gates invalid UTF-8 through on_invalid", {
+  df <- data.frame(
+    USUBJID = c(rawToChar(as.raw(c(0x63, 0xE9))), "01-002"),
+    stringsAsFactors = FALSE
+  )
+  p <- withr::local_tempfile(fileext = ".ndjson")
+  expect_error(write_ndjson(df, p), class = "artoo_error_codec")
+  expect_warning(
+    write_ndjson(df, p, on_invalid = "replace"),
+    class = "artoo_warning_encoding"
+  )
+  back <- read_ndjson(p)
+  expect_true(all(validUTF8(back$USUBJID)))
+  expect_match(back$USUBJID[1], "[?]")
+  p2 <- withr::local_tempfile(fileext = ".ndjson")
+  expect_no_warning(write_ndjson(df, p2, on_invalid = "ignore"))
+  expect_identical(read_ndjson(p2)$USUBJID[1], "c")
+})

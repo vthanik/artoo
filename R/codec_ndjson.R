@@ -15,6 +15,7 @@
   x,
   meta,
   path,
+  on_invalid = "error",
   created = NULL,
   strict = FALSE,
   call = rlang::caller_env()
@@ -32,10 +33,11 @@
   created <- created %||% Sys.time()
   special <- .json_prepare_special(x, meta, strict, path, call)
 
-  # Canonicalise character columns to NFC (same contract as the .json codec).
+  # Gate UTF-8 validity, then canonicalise to NFC (same contract as the
+  # .json codec).
   for (nm in names(x)) {
     if (is.character(x[[nm]])) {
-      x[[nm]] <- .nfc(x[[nm]])
+      x[[nm]] <- .nfc(.to_target(x[[nm]], "UTF-8", on_invalid, call))
     }
   }
 
@@ -216,6 +218,11 @@
 #'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.ndjson` path.* `<character(1)>: required`. A
 #'   `.ndjson.gz` path writes gzip-compressed bytes.
+#' @param on_invalid *Policy for values that are not valid UTF-8.*
+#'   `<character(1)>: default "error"`. One of `"error"` (abort with
+#'   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
+#'   `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes).
+#'   See [write_json()] for when this fires.
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
 #'   freeze it for byte-stable output.
@@ -247,8 +254,22 @@
 #' @seealso [read_ndjson()] for the inverse; [write_json()] for the
 #'   array-form file; [write_dataset()] for the generic dispatcher.
 #' @export
-write_ndjson <- function(x, path, created = NULL, strict = FALSE) {
-  write_dataset(x, path, format = "ndjson", created = created, strict = strict)
+write_ndjson <- function(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+) {
+  on_invalid <- match.arg(on_invalid)
+  write_dataset(
+    x,
+    path,
+    format = "ndjson",
+    on_invalid = on_invalid,
+    created = created,
+    strict = strict
+  )
 }
 
 #' Read a dataset from CDISC Dataset-JSON NDJSON

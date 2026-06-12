@@ -68,6 +68,17 @@ no backward compatibility is kept with the vport surface.
   spec's standard on the Datasets sheet. Define-XML to P21 is one
   composition: `read_spec("define.xml") |> write_spec("spec.xlsx")`.
 
+## Dataset I/O
+
+* `write_json()`, `write_ndjson()`, and `write_parquet()` gained the
+  `on_invalid = c("error", "replace", "ignore")` policy `write_xpt()`
+  already had, closing the asymmetry where one invalid byte made a dataset
+  "submittable as XPT but not as Dataset-JSON". Invalid UTF-8 now aborts
+  with `artoo_error_codec` naming the offenders hex-escaped (previously an
+  uncontrolled `utf8::utf8_normalize()` error), or is replaced/dropped on
+  request; the gate lives in the one shared transcode helper, so all four
+  writers rule identically.
+
 ## Inspect
 
 * New `artoo_encodings()`: the encodings clinical data travels in, one row
@@ -105,6 +116,12 @@ no backward compatibility is kept with the vport surface.
   time.
 
 ## Fixes
+
+* Inferred xpt storage lengths for character columns without metadata now
+  count bytes, not characters: an XPORT `LENGTH` is a byte width, so
+  multibyte UTF-8 values were undercounted (and would truncate on write),
+  and `nchar(type = "chars")` failed outright on invalid bytes before the
+  writers' `on_invalid` gate could rule.
 
 * `read_xpt()` no longer silently drops a small second member hiding
   entirely inside the floored-off tail of a wide-record v5 file; the

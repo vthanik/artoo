@@ -251,3 +251,27 @@ test_that("an invalid compression value aborts before writing", {
   )
   expect_false(file.exists(p))
 })
+
+# ---- on_invalid: UTF-8 validation parity with write_xpt --------------------
+test_that("write_parquet gates invalid UTF-8 through on_invalid", {
+  skip_if_not_installed("nanoparquet")
+  spec <- artoo_spec(
+    cdisc_sdtm_datasets,
+    cdisc_sdtm_variables,
+    codelists = cdisc_codelists
+  )
+  dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  dm$USUBJID[1] <- rawToChar(as.raw(c(0x63, 0xE9)))
+  p <- withr::local_tempfile(fileext = ".parquet")
+  expect_error(write_parquet(dm, p), class = "artoo_error_codec")
+  expect_warning(
+    write_parquet(dm, p, on_invalid = "replace"),
+    class = "artoo_warning_encoding"
+  )
+  back <- read_parquet(p)
+  expect_true(all(validUTF8(back$USUBJID)))
+  expect_match(back$USUBJID[1], "[?]")
+  p2 <- withr::local_tempfile(fileext = ".parquet")
+  expect_no_warning(write_parquet(dm, p2, on_invalid = "ignore"))
+  expect_identical(read_parquet(p2)$USUBJID[1], "c")
+})

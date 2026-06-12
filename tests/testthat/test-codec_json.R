@@ -391,3 +391,45 @@ test_that("read_json(encoding=) decodes a foreign (non-UTF-8) Dataset-JSON file"
   back <- read_json(p, encoding = "windows-1252")
   expect_identical(back$SITE, "café")
 })
+
+# ---- on_invalid: UTF-8 validation parity with write_xpt --------------------
+test_that("write_json gates invalid UTF-8 through on_invalid", {
+  spec <- demo_sdtm_spec()
+  dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  dm$USUBJID[1] <- rawToChar(as.raw(c(0x63, 0xE9))) # invalid UTF-8 byte
+  p <- withr::local_tempfile(fileext = ".json")
+  # Default: abort, naming the offender hex-escaped (artoo_error_codec) --
+  # never the old uncontrolled utf8_normalize error.
+  expect_error(write_json(dm, p, created = frozen), class = "artoo_error_codec")
+  # replace: warn, write a valid-UTF-8 file with ?, round-trip intact.
+  expect_warning(
+    write_json(dm, p, created = frozen, on_invalid = "replace"),
+    class = "artoo_warning_encoding"
+  )
+  back <- read_json(p)
+  expect_true(all(validUTF8(back$USUBJID)))
+  expect_match(back$USUBJID[1], "[?]")
+  # ignore: silent, byte dropped.
+  p2 <- withr::local_tempfile(fileext = ".json")
+  expect_no_warning(
+    write_json(dm, p2, created = frozen, on_invalid = "ignore")
+  )
+  expect_identical(read_json(p2)$USUBJID[1], "c")
+})
+
+test_that("write_json never flags declared-latin1 or factor columns (regression)", {
+  spec <- demo_sdtm_spec()
+  dm <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  lat <- rawToChar(as.raw(c(0x63, 0xE9)))
+  Encoding(lat) <- "latin1"
+  dm$USUBJID[1] <- lat # declared mark: transcodes cleanly under "error"
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(dm, p, created = frozen)
+  expect_identical(read_json(p)$USUBJID[1], "cé")
+  # The gate covers character columns only; a factor column's (pre-existing)
+  # write behavior is unchanged -- the write itself still succeeds.
+  dm2 <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
+  dm2$FCT <- factor(rep_len(c("a", "b"), nrow(dm2)))
+  p2 <- withr::local_tempfile(fileext = ".json")
+  expect_no_error(write_json(dm2, p2, created = frozen))
+})

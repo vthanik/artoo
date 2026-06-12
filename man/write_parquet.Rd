@@ -4,7 +4,13 @@
 \alias{write_parquet}
 \title{Write a dataset to Apache Parquet}
 \usage{
-write_parquet(x, path, encoding = NULL, compression = "snappy")
+write_parquet(
+  x,
+  path,
+  encoding = NULL,
+  on_invalid = c("error", "replace", "ignore"),
+  compression = "snappy"
+)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
@@ -20,6 +26,13 @@ UTF-8 by spec); \code{encoding} only records the data's original charset in the
 
 \strong{Tip:} any SAS or IANA spelling listed by \code{\link[=artoo_encodings]{artoo_encodings()}} is
 accepted.}
+
+\item{on_invalid}{\emph{Policy for values that are not valid UTF-8.}
+\verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
+\code{artoo_error_codec}), \code{"replace"} (substitute \verb{?} and warn with
+\code{artoo_warning_encoding}), or \code{"ignore"} (drop the invalid bytes).
+See \code{\link[=write_json]{write_json()}} for when this fires; parquet STRING bytes are
+UTF-8 by spec, exactly like Dataset-JSON.}
 
 \item{compression}{\emph{Column compression codec.} \verb{<character(1)>: default "snappy"}. One of:
 \itemize{

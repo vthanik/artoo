@@ -233,7 +233,9 @@
 # policy. Returns a character vector whose stored bytes are the target
 # encoding (ready for charToRaw by the codec). "error" fails loud naming
 # offenders; "replace" substitutes "?" and warns; "ignore" drops. A UTF-8
-# target fast-paths unchanged (lossless inherit).
+# target validates, then inherits losslessly: unmarked bytes that are not
+# valid UTF-8 hit the same on_invalid policy here instead of surfacing
+# later as a foreign utf8_normalize error inside a serializer.
 #' @noRd
 .to_target <- function(
   x,
@@ -247,7 +249,47 @@
   }
   cs <- .resolve_charset(to, call)
   if (identical(toupper(cs), "UTF-8")) {
-    return(x)
+    # Declared single-byte marks (latin1) transcode cleanly first; for
+    # internal UTF-8 / unmarked bytes enc2utf8 is the identity, so the
+    # all-valid path returns input-equivalent content and byte goldens
+    # are unaffected. iconv strips attributes; save and restore them
+    # (encoding marks live in the CHARSXPs, not in attributes()).
+    at <- attributes(x)
+    out <- enc2utf8(x)
+    bad <- !validUTF8(out) & !is.na(out)
+    if (!any(bad)) {
+      attributes(out) <- at
+      return(out)
+    }
+    if (on_invalid == "error") {
+      shown <- utils::head(
+        unique(iconv(out[bad], from = "UTF-8", to = "UTF-8", sub = "byte")),
+        3L
+      )
+      .artoo_abort(
+        c(
+          "Cannot encode {sum(bad)} value{?s} as UTF-8.",
+          "x" = "Invalid bytes (hex-escaped): {.val {shown}}.",
+          "i" = "Re-read the source with the correct {.arg encoding}, or set {.arg on_invalid}."
+        ),
+        kind = "codec",
+        call = call
+      )
+    }
+    sub <- if (on_invalid == "replace") "?" else ""
+    out <- iconv(out, from = "UTF-8", to = "UTF-8", sub = sub)
+    if (on_invalid == "replace") {
+      .artoo_warn(
+        c(
+          "Replaced invalid UTF-8 bytes with {.val ?} in {sum(bad)} value{?s}.",
+          "i" = "Use {.code on_invalid = \"error\"} to fail loudly instead."
+        ),
+        kind = "encoding",
+        call = call
+      )
+    }
+    attributes(out) <- at
+    return(out)
   }
 
   if (on_invalid == "error") {

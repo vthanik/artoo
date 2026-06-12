@@ -62,6 +62,7 @@
   x,
   meta,
   path,
+  on_invalid = "error",
   created = NULL,
   strict = FALSE,
   call = rlang::caller_env()
@@ -83,11 +84,13 @@
   # when there is content; `strict = TRUE` suppresses it with a loss warning.
   special <- .json_prepare_special(x, meta, strict, path, call)
 
-  # Canonicalise character columns to NFC so the UTF-8 output is canonical. A
-  # no-op on ASCII / single-byte data, so demo goldens are byte-stable.
+  # Gate character columns through the UTF-8 validity policy, then
+  # canonicalise to NFC so the output is canonical UTF-8 (RFC 8259). The
+  # gate runs first: normalization needs valid UTF-8. Both are no-ops on
+  # ASCII / single-byte data, so demo goldens are byte-stable.
   for (nm in names(x)) {
     if (is.character(x[[nm]])) {
-      x[[nm]] <- .nfc(x[[nm]])
+      x[[nm]] <- .nfc(.to_target(x[[nm]], "UTF-8", on_invalid, call))
     }
   }
 
@@ -342,6 +345,14 @@
 #' @param x *The dataset to write.* `<data.frame>: required`. Typically the
 #'   output of [apply_spec()], carrying `artoo_meta`.
 #' @param path *Destination `.json` path.* `<character(1)>: required`.
+#' @param on_invalid *Policy for values that are not valid UTF-8.*
+#'   `<character(1)>: default "error"`. One of `"error"` (abort with
+#'   `artoo_error_codec`, naming the offenders with their invalid bytes
+#'   hex-escaped), `"replace"` (substitute `?` and warn with
+#'   `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes).
+#'   The same policy vocabulary as [write_xpt()]; text correctly read
+#'   through artoo is always valid UTF-8, so this only fires on bytes
+#'   that entered the frame through a mis-declared source encoding.
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
 #'   freeze it for byte-stable output.
@@ -378,8 +389,22 @@
 #' @seealso [read_json()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.
 #' @export
-write_json <- function(x, path, created = NULL, strict = FALSE) {
-  write_dataset(x, path, format = "json", created = created, strict = strict)
+write_json <- function(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+) {
+  on_invalid <- match.arg(on_invalid)
+  write_dataset(
+    x,
+    path,
+    format = "json",
+    on_invalid = on_invalid,
+    created = created,
+    strict = strict
+  )
 }
 
 #' Read a dataset from CDISC Dataset-JSON

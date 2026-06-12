@@ -195,15 +195,21 @@
 
 # ---- resolvers (shared by coerce, encode, meta_from_frame) ------------------
 
-# The xpt storage length: the meta length when set, else max(nchar) for a
-# character column, else 8 (full IEEE precision) for a numeric one.
+# The xpt storage length: the meta length when set, else max byte width for
+# a character column, else 8 (full IEEE precision) for a numeric one. Bytes,
+# not chars: an xpt LENGTH is a byte width, so a multibyte value must count
+# its bytes (chars would undercount and truncate) -- and byte counting never
+# fails on invalid-UTF-8 input the way type = "chars" does, so inference
+# stays alive long enough for the codecs' on_invalid gate to rule.
 #' @noRd
 .resolve_xpt_length <- function(meta_len, col) {
   if (!is.null(meta_len) && length(meta_len) == 1L && !is.na(meta_len)) {
     return(as.integer(meta_len))
   }
   if (is.character(col) || is.factor(col)) {
-    m <- suppressWarnings(max(nchar(as.character(col)), 1L, na.rm = TRUE))
+    m <- suppressWarnings(
+      max(nchar(as.character(col), type = "bytes"), 1L, na.rm = TRUE)
+    )
     return(as.integer(m))
   }
   8L

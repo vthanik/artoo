@@ -4,7 +4,13 @@
 \alias{write_ndjson}
 \title{Write a dataset to CDISC Dataset-JSON NDJSON}
 \usage{
-write_ndjson(x, path, created = NULL, strict = FALSE)
+write_ndjson(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
@@ -12,6 +18,12 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.ndjson} path.} \verb{<character(1)>: required}. A
 \code{.ndjson.gz} path writes gzip-compressed bytes.}
+
+\item{on_invalid}{\emph{Policy for values that are not valid UTF-8.}
+\verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
+\code{artoo_error_codec}), \code{"replace"} (substitute \verb{?} and warn with
+\code{artoo_warning_encoding}), or \code{"ignore"} (drop the invalid bytes).
+See \code{\link[=write_json]{write_json()}} for when this fires.}
 
 \item{created}{\emph{Creation timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};

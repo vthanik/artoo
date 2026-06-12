@@ -4,13 +4,28 @@
 \alias{write_json}
 \title{Write a dataset to CDISC Dataset-JSON}
 \usage{
-write_json(x, path, created = NULL, strict = FALSE)
+write_json(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+)
 }
 \arguments{
 \item{x}{\emph{The dataset to write.} \verb{<data.frame>: required}. Typically the
 output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 
 \item{path}{\emph{Destination \code{.json} path.} \verb{<character(1)>: required}.}
+
+\item{on_invalid}{\emph{Policy for values that are not valid UTF-8.}
+\verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
+\code{artoo_error_codec}, naming the offenders with their invalid bytes
+hex-escaped), \code{"replace"} (substitute \verb{?} and warn with
+\code{artoo_warning_encoding}), or \code{"ignore"} (drop the invalid bytes).
+The same policy vocabulary as \code{\link[=write_xpt]{write_xpt()}}; text correctly read
+through artoo is always valid UTF-8, so this only fires on bytes
+that entered the frame through a mis-declared source encoding.}
 
 \item{created}{\emph{Creation timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL}
 (default) stamps the current time into \code{datasetJSONCreationDateTime};

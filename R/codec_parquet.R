@@ -40,6 +40,7 @@
   meta,
   path,
   encoding = NULL,
+  on_invalid = "error",
   compression = "snappy",
   call = rlang::caller_env()
 ) {
@@ -73,12 +74,14 @@
   # realizes it back from the sidecar dataType). as.numeric(units = "secs")
   # — never unclass(), which would keep a stray units attribute. Date and
   # POSIXct have native parquet types, so they pass through untouched.
-  # Character columns are NFC-canonicalised (a no-op on ASCII / single-byte).
+  # Character columns are gated through the UTF-8 validity policy (parquet
+  # STRING is UTF-8 by spec), then NFC-canonicalised (both no-ops on
+  # ASCII / single-byte content).
   for (nm in names(x)) {
     if (inherits(x[[nm]], "difftime")) {
       x[[nm]] <- as.numeric(x[[nm]], units = "secs")
     } else if (is.character(x[[nm]])) {
-      x[[nm]] <- .nfc(x[[nm]])
+      x[[nm]] <- .nfc(.to_target(x[[nm]], "UTF-8", on_invalid, call))
     }
   }
   # The frame-level metadata_json attribute (if any) is not a column; drop it
@@ -242,6 +245,12 @@
 #'
 #'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
 #'   accepted.
+#' @param on_invalid *Policy for values that are not valid UTF-8.*
+#'   `<character(1)>: default "error"`. One of `"error"` (abort with
+#'   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
+#'   `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes).
+#'   See [write_json()] for when this fires; parquet STRING bytes are
+#'   UTF-8 by spec, exactly like Dataset-JSON.
 #' @param compression *Column compression codec.* `<character(1)>: default
 #'   "snappy"`. One of:
 #'
@@ -272,12 +281,20 @@
 #' @seealso [read_parquet()] for the inverse; [write_dataset()] for the
 #'   generic dispatcher.
 #' @export
-write_parquet <- function(x, path, encoding = NULL, compression = "snappy") {
+write_parquet <- function(
+  x,
+  path,
+  encoding = NULL,
+  on_invalid = c("error", "replace", "ignore"),
+  compression = "snappy"
+) {
+  on_invalid <- match.arg(on_invalid)
   write_dataset(
     x,
     path,
     format = "parquet",
     encoding = encoding,
+    on_invalid = on_invalid,
     compression = compression
   )
 }
