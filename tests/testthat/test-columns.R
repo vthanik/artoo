@@ -24,9 +24,10 @@ test_that("columns() on a stamped frame is one row per variable", {
 
   expect_s3_class(pane, "artoo_columns")
   expect_s3_class(pane, "data.frame")
+  # Informat is absent: ADSL carries none (shown only when populated).
   expect_identical(
     names(pane),
-    c("#", "Variable", "Type", "Len", "Format", "Informat", "Label", "Key")
+    c("#", "Variable", "Type", "Len", "Format", "Label", "Key")
   )
   expect_identical(nrow(pane), ncol(adsl))
   expect_identical(pane$Variable, names(adsl))
@@ -41,6 +42,68 @@ test_that("columns() on a stamped frame is one row per variable", {
       spec_variables(spec, "ADSL")$variable == "AGE"
     ]
   )
+})
+
+test_that("numeric Len is blank; a Char column always shows a byte Len", {
+  # A date variable with no targetDataType is ISO 8601 text (Char) and the
+  # spec declares no length: the pane must still show an inferred byte width,
+  # not a blank (the RFSTDTC/RFENDTC bug). Numerics show no Len at all.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = c("USUBJID", "AGE", "RFSTDTC"),
+      label = c("Subject", "Age", "Ref Start Date/Time"),
+      data_type = c("string", "integer", "date"),
+      length = c(11L, 8L, NA_integer_),
+      order = 1:3,
+      stringsAsFactors = FALSE
+    )
+  )
+  raw <- data.frame(
+    USUBJID = c("01-701-1015", "01-701-1023"),
+    AGE = c(34L, 56L),
+    RFSTDTC = c("2014-01-02", "2014-07-02"),
+    stringsAsFactors = FALSE
+  )
+  pane <- columns(apply_spec(raw, spec, "DM", conformance = "off"))
+  # RFSTDTC: Char, no declared length -> inferred byte width (>= 10).
+  rf <- pane[pane$Variable == "RFSTDTC", ]
+  expect_identical(rf$Type, "Char")
+  expect_false(is.na(rf$Len))
+  expect_gte(rf$Len, 10L)
+  # AGE is numeric -> blank Len; the Len column stays integer-typed.
+  expect_true(is.na(pane$Len[pane$Variable == "AGE"]))
+  expect_type(pane$Len, "integer")
+})
+
+test_that("Format names render uppercase regardless of source spelling", {
+  # Define-sourced formats are often lowercase (date9.); the SAS pane shows
+  # them uppercase, while the metadata keeps the source spelling.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "VISITDT",
+      data_type = "date",
+      display_format = "date9.",
+      order = 1L,
+      stringsAsFactors = FALSE
+    )
+  )
+  raw <- data.frame(VISITDT = "2014-01-02", stringsAsFactors = FALSE)
+  pane <- columns(apply_spec(raw, spec, "DM", conformance = "off"))
+  expect_identical(pane$Format[pane$Variable == "VISITDT"], "DATE9.")
+})
+
+test_that("the Informat column appears only when a variable carries one", {
+  df <- data.frame(USUBJID = c("A", "B"), stringsAsFactors = FALSE)
+  expect_false("Informat" %in% names(columns(df)))
+  # An informat present -> the column appears, uppercased.
+  attr(df$USUBJID, "informat.sas") <- "date9."
+  pane <- columns(df)
+  expect_true("Informat" %in% names(pane))
+  expect_identical(pane$Informat[pane$Variable == "USUBJID"], "DATE9.")
 })
 
 test_that("an undeclared frame column still appears, attrs inferred", {
@@ -123,9 +186,11 @@ test_that("the Key column carries the spec keySequence in order", {
 test_that("a zero-column frame yields the canonical empty pane", {
   pane <- columns(data.frame())
   expect_identical(nrow(pane), 0L)
+  # The empty pane omits Informat too (no variable carries one), so the schema
+  # is uniform with a populated, informat-free pane.
   expect_identical(
     names(pane),
-    c("#", "Variable", "Type", "Len", "Format", "Informat", "Label", "Key")
+    c("#", "Variable", "Type", "Len", "Format", "Label", "Key")
   )
 })
 

@@ -24,6 +24,15 @@
 #' never-stamped data frame works the same way — every attribute is
 #' inferred.
 #'
+#' **Len is physical storage.** The pane mirrors what `PROC CONTENTS`
+#' shows and what the writers store, not a spec digit-width. A Char column
+#' always carries a byte `Len` (the declared length, else inferred from the
+#' data); a numeric `Len` is blank, because a numeric stores as an 8-byte
+#' IEEE double with no character width (a Define-XML numeric `Length` is a
+#' digit-width, kept in the metadata for the Define / P21 surface). Format
+#' and informat names render uppercase; the metadata keeps the source
+#' spelling.
+#'
 #' **A path reads through the codec.** A file path is dispatched by
 #' extension through the same registry as [read_dataset()], so the
 #' attributes come from the one lossless reader (an unknown extension
@@ -47,9 +56,10 @@
 #'   meaningful when `x` is a path to a multi-member `.xpt` file.
 #'
 #' @return *A `<artoo_columns>` data frame* with columns `#`, `Variable`,
-#'   `Type`, `Len`, `Format`, `Informat`, `Label`, `Key`, printed
-#'   left-aligned. It is an ordinary data frame underneath — filter or
-#'   inspect it like one.
+#'   `Type`, `Len`, `Format`, `Label`, `Key`, printed left-aligned. The
+#'   `Informat` column appears only when at least one variable carries an
+#'   informat (most clinical panes have none). It is an ordinary data frame
+#'   underneath — filter or inspect it like one.
 #'
 #' @examples
 #' spec <- artoo_spec(cdisc_adam_datasets, cdisc_adam_variables, codelists = cdisc_codelists)
@@ -122,15 +132,27 @@ columns <- function(x, member = NULL) {
       # like the codecs do on write.
       cm <- .col_from_frame_col(nm, x[[i]], ds_name)
     }
+    is_char <- is.character(x[[i]]) || is.factor(x[[i]])
     data.frame(
       `#` = i,
       Variable = nm,
       # SAS Type reports STORAGE: character columns are Char, everything
       # else (including numeric-backed dates/times) is Num.
-      Type = if (is.character(x[[i]]) || is.factor(x[[i]])) "Char" else "Num",
-      Len = cm$length %||% NA_integer_,
-      Format = cm$displayFormat %||% NA_character_,
-      Informat = cm$informat %||% NA_character_,
+      Type = if (is_char) "Char" else "Num",
+      # Len is physical storage, the way PROC CONTENTS shows it: a Char
+      # column's byte width (declared, else inferred -- never blank, mirroring
+      # the xpt writer), and blank for a numeric. A numeric stores as an
+      # 8-byte IEEE double with no character width; the Define digit-width
+      # stays in metadata for the Define/P21 surface, not shown here.
+      Len = if (is_char) {
+        .resolve_xpt_length(cm$length, x[[i]])
+      } else {
+        NA_integer_
+      },
+      # SAS format names render uppercase (they are case-insensitive; the
+      # metadata keeps the source spelling).
+      Format = toupper(cm$displayFormat %||% NA_character_),
+      Informat = toupper(cm$informat %||% NA_character_),
       Label = cm$label %||% NA_character_,
       Key = cm$keySequence %||% NA_integer_,
       check.names = FALSE,
@@ -153,6 +175,13 @@ columns <- function(x, member = NULL) {
       check.names = FALSE,
       stringsAsFactors = FALSE
     )
+  }
+  # Informat is shown only when at least one variable actually carries one
+  # (clinical panes rarely do; an all-blank column is dead weight). Uniform
+  # across the populated and the zero-row pane: all(is.na(character(0))) is
+  # TRUE, so the empty pane drops it too.
+  if (all(is.na(out$Informat))) {
+    out$Informat <- NULL
   }
   rownames(out) <- NULL
   attr(out, "dataset") <- ds_name

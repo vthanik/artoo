@@ -105,10 +105,15 @@ no backward compatibility is kept with the vport surface.
   `sas` or `r` spelling.
 
 * New `columns()`: the SAS `PROC CONTENTS` / Universal Viewer variable
-  pane (`#`, Variable, Type, Len, Format, Informat, Label, plus the CDISC
-  Key sequence), polymorphic over a stamped frame, any plain data frame
-  (attributes inferred), or a file path dispatched through the codec
-  registry. A multi-member XPORT path without `member =` points at
+  pane (`#`, Variable, Type, Len, Format, Label, plus the CDISC Key
+  sequence, and Informat only when a variable carries one), polymorphic over
+  a stamped frame, any plain data frame (attributes inferred), or a file path
+  dispatched through the codec registry. The pane mirrors physical storage: a
+  Char column always shows a byte length (inferred when the spec declares
+  none, so an ISO-8601 `--DTC` column is never blank), a numeric shows none
+  (an 8-byte IEEE double has no character width; a Define-XML numeric length
+  is a digit-width kept in metadata), and format and informat names render
+  uppercase. A multi-member XPORT path without `member =` points at
   `xpt_members()`.
 
 ## Data

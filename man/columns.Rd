@@ -17,9 +17,10 @@ meaningful when \code{x} is a path to a multi-member \code{.xpt} file.}
 }
 \value{
 \emph{A \verb{<artoo_columns>} data frame} with columns \verb{#}, \code{Variable},
-\code{Type}, \code{Len}, \code{Format}, \code{Informat}, \code{Label}, \code{Key}, printed
-left-aligned. It is an ordinary data frame underneath — filter or
-inspect it like one.
+\code{Type}, \code{Len}, \code{Format}, \code{Label}, \code{Key}, printed left-aligned. The
+\code{Informat} column appears only when at least one variable carries an
+informat (most clinical panes have none). It is an ordinary data frame
+underneath — filter or inspect it like one.
 }
 \description{
 Return a one-row-per-variable attribute table — the pane a SAS
@@ -34,6 +35,15 @@ column the spec never declared (which \code{\link[=apply_spec]{apply_spec()}} ke
 still appears, its attributes inferred from the R class. A plain,
 never-stamped data frame works the same way — every attribute is
 inferred.
+
+\strong{Len is physical storage.} The pane mirrors what \verb{PROC CONTENTS}
+shows and what the writers store, not a spec digit-width. A Char column
+always carries a byte \code{Len} (the declared length, else inferred from the
+data); a numeric \code{Len} is blank, because a numeric stores as an 8-byte
+IEEE double with no character width (a Define-XML numeric \code{Length} is a
+digit-width, kept in the metadata for the Define / P21 surface). Format
+and informat names render uppercase; the metadata keeps the source
+spelling.
 
 \strong{A path reads through the codec.} A file path is dispatched by
 extension through the same registry as \code{\link[=read_dataset]{read_dataset()}}, so the
