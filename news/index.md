@@ -175,6 +175,18 @@ no backward compatibility is kept with the vport surface.
 
 ### Fixes
 
+- The declaration-driven writers (Dataset-JSON, NDJSON, the Parquet
+  sidecar, rds) now reconcile the carried metadata to the frame before
+  serializing, the same overlay semantics
+  [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  always had. A frame mutated after
+  [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  — a column added, dropped, or reordered without
+  [`sync_meta()`](https://vthanik.github.io/artoo/reference/sync_meta.md)
+  — previously wrote a corrupt Dataset-JSON (row arity disagreed with
+  the columns declaration) or, for a pure reorder, a silently misaligned
+  one in which every value landed under the wrong column name.
+
 - Inferred xpt storage lengths for character columns without metadata
   now count bytes, not characters: an XPORT `LENGTH` is a byte width, so
   multibyte UTF-8 values were undercounted (and would truncate on

@@ -93,7 +93,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="fixes-0-0-0-9000">Fixes<a class="anchor" aria-label="anchor" href="#fixes-0-0-0-9000"></a></h3>
-<ul><li><p>Inferred xpt storage lengths for character columns without metadata now count bytes, not characters: an XPORT <code>LENGTH</code> is a byte width, so multibyte UTF-8 values were undercounted (and would truncate on write), and <code>nchar(type = "chars")</code> failed outright on invalid bytes before the writers’ <code>on_invalid</code> gate could rule.</p></li>
+<ul><li><p>The declaration-driven writers (Dataset-JSON, NDJSON, the Parquet sidecar, rds) now reconcile the carried metadata to the frame before serializing, the same overlay semantics <code><a href="../reference/write_xpt.html">write_xpt()</a></code> always had. A frame mutated after <code><a href="../reference/apply_spec.html">apply_spec()</a></code> — a column added, dropped, or reordered without <code><a href="../reference/sync_meta.html">sync_meta()</a></code> — previously wrote a corrupt Dataset-JSON (row arity disagreed with the columns declaration) or, for a pure reorder, a silently misaligned one in which every value landed under the wrong column name.</p></li>
+<li><p>Inferred xpt storage lengths for character columns without metadata now count bytes, not characters: an XPORT <code>LENGTH</code> is a byte width, so multibyte UTF-8 values were undercounted (and would truncate on write), and <code>nchar(type = "chars")</code> failed outright on invalid bytes before the writers’ <code>on_invalid</code> gate could rule.</p></li>
 <li><p><code><a href="../reference/read_xpt.html">read_xpt()</a></code> no longer silently drops a small second member hiding entirely inside the floored-off tail of a wide-record v5 file; the EOF-derived row count now scans the fragment’s 80-byte boundaries and raises the multi-member abort.</p></li>
 </ul></div>
 <div class="section level3">
