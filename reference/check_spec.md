@@ -85,10 +85,21 @@ decode step: `"none"`/`"to_code"` check against the codelist `term`s,
 threads its own `decode` through, so a decoded column is not wrongly
 flagged.
 
+**Fatal vs informational coercion checks.** Only `integer_fraction` and
+`integer_overflow` carry error severity: they mark data an `integer`
+dataType cannot hold without loss, which
+[`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+refuses to coerce (its `on_coercion_loss` governs that gate).
+`type_mismatch` is a note: a column stored more widely than the spec
+declares (an integer-valued double, for instance) coerces cleanly, so it
+is informational, not a blocker.
+
 ## See also
 
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
 which runs this;
+[`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md)
+for the same check across a whole study;
 [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
 to select dimensions;
 [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)

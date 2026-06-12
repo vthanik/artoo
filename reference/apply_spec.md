@@ -17,7 +17,8 @@ apply_spec(
   dataset,
   conformance = c("warn", "abort", "off"),
   na_position = c("first", "last"),
-  extra = c("keep", "drop")
+  extra = c("keep", "drop"),
+  on_coercion_loss = c("error", "keep")
 )
 ```
 
@@ -53,12 +54,11 @@ apply_spec(
 
   **Note:** this governs only the *findings* disposition — what is
   *reported*. Pipeline errors are a different category and abort under
-  every setting, including `"off"`: an unknown dataset, and above all
-  lossy coercion (`artoo_error_type`), which no `conformance` value
-  bypasses. If the abort names variables whose spec dataType is
-  `integer` but whose data carries fractions, the fix is the spec
-  (retype to `"float"`/`"decimal"`), not this argument; the condition's
-  `$variables` frame lists every offender.
+  every setting, including `"off"`: an unknown dataset, and lossy
+  coercion (`artoo_error_type`). Lossy coercion has its own governed
+  gate, `on_coercion_loss`, not this argument; when the spec is the
+  problem, retype it with
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md).
 
 - na_position:
 
@@ -79,16 +79,48 @@ apply_spec(
     reported by the `extra_variable` finding.
 
   - `"drop"` the returned frame carries exactly the spec's columns; the
-    drop is announced (`artoo_message_apply`) and the `extra_variable`
-    finding still reports what was removed.
+    drop is announced (`artoo_message_apply`), and that message is the
+    audit trail of what was removed.
 
-  **Interaction:** under `conformance = "abort"` an error-severity
-  finding aborts *before* any drop — the trim never masks a failure.
+  **Interaction:** the drop runs *before* the check, so
+  [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
+  reports only the columns the returned frame keeps. Under
+  `conformance = "abort"` an error-severity finding still aborts (those
+  findings arise only on spec-declared columns, which the drop never
+  touches) and the input is never mutated, so the trim cannot mask a
+  failure.
 
   **Note:** `"keep"` is the default deliberately. artoo is a lossless
   carrier, so the metadata step never silently discards a column; extras
   are surfaced every run (the `extra_variable` finding, and a warning
   under `conformance = "warn"`), making `"drop"` a conscious opt-in.
+
+- on_coercion_loss:
+
+  *What to do when coercion would lose data.* `<character(1)>`. The
+  governed gate for an `integer` dataType whose data truncates
+  (fractions) or overflows (R's 32-bit range). One of:
+
+  - `"error"` (default) abort with `artoo_error_type` before any value
+    is touched, refusing to damage the data.
+
+  - `"keep"` skip coercion for the offending column, leaving it at its
+    wider source type. The values are preserved and the mismatch is
+    reported as an `integer_fraction` / `integer_overflow` finding (read
+    with
+    [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)),
+    never silently truncated.
+
+  **Interaction:** independent of `conformance`. `"error"` aborts even
+  under `conformance = "off"`; under `"keep"` the finding it leaves is
+  surfaced by `conformance = "warn"` (the default) and suppressed by
+  `"off"`.
+
+  **Tip:** `"keep"` is the iterate stance (preserve the data, flag the
+  spec); `"error"` is the submission stance. To fix the spec itself, see
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
+  and
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md).
 
 ## Value
 
@@ -119,19 +151,28 @@ metadata-application step that silently discarded columns would break
 that contract, so trimming data is always an explicit, announced choice
 rather than a default side effect. `extra = "drop"` opts in to
 trim-to-spec (the returned frame carries exactly the spec's columns):
-the undeclared columns are removed *after* the findings are computed, so
-the `extra_variable` finding remains the audit trail of what was
-dropped, and the drop itself is always announced (`artoo_message_apply`)
-— even under `conformance = "off"`.
+the undeclared columns are removed *before* the check, so the findings
+describe exactly the returned frame (a dropped column is never reported
+as `extra_variable`), and the drop itself is always announced
+(`artoo_message_apply`) as the audit trail of what was removed — even
+under `conformance = "off"`.
 
-**Lossless or abort.** A coercion that would damage values — an
-`integer` dataType truncating fractions or overflowing R's 32-bit range
-— aborts with `artoo_error_type` before any value is touched. There is
-no opt-out: fix the spec (dataType `"float"` or `"decimal"` keeps
-fractions) rather than accept silent damage. The condition carries the
-offending rows as data: `cnd$variables` is a data frame with columns
-`variable`, `data_type`, `n`, and `reason` (`"truncated"` /
-`"overflowed"`), so a pipeline can collect every mismatch in one
+**Lossless or abort, your call.** A coercion that would damage values —
+an `integer` dataType truncating fractions or overflowing R's 32-bit
+range — aborts with `artoo_error_type` before any value is touched,
+under the default `on_coercion_loss = "error"`. This gate is independent
+of `conformance`: `conformance = "off"` does not bypass it. When the
+data (not the spec) is right, set `on_coercion_loss = "keep"`: the
+column keeps its wider source type and the divergence is reported as an
+`integer_fraction` / `integer_overflow` finding, never silently
+truncated. When the spec is wrong, retype it with
+[`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
+(or
+[`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
+from the findings). The error abort carries the offending rows as data:
+`cnd$variables` is a data frame with columns `variable`, `data_type`,
+`n`, and `reason` (`"truncated"` / `"overflowed"`), so a pipeline can
+collect every mismatch in one
 `tryCatch(..., artoo_error_type = function(cnd) cnd$variables)` pass.
 The NA-introduction warning (`artoo_warning_coercion`) carries the same
 frame with `reason = "na_introduced"`, and a `conformance = "abort"`
@@ -148,6 +189,12 @@ values (`SEX` stays `"M"`); codelist translation is its own verb,
 for the findings;
 [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
 to read them back.
+
+**Fix the spec:**
+[`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md) to
+retype a variable the data disagrees with,
+[`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
+to apply every integer fix from a findings frame.
 
 **Translate:**
 [`decode_column()`](https://vthanik.github.io/artoo/reference/decode_column.md)

@@ -128,11 +128,19 @@ data is checked against, matching <code><a href="apply_spec.html">apply_spec()</
 <code>"none"</code>/<code>"to_code"</code> check against the codelist <code>term</code>s, <code>"to_decode"</code>
 against the <code>decode</code>s. <code><a href="apply_spec.html">apply_spec()</a></code> threads its own <code>decode</code> through, so
 a decoded column is not wrongly flagged.</p>
+<p><strong>Fatal vs informational coercion checks.</strong> Only <code>integer_fraction</code> and
+<code>integer_overflow</code> carry error severity: they mark data an <code>integer</code>
+dataType cannot hold without loss, which <code><a href="apply_spec.html">apply_spec()</a></code> refuses to coerce
+(its <code>on_coercion_loss</code> governs that gate). <code>type_mismatch</code> is a note: a
+column stored more widely than the spec declares (an integer-valued
+double, for instance) coerces cleanly, so it is informational, not a
+blocker.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="apply_spec.html">apply_spec()</a></code> which runs this; <code><a href="artoo_checks.html">artoo_checks()</a></code> to select
-dimensions; <code><a href="validate_spec.html">validate_spec()</a></code> for spec integrity.</p></div>
+    <div class="dont-index"><p><code><a href="apply_spec.html">apply_spec()</a></code> which runs this; <code><a href="check_study.html">check_study()</a></code> for the same
+check across a whole study; <code><a href="artoo_checks.html">artoo_checks()</a></code> to select dimensions;
+<code><a href="validate_spec.html">validate_spec()</a></code> for spec integrity.</p></div>
     </div>
 
     <div class="section level2">

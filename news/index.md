@@ -56,10 +56,15 @@ no backward compatibility is kept with the vport surface.
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   gained `extra = c("keep", "drop")`: `"keep"` (default) preserves
   today’s never-drop behavior; `"drop"` trims the output to exactly the
-  spec’s columns. The drop is never silent: it is announced
-  (`artoo_message_apply`) even under `conformance = "off"`, the
-  `extra_variable` finding remains the audit trail, and a
-  `conformance = "abort"` failure fires before any drop.
+  spec’s columns. The drop runs before the conformance check, so
+  [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
+  on the result reports only the columns the returned frame keeps (a
+  dropped column is never a phantom `extra_variable` / `variable_name`
+  finding). The drop is never silent: it is announced
+  (`artoo_message_apply`) even under `conformance = "off"`, which is its
+  audit trail; under `conformance = "abort"` an error finding (only ever
+  on a spec-declared column) still aborts and the input is never
+  mutated.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
   data-protection conditions now carry their evidence as data, not just
@@ -99,10 +104,38 @@ no backward compatibility is kept with the vport surface.
   codec.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
-  always aborts on lossy coercion (`artoo_error_type`): integer
-  truncation of fractional values and 32-bit overflow have no
-  warn-and-continue opt-out (`on_lossy` dropped); fix the spec’s
-  dataType instead.
+  gained `on_coercion_loss = c("error", "keep")`, the governed gate for
+  a coercion that would lose data (an `integer` dataType truncating
+  fractions, or overflowing R’s 32-bit range). `"error"` (default) keeps
+  the abort-before-touching-data behavior; `"keep"` skips coercion for
+  the offending column, preserves its wider source type, and reports the
+  divergence as an `integer_fraction` / `integer_overflow` finding
+  instead of failing, so a QC pass can keep every value and still see
+  the spec disagree. The gate is independent of `conformance`
+  (`conformance = "off"` never bypassed it), and the abort now names the
+  knob: `on_coercion_loss = "keep"`,
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md),
+  and
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md).
+
+- New
+  [`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md):
+  run
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  over a named list of a study’s datasets and return one stacked
+  findings frame, so “is my whole study submittable?” is one call
+  instead of a per-dataset loop with one abort at a time. The result
+  subclasses the findings frame (it filters like one and feeds
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
+  directly); printing it renders the dataset-by-check count matrix.
+
+- [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)’s
+  `type_mismatch` finding is now severity `note`, not `warning`: a
+  column stored more widely than the spec declares (an integer-valued
+  double under an `integer` dataType, say) coerces cleanly, so it is
+  informational. The only fatal coercion checks are `integer_fraction`
+  and `integer_overflow`; down-ranking `type_mismatch` unclutters a
+  findings report so the genuine blockers stand out.
 
 ### Spec I/O
 
@@ -120,6 +153,27 @@ no backward compatibility is kept with the vport surface.
   preserves `string`, `integer`, `float`, `date`, `datetime`, and `time`
   exactly.
 
+- New
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md):
+  return a spec with one or more variables retyped, e.g.
+  `set_type(spec, "ADSL", AGE = "float")`. The supported, in-R way to
+  correct a spec’s dataType when the data disagrees with it, instead of
+  reaching into the object: the type is canonicalised through the CDISC
+  vocabulary and the rebuilt spec is re-validated. The original is
+  unchanged.
+
+- New
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md):
+  take the `integer_fraction` / `integer_overflow` findings
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  reports and return a spec with every offending variable retyped to
+  `float`, so a frame the original spec would refuse to coerce conforms
+  after one call. Built on
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md);
+  compose with
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to persist the corrected workbook.
+
 ### Dataset I/O
 
 - [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
@@ -135,6 +189,15 @@ no backward compatibility is kept with the vport surface.
   [`utf8::utf8_normalize()`](https://krlmlr.github.io/r-utf8/reference/utf8_normalize.html)
   error), or is replaced/dropped on request; the gate lives in the one
   shared transcode helper, so all four writers rule identically.
+
+- [`read_ndjson()`](https://vthanik.github.io/artoo/reference/read_ndjson.md)
+  gained the `encoding =` argument the other readers already carried,
+  closing the last read-side asymmetry. Pass an IANA or SAS charset
+  (e.g. `"windows-1252"`) to read a non-conformant NDJSON file a
+  producer wrote in that charset; each line is transcoded to UTF-8 on
+  read, preserving the bounded `n_max` streaming. Character columns are
+  now NFC-normalized on read, matching
+  [`read_json()`](https://vthanik.github.io/artoo/reference/read_json.md).
 
 ### Inspect
 
@@ -196,6 +259,20 @@ no backward compatibility is kept with the vport surface.
   time.
 
 ### Docs
+
+- The pkgdown reference index gains
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
+  and
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
+  (in the Specification group) and
+  [`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md)
+  (in the Check group), and the site root now serves an `llms.txt`
+  function map for machine-readable discovery.
+  [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  cross-links the spec-fix verbs and
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  cross-links
+  [`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md).
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
   `extra` argument documents why `"keep"` is the lossless default, and

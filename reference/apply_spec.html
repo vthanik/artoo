@@ -69,7 +69,8 @@ mutated; if any step aborts, the call leaves your data untouched.</p>
 <span>  <span class="va">dataset</span>,</span>
 <span>  conformance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"abort"</span>, <span class="st">"off"</span><span class="op">)</span>,</span>
 <span>  na_position <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"first"</span>, <span class="st">"last"</span><span class="op">)</span>,</span>
-<span>  extra <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"drop"</span><span class="op">)</span></span>
+<span>  extra <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"drop"</span><span class="op">)</span>,</span>
+<span>  on_coercion_loss <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"keep"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -98,12 +99,10 @@ finding.</p></li>
 <li><p><code>"off"</code> skip the check entirely.</p></li>
 </ul><p><strong>Note:</strong> this governs only the <em>findings</em> disposition — what is
 <em>reported</em>. Pipeline errors are a different category and abort under
-every setting, including <code>"off"</code>: an unknown dataset, and above all
-lossy coercion (<code>artoo_error_type</code>), which no <code>conformance</code> value
-bypasses. If the abort names variables whose spec dataType is
-<code>integer</code> but whose data carries fractions, the fix is the spec
-(retype to <code>"float"</code>/<code>"decimal"</code>), not this argument; the condition's
-<code>$variables</code> frame lists every offender.</p></dd>
+every setting, including <code>"off"</code>: an unknown dataset, and lossy
+coercion (<code>artoo_error_type</code>). Lossy coercion has its own governed
+gate, <code>on_coercion_loss</code>, not this argument; when the spec is the
+problem, retype it with <code><a href="set_type.html">set_type()</a></code>.</p></dd>
 
 
 <dt id="arg-na-position">na_position<a class="anchor" aria-label="anchor" href="#arg-na-position"></a></dt>
@@ -120,14 +119,36 @@ An "extra" is a column of <code>x</code> the spec does not declare — typically
 derivation temporary. One of:</p><ul><li><p><code>"keep"</code> (default) extras ride along after the declared columns,
 reported by the <code>extra_variable</code> finding.</p></li>
 <li><p><code>"drop"</code> the returned frame carries exactly the spec's columns;
-the drop is announced (<code>artoo_message_apply</code>) and the
-<code>extra_variable</code> finding still reports what was removed.</p></li>
-</ul><p><strong>Interaction:</strong> under <code>conformance = "abort"</code> an error-severity
-finding aborts <em>before</em> any drop — the trim never masks a failure.</p>
+the drop is announced (<code>artoo_message_apply</code>), and that message is
+the audit trail of what was removed.</p></li>
+</ul><p><strong>Interaction:</strong> the drop runs <em>before</em> the check, so <code><a href="conformance.html">conformance()</a></code>
+reports only the columns the returned frame keeps. Under
+<code>conformance = "abort"</code> an error-severity finding still aborts (those
+findings arise only on spec-declared columns, which the drop never
+touches) and the input is never mutated, so the trim cannot mask a
+failure.</p>
 <p><strong>Note:</strong> <code>"keep"</code> is the default deliberately. artoo is a lossless
 carrier, so the metadata step never silently discards a column;
 extras are surfaced every run (the <code>extra_variable</code> finding, and a
 warning under <code>conformance = "warn"</code>), making <code>"drop"</code> a conscious opt-in.</p></dd>
+
+
+<dt id="arg-on-coercion-loss">on_coercion_loss<a class="anchor" aria-label="anchor" href="#arg-on-coercion-loss"></a></dt>
+<dd><p><em>What to do when coercion would lose data.</em>
+<code>&lt;character(1)&gt;</code>. The governed gate for an <code>integer</code> dataType whose data
+truncates (fractions) or overflows (R's 32-bit range). One of:</p><ul><li><p><code>"error"</code> (default) abort with <code>artoo_error_type</code> before any value is
+touched, refusing to damage the data.</p></li>
+<li><p><code>"keep"</code> skip coercion for the offending column, leaving it at its
+wider source type. The values are preserved and the mismatch is
+reported as an <code>integer_fraction</code> / <code>integer_overflow</code> finding (read
+with <code><a href="conformance.html">conformance()</a></code>), never silently truncated.</p></li>
+</ul><p><strong>Interaction:</strong> independent of <code>conformance</code>. <code>"error"</code> aborts even
+under <code>conformance = "off"</code>; under <code>"keep"</code> the finding it leaves is
+surfaced by <code>conformance = "warn"</code> (the default) and suppressed by
+<code>"off"</code>.</p>
+<p><strong>Tip:</strong> <code>"keep"</code> is the iterate stance (preserve the data, flag the
+spec); <code>"error"</code> is the submission stance. To fix the spec itself, see
+<code><a href="set_type.html">set_type()</a></code> and <code><a href="repair_spec.html">repair_spec()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -156,17 +177,22 @@ metadata-application step that silently discarded columns would break
 that contract, so trimming data is always an explicit, announced choice
 rather than a default side effect.
 <code>extra = "drop"</code> opts in to trim-to-spec (the returned frame carries
-exactly the spec's columns): the undeclared
-columns are removed <em>after</em> the findings are computed, so the
-<code>extra_variable</code> finding remains the audit trail of what was dropped,
-and the drop itself is always announced (<code>artoo_message_apply</code>) — even
-under <code>conformance = "off"</code>.</p>
-<p><strong>Lossless or abort.</strong> A coercion that would damage values — an
-<code>integer</code> dataType truncating fractions or overflowing R's 32-bit range
-— aborts with <code>artoo_error_type</code> before any value is touched. There is
-no opt-out: fix the spec (dataType <code>"float"</code> or <code>"decimal"</code> keeps
-fractions) rather than accept silent damage. The condition carries the
-offending rows as data: <code>cnd$variables</code> is a data frame with columns
+exactly the spec's columns): the undeclared columns are removed <em>before</em>
+the check, so the findings describe exactly the returned frame (a dropped
+column is never reported as <code>extra_variable</code>), and the drop itself is
+always announced (<code>artoo_message_apply</code>) as the audit trail of what was
+removed — even under <code>conformance = "off"</code>.</p>
+<p><strong>Lossless or abort, your call.</strong> A coercion that would damage values —
+an <code>integer</code> dataType truncating fractions or overflowing R's 32-bit
+range — aborts with <code>artoo_error_type</code> before any value is touched, under
+the default <code>on_coercion_loss = "error"</code>. This gate is independent of
+<code>conformance</code>: <code>conformance = "off"</code> does not bypass it. When the data
+(not the spec) is right, set <code>on_coercion_loss = "keep"</code>: the column
+keeps its wider source type and the divergence is reported as an
+<code>integer_fraction</code> / <code>integer_overflow</code> finding, never silently
+truncated. When the spec is wrong, retype it with <code><a href="set_type.html">set_type()</a></code> (or
+<code><a href="repair_spec.html">repair_spec()</a></code> from the findings). The error abort carries the offending
+rows as data: <code>cnd$variables</code> is a data frame with columns
 <code>variable</code>, <code>data_type</code>, <code>n</code>, and <code>reason</code> (<code>"truncated"</code> /
 <code>"overflowed"</code>), so a pipeline can collect every mismatch in one
 <code>tryCatch(..., artoo_error_type = function(cnd) cnd$variables)</code> pass.
@@ -181,6 +207,8 @@ values (<code>SEX</code> stays <code>"M"</code>); codelist translation is its ow
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><strong>Check:</strong> <code><a href="check_spec.html">check_spec()</a></code> for the findings; <code><a href="conformance.html">conformance()</a></code> to read them
 back.</p>
+<p><strong>Fix the spec:</strong> <code><a href="set_type.html">set_type()</a></code> to retype a variable the data disagrees
+with, <code><a href="repair_spec.html">repair_spec()</a></code> to apply every integer fix from a findings frame.</p>
 <p><strong>Translate:</strong> <code><a href="decode_column.html">decode_column()</a></code> for codelist value mapping.</p>
 <p><strong>Metadata:</strong> <code><a href="get_meta.html">get_meta()</a></code> / <code><a href="set_meta.html">set_meta()</a></code> for what the stamp attaches.</p></div>
     </div>

@@ -4,7 +4,9 @@
 
 Build a artoo_spec — the canonical CDISC-shaped description of your
 datasets, one CDISC standard each — or read one from native JSON, a
-Pinnacle 21 workbook, or Define-XML, and write it back out.
+Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
+R when the data disagrees: retype a variable, or repair every integer
+mismatch a check surfaced.
 
 - [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
   : Construct a CDISC specification
@@ -12,6 +14,10 @@ Pinnacle 21 workbook, or Define-XML, and write it back out.
   : Read a specification from JSON, Excel, or Define-XML
 - [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
   : Write a specification to native JSON or a P21 Excel workbook
+- [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
+  : Override a variable's dataType in a spec
+- [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
+  : Repair a spec from its conformance findings
 - [`is_artoo_spec()`](https://vthanik.github.io/artoo/reference/is_artoo_spec.md)
   : Test for a artoo_spec object
 
@@ -65,11 +71,14 @@ keep it in step with the data.
 
 ## Check
 
-Conformance findings for the data, integrity findings for the spec
-itself, and the control object that scopes both.
+Conformance findings for the data — one dataset or a whole study —
+integrity findings for the spec itself, and the control object that
+scopes both.
 
 - [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
   : Check a dataset against its spec
+- [`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md)
+  : Check a whole study against its spec
 - [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
   : Read the conformance findings a dataset carries
 - [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)

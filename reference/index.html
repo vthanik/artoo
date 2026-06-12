@@ -43,7 +43,7 @@
     <div class="section level2">
       <h2 id="specification">Specification<a class="anchor" aria-label="anchor" href="#specification"></a></h2>
 
-      <div class="section-desc"><p>Build a artoo_spec — the canonical CDISC-shaped description of your datasets, one CDISC standard each — or read one from native JSON, a Pinnacle 21 workbook, or Define-XML, and write it back out.</p></div>
+      <div class="section-desc"><p>Build a artoo_spec — the canonical CDISC-shaped description of your datasets, one CDISC standard each — or read one from native JSON, a Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in R when the data disagrees: retype a variable, or repair every integer mismatch a check surfaced.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -70,6 +70,20 @@
 
         </dt>
         <dd>Write a specification to native JSON or a P21 Excel workbook</dd>
+
+        <dt>
+
+          <code><a href="set_type.html">set_type()</a></code>
+
+        </dt>
+        <dd>Override a variable's dataType in a spec</dd>
+
+        <dt>
+
+          <code><a href="repair_spec.html">repair_spec()</a></code>
+
+        </dt>
+        <dd>Repair a spec from its conformance findings</dd>
 
         <dt>
 
@@ -212,7 +226,7 @@
       </dl></div><div class="section level2">
       <h2 id="check">Check<a class="anchor" aria-label="anchor" href="#check"></a></h2>
 
-      <div class="section-desc"><p>Conformance findings for the data, integrity findings for the spec itself, and the control object that scopes both.</p></div>
+      <div class="section-desc"><p>Conformance findings for the data — one dataset or a whole study — integrity findings for the spec itself, and the control object that scopes both.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -225,6 +239,13 @@
 
         </dt>
         <dd>Check a dataset against its spec</dd>
+
+        <dt>
+
+          <code><a href="check_study.html">check_study()</a></code>
+
+        </dt>
+        <dd>Check a whole study against its spec</dd>
 
         <dt>
 

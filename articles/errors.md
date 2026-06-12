@@ -69,8 +69,11 @@ apply_spec(raw, strict, "ADSL", conformance = "off")
     Error:
     ! Coercion to the spec dataTypes would lose data.
     ✖ Integer coercion would truncate fractional values in: AGE (1).
-    ℹ Fix the spec: dataType "float" or "decimal" keeps fractions; a wider type
-      avoids overflow.
+    ℹ This gate is separate from `conformance`; `conformance = "off"` does not
+      bypass it.
+    ℹ To keep these values in R, set `apply_spec(on_coercion_loss = "keep")`, or
+      retype the spec with `set_type()` (dataType "float" or "decimal").
+    ℹ To see every finding at once, run `check_spec(x, spec, dataset)`.
 
 **Fix:** retype the spec variable to `"float"` or `"decimal"`. Collect
 every offender programmatically with

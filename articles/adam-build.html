@@ -155,17 +155,15 @@ Spec for: ADSL, ADAE</code></pre>
 <div class="cell-output cell-output-stderr">
 <pre><code>6 variables the spec declares are absent from the data (not added): `TRTDURD`,
 `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
-ℹ See `conformance(x)` for the findings.</code></pre>
+ℹ See `conformance(x)` for the findings.
+Dropped 6 undeclared variables: `TRTDUR`, `DISONSDT`, `DCDECOD`, `DCREASCD`,
+`MMSETOT`, and `AGEGR1_TMP`</code></pre>
 </div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning: 1 conformance error for "ADSL".
 ℹ Run `conformance(x)` on the returned frame to see every finding.</code></pre>
 </div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Dropped 6 undeclared variables: `TRTDUR`, `DISONSDT`, `DCDECOD`, `DCREASCD`,
-`MMSETOT`, and `AGEGR1_TMP`</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="st">"AGEGR1_TMP"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">conformed</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] FALSE</code></pre>
@@ -181,7 +179,7 @@ Spec for: ADSL, ADAE</code></pre>
 </h2>
 <p>The writers return their input invisibly, so one conformed frame flows to every format in a single pipe — losslessly, because each codec carries the same metadata:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xpt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".xpt"</span><span class="op">)</span></span>
 <span><span class="va">json</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span>
 <span><span class="va">conformed</span> <span class="op">|&gt;</span></span>

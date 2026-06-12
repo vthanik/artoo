@@ -105,12 +105,11 @@ conformed <- apply_spec(adsl, adam_spec, "ADSL", extra = "drop")
     6 variables the spec declares are absent from the data (not added): `TRTDURD`,
     `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
     ℹ See `conformance(x)` for the findings.
+    Dropped 6 undeclared variables: `TRTDUR`, `DISONSDT`, `DCDECOD`, `DCREASCD`,
+    `MMSETOT`, and `AGEGR1_TMP`
 
     Warning: 1 conformance error for "ADSL".
     ℹ Run `conformance(x)` on the returned frame to see every finding.
-
-    Dropped 6 undeclared variables: `TRTDUR`, `DISONSDT`, `DCDECOD`, `DCREASCD`,
-    `MMSETOT`, and `AGEGR1_TMP`
 
 ``` r
 

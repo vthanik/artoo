@@ -27,6 +27,7 @@
 <url><loc>https://vthanik.github.io/artoo/reference/cdisc_ts.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/cdisc_vs.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/check_spec.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/check_study.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/columns.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/conformance.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/decode_column.html</loc></url>
@@ -43,7 +44,9 @@
 <url><loc>https://vthanik.github.io/artoo/reference/read_rds.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_spec.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_xpt.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/repair_spec.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/set_meta.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/set_type.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/spec_codelists.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/spec_comments.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/spec_datasets.html</loc></url>

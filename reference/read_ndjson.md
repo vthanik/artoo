@@ -12,7 +12,7 @@ with `format = "ndjson"`.
 ## Usage
 
 ``` r
-read_ndjson(path, col_select = NULL, n_max = Inf)
+read_ndjson(path, col_select = NULL, n_max = Inf, encoding = NULL)
 ```
 
 ## Arguments
@@ -39,6 +39,14 @@ read_ndjson(path, col_select = NULL, n_max = Inf)
   *Maximum records to read.* `<numeric(1)>: default Inf`. Caps the row
   count; the returned `artoo_meta` reports the rows actually read. xpt
   v8 bounds the disk read; the other formats cap after decode.
+
+- encoding:
+
+  *Source charset of the file bytes.* `<character(1)> | NULL`. `NULL`
+  (default) reads UTF-8, as Dataset-JSON requires. Pass an IANA or SAS
+  charset name (e.g. `"windows-1252"`) only to read a non-conformant
+  file a producer wrote in that charset; each line is transcoded to
+  UTF-8 on read, preserving the bounded `n_max` streaming.
 
 ## Value
 
