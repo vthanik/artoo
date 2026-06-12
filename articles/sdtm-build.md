@@ -158,8 +158,8 @@ members(json)
 ```
 
     <artoo_members> 1 dataset
-    file                  member  label         records  variables  format
-    file200e3cfa437.json  DM      Demographics  60       15         json
+    file                   member  label         records  variables  format
+    file1fce5d6fd321.json  DM      Demographics  60       15         json
 
 ## Where to next
 

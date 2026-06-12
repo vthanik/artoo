@@ -296,6 +296,16 @@ no backward compatibility is kept with the vport surface.
 
 ### Fixes
 
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  no longer silently drops foreign columns when writing a Pinnacle 21
+  workbook. The reader already retains columns it does not map to the
+  P21 vocabulary (they ride along as character columns), but the writer
+  previously projected only the mapped columns and dropped the rest; it
+  now re-emits foreign columns verbatim, so an xlsx round-trip keeps
+  user columns. Canonical columns with no P21 header (`itemoid`,
+  `target_data_type`, `key_sequence`) stay unemitted and survive through
+  the lossless native JSON, as before.
+
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   now coerces a `factor` column through its labels, never its integer
   level codes. A factor of numeric labels declared `integer` or `float`

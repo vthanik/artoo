@@ -60,6 +60,10 @@ in the Define-XML / ODM vocabulary the workbook expects: a character
 variable is `text` (not the Dataset-JSON `string`), and `decimal` /
 `double` collapse to `float`, `boolean` / `URI` to `text`.
 
+Columns the P21 vocabulary does not model are not lost: a foreign column
+carried on a slot is re-emitted verbatim under its own header, so an
+xlsx round-trip keeps user columns.
+
 **Note:** fields with no P21 column (`itemoid`, `target_data_type`,
 per-variable `key_sequence`) do not survive an xlsx round-trip; persist
 to JSON when you need the spec back exactly. The `Data Type` re-encoding

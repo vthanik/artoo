@@ -104,6 +104,9 @@ Attribute/Value pairs (<code>StudyName</code>, <code>StudyDescription</code>,
 ODM vocabulary the workbook expects: a character variable is <code>text</code>
 (not the Dataset-JSON <code>string</code>), and <code>decimal</code> / <code>double</code> collapse to
 <code>float</code>, <code>boolean</code> / <code>URI</code> to <code>text</code>.</p>
+<p>Columns the P21 vocabulary does not model are not lost: a foreign column
+carried on a slot is re-emitted verbatim under its own header, so an xlsx
+round-trip keeps user columns.</p>
 <p><strong>Note:</strong> fields with no P21 column (<code>itemoid</code>, <code>target_data_type</code>,
 per-variable <code>key_sequence</code>) do not survive an xlsx round-trip;
 persist to JSON when you need the spec back exactly. The <code>Data Type</code>
