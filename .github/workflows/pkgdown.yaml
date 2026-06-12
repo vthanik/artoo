@@ -63,6 +63,11 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          # Full replace: the site is regenerated in docs/ on every build, so
+          # nothing on gh-pages should persist across builds. clean: false left
+          # renamed or removed pages orphaned (e.g. a renamed vignette's stale
+          # HTML lingering, unlinked). build_site_github_pages() writes its own
+          # .nojekyll into docs/, and there is no CNAME to preserve.
+          clean: true
           branch: gh-pages
           folder: docs
