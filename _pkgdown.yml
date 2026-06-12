@@ -155,7 +155,7 @@ reference:
 
 articles:
 - title: Task guides
-  navbar: Task guides
+  navbar: ~
   contents:
   - articles/adam-build
   - articles/sdtm-build
