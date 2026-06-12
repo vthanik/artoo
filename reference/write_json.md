@@ -10,7 +10,13 @@ with `format = "json"`.
 ## Usage
 
 ``` r
-write_json(x, path, created = NULL, strict = FALSE)
+write_json(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+)
 ```
 
 ## Arguments
@@ -25,6 +31,19 @@ write_json(x, path, created = NULL, strict = FALSE)
 - path:
 
   *Destination `.json` path.* `<character(1)>: required`.
+
+- on_invalid:
+
+  *Policy for values that are not valid UTF-8.*
+  `<character(1)>: default "error"`. One of `"error"` (abort with
+  `artoo_error_codec`, naming the offenders with their invalid bytes
+  hex-escaped), `"replace"` (substitute `?` and warn with
+  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). The
+  same policy vocabulary as
+  [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md);
+  text correctly read through artoo is always valid UTF-8, so this only
+  fires on bytes that entered the frame through a mis-declared source
+  encoding.
 
 - created:
 
@@ -93,10 +112,40 @@ write_json(adsl, path)
 
 # ---- Example 2: a frozen timestamp for reproducible bytes ----
 #
-# Fixing `created` makes two writes byte-identical (DM is SDTM, so it
-# conforms against the bundled sdtm_spec).
+# Fixing `created` makes two writes byte-identical; the columns() pane on
+# the written file shows the full metadata the file carries (DM is SDTM,
+# so it conforms against the bundled sdtm_spec).
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> Scaffolded 1 variable: `BRTHDTC`
 path2 <- tempfile(fileext = ".json")
 write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
+columns(path2)
+#> <artoo_columns> DM -- 26 variables, 60 obs
+#> #   Variable  Type  Len  Format  Informat  Label                              Key
+#> 1   STUDYID   Char  7                      Study Identifier                   1
+#> 2   DOMAIN    Char  2                      Domain Abbreviation
+#> 3   USUBJID   Char  14                     Unique Subject Identifier          2
+#> 4   SUBJID    Char  6                      Subject Identifier for the Study
+#> 5   RFSTDTC   Char                         Subject Reference Start Date/Time
+#> 6   RFENDTC   Char                         Subject Reference End Date/Time
+#> 7   SITEID    Char  3                      Study Site Identifier
+#> 8   BRTHDTC   Char                         Date/Time of Birth
+#> 9   AGE       Num   2                      Age
+#> 10  AGEU      Char  5                      Age Units
+#> 11  SEX       Char  16                     Sex
+#> 12  RACE      Char  41                     Race
+#> 13  ETHNIC    Char  22                     Ethnicity
+#> 14  ARMCD     Char  8                      Planned Arm Code
+#> 15  ARM       Char  20                     Description of Planned Arm
+#> 16  COUNTRY   Char  3                      Country
+#> 17  RFXSTDTC  Char  10
+#> 18  RFXENDTC  Char  10
+#> 19  RFICDTC   Char  1
+#> 20  RFPENDTC  Char  16
+#> 21  DTHDTC    Char  10
+#> 22  DTHFL     Char  1
+#> 23  ACTARMCD  Char  8
+#> 24  ACTARM    Char  20
+#> 25  DMDTC     Char  10
+#> 26  DMDY      Num   8
 ```

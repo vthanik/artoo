@@ -267,6 +267,16 @@ archived is what you analysed.
 
 ## Where to next
 
+- The task guides: [an end-to-end ADaM
+  build](https://vthanik.github.io/artoo/articles/articles/adam-build.md),
+  [any-to-any
+  conversion](https://vthanik.github.io/artoo/articles/articles/convert.md),
+  [dates, times, and
+  `--DTC`](https://vthanik.github.io/artoo/articles/articles/dates.md),
+  [validation &
+  qualification](https://vthanik.github.io/artoo/articles/articles/validation.md),
+  and [common
+  errors](https://vthanik.github.io/artoo/articles/articles/errors.md).
 - [`?apply_spec`](https://vthanik.github.io/artoo/reference/apply_spec.md),
   [`?check_spec`](https://vthanik.github.io/artoo/reference/check_spec.md),
   [`?decode_column`](https://vthanik.github.io/artoo/reference/decode_column.md)

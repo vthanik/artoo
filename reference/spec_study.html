@@ -27,6 +27,13 @@ artoo_spec()) plus any other study-scoped fields a source provides
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -73,7 +80,11 @@ table; an unknown field aborts with <code>artoo_error_input</code>.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><em>The study data frame</em>, or the value of one <code>field</code>.</p>
+    <p><em>The study data frame</em> (one row), or the value of one <code>field</code>.
+The canonical fields are <code>study_name</code>, <code>study_description</code>, and
+<code>protocol_name</code> — every source spelling is canonicalised to these by
+<code><a href="artoo_spec.html">artoo_spec()</a></code> — plus any other field the source carried verbatim
+(e.g. <code>define_version</code> from a Define-XML read).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

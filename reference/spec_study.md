@@ -30,7 +30,12 @@ spec_study(spec, field = NULL)
 
 ## Value
 
-*The study data frame*, or the value of one `field`.
+*The study data frame* (one row), or the value of one `field`. The
+canonical fields are `study_name`, `study_description`, and
+`protocol_name` — every source spelling is canonicalised to these by
+[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
+— plus any other field the source carried verbatim (e.g.
+`define_version` from a Define-XML read).
 
 ## See also
 

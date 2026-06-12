@@ -12,7 +12,13 @@ package.
 ## Usage
 
 ``` r
-write_parquet(x, path, encoding = NULL, compression = "snappy")
+write_parquet(
+  x,
+  path,
+  encoding = NULL,
+  on_invalid = c("error", "replace", "ignore"),
+  compression = "snappy"
+)
 ```
 
 ## Arguments
@@ -41,6 +47,16 @@ write_parquet(x, path, encoding = NULL, compression = "snappy")
   **Tip:** any SAS or IANA spelling listed by
   [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
   is accepted.
+
+- on_invalid:
+
+  *Policy for values that are not valid UTF-8.*
+  `<character(1)>: default "error"`. One of `"error"` (abort with
+  `artoo_error_codec`), `"replace"` (substitute `?` and warn with
+  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). See
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
+  for when this fires; parquet STRING bytes are UTF-8 by spec, exactly
+  like Dataset-JSON.
 
 - compression:
 

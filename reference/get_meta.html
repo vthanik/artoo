@@ -27,6 +27,13 @@ read half of the lossless round-trip."><meta property="og:image" content="https:
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -71,9 +78,15 @@ Typically the output of <code><a href="apply_spec.html">apply_spec()</a></code> 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><em>A <code>&lt;artoo_meta&gt;</code></em> with dataset-level (<code>@dataset</code>) and per-column
-(<code>@columns</code>) CDISC attributes. Pass it to <code><a href="set_meta.html">set_meta()</a></code> to re-attach, or
-inspect it directly.</p>
+    <p><em>A <code>&lt;artoo_meta&gt;</code></em> with two properties. <code>@dataset</code> is a named
+list of dataset-level attributes: <code>itemGroupOID</code>, <code>name</code>, <code>label</code>,
+<code>records</code>, <code>studyOID</code>, <code>metaDataVersionOID</code>, <code>encoding</code>, and <code>keys</code>.
+<code>@columns</code> is a named list with one entry per variable, each carrying
+<code>itemOID</code>, <code>name</code>, <code>label</code>, <code>dataType</code>, <code>targetDataType</code>, <code>length</code>,
+<code>displayFormat</code>, <code>informat</code>, <code>keySequence</code>, <code>codelist</code>,
+<code>significantDigits</code>, and <code>origin</code> (absent values are <code>NULL</code>). Pass it
+to <code><a href="set_meta.html">set_meta()</a></code> to re-attach, or index it directly
+(<code>meta@columns$AGE$label</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

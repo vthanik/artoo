@@ -54,6 +54,26 @@ no backward compatibility is kept with the vport surface.
 ### Conform
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  gained `extra = c("keep", "drop")`: `"keep"` (default) preserves
+  today’s never-drop behavior; `"drop"` trims the output to exactly the
+  spec’s columns — the `metatools::drop_unspec_vars()` migration shape.
+  The drop is never silent: it is announced (`artoo_message_apply`) even
+  under `conformance = "off"`, the `extra_variable` finding remains the
+  audit trail, and a `conformance = "abort"` failure fires before any
+  drop.
+
+- [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
+  data-protection conditions now carry their evidence as data, not just
+  prose: the lossy-coercion abort (`artoo_error_type`) and the
+  NA-introduction warning (`artoo_warning_coercion`) attach
+  `cnd$variables` — a data frame of `variable`, `data_type`, `n`,
+  `reason` — and the `conformance = "abort"` failure attaches the
+  complete findings frame as `cnd$findings`, so a pipeline collects
+  every mismatch in one
+  [`tryCatch()`](https://rdrr.io/r/base/conditions.html) pass instead of
+  parsing messages.
+
+- [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   was reduced to five load-bearing arguments:
   `apply_spec(x, spec, dataset, conformance =, na_position =)`. The
   pipeline is fixed — scaffold, coerce, order, sort, stamp — with no
@@ -64,11 +84,13 @@ no backward compatibility is kept with the vport surface.
   controls are passed to
   [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
   directly.
+
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   never drops a column: a variable the spec does not declare survives
   the pipeline, is reported by the `extra_variable` finding, gets a
   class-inferred metadata entry at stamp time, and round-trips every
   codec.
+
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   always aborts on lossy coercion (`artoo_error_type`): integer
   truncation of fractional values and 32-bit overflow have no
@@ -84,6 +106,22 @@ no backward compatibility is kept with the vport surface.
   own maps, with foreign keys repeated on every row and the spec’s
   standard on the Datasets sheet. Define-XML to P21 is one composition:
   `read_spec("define.xml") |> write_spec("spec.xlsx")`.
+
+### Dataset I/O
+
+- [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  and
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)
+  gained the `on_invalid = c("error", "replace", "ignore")` policy
+  [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  already had, closing the asymmetry where one invalid byte made a
+  dataset “submittable as XPT but not as Dataset-JSON”. Invalid UTF-8
+  now aborts with `artoo_error_codec` naming the offenders hex-escaped
+  (previously an uncontrolled
+  [`utf8::utf8_normalize()`](https://krlmlr.github.io/r-utf8/reference/utf8_normalize.html)
+  error), or is replaced/dropped on request; the gate lives in the one
+  shared transcode helper, so all four writers rule identically.
 
 ### Inspect
 
@@ -127,7 +165,21 @@ no backward compatibility is kept with the vport surface.
   `apply_spec(conformance = "abort")` — gated at build time and at test
   time.
 
+### Docs
+
+- Five task-oriented articles joined the site (web-only, not in the
+  package tarball): an end-to-end ADaM build, any-to-any conversion,
+  dates/times/`--DTC` carriage, validation & qualification, and a
+  common-errors page that triggers every `artoo_error_<kind>` live with
+  its fix.
+
 ### Fixes
+
+- Inferred xpt storage lengths for character columns without metadata
+  now count bytes, not characters: an XPORT `LENGTH` is a byte width, so
+  multibyte UTF-8 values were undercounted (and would truncate on
+  write), and `nchar(type = "chars")` failed outright on invalid bytes
+  before the writers’ `on_invalid` gate could rule.
 
 - [`read_xpt()`](https://vthanik.github.io/artoo/reference/read_xpt.md)
   no longer silently drops a small second member hiding entirely inside

@@ -16,7 +16,8 @@ apply_spec(
   spec,
   dataset,
   conformance = c("warn", "abort", "off"),
-  na_position = c("first", "last")
+  na_position = c("first", "last"),
+  extra = c("keep", "drop")
 )
 ```
 
@@ -50,8 +51,14 @@ apply_spec(
 
   - `"off"` skip the check entirely.
 
-  **Note:** this governs only the *findings* disposition; pipeline
-  errors (an unknown dataset, lossy coercion) abort regardless.
+  **Note:** this governs only the *findings* disposition — what is
+  *reported*. Pipeline errors are a different category and abort under
+  every setting, including `"off"`: an unknown dataset, and above all
+  lossy coercion (`artoo_error_type`), which no `conformance` value
+  bypasses. If the abort names variables whose spec dataType is
+  `integer` but whose data carries fractions, the fix is the spec
+  (retype to `"float"`/`"decimal"`), not this argument; the condition's
+  `$variables` frame lists every offender.
 
 - na_position:
 
@@ -61,6 +68,22 @@ apply_spec(
   `"last"` matches R's [`order()`](https://rdrr.io/r/base/order.html)
   and the pandas/Polars default. Both are lossless; pick the one your
   comparison target uses.
+
+- extra:
+
+  *What happens to undeclared columns.* `<character(1)>`. An "extra" is
+  a column of `x` the spec does not declare — typically a derivation
+  temporary. One of:
+
+  - `"keep"` (default) extras ride along after the declared columns,
+    reported by the `extra_variable` finding.
+
+  - `"drop"` the returned frame carries exactly the spec's columns; the
+    drop is announced (`artoo_message_apply`) and the `extra_variable`
+    finding still reports what was removed.
+
+  **Interaction:** under `conformance = "abort"` an error-severity
+  finding aborts *before* any drop — the trim never masks a failure.
 
 ## Value
 
@@ -77,17 +100,30 @@ spec variables (typed `NA`), coerce each column to its CDISC dataType,
 reorder columns to the spec, sort rows by the dataset keys, then stamp
 the metadata.
 
-**Never drops a column.** A column the spec does not declare survives
-the pipeline (ordered after the declared ones), is *reported* by the
-`extra_variable` conformance finding, and round-trips through every
-`write_*()` codec with metadata inferred from its R class. Membership is
-reported, not enforced by destruction.
+**Extras are kept by default.** A column the spec does not declare
+survives the pipeline (ordered after the declared ones), is *reported*
+by the `extra_variable` conformance finding, and round-trips through
+every `write_*()` codec with metadata inferred from its R class —
+membership reported, never enforced by silent destruction.
+`extra = "drop"` opts in to trim-to-spec (the
+`metatools::drop_unspec_vars()` migration shape): the undeclared columns
+are removed *after* the findings are computed, so the `extra_variable`
+finding remains the audit trail of what was dropped, and the drop itself
+is always announced (`artoo_message_apply`) — even under
+`conformance = "off"`.
 
 **Lossless or abort.** A coercion that would damage values — an
 `integer` dataType truncating fractions or overflowing R's 32-bit range
 — aborts with `artoo_error_type` before any value is touched. There is
 no opt-out: fix the spec (dataType `"float"` or `"decimal"` keeps
-fractions) rather than accept silent damage.
+fractions) rather than accept silent damage. The condition carries the
+offending rows as data: `cnd$variables` is a data frame with columns
+`variable`, `data_type`, `n`, and `reason` (`"truncated"` /
+`"overflowed"`), so a pipeline can collect every mismatch in one
+`tryCatch(..., artoo_error_type = function(cnd) cnd$variables)` pass.
+The NA-introduction warning (`artoo_warning_coercion`) carries the same
+frame with `reason = "na_introduced"`, and a `conformance = "abort"`
+failure carries the complete findings frame as `cnd$findings`.
 
 **Values are never translated.** Coded variables keep their submission
 values (`SEX` stays `"M"`); codelist translation is its own verb,
@@ -124,11 +160,12 @@ adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 get_meta(adsl)@dataset$records
 #> [1] 60
 
-# ---- Example 2: an undeclared column survives, and is reported ----
+# ---- Example 2: extras are kept and reported, or dropped on request ----
 #
-# apply_spec() never drops data: a column outside the spec rides along
-# (reported by the extra_variable finding) and still writes losslessly.
-# DM is SDTM, so it conforms against the bundled sdtm_spec.
+# By default a column outside the spec rides along (reported by the
+# extra_variable finding) and still writes losslessly; extra = "drop"
+# trims to the spec, announced and still reported. DM is SDTM, so it
+# conforms against the bundled sdtm_spec.
 raw <- cdisc_dm
 raw$DERIVED <- seq_len(nrow(raw))
 dm <- apply_spec(raw, sdtm_spec, "DM")
@@ -147,4 +184,11 @@ findings[findings$check == "extra_variable", c("variable", "message")]
 #> 9     DMDTC    Column 'DMDTC' is not declared in the spec.
 #> 10     DMDY     Column 'DMDY' is not declared in the spec.
 #> 11  DERIVED  Column 'DERIVED' is not declared in the spec.
+trimmed <- apply_spec(raw, sdtm_spec, "DM", extra = "drop")
+#> Scaffolded 1 variable: `BRTHDTC`
+#> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,
+#> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,
+#> and `DERIVED`
+"DERIVED" %in% names(trimmed)
+#> [1] FALSE
 ```

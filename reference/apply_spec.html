@@ -29,6 +29,13 @@ mutated; if any step aborts, the call leaves your data untouched."><meta propert
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -62,7 +69,8 @@ mutated; if any step aborts, the call leaves your data untouched.</p>
 <span>  <span class="va">spec</span>,</span>
 <span>  <span class="va">dataset</span>,</span>
 <span>  conformance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"abort"</span>, <span class="st">"off"</span><span class="op">)</span>,</span>
-<span>  na_position <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"first"</span>, <span class="st">"last"</span><span class="op">)</span></span>
+<span>  na_position <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"first"</span>, <span class="st">"last"</span><span class="op">)</span>,</span>
+<span>  extra <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"drop"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -89,8 +97,14 @@ them with <code><a href="conformance.html">conformance()</a></code>), warn on an
 <li><p><code>"abort"</code> abort with <code>artoo_error_conformance</code> on any error-severity
 finding.</p></li>
 <li><p><code>"off"</code> skip the check entirely.</p></li>
-</ul><p><strong>Note:</strong> this governs only the <em>findings</em> disposition; pipeline
-errors (an unknown dataset, lossy coercion) abort regardless.</p></dd>
+</ul><p><strong>Note:</strong> this governs only the <em>findings</em> disposition — what is
+<em>reported</em>. Pipeline errors are a different category and abort under
+every setting, including <code>"off"</code>: an unknown dataset, and above all
+lossy coercion (<code>artoo_error_type</code>), which no <code>conformance</code> value
+bypasses. If the abort names variables whose spec dataType is
+<code>integer</code> but whose data carries fractions, the fix is the spec
+(retype to <code>"float"</code>/<code>"decimal"</code>), not this argument; the condition's
+<code>$variables</code> frame lists every offender.</p></dd>
 
 
 <dt id="arg-na-position">na_position<a class="anchor" aria-label="anchor" href="#arg-na-position"></a></dt>
@@ -99,6 +113,18 @@ of <code>"first"</code> (default) or <code>"last"</code>. <code>"first"</code> m
 (and the FDA submission convention) by ordering missings before present
 values; <code>"last"</code> matches R's <code><a href="https://rdrr.io/r/base/order.html" class="external-link">order()</a></code> and the pandas/Polars default.
 Both are lossless; pick the one your comparison target uses.</p></dd>
+
+
+<dt id="arg-extra">extra<a class="anchor" aria-label="anchor" href="#arg-extra"></a></dt>
+<dd><p><em>What happens to undeclared columns.</em> <code>&lt;character(1)&gt;</code>.
+An "extra" is a column of <code>x</code> the spec does not declare — typically a
+derivation temporary. One of:</p><ul><li><p><code>"keep"</code> (default) extras ride along after the declared columns,
+reported by the <code>extra_variable</code> finding.</p></li>
+<li><p><code>"drop"</code> the returned frame carries exactly the spec's columns;
+the drop is announced (<code>artoo_message_apply</code>) and the
+<code>extra_variable</code> finding still reports what was removed.</p></li>
+</ul><p><strong>Interaction:</strong> under <code>conformance = "abort"</code> an error-severity
+finding aborts <em>before</em> any drop — the trim never masks a failure.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -113,16 +139,29 @@ Both are lossless; pick the one your comparison target uses.</p></dd>
 spec variables (typed <code>NA</code>), coerce each column to its CDISC dataType,
 reorder columns to the spec, sort rows by the dataset keys, then stamp
 the metadata.</p>
-<p><strong>Never drops a column.</strong> A column the spec does not declare survives the
-pipeline (ordered after the declared ones), is <em>reported</em> by the
-<code>extra_variable</code> conformance finding, and round-trips through every
-<code>write_*()</code> codec with metadata inferred from its R class. Membership is
-reported, not enforced by destruction.</p>
+<p><strong>Extras are kept by default.</strong> A column the spec does not declare
+survives the pipeline (ordered after the declared ones), is <em>reported</em>
+by the <code>extra_variable</code> conformance finding, and round-trips through
+every <code>write_*()</code> codec with metadata inferred from its R class —
+membership reported, never enforced by silent destruction.
+<code>extra = "drop"</code> opts in to trim-to-spec (the
+<code>metatools::drop_unspec_vars()</code> migration shape): the undeclared
+columns are removed <em>after</em> the findings are computed, so the
+<code>extra_variable</code> finding remains the audit trail of what was dropped,
+and the drop itself is always announced (<code>artoo_message_apply</code>) — even
+under <code>conformance = "off"</code>.</p>
 <p><strong>Lossless or abort.</strong> A coercion that would damage values — an
 <code>integer</code> dataType truncating fractions or overflowing R's 32-bit range
 — aborts with <code>artoo_error_type</code> before any value is touched. There is
 no opt-out: fix the spec (dataType <code>"float"</code> or <code>"decimal"</code> keeps
-fractions) rather than accept silent damage.</p>
+fractions) rather than accept silent damage. The condition carries the
+offending rows as data: <code>cnd$variables</code> is a data frame with columns
+<code>variable</code>, <code>data_type</code>, <code>n</code>, and <code>reason</code> (<code>"truncated"</code> /
+<code>"overflowed"</code>), so a pipeline can collect every mismatch in one
+<code>tryCatch(..., artoo_error_type = function(cnd) cnd$variables)</code> pass.
+The NA-introduction warning (<code>artoo_warning_coercion</code>) carries the same
+frame with <code>reason = "na_introduced"</code>, and a <code>conformance = "abort"</code>
+failure carries the complete findings frame as <code>cnd$findings</code>.</p>
 <p><strong>Values are never translated.</strong> Coded variables keep their submission
 values (<code>SEX</code> stays <code>"M"</code>); codelist translation is its own verb,
 <code><a href="decode_column.html">decode_column()</a></code>.</p>
@@ -148,11 +187,12 @@ back.</p>
 <span class="r-in"><span><span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span><span class="op">@</span><span class="va">dataset</span><span class="op">$</span><span class="va">records</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 60</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># ---- Example 2: an undeclared column survives, and is reported ----</span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 2: extras are kept and reported, or dropped on request ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
-<span class="r-in"><span><span class="co"># apply_spec() never drops data: a column outside the spec rides along</span></span></span>
-<span class="r-in"><span><span class="co"># (reported by the extra_variable finding) and still writes losslessly.</span></span></span>
-<span class="r-in"><span><span class="co"># DM is SDTM, so it conforms against the bundled sdtm_spec.</span></span></span>
+<span class="r-in"><span><span class="co"># By default a column outside the spec rides along (reported by the</span></span></span>
+<span class="r-in"><span><span class="co"># extra_variable finding) and still writes losslessly; extra = "drop"</span></span></span>
+<span class="r-in"><span><span class="co"># trims to the spec, announced and still reported. DM is SDTM, so it</span></span></span>
+<span class="r-in"><span><span class="co"># conforms against the bundled sdtm_spec.</span></span></span>
 <span class="r-in"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_dm</span></span></span>
 <span class="r-in"><span><span class="va">raw</span><span class="op">$</span><span class="va">DERIVED</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span><span class="op">)</span></span></span>
@@ -171,6 +211,13 @@ back.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 9     DMDTC    Column 'DMDTC' is not declared in the spec.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 10     DMDY     Column 'DMDY' is not declared in the spec.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 11  DERIVED  Column 'DERIVED' is not declared in the spec.</span>
+<span class="r-in"><span><span class="va">trimmed</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, extra <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable: `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> and `DERIVED`</span>
+<span class="r-in"><span><span class="st">"DERIVED"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">trimmed</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -65,8 +65,9 @@ decode_column(
 - no_match:
 
   *Policy for values absent from the codelist.* `<character(1)>`. One of
-  `"error"` (default), `"keep"` (carry the source value through), or
-  `"na"`.
+  `"error"` (default; abort with `artoo_error_codelist`, naming the
+  unmatched values and the codelist), `"keep"` (carry the source value
+  through), or `"na"`.
 
 - trim:
 

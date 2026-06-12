@@ -52,8 +52,13 @@ write_xpt(
 - on_invalid:
 
   *Policy for values not representable in `encoding`.*
-  `<character(1)>: default "error"`. One of `"error"`, `"replace"`
-  (substitute `?` and warn), or `"ignore"` (drop them).
+  `<character(1)>: default "error"`. One of `"error"` (abort with
+  `artoo_error_codec`, naming the offenders), `"replace"` (substitute
+  `?` and warn with `artoo_warning_encoding`), or `"ignore"` (drop
+  them). The same policy vocabulary as the UTF-8 writers
+  ([`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)).
 
 - created:
 
@@ -111,9 +116,13 @@ write_xpt(adsl, path)
 # ---- Example 2: v8 for long names, with a frozen timestamp ----
 #
 # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
-# reproducible. DM is SDTM, so it conforms against the bundled sdtm_spec.
+# reproducible. Reading it back shows the labels, types, and record count
+# survived the transport. DM is SDTM, so it conforms against the bundled
+# sdtm_spec.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> Scaffolded 1 variable: `BRTHDTC`
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
+get_meta(read_xpt(path8))@dataset$records
+#> [1] 60
 ```

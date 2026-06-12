@@ -27,6 +27,13 @@ write_dataset() with format = "json".'><meta property="og:image" content="https:
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -54,7 +61,13 @@ workflow (spec -&gt; apply_spec -&gt; write_json); a thin wrapper over
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">write_json</span><span class="op">(</span><span class="va">x</span>, <span class="va">path</span>, created <span class="op">=</span> <span class="cn">NULL</span>, strict <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">write_json</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">path</span>,</span>
+<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
+<span>  created <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  strict <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -68,6 +81,17 @@ output of <code><a href="apply_spec.html">apply_spec()</a></code>, carrying <cod
 
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
 <dd><p><em>Destination <code>.json</code> path.</em> <code>&lt;character(1)&gt;: required</code>.</p></dd>
+
+
+<dt id="arg-on-invalid">on_invalid<a class="anchor" aria-label="anchor" href="#arg-on-invalid"></a></dt>
+<dd><p><em>Policy for values that are not valid UTF-8.</em>
+<code>&lt;character(1)&gt;: default "error"</code>. One of <code>"error"</code> (abort with
+<code>artoo_error_codec</code>, naming the offenders with their invalid bytes
+hex-escaped), <code>"replace"</code> (substitute <code>?</code> and warn with
+<code>artoo_warning_encoding</code>), or <code>"ignore"</code> (drop the invalid bytes).
+The same policy vocabulary as <code><a href="write_xpt.html">write_xpt()</a></code>; text correctly read
+through artoo is always valid UTF-8, so this only fires on bytes
+that entered the frame through a mis-declared source encoding.</p></dd>
 
 
 <dt id="arg-created">created<a class="anchor" aria-label="anchor" href="#arg-created"></a></dt>
@@ -127,12 +151,42 @@ dispatcher.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: a frozen timestamp for reproducible bytes ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
-<span class="r-in"><span><span class="co"># Fixing `created` makes two writes byte-identical (DM is SDTM, so it</span></span></span>
-<span class="r-in"><span><span class="co"># conforms against the bundled sdtm_spec).</span></span></span>
+<span class="r-in"><span><span class="co"># Fixing `created` makes two writes byte-identical; the columns() pane on</span></span></span>
+<span class="r-in"><span><span class="co"># the written file shows the full metadata the file carries (DM is SDTM,</span></span></span>
+<span class="r-in"><span><span class="co"># so it conforms against the bundled sdtm_spec).</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable: `BRTHDTC`</span>
 <span class="r-in"><span><span class="va">path2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_json</span><span class="op">(</span><span class="va">dm</span>, <span class="va">path2</span>, created <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2020-01-01"</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="columns.html">columns</a></span><span class="op">(</span><span class="va">path2</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_columns&gt; DM -- 26 variables, 60 obs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #   Variable  Type  Len  Format  Informat  Label                              Key</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   STUDYID   Char  7                      Study Identifier                   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   DOMAIN    Char  2                      Domain Abbreviation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   USUBJID   Char  14                     Unique Subject Identifier          2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   SUBJID    Char  6                      Subject Identifier for the Study</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   RFSTDTC   Char                         Subject Reference Start Date/Time</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   RFENDTC   Char                         Subject Reference End Date/Time</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   SITEID    Char  3                      Study Site Identifier</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   BRTHDTC   Char                         Date/Time of Birth</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   AGE       Num   2                      Age</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  AGEU      Char  5                      Age Units</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  SEX       Char  16                     Sex</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  RACE      Char  41                     Race</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  ETHNIC    Char  22                     Ethnicity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  ARMCD     Char  8                      Planned Arm Code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15  ARM       Char  20                     Description of Planned Arm</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16  COUNTRY   Char  3                      Country</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17  RFXSTDTC  Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18  RFXENDTC  Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19  RFICDTC   Char  1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20  RFPENDTC  Char  16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21  DTHDTC    Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22  DTHFL     Char  1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23  ACTARMCD  Char  8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24  ACTARM    Char  20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25  DMDTC     Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26  DMDY      Num   8</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

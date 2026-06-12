@@ -29,6 +29,13 @@ nanoparquet package."><meta property="og:image" content="https://vthanik.github.
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,7 +64,13 @@ workflow (spec -&gt; apply_spec -&gt; write_parquet); a thin wrapper over
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">write_parquet</span><span class="op">(</span><span class="va">x</span>, <span class="va">path</span>, encoding <span class="op">=</span> <span class="cn">NULL</span>, compression <span class="op">=</span> <span class="st">"snappy"</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">write_parquet</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">path</span>,</span>
+<span>  encoding <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
+<span>  compression <span class="op">=</span> <span class="st">"snappy"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -81,6 +94,15 @@ UTF-8 by spec); <code>encoding</code> only records the data's original charset i
 <code>NULL</code> (default) leaves the recorded encoding untouched.</p>
 <p><strong>Tip:</strong> any SAS or IANA spelling listed by <code><a href="artoo_encodings.html">artoo_encodings()</a></code> is
 accepted.</p></dd>
+
+
+<dt id="arg-on-invalid">on_invalid<a class="anchor" aria-label="anchor" href="#arg-on-invalid"></a></dt>
+<dd><p><em>Policy for values that are not valid UTF-8.</em>
+<code>&lt;character(1)&gt;: default "error"</code>. One of <code>"error"</code> (abort with
+<code>artoo_error_codec</code>), <code>"replace"</code> (substitute <code>?</code> and warn with
+<code>artoo_warning_encoding</code>), or <code>"ignore"</code> (drop the invalid bytes).
+See <code><a href="write_json.html">write_json()</a></code> for when this fires; parquet STRING bytes are
+UTF-8 by spec, exactly like Dataset-JSON.</p></dd>
 
 
 <dt id="arg-compression">compression<a class="anchor" aria-label="anchor" href="#arg-compression"></a></dt>

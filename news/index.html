@@ -19,6 +19,13 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
+    <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
+    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+    <li><a class="dropdown-item" href="../articles/errors.html">Common errors and how to fix them</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -51,17 +58,21 @@
 </ul></div>
 <div class="section level3">
 <h3 id="conform-0-0-0-9000">Conform<a class="anchor" aria-label="anchor" href="#conform-0-0-0-9000"></a></h3>
-<ul><li>
-<code><a href="../reference/apply_spec.html">apply_spec()</a></code> was reduced to five load-bearing arguments: <code>apply_spec(x, spec, dataset, conformance =, na_position =)</code>. The pipeline is fixed — scaffold, coerce, order, sort, stamp — with no subsetting knob (<code>steps</code>, <code>profile</code> dropped); codelist translation lives in <code><a href="../reference/decode_column.html">decode_column()</a></code> (<code>decode</code>, <code>no_match</code>, <code>trim</code>, <code>ignore_case</code> dropped); <code>checks</code> controls are passed to <code><a href="../reference/check_spec.html">check_spec()</a></code> directly.</li>
-<li>
-<code><a href="../reference/apply_spec.html">apply_spec()</a></code> never drops a column: a variable the spec does not declare survives the pipeline, is reported by the <code>extra_variable</code> finding, gets a class-inferred metadata entry at stamp time, and round-trips every codec.</li>
-<li>
-<code><a href="../reference/apply_spec.html">apply_spec()</a></code> always aborts on lossy coercion (<code>artoo_error_type</code>): integer truncation of fractional values and 32-bit overflow have no warn-and-continue opt-out (<code>on_lossy</code> dropped); fix the spec’s dataType instead.</li>
+<ul><li><p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> gained <code>extra = c("keep", "drop")</code>: <code>"keep"</code> (default) preserves today’s never-drop behavior; <code>"drop"</code> trims the output to exactly the spec’s columns — the <code>metatools::drop_unspec_vars()</code> migration shape. The drop is never silent: it is announced (<code>artoo_message_apply</code>) even under <code>conformance = "off"</code>, the <code>extra_variable</code> finding remains the audit trail, and a <code>conformance = "abort"</code> failure fires before any drop.</p></li>
+<li><p><code><a href="../reference/apply_spec.html">apply_spec()</a></code>’s data-protection conditions now carry their evidence as data, not just prose: the lossy-coercion abort (<code>artoo_error_type</code>) and the NA-introduction warning (<code>artoo_warning_coercion</code>) attach <code>cnd$variables</code> — a data frame of <code>variable</code>, <code>data_type</code>, <code>n</code>, <code>reason</code> — and the <code>conformance = "abort"</code> failure attaches the complete findings frame as <code>cnd$findings</code>, so a pipeline collects every mismatch in one <code><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch()</a></code> pass instead of parsing messages.</p></li>
+<li><p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> was reduced to five load-bearing arguments: <code>apply_spec(x, spec, dataset, conformance =, na_position =)</code>. The pipeline is fixed — scaffold, coerce, order, sort, stamp — with no subsetting knob (<code>steps</code>, <code>profile</code> dropped); codelist translation lives in <code><a href="../reference/decode_column.html">decode_column()</a></code> (<code>decode</code>, <code>no_match</code>, <code>trim</code>, <code>ignore_case</code> dropped); <code>checks</code> controls are passed to <code><a href="../reference/check_spec.html">check_spec()</a></code> directly.</p></li>
+<li><p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> never drops a column: a variable the spec does not declare survives the pipeline, is reported by the <code>extra_variable</code> finding, gets a class-inferred metadata entry at stamp time, and round-trips every codec.</p></li>
+<li><p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> always aborts on lossy coercion (<code>artoo_error_type</code>): integer truncation of fractional values and 32-bit overflow have no warn-and-continue opt-out (<code>on_lossy</code> dropped); fix the spec’s dataType instead.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="spec-io-0-0-0-9000">Spec I/O<a class="anchor" aria-label="anchor" href="#spec-io-0-0-0-9000"></a></h3>
 <ul><li>
 <code><a href="../reference/write_spec.html">write_spec()</a></code> dispatches on the file extension: <code>.json</code> writes the lossless native format; <code>.xlsx</code> (new; <code>writexl</code> in Suggests) writes a Pinnacle 21 workbook whose sheet names and headers derive from the P21 reader’s own maps, with foreign keys repeated on every row and the spec’s standard on the Datasets sheet. Define-XML to P21 is one composition: <code>read_spec("define.xml") |&gt; write_spec("spec.xlsx")</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="dataset-io-0-0-0-9000">Dataset I/O<a class="anchor" aria-label="anchor" href="#dataset-io-0-0-0-9000"></a></h3>
+<ul><li>
+<code><a href="../reference/write_json.html">write_json()</a></code>, <code><a href="../reference/write_ndjson.html">write_ndjson()</a></code>, and <code><a href="../reference/write_parquet.html">write_parquet()</a></code> gained the <code>on_invalid = c("error", "replace", "ignore")</code> policy <code><a href="../reference/write_xpt.html">write_xpt()</a></code> already had, closing the asymmetry where one invalid byte made a dataset “submittable as XPT but not as Dataset-JSON”. Invalid UTF-8 now aborts with <code>artoo_error_codec</code> naming the offenders hex-escaped (previously an uncontrolled <code><a href="https://krlmlr.github.io/r-utf8/reference/utf8_normalize.html" class="external-link">utf8::utf8_normalize()</a></code> error), or is replaced/dropped on request; the gate lives in the one shared transcode helper, so all four writers rule identically.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="inspect-0-0-0-9000">Inspect<a class="anchor" aria-label="anchor" href="#inspect-0-0-0-9000"></a></h3>
@@ -77,9 +88,13 @@
 <li>New bundled specs <code>adam_spec</code> (ADaMIG 1.1: ADSL, ADAE) and <code>sdtm_spec</code> (SDTMIG 3.1.2: TS, DM, VS, SUPPDM), built reproducibly from the official CDISC Define-XML 2.1 release examples and shipped also as P21 workbooks under <code>inst/extdata/</code>. New demo datasets <code>cdisc_adae</code>, <code>cdisc_vs</code>, <code>cdisc_ts</code>, <code>cdisc_suppdm</code> from the PHUSE Test Data Factory. Every bundled dataset conforms to its bundled spec under <code>apply_spec(conformance = "abort")</code> — gated at build time and at test time.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="docs-0-0-0-9000">Docs<a class="anchor" aria-label="anchor" href="#docs-0-0-0-9000"></a></h3>
+<ul><li>Five task-oriented articles joined the site (web-only, not in the package tarball): an end-to-end ADaM build, any-to-any conversion, dates/times/<code>--DTC</code> carriage, validation &amp; qualification, and a common-errors page that triggers every <code>artoo_error_&lt;kind&gt;</code> live with its fix.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="fixes-0-0-0-9000">Fixes<a class="anchor" aria-label="anchor" href="#fixes-0-0-0-9000"></a></h3>
-<ul><li>
-<code><a href="../reference/read_xpt.html">read_xpt()</a></code> no longer silently drops a small second member hiding entirely inside the floored-off tail of a wide-record v5 file; the EOF-derived row count now scans the fragment’s 80-byte boundaries and raises the multi-member abort.</li>
+<ul><li><p>Inferred xpt storage lengths for character columns without metadata now count bytes, not characters: an XPORT <code>LENGTH</code> is a byte width, so multibyte UTF-8 values were undercounted (and would truncate on write), and <code>nchar(type = "chars")</code> failed outright on invalid bytes before the writers’ <code>on_invalid</code> gate could rule.</p></li>
+<li><p><code><a href="../reference/read_xpt.html">read_xpt()</a></code> no longer silently drops a small second member hiding entirely inside the floored-off tail of a wide-record v5 file; the EOF-derived row count now scans the fragment’s 80-byte boundaries and raises the multi-member abort.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="carried-over-from-the-pre-rename-development-line-0-0-0-9000">Carried over from the pre-rename development line<a class="anchor" aria-label="anchor" href="#carried-over-from-the-pre-rename-development-line-0-0-0-9000"></a></h3>

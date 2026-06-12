@@ -11,7 +11,13 @@ with `format = "ndjson"`.
 ## Usage
 
 ``` r
-write_ndjson(x, path, created = NULL, strict = FALSE)
+write_ndjson(
+  x,
+  path,
+  on_invalid = c("error", "replace", "ignore"),
+  created = NULL,
+  strict = FALSE
+)
 ```
 
 ## Arguments
@@ -27,6 +33,15 @@ write_ndjson(x, path, created = NULL, strict = FALSE)
 
   *Destination `.ndjson` path.* `<character(1)>: required`. A
   `.ndjson.gz` path writes gzip-compressed bytes.
+
+- on_invalid:
+
+  *Policy for values that are not valid UTF-8.*
+  `<character(1)>: default "error"`. One of `"error"` (abort with
+  `artoo_error_codec`), `"replace"` (substitute `?` and warn with
+  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). See
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
+  for when this fires.
 
 - created:
 
