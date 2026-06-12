@@ -117,6 +117,11 @@ archived is what you analysed.
 
 ## Where to next
 
+- The task guides: [an end-to-end ADaM build](articles/adam-build.html),
+  [any-to-any conversion](articles/convert.html),
+  [dates, times, and `--DTC`](articles/dates.html),
+  [validation & qualification](articles/validation.html), and
+  [common errors](articles/errors.html).
 - `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
 - `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
 - `?read_dataset` — generic I/O and the per-format wrappers.

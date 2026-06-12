@@ -131,6 +131,14 @@ no backward compatibility is kept with the vport surface.
   `apply_spec(conformance = "abort")` — gated at build time and at test
   time.
 
+## Docs
+
+* Five task-oriented articles joined the site (web-only, not in the
+  package tarball): an end-to-end ADaM build, any-to-any conversion,
+  dates/times/`--DTC` carriage, validation & qualification, and a
+  common-errors page that triggers every `artoo_error_<kind>` live with
+  its fix.
+
 ## Fixes
 
 * Inferred xpt storage lengths for character columns without metadata now

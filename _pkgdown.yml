@@ -156,3 +156,12 @@ articles:
   navbar: ~
   contents:
   - getting-started
+
+- title: Task guides
+  navbar: Task guides
+  contents:
+  - articles/adam-build
+  - articles/convert
+  - articles/dates
+  - articles/validation
+  - articles/errors

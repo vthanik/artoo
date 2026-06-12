@@ -1,0 +1,93 @@
+---
+title: "Any-to-any conversion"
+format: html
+---
+
+```{r}
+#| include: false
+library(artoo)
+```
+
+artoo's conversion story is one sentence: every codec reads and writes the
+same canonical metadata, so any format converts to any other without loss.
+This article shows the round trips, what "lossless" means concretely, and
+how the encoding policy keeps a single bad byte from deciding which
+formats your dataset can travel in.
+
+## 1. One metadata model, four carriers
+
+A conformed frame carries its `artoo_meta`; each writer embeds it in the
+format's own idiom (XPORT NAMESTR records, the Dataset-JSON itemGroup, a
+Parquet key-value sidecar, rds attributes):
+
+```{r}
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+xpt <- tempfile(fileext = ".xpt")
+json <- tempfile(fileext = ".json")
+parquet <- tempfile(fileext = ".parquet")
+dm |>
+  write_xpt(xpt) |>
+  write_json(json) |>
+  write_parquet(parquet)
+```
+
+Conversion is read one, write the other — and the metadata survives the
+hop:
+
+```{r}
+from_xpt <- read_xpt(xpt)
+identical(get_meta(from_xpt)@columns, get_meta(read_json(json))@columns)
+```
+
+One caveat is structural, not artoo's: XPORT v5 cannot carry
+`keySequence`, codelist references, or origin (its NAMESTR record has no
+field for them), so an `.xpt`-sourced frame shows a blank Key pane by
+design. Route through Dataset-JSON or Parquet when those must survive.
+
+## 2. Encodings: recorded, inherited, never silently transformed
+
+artoo text is always UTF-8 in memory; encodings matter only at the file
+boundary. Each reader records the source encoding in the metadata, and
+`write_*(encoding = NULL)` inherits it, so a round trip is byte-faithful.
+The name rosetta lives in `artoo_encodings()`:
+
+```{r}
+enc <- artoo_encodings()
+enc[enc$sas == "WLATIN1", ]
+```
+
+## 3. `on_invalid`: one policy, all four writers
+
+A value that cannot be represented in the target — an unencodable
+character for xpt's target charset, or bytes that are not valid UTF-8 for
+Dataset-JSON / NDJSON / Parquet — hits the same three-way policy
+everywhere: `"error"` (default), `"replace"`, or `"ignore"`. The default
+names the offenders hex-escaped:
+
+```{r}
+#| error: true
+bad <- dm
+bad$USUBJID[1] <- rawToChar(as.raw(c(0x63, 0xE9))) # a stray latin1 byte
+write_json(bad, tempfile(fileext = ".json"))
+```
+
+`"replace"` substitutes `?` and warns, so the write completes and the
+file is valid:
+
+```{r}
+#| warning: true
+fixed <- tempfile(fileext = ".json")
+write_json(bad, fixed, on_invalid = "replace")
+read_json(fixed)$USUBJID[1]
+```
+
+The right fix is upstream — re-read the source with its true `encoding=`
+so the bytes arrive as the characters they were — but the policy means a
+mis-declared byte in one record no longer makes a dataset "submittable as
+XPT but not as Dataset-JSON", or vice versa.
+
+## Where to next
+
+- [An end-to-end ADaM build](adam-build.html) — the derivation loop.
+- [Validation & qualification](validation.html) — what "lossless" buys
+  in a regulated setting.
