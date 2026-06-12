@@ -79,10 +79,16 @@ no backward compatibility is kept with the vport surface.
   declare survives the pipeline, is reported by the `extra_variable`
   finding, gets a class-inferred metadata entry at stamp time, and
   round-trips every codec.
-* `apply_spec()` always aborts on lossy coercion (`artoo_error_type`):
-  integer truncation of fractional values and 32-bit overflow have no
-  warn-and-continue opt-out (`on_lossy` dropped); fix the spec's dataType
-  instead.
+* `apply_spec()` gained `on_coercion_loss = c("error", "keep")`, the
+  governed gate for a coercion that would lose data (an `integer` dataType
+  truncating fractions, or overflowing R's 32-bit range). `"error"`
+  (default) keeps the abort-before-touching-data behavior; `"keep"` skips
+  coercion for the offending column, preserves its wider source type, and
+  reports the divergence as an `integer_fraction` / `integer_overflow`
+  finding instead of failing, so a QC pass can keep every value and still
+  see the spec disagree. The gate is independent of `conformance`
+  (`conformance = "off"` never bypassed it), and the abort now names the
+  knob: `on_coercion_loss = "keep"`, `set_type()`, and `check_spec()`.
 
 ## Spec I/O
 

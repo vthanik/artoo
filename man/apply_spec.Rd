@@ -10,7 +10,8 @@ apply_spec(
   dataset,
   conformance = c("warn", "abort", "off"),
   na_position = c("first", "last"),
-  extra = c("keep", "drop")
+  extra = c("keep", "drop"),
+  on_coercion_loss = c("error", "keep")
 )
 }
 \arguments{
@@ -32,12 +33,10 @@ finding.
 
 \strong{Note:} this governs only the \emph{findings} disposition — what is
 \emph{reported}. Pipeline errors are a different category and abort under
-every setting, including \code{"off"}: an unknown dataset, and above all
-lossy coercion (\code{artoo_error_type}), which no \code{conformance} value
-bypasses. If the abort names variables whose spec dataType is
-\code{integer} but whose data carries fractions, the fix is the spec
-(retype to \code{"float"}/\code{"decimal"}), not this argument; the condition's
-\verb{$variables} frame lists every offender.}
+every setting, including \code{"off"}: an unknown dataset, and lossy
+coercion (\code{artoo_error_type}). Lossy coercion has its own governed
+gate, \code{on_coercion_loss}, not this argument; when the spec is the
+problem, retype it with \code{\link[=set_type]{set_type()}}.}
 
 \item{na_position}{\emph{Where missing key values sort.} \verb{<character(1)>}. One
 of \code{"first"} (default) or \code{"last"}. \code{"first"} matches SAS \verb{PROC SORT}
@@ -67,6 +66,27 @@ failure.
 carrier, so the metadata step never silently discards a column;
 extras are surfaced every run (the \code{extra_variable} finding, and a
 warning under \code{conformance = "warn"}), making \code{"drop"} a conscious opt-in.}
+
+\item{on_coercion_loss}{\emph{What to do when coercion would lose data.}
+\verb{<character(1)>}. The governed gate for an \code{integer} dataType whose data
+truncates (fractions) or overflows (R's 32-bit range). One of:
+\itemize{
+\item \code{"error"} (default) abort with \code{artoo_error_type} before any value is
+touched, refusing to damage the data.
+\item \code{"keep"} skip coercion for the offending column, leaving it at its
+wider source type. The values are preserved and the mismatch is
+reported as an \code{integer_fraction} / \code{integer_overflow} finding (read
+with \code{\link[=conformance]{conformance()}}), never silently truncated.
+}
+
+\strong{Interaction:} independent of \code{conformance}. \code{"error"} aborts even
+under \code{conformance = "off"}; under \code{"keep"} the finding it leaves is
+surfaced by \code{conformance = "warn"} (the default) and suppressed by
+\code{"off"}.
+
+\strong{Tip:} \code{"keep"} is the iterate stance (preserve the data, flag the
+spec); \code{"error"} is the submission stance. To fix the spec itself, see
+\code{\link[=set_type]{set_type()}} and \code{\link[=repair_spec]{repair_spec()}}.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{artoo_meta} (read it with
@@ -107,12 +127,17 @@ column is never reported as \code{extra_variable}), and the drop itself is
 always announced (\code{artoo_message_apply}) as the audit trail of what was
 removed — even under \code{conformance = "off"}.
 
-\strong{Lossless or abort.} A coercion that would damage values — an
-\code{integer} dataType truncating fractions or overflowing R's 32-bit range
-— aborts with \code{artoo_error_type} before any value is touched. There is
-no opt-out: fix the spec (dataType \code{"float"} or \code{"decimal"} keeps
-fractions) rather than accept silent damage. The condition carries the
-offending rows as data: \code{cnd$variables} is a data frame with columns
+\strong{Lossless or abort, your call.} A coercion that would damage values —
+an \code{integer} dataType truncating fractions or overflowing R's 32-bit
+range — aborts with \code{artoo_error_type} before any value is touched, under
+the default \code{on_coercion_loss = "error"}. This gate is independent of
+\code{conformance}: \code{conformance = "off"} does not bypass it. When the data
+(not the spec) is right, set \code{on_coercion_loss = "keep"}: the column
+keeps its wider source type and the divergence is reported as an
+\code{integer_fraction} / \code{integer_overflow} finding, never silently
+truncated. When the spec is wrong, retype it with \code{\link[=set_type]{set_type()}} (or
+\code{\link[=repair_spec]{repair_spec()}} from the findings). The error abort carries the offending
+rows as data: \code{cnd$variables} is a data frame with columns
 \code{variable}, \code{data_type}, \code{n}, and \code{reason} (\code{"truncated"} /
 \code{"overflowed"}), so a pipeline can collect every mismatch in one
 \code{tryCatch(..., artoo_error_type = function(cnd) cnd$variables)} pass.

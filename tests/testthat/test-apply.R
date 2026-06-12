@@ -19,12 +19,20 @@ demo_sdtm_spec <- function() {
 
 # ---- apply_spec surface -----------------------------------------------------
 
-test_that("apply_spec exposes exactly the six load-bearing arguments", {
-  # extra= joined 2026-06-12 by explicit decision (consumer feedback 4.2),
-  # superseding the original five-argument lock.
+test_that("apply_spec exposes exactly the load-bearing arguments", {
+  # extra= joined 2026-06-12 (consumer feedback 4.2); on_coercion_loss= joined
+  # 2026-06-12 as the governed opt-out of the lossy-coercion gate.
   expect_named(
     formals(apply_spec),
-    c("x", "spec", "dataset", "conformance", "na_position", "extra")
+    c(
+      "x",
+      "spec",
+      "dataset",
+      "conformance",
+      "na_position",
+      "extra",
+      "on_coercion_loss"
+    )
   )
 })
 
@@ -598,4 +606,48 @@ test_that("the default keeps extras exactly as before", {
   raw$NOTSPEC <- "keep me"
   out <- suppressWarnings(apply_spec(raw, spec, "DM"))
   expect_true("NOTSPEC" %in% names(out))
+})
+
+# ---- on_coercion_loss = c("error", "keep") ----------------------------------
+
+test_that("on_coercion_loss = 'keep' preserves fractional values and reports them", {
+  dat <- cdisc_adsl
+  dat$AGE <- dat$AGE + 0.5
+  out <- suppressWarnings(
+    apply_spec(dat, adam_spec, "ADSL", on_coercion_loss = "keep")
+  )
+  # The column is kept at its wider source type, values intact (sort reorders
+  # rows, so compare as sets).
+  expect_type(out$AGE, "double")
+  expect_equal(sort(out$AGE), sort(dat$AGE))
+  # Not silent: the mismatch is an error-severity integer_fraction finding.
+  f <- conformance(out)
+  expect_true("AGE" %in% f$variable[f$check == "integer_fraction"])
+  expect_true(any(f$severity == "error" & f$check == "integer_fraction"))
+})
+
+test_that("on_coercion_loss = 'error' (default) aborts on lossy coercion", {
+  dat <- cdisc_adsl
+  dat$AGE <- dat$AGE + 0.5
+  expect_error(
+    apply_spec(dat, adam_spec, "ADSL"),
+    class = "artoo_error_type"
+  )
+  # The gate is separate from conformance: 'off' does not bypass it.
+  expect_error(
+    apply_spec(dat, adam_spec, "ADSL", conformance = "off"),
+    class = "artoo_error_type"
+  )
+})
+
+test_that("on_coercion_loss = 'keep' preserves overflowing values", {
+  dat <- cdisc_adsl
+  dat$AGE <- dat$AGE + 3e9 # beyond R's 32-bit integer range
+  out <- suppressWarnings(
+    apply_spec(dat, adam_spec, "ADSL", on_coercion_loss = "keep")
+  )
+  expect_type(out$AGE, "double")
+  expect_true(any(abs(out$AGE) > .Machine$integer.max))
+  f <- conformance(out)
+  expect_true("AGE" %in% f$variable[f$check == "integer_overflow"])
 })

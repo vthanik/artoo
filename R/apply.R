@@ -40,12 +40,17 @@
 #' always announced (`artoo_message_apply`) as the audit trail of what was
 #' removed — even under `conformance = "off"`.
 #'
-#' **Lossless or abort.** A coercion that would damage values — an
-#' `integer` dataType truncating fractions or overflowing R's 32-bit range
-#' — aborts with `artoo_error_type` before any value is touched. There is
-#' no opt-out: fix the spec (dataType `"float"` or `"decimal"` keeps
-#' fractions) rather than accept silent damage. The condition carries the
-#' offending rows as data: `cnd$variables` is a data frame with columns
+#' **Lossless or abort, your call.** A coercion that would damage values —
+#' an `integer` dataType truncating fractions or overflowing R's 32-bit
+#' range — aborts with `artoo_error_type` before any value is touched, under
+#' the default `on_coercion_loss = "error"`. This gate is independent of
+#' `conformance`: `conformance = "off"` does not bypass it. When the data
+#' (not the spec) is right, set `on_coercion_loss = "keep"`: the column
+#' keeps its wider source type and the divergence is reported as an
+#' `integer_fraction` / `integer_overflow` finding, never silently
+#' truncated. When the spec is wrong, retype it with [set_type()] (or
+#' [repair_spec()] from the findings). The error abort carries the offending
+#' rows as data: `cnd$variables` is a data frame with columns
 #' `variable`, `data_type`, `n`, and `reason` (`"truncated"` /
 #' `"overflowed"`), so a pipeline can collect every mismatch in one
 #' `tryCatch(..., artoo_error_type = function(cnd) cnd$variables)` pass.
@@ -71,12 +76,10 @@
 #'
 #'   **Note:** this governs only the *findings* disposition — what is
 #'   *reported*. Pipeline errors are a different category and abort under
-#'   every setting, including `"off"`: an unknown dataset, and above all
-#'   lossy coercion (`artoo_error_type`), which no `conformance` value
-#'   bypasses. If the abort names variables whose spec dataType is
-#'   `integer` but whose data carries fractions, the fix is the spec
-#'   (retype to `"float"`/`"decimal"`), not this argument; the condition's
-#'   `$variables` frame lists every offender.
+#'   every setting, including `"off"`: an unknown dataset, and lossy
+#'   coercion (`artoo_error_type`). Lossy coercion has its own governed
+#'   gate, `on_coercion_loss`, not this argument; when the spec is the
+#'   problem, retype it with [set_type()].
 #' @param na_position *Where missing key values sort.* `<character(1)>`. One
 #'   of `"first"` (default) or `"last"`. `"first"` matches SAS `PROC SORT`
 #'   (and the FDA submission convention) by ordering missings before present
@@ -102,6 +105,24 @@
 #'   carrier, so the metadata step never silently discards a column;
 #'   extras are surfaced every run (the `extra_variable` finding, and a
 #'   warning under `conformance = "warn"`), making `"drop"` a conscious opt-in.
+#' @param on_coercion_loss *What to do when coercion would lose data.*
+#'   `<character(1)>`. The governed gate for an `integer` dataType whose data
+#'   truncates (fractions) or overflows (R's 32-bit range). One of:
+#'   * `"error"` (default) abort with `artoo_error_type` before any value is
+#'     touched, refusing to damage the data.
+#'   * `"keep"` skip coercion for the offending column, leaving it at its
+#'     wider source type. The values are preserved and the mismatch is
+#'     reported as an `integer_fraction` / `integer_overflow` finding (read
+#'     with [conformance()]), never silently truncated.
+#'
+#'   **Interaction:** independent of `conformance`. `"error"` aborts even
+#'   under `conformance = "off"`; under `"keep"` the finding it leaves is
+#'   surfaced by `conformance = "warn"` (the default) and suppressed by
+#'   `"off"`.
+#'
+#'   **Tip:** `"keep"` is the iterate stance (preserve the data, flag the
+#'   spec); `"error"` is the submission stance. To fix the spec itself, see
+#'   [set_type()] and [repair_spec()].
 #'
 #' @return *A conformed `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]) and, unless `conformance = "off"`, the findings frame
@@ -145,12 +166,14 @@ apply_spec <- function(
   dataset,
   conformance = c("warn", "abort", "off"),
   na_position = c("first", "last"),
-  extra = c("keep", "drop")
+  extra = c("keep", "drop"),
+  on_coercion_loss = c("error", "keep")
 ) {
   call <- rlang::caller_env()
   conformance <- match.arg(conformance)
   na_position <- match.arg(na_position)
   extra <- match.arg(extra)
+  on_coercion_loss <- match.arg(on_coercion_loss)
 
   if (!is.data.frame(x)) {
     .artoo_abort(
@@ -166,7 +189,7 @@ apply_spec <- function(
   .check_dataset_arg(spec, dataset, call = call)
 
   info <- .apply_info(spec, dataset, call = call)
-  out <- .coerce_types(x, info, call)
+  out <- .coerce_types(x, info, on_coercion_loss, call)
   out <- .order_cols(out, info, call)
   out <- .sort_keys(out, info, na_position, call)
   out <- .stamp_meta(out, info, spec, dataset, call)

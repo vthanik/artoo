@@ -260,8 +260,7 @@ check_spec <- function(
     # truncate them (HEIGHTBL 162.6 -> 162). Pre-flight here so the spec
     # bug surfaces before apply_spec()'s coercion ever runs.
     if (checks$integer_fraction && identical(dt, "integer")) {
-      nv <- suppressWarnings(as.numeric(col))
-      frac <- !is.na(nv) & is.finite(nv) & nv != trunc(nv)
+      frac <- .is_integer_fractional(col)
       if (any(frac)) {
         found[[length(found) + 1L]] <- .finding(
           "integer_fraction",
@@ -279,8 +278,7 @@ check_spec <- function(
     # 32-bit overflow: an integer-typed variable carried as double (or text)
     # can hold values R's integer cannot; coercion would turn them NA.
     if (checks$integer_overflow && identical(dt, "integer")) {
-      nv <- suppressWarnings(as.numeric(col))
-      over <- !is.na(nv) & abs(nv) > .Machine$integer.max
+      over <- .is_integer_overflowed(col)
       if (any(over)) {
         found[[length(found) + 1L]] <- .finding(
           "integer_overflow",

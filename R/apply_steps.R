@@ -6,8 +6,9 @@
 # (the transactional guarantee). Steps are NOT exported: they are not
 # independently meaningful and inviting mis-composition. The pipeline is
 # fixed — coerce, order, sort, stamp; the extra = "drop"
-# trim lives in apply_spec() itself, AFTER the findings are computed,
-# so it is an output policy, not a fifth step.
+# trim lives in apply_spec() itself, BEFORE the findings are computed,
+# so the findings describe the returned columns (it is an output policy,
+# not a fifth step).
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort
@@ -47,11 +48,17 @@
 }
 
 # 1. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
-# Lossy numeric coercion (truncated fractions, 32-bit overflow) always
-# aborts: silent data damage in a submission dataset is a data-integrity
-# event, and the cure is fixing the spec's dataType, not accepting the loss.
+# Lossy numeric coercion (truncated fractions, 32-bit overflow) aborts under
+# the default on_coercion_loss = "error" (silent data damage in a submission
+# dataset is a data-integrity event); on_coercion_loss = "keep" skips the
+# offending column instead, keeping its wider source type for a QC pass.
 #' @noRd
-.coerce_types <- function(x, info, call = rlang::caller_env()) {
+.coerce_types <- function(
+  x,
+  info,
+  on_coercion_loss = "error",
+  call = rlang::caller_env()
+) {
   vars <- info$vars
   # One structured record per (variable, reason). The data frame attached
   # to the condition is the source of truth; the message strings are
@@ -64,6 +71,22 @@
       next
     }
     old <- attributes(x[[v]])
+    # on_coercion_loss = "keep": when an integer dataType would truncate
+    # fractional values or overflow the 32-bit range, skip coercion and leave
+    # the column at its wider source type, untouched. The mismatch is not
+    # silent -- the kept column is still fractional/oversized, so check_spec()'s
+    # integer_fraction / integer_overflow rule reports it (an error finding) and
+    # conformance = "warn" surfaces it. Probe a de-factored copy so detection
+    # reads authored values without mutating x[[v]] (a factor and its attributes
+    # survive the skip intact). The "error" default falls through to the abort.
+    if (identical(dt, "integer") && on_coercion_loss == "keep") {
+      probe <- if (is.factor(x[[v]])) as.character(x[[v]]) else x[[v]]
+      if (
+        any(.is_integer_fractional(probe)) || any(.is_integer_overflowed(probe))
+      ) {
+        next
+      }
+    }
     # Coerce a factor to its labels up front: the 32-bit overflow pre-check
     # and the temporal realiser below both read x[[v]] directly, and
     # as.numeric(<factor>) would see level codes, not the authored values.
@@ -97,8 +120,7 @@
       # Name 32-bit overflow precisely BEFORE coercion turns the values NA —
       # the generic NA-introduction warning would bury the cause.
       if (identical(dt, "integer")) {
-        nv <- suppressWarnings(as.numeric(x[[v]]))
-        n_over <- sum(!is.na(nv) & abs(nv) > .Machine$integer.max)
+        n_over <- sum(.is_integer_overflowed(x[[v]]))
         if (n_over > 0L) {
           records[[length(records) + 1L]] <- list(
             variable = v,
@@ -149,10 +171,11 @@
     sprintf("%s (%d)", df$variable, df$n)
   }
   # Truncation and overflow damage values (a fractional height losing its
-  # decimals is a data-integrity event, not a nuisance); the pipeline aborts
-  # BEFORE any value is touched — there is no opt-out. Checked ahead of the
-  # NA-introduction warning so an abort is never preceded by a half-report
-  # of the same values.
+  # decimals is a data-integrity event, not a nuisance); under the default
+  # on_coercion_loss = "error" the pipeline aborts BEFORE any value is
+  # touched. (on_coercion_loss = "keep" already skipped these columns above,
+  # so they never reach lossy_df.) Checked ahead of the NA-introduction
+  # warning so an abort is never preceded by a half-report of the same values.
   lossy_df <- rec_frame(c("truncated", "overflowed"))
   if (nrow(lossy_df)) {
     truncated <- rec_strings(lossy_df[lossy_df$reason == "truncated", ])
@@ -175,7 +198,9 @@
       c(
         "Coercion to the spec dataTypes would lose data.",
         stats::setNames(lossy, rep("x", length(lossy))),
-        "i" = "Fix the spec: dataType {.val float} or {.val decimal} keeps fractions; a wider type avoids overflow."
+        "i" = "This gate is separate from {.arg conformance}; {.code conformance = \"off\"} does not bypass it.",
+        "i" = "To keep these values in R, set {.code apply_spec(on_coercion_loss = \"keep\")}, or retype the spec with {.fn set_type} (dataType {.val float} or {.val decimal}).",
+        "i" = "To see every finding at once, run {.code check_spec(x, spec, dataset)}."
       ),
       kind = "type",
       variables = lossy_df,

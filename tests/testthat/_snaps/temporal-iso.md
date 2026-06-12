@@ -16,5 +16,7 @@
       Error:
       ! Coercion to the spec dataTypes would lose data.
       x Integer coercion would truncate fractional values in: HEIGHTBL (2).
-      i Fix the spec: dataType "float" or "decimal" keeps fractions; a wider type avoids overflow.
+      i This gate is separate from `conformance`; `conformance = "off"` does not bypass it.
+      i To keep these values in R, set `apply_spec(on_coercion_loss = "keep")`, or retype the spec with `set_type()` (dataType "float" or "decimal").
+      i To see every finding at once, run `check_spec(x, spec, dataset)`.
 

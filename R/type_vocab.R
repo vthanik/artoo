@@ -141,6 +141,27 @@
   )
 }
 
+#' Per-value lossy-integer predicates
+#'
+#' The single definition of "an integer dataType the data does not satisfy",
+#' shared by `check_spec()` (the integer_fraction / integer_overflow rules),
+#' the `apply_spec()` coercion gate, and `.coerce_to_type()`'s truncation
+#' tally. `.is_integer_fractional()` flags finite values with a fractional
+#' part; `.is_integer_overflowed()` flags values beyond R's 32-bit integer
+#' range. Both read values through `as.numeric()`, so a factor must be
+#' de-factored to its labels before they see it.
+#' @noRd
+.is_integer_fractional <- function(x) {
+  nv <- suppressWarnings(as.numeric(x))
+  !is.na(nv) & is.finite(nv) & nv != trunc(nv)
+}
+
+#' @noRd
+.is_integer_overflowed <- function(x) {
+  nv <- suppressWarnings(as.numeric(x))
+  !is.na(nv) & abs(nv) > .Machine$integer.max
+}
+
 #' Coerce a vector to the storage of a CDISC dataType
 #'
 #' Returns a list with `value` (the coerced vector), `n_na_introduced`
@@ -162,8 +183,10 @@
   after_na <- is.na(value)
   n_lossy <- 0L
   if (mode == "integer") {
-    xn <- suppressWarnings(as.numeric(x))
-    n_lossy <- sum(!is.na(xn) & !after_na & xn != as.numeric(value))
+    # The same "fractional" definition the integer_fraction check uses; the
+    # !after_na guard keeps an overflow (already counted as an NA introduction)
+    # out of the truncation tally.
+    n_lossy <- sum(.is_integer_fractional(x) & !after_na)
   }
   list(
     value = value,
