@@ -1541,8 +1541,11 @@
 #'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
 #'   accepted.
 #' @param on_invalid *Policy for values not representable in `encoding`.*
-#'   `<character(1)>: default "error"`. One of `"error"`, `"replace"`
-#'   (substitute `?` and warn), or `"ignore"` (drop them).
+#'   `<character(1)>: default "error"`. One of `"error"` (abort with
+#'   `artoo_error_codec`, naming the offenders), `"replace"` (substitute
+#'   `?` and warn with `artoo_warning_encoding`), or `"ignore"` (drop
+#'   them). The same policy vocabulary as the UTF-8 writers
+#'   ([write_json()], [write_ndjson()], [write_parquet()]).
 #' @param created *Header timestamp.* `<POSIXct(1)> | NULL`. `NULL` (default)
 #'   stamps the current time; freeze it for byte-stable output.
 #'
@@ -1565,10 +1568,13 @@
 #' # ---- Example 2: v8 for long names, with a frozen timestamp ----
 #' #
 #' # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
-#' # reproducible. DM is SDTM, so it conforms against the bundled sdtm_spec.
+#' # reproducible. Reading it back shows the labels, types, and record count
+#' # survived the transport. DM is SDTM, so it conforms against the bundled
+#' # sdtm_spec.
 #' dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #' path8 <- tempfile(fileext = ".xpt")
 #' write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
+#' get_meta(read_xpt(path8))@dataset$records
 #'
 #' @seealso [read_xpt()] for the inverse; [write_dataset()] for the generic
 #'   dispatcher.

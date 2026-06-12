@@ -78,11 +78,13 @@ write_json(adsl, path)
 
 # ---- Example 2: a frozen timestamp for reproducible bytes ----
 #
-# Fixing `created` makes two writes byte-identical (DM is SDTM, so it
-# conforms against the bundled sdtm_spec).
+# Fixing `created` makes two writes byte-identical; the columns() pane on
+# the written file shows the full metadata the file carries (DM is SDTM,
+# so it conforms against the bundled sdtm_spec).
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 path2 <- tempfile(fileext = ".json")
 write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
+columns(path2)
 
 }
 \seealso{

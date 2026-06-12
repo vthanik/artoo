@@ -62,8 +62,9 @@
 #'   * `"to_code"` map decoded values to their submission codes — the
 #'     `RACEN`-from-`RACE` derivation.
 #' @param no_match *Policy for values absent from the codelist.*
-#'   `<character(1)>`. One of `"error"` (default), `"keep"` (carry the
-#'   source value through), or `"na"`.
+#'   `<character(1)>`. One of `"error"` (default; abort with
+#'   `artoo_error_codelist`, naming the unmatched values and the
+#'   codelist), `"keep"` (carry the source value through), or `"na"`.
 #' @param trim *Match after trimming whitespace.* `<logical(1)>: default
 #'   TRUE`.
 #' @param ignore_case *Match case-insensitively.* `<logical(1)>: default

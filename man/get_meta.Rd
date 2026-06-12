@@ -15,9 +15,15 @@ Typically the output of \code{\link[=apply_spec]{apply_spec()}} or a \verb{read_
 \code{artoo_error_input}.}
 }
 \value{
-\emph{A \verb{<artoo_meta>}} with dataset-level (\verb{@dataset}) and per-column
-(\verb{@columns}) CDISC attributes. Pass it to \code{\link[=set_meta]{set_meta()}} to re-attach, or
-inspect it directly.
+\emph{A \verb{<artoo_meta>}} with two properties. \verb{@dataset} is a named
+list of dataset-level attributes: \code{itemGroupOID}, \code{name}, \code{label},
+\code{records}, \code{studyOID}, \code{metaDataVersionOID}, \code{encoding}, and \code{keys}.
+\verb{@columns} is a named list with one entry per variable, each carrying
+\code{itemOID}, \code{name}, \code{label}, \code{dataType}, \code{targetDataType}, \code{length},
+\code{displayFormat}, \code{informat}, \code{keySequence}, \code{codelist},
+\code{significantDigits}, and \code{origin} (absent values are \code{NULL}). Pass it
+to \code{\link[=set_meta]{set_meta()}} to re-attach, or index it directly
+(\code{meta@columns$AGE$label}).
 }
 \description{
 Pull the \code{artoo_meta} off a data frame produced by \code{\link[=apply_spec]{apply_spec()}} or read

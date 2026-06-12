@@ -15,7 +15,11 @@ spec_study(spec, field = NULL)
 table; an unknown field aborts with \code{artoo_error_input}.}
 }
 \value{
-\emph{The study data frame}, or the value of one \code{field}.
+\emph{The study data frame} (one row), or the value of one \code{field}.
+The canonical fields are \code{study_name}, \code{study_description}, and
+\code{protocol_name} — every source spelling is canonicalised to these by
+\code{\link[=artoo_spec]{artoo_spec()}} — plus any other field the source carried verbatim
+(e.g. \code{define_version} from a Define-XML read).
 }
 \description{
 Return the study-level metadata row, or a single field from it. Holds

@@ -30,8 +30,14 @@ finding.
 \item \code{"off"} skip the check entirely.
 }
 
-\strong{Note:} this governs only the \emph{findings} disposition; pipeline
-errors (an unknown dataset, lossy coercion) abort regardless.}
+\strong{Note:} this governs only the \emph{findings} disposition — what is
+\emph{reported}. Pipeline errors are a different category and abort under
+every setting, including \code{"off"}: an unknown dataset, and above all
+lossy coercion (\code{artoo_error_type}), which no \code{conformance} value
+bypasses. If the abort names variables whose spec dataType is
+\code{integer} but whose data carries fractions, the fix is the spec
+(retype to \code{"float"}/\code{"decimal"}), not this argument; the condition's
+\verb{$variables} frame lists every offender.}
 
 \item{na_position}{\emph{Where missing key values sort.} \verb{<character(1)>}. One
 of \code{"first"} (default) or \code{"last"}. \code{"first"} matches SAS \verb{PROC SORT}

@@ -61,8 +61,14 @@
 #'     finding.
 #'   * `"off"` skip the check entirely.
 #'
-#'   **Note:** this governs only the *findings* disposition; pipeline
-#'   errors (an unknown dataset, lossy coercion) abort regardless.
+#'   **Note:** this governs only the *findings* disposition — what is
+#'   *reported*. Pipeline errors are a different category and abort under
+#'   every setting, including `"off"`: an unknown dataset, and above all
+#'   lossy coercion (`artoo_error_type`), which no `conformance` value
+#'   bypasses. If the abort names variables whose spec dataType is
+#'   `integer` but whose data carries fractions, the fix is the spec
+#'   (retype to `"float"`/`"decimal"`), not this argument; the condition's
+#'   `$variables` frame lists every offender.
 #' @param na_position *Where missing key values sort.* `<character(1)>`. One
 #'   of `"first"` (default) or `"last"`. `"first"` matches SAS `PROC SORT`
 #'   (and the FDA submission convention) by ordering missings before present

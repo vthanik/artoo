@@ -312,7 +312,11 @@ spec_standard <- function(spec) {
 #'   **Restriction:** a non-`NULL` `field` must be a column of the study
 #'   table; an unknown field aborts with `artoo_error_input`.
 #'
-#' @return *The study data frame*, or the value of one `field`.
+#' @return *The study data frame* (one row), or the value of one `field`.
+#'   The canonical fields are `study_name`, `study_description`, and
+#'   `protocol_name` — every source spelling is canonicalised to these by
+#'   [artoo_spec()] — plus any other field the source carried verbatim
+#'   (e.g. `define_version` from a Define-XML read).
 #'
 #' @examples
 #' # ---- Example 1: the whole study row, then one field ----

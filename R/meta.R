@@ -466,9 +466,15 @@ is_artoo_meta <- function(x) {
 #'   [set_meta()], [apply_spec()], or a reader); a bare frame aborts with
 #'   `artoo_error_input`.
 #'
-#' @return *A `<artoo_meta>`* with dataset-level (`@dataset`) and per-column
-#'   (`@columns`) CDISC attributes. Pass it to [set_meta()] to re-attach, or
-#'   inspect it directly.
+#' @return *A `<artoo_meta>`* with two properties. `@dataset` is a named
+#'   list of dataset-level attributes: `itemGroupOID`, `name`, `label`,
+#'   `records`, `studyOID`, `metaDataVersionOID`, `encoding`, and `keys`.
+#'   `@columns` is a named list with one entry per variable, each carrying
+#'   `itemOID`, `name`, `label`, `dataType`, `targetDataType`, `length`,
+#'   `displayFormat`, `informat`, `keySequence`, `codelist`,
+#'   `significantDigits`, and `origin` (absent values are `NULL`). Pass it
+#'   to [set_meta()] to re-attach, or index it directly
+#'   (`meta@columns$AGE$label`).
 #'
 #' @examples
 #' # ---- Example 1: read metadata off a conformed dataset ----

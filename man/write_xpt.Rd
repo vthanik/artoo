@@ -31,8 +31,11 @@ UTF-8. IANA and SAS names (\code{"US-ASCII"}, \code{"wlatin1"}) both work.
 accepted.}
 
 \item{on_invalid}{\emph{Policy for values not representable in \code{encoding}.}
-\verb{<character(1)>: default "error"}. One of \code{"error"}, \code{"replace"}
-(substitute \verb{?} and warn), or \code{"ignore"} (drop them).}
+\verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
+\code{artoo_error_codec}, naming the offenders), \code{"replace"} (substitute
+\verb{?} and warn with \code{artoo_warning_encoding}), or \code{"ignore"} (drop
+them). The same policy vocabulary as the UTF-8 writers
+(\code{\link[=write_json]{write_json()}}, \code{\link[=write_ndjson]{write_ndjson()}}, \code{\link[=write_parquet]{write_parquet()}}).}
 
 \item{created}{\emph{Header timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL} (default)
 stamps the current time; freeze it for byte-stable output.}
@@ -83,10 +86,13 @@ write_xpt(adsl, path)
 # ---- Example 2: v8 for long names, with a frozen timestamp ----
 #
 # Version 8 keeps names over 8 characters; a fixed `created` makes the bytes
-# reproducible. DM is SDTM, so it conforms against the bundled sdtm_spec.
+# reproducible. Reading it back shows the labels, types, and record count
+# survived the transport. DM is SDTM, so it conforms against the bundled
+# sdtm_spec.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
+get_meta(read_xpt(path8))@dataset$records
 
 }
 \seealso{

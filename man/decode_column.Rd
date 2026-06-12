@@ -39,8 +39,9 @@ dataType coercion and label; an undeclared `to` is plain character.}
 }}
 
 \item{no_match}{\emph{Policy for values absent from the codelist.}
-\verb{<character(1)>}. One of \code{"error"} (default), \code{"keep"} (carry the
-source value through), or \code{"na"}.}
+\verb{<character(1)>}. One of \code{"error"} (default; abort with
+\code{artoo_error_codelist}, naming the unmatched values and the
+codelist), \code{"keep"} (carry the source value through), or \code{"na"}.}
 
 \item{trim}{\emph{Match after trimming whitespace.} \verb{<logical(1)>: default TRUE}.}
 
