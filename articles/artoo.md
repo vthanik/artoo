@@ -61,19 +61,21 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 ## 2. Apply the spec
 
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
-is the conform pipeline: it scaffolds the variables the spec declares
-(typed `NA`), coerces each column to its CDISC data type, orders the
-columns, sorts by the dataset keys, and stamps the result with its
-metadata. The input is never mutated, no column is ever dropped, and a
-coercion that would damage values aborts before it runs.
+is the conform pipeline: it coerces each column to its CDISC data type,
+orders the columns, sorts by the dataset keys, and stamps the result
+with its metadata. A variable the spec declares but the data lacks is
+reported, never fabricated as an empty column. The input is never
+mutated, no column is ever dropped, and a coercion that would damage
+values aborts before it runs.
 
 ``` r
 
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 ```
 
-    Scaffolded 6 variables the spec declares but the data lacks (added as empty):
-    `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`
+    6 variables the spec declares are absent from the data (not added): `TRTDURD`,
+    `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
+    ℹ See `conformance(x)` for the findings.
 
 The conformance findings ride along on the result — read them back as a
 frame with
@@ -84,7 +86,7 @@ frame with
 nrow(conformance(adsl))
 ```
 
-    [1] 6
+    [1] 12
 
 The pipeline is standard-neutral: an SDTM domain conforms identically —
 only the spec and the dataset change. The full SDTM walkthrough is its
@@ -96,15 +98,15 @@ guide](https://vthanik.github.io/artoo/articles/articles/sdtm-build.md).
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM")
 ```
 
-    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-    `BRTHDTC`
+    1 variable the spec declares is absent from the data (not added): `BRTHDTC`.
+    ℹ See `conformance(x)` for the findings.
 
 ``` r
 
 nrow(conformance(dm))
 ```
 
-    [1] 13
+    [1] 14
 
 ## 3. Inspect the columns
 
@@ -119,7 +121,7 @@ file path:
 columns(adsl)
 ```
 
-    <artoo_columns> ADSL -- 54 variables, 60 obs
+    <artoo_columns> ADSL -- 48 variables, 60 obs
     #   Variable  Type  Len  Format  Label                                     Key
     1   STUDYID   Char  12           Study Identifier                          1
     2   USUBJID   Char  11           Unique Subject Identifier                 2
@@ -133,48 +135,42 @@ columns(adsl)
     10  TRT01AN   Num                Actual Treatment for Period 01 (N)
     11  TRTSDT    Num        DATE9.  Date of First Exposure to Treatment
     12  TRTEDT    Num        DATE9.  Date of Last Exposure to Treatment
-    13  TRTDURD   Num                Total Treatment Duration (Days)
-    14  AVGDD     Num        5.1     Avg Daily Dose (as planned)
-    15  CUMDOSE   Num        8.1     Cumulative Dose (as planned)
-    16  AGE       Num                Age
-    17  AGEGR1    Char  5            Pooled Age Group 1
-    18  AGEGR1N   Num                Pooled Age Group 1 (N)
-    19  AGEU      Char  5            Age Units
-    20  RACE      Char  32           Race
-    21  RACEN     Num                Race (N)
-    22  SEX       Char  1            Sex
-    23  ETHNIC    Char  22           Ethnicity
-    24  SAFFL     Char  1            Safety Population Flag
-    25  ITTFL     Char  1            Intent-To-Treat Population Flag
-    26  EFFFL     Char  1            Efficacy Population Flag
-    27  COMP8FL   Char  1            Completers of Week 8 Population Flag
-    28  COMP16FL  Char  1            Completers of Week 16 Population Flag
-    29  COMP24FL  Char  1            Completers of Week 24 Population Flag
-    30  DISCONFL  Char  1            Subject Discontinued Study Flag
-    31  DSRAEFL   Char  1            Subject Discontinued due to AE Flag
-    32  DTHFL     Char  1            Subject Death Flag
-    33  BMIBL     Num        5.1     Baseline BMI (kg/m^2)
-    34  BMIBLGR1  Char  6            Pooled Baseline BMI Group 1
-    35  HEIGHTBL  Num        6.1     Baseline Height (cm)
-    36  WEIGHTBL  Num        6.1     Baseline Weight (kg)
-    37  EDUCLVL   Num                Years of Education
-    38  DISONDT   Num        DATE9.  Date of Onset of Disease
-    39  DURDIS    Num        6.1     Duration of Disease (Months)
-    40  DURDSGR1  Char  4            Pooled Disease Duration Group 1
-    41  VISIT1DT  Num        DATE9.  Date of Visit 1
-    42  RFSTDTC   Char  10           Subject Reference Start Date/Time
-    43  RFENDTC   Char  10           Subject Reference End Date/Time
-    44  VISNUMEN  Num                End of Trt Visit (Vis 12 or Early Term.)
-    45  RFENDT    Num                Date of Discontinuation/Completion
-    46  EOSSTT    Char  12           End of Study Status
-    47  DCSREAS   Char  18           Reason for Discontinuation from Study
-    48  EOSDISP   Char  27           Standardized Disposition Term
-    49  MMS1TSBL  Num                MMS1-Total Score at Baseline
-    50  TRTDUR    Num
-    51  DISONSDT  Num        DATE9.
-    52  DCDECOD   Char  27
-    53  DCREASCD  Char  18
-    54  MMSETOT   Num
+    13  AVGDD     Num        5.1     Avg Daily Dose (as planned)
+    14  CUMDOSE   Num        8.1     Cumulative Dose (as planned)
+    15  AGE       Num                Age
+    16  AGEGR1    Char  5            Pooled Age Group 1
+    17  AGEGR1N   Num                Pooled Age Group 1 (N)
+    18  AGEU      Char  5            Age Units
+    19  RACE      Char  32           Race
+    20  RACEN     Num                Race (N)
+    21  SEX       Char  1            Sex
+    22  ETHNIC    Char  22           Ethnicity
+    23  SAFFL     Char  1            Safety Population Flag
+    24  ITTFL     Char  1            Intent-To-Treat Population Flag
+    25  EFFFL     Char  1            Efficacy Population Flag
+    26  COMP8FL   Char  1            Completers of Week 8 Population Flag
+    27  COMP16FL  Char  1            Completers of Week 16 Population Flag
+    28  COMP24FL  Char  1            Completers of Week 24 Population Flag
+    29  DISCONFL  Char  1            Subject Discontinued Study Flag
+    30  DSRAEFL   Char  1            Subject Discontinued due to AE Flag
+    31  DTHFL     Char  1            Subject Death Flag
+    32  BMIBL     Num        5.1     Baseline BMI (kg/m^2)
+    33  BMIBLGR1  Char  6            Pooled Baseline BMI Group 1
+    34  HEIGHTBL  Num        6.1     Baseline Height (cm)
+    35  WEIGHTBL  Num        6.1     Baseline Weight (kg)
+    36  EDUCLVL   Num                Years of Education
+    37  DURDIS    Num        6.1     Duration of Disease (Months)
+    38  DURDSGR1  Char  4            Pooled Disease Duration Group 1
+    39  VISIT1DT  Num        DATE9.  Date of Visit 1
+    40  RFSTDTC   Char  10           Subject Reference Start Date/Time
+    41  RFENDTC   Char  10           Subject Reference End Date/Time
+    42  VISNUMEN  Num                End of Trt Visit (Vis 12 or Early Term.)
+    43  RFENDT    Num                Date of Discontinuation/Completion
+    44  TRTDUR    Num
+    45  DISONSDT  Num        DATE9.
+    46  DCDECOD   Char  27
+    47  DCREASCD  Char  18
+    48  MMSETOT   Num
 
 ## 4. Write to any format — losslessly
 
@@ -219,7 +215,7 @@ get_meta(back)@dataset$records
 columns(back)
 ```
 
-    <artoo_columns> ADSL -- 54 variables, 60 obs
+    <artoo_columns> ADSL -- 48 variables, 60 obs
     #   Variable  Type  Len  Format  Label                                     Key
     1   STUDYID   Char  12           Study Identifier                          1
     2   USUBJID   Char  11           Unique Subject Identifier                 2
@@ -233,48 +229,42 @@ columns(back)
     10  TRT01AN   Num                Actual Treatment for Period 01 (N)
     11  TRTSDT    Num        DATE9.  Date of First Exposure to Treatment
     12  TRTEDT    Num        DATE9.  Date of Last Exposure to Treatment
-    13  TRTDURD   Num                Total Treatment Duration (Days)
-    14  AVGDD     Num        5.1     Avg Daily Dose (as planned)
-    15  CUMDOSE   Num        8.1     Cumulative Dose (as planned)
-    16  AGE       Num                Age
-    17  AGEGR1    Char  5            Pooled Age Group 1
-    18  AGEGR1N   Num                Pooled Age Group 1 (N)
-    19  AGEU      Char  5            Age Units
-    20  RACE      Char  32           Race
-    21  RACEN     Num                Race (N)
-    22  SEX       Char  1            Sex
-    23  ETHNIC    Char  22           Ethnicity
-    24  SAFFL     Char  1            Safety Population Flag
-    25  ITTFL     Char  1            Intent-To-Treat Population Flag
-    26  EFFFL     Char  1            Efficacy Population Flag
-    27  COMP8FL   Char  1            Completers of Week 8 Population Flag
-    28  COMP16FL  Char  1            Completers of Week 16 Population Flag
-    29  COMP24FL  Char  1            Completers of Week 24 Population Flag
-    30  DISCONFL  Char  1            Subject Discontinued Study Flag
-    31  DSRAEFL   Char  1            Subject Discontinued due to AE Flag
-    32  DTHFL     Char  1            Subject Death Flag
-    33  BMIBL     Num        5.1     Baseline BMI (kg/m^2)
-    34  BMIBLGR1  Char  6            Pooled Baseline BMI Group 1
-    35  HEIGHTBL  Num        6.1     Baseline Height (cm)
-    36  WEIGHTBL  Num        6.1     Baseline Weight (kg)
-    37  EDUCLVL   Num                Years of Education
-    38  DISONDT   Num        DATE9.  Date of Onset of Disease
-    39  DURDIS    Num        6.1     Duration of Disease (Months)
-    40  DURDSGR1  Char  4            Pooled Disease Duration Group 1
-    41  VISIT1DT  Num        DATE9.  Date of Visit 1
-    42  RFSTDTC   Char  10           Subject Reference Start Date/Time
-    43  RFENDTC   Char  10           Subject Reference End Date/Time
-    44  VISNUMEN  Num                End of Trt Visit (Vis 12 or Early Term.)
-    45  RFENDT    Num                Date of Discontinuation/Completion
-    46  EOSSTT    Char  12           End of Study Status
-    47  DCSREAS   Char  18           Reason for Discontinuation from Study
-    48  EOSDISP   Char  27           Standardized Disposition Term
-    49  MMS1TSBL  Num                MMS1-Total Score at Baseline
-    50  TRTDUR    Num
-    51  DISONSDT  Num        DATE9.
-    52  DCDECOD   Char  27
-    53  DCREASCD  Char  18
-    54  MMSETOT   Num
+    13  AVGDD     Num        5.1     Avg Daily Dose (as planned)
+    14  CUMDOSE   Num        8.1     Cumulative Dose (as planned)
+    15  AGE       Num                Age
+    16  AGEGR1    Char  5            Pooled Age Group 1
+    17  AGEGR1N   Num                Pooled Age Group 1 (N)
+    18  AGEU      Char  5            Age Units
+    19  RACE      Char  32           Race
+    20  RACEN     Num                Race (N)
+    21  SEX       Char  1            Sex
+    22  ETHNIC    Char  22           Ethnicity
+    23  SAFFL     Char  1            Safety Population Flag
+    24  ITTFL     Char  1            Intent-To-Treat Population Flag
+    25  EFFFL     Char  1            Efficacy Population Flag
+    26  COMP8FL   Char  1            Completers of Week 8 Population Flag
+    27  COMP16FL  Char  1            Completers of Week 16 Population Flag
+    28  COMP24FL  Char  1            Completers of Week 24 Population Flag
+    29  DISCONFL  Char  1            Subject Discontinued Study Flag
+    30  DSRAEFL   Char  1            Subject Discontinued due to AE Flag
+    31  DTHFL     Char  1            Subject Death Flag
+    32  BMIBL     Num        5.1     Baseline BMI (kg/m^2)
+    33  BMIBLGR1  Char  6            Pooled Baseline BMI Group 1
+    34  HEIGHTBL  Num        6.1     Baseline Height (cm)
+    35  WEIGHTBL  Num        6.1     Baseline Weight (kg)
+    36  EDUCLVL   Num                Years of Education
+    37  DURDIS    Num        6.1     Duration of Disease (Months)
+    38  DURDSGR1  Char  4            Pooled Disease Duration Group 1
+    39  VISIT1DT  Num        DATE9.  Date of Visit 1
+    40  RFSTDTC   Char  10           Subject Reference Start Date/Time
+    41  RFENDTC   Char  10           Subject Reference End Date/Time
+    42  VISNUMEN  Num                End of Trt Visit (Vis 12 or Early Term.)
+    43  RFENDT    Num                Date of Discontinuation/Completion
+    44  TRTDUR    Num
+    45  DISONSDT  Num        DATE9.
+    46  DCDECOD   Char  27
+    47  DCREASCD  Char  18
+    48  MMSETOT   Num
 
 One honest caveat: the XPORT byte layout stores only name, label,
 length, and formats, so

@@ -138,10 +138,14 @@ warning under <code>conformance = "warn"</code>), making <code>"drop"</code> a c
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><strong>Ordered pipeline.</strong> Five fixed steps run in order: scaffold missing
-spec variables (typed <code>NA</code>), coerce each column to its CDISC dataType,
-reorder columns to the spec, sort rows by the dataset keys, then stamp
-the metadata.</p>
+    <p><strong>Ordered pipeline.</strong> Four fixed steps run in order: coerce each column
+to its CDISC dataType, reorder columns to the spec, sort rows by the
+dataset keys, then stamp the metadata. A spec variable the data lacks is
+never fabricated as an empty column: artoo is a lossless carrier, not a
+deriver. It is reported instead, an informational heads-up at apply time
+plus a <code>missing_variable</code> finding (when mandatory) or <code>missing_permissible</code>
+(when not), and left absent, so the conformed frame carries only the
+columns the data actually had.</p>
 <p><strong>Extras are kept by default.</strong> A column the spec does not declare
 survives the pipeline (ordered after the declared ones), is <em>reported</em>
 by the <code>extra_variable</code> conformance finding, and round-trips through
@@ -185,13 +189,14 @@ back.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># ---- Example 1: conform ADSL, then read its metadata ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
-<span class="r-in"><span><span class="co"># The bundled adam_spec describes ADSL; the raw frame is scaffolded,</span></span></span>
-<span class="r-in"><span><span class="co"># coerced, ordered, sorted, and stamped with the CDISC metadata</span></span></span>
-<span class="r-in"><span><span class="co"># get_meta() reads back.</span></span></span>
+<span class="r-in"><span><span class="co"># The bundled adam_spec describes ADSL; the raw frame is coerced,</span></span></span>
+<span class="r-in"><span><span class="co"># ordered, sorted, and stamped with the CDISC metadata get_meta() reads</span></span></span>
+<span class="r-in"><span><span class="co"># back. Variables the spec declares but this extract never derived are</span></span></span>
+<span class="r-in"><span><span class="co"># reported (not added), readable via conformance().</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> `MMS1TSBL`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 variables the spec declares are absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> See `conformance(x)` for the findings.</span>
 <span class="r-in"><span><span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span><span class="op">@</span><span class="va">dataset</span><span class="op">$</span><span class="va">records</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 60</span>
 <span class="r-in"><span></span></span>
@@ -204,25 +209,27 @@ back.</p>
 <span class="r-in"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_dm</span></span></span>
 <span class="r-in"><span><span class="va">raw</span><span class="op">$</span><span class="va">DERIVED</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 variable the spec declares is absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> See `conformance(x)` for the findings.</span>
 <span class="r-in"><span><span class="va">findings</span> <span class="op">&lt;-</span> <span class="fu"><a href="conformance.html">conformance</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">findings</span><span class="op">[</span><span class="va">findings</span><span class="op">$</span><span class="va">check</span> <span class="op">==</span> <span class="st">"extra_variable"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"message"</span><span class="op">)</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    variable                                        message</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  RFXSTDTC Column 'RFXSTDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  RFXENDTC Column 'RFXENDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   RFICDTC  Column 'RFICDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  RFPENDTC Column 'RFPENDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5    DTHDTC   Column 'DTHDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6     DTHFL    Column 'DTHFL' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7  ACTARMCD Column 'ACTARMCD' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8    ACTARM   Column 'ACTARM' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9     DMDTC    Column 'DMDTC' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10     DMDY     Column 'DMDY' is not declared in the spec.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  DERIVED  Column 'DERIVED' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  RFXSTDTC Column 'RFXSTDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  RFXENDTC Column 'RFXENDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   RFICDTC  Column 'RFICDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  RFPENDTC Column 'RFPENDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6    DTHDTC   Column 'DTHDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7     DTHFL    Column 'DTHFL' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  ACTARMCD Column 'ACTARMCD' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9    ACTARM   Column 'ACTARM' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10    DMDTC    Column 'DMDTC' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11     DMDY     Column 'DMDY' is not declared in the spec.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  DERIVED  Column 'DERIVED' is not declared in the spec.</span>
 <span class="r-in"><span><span class="va">trimmed</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, extra <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 variable the spec declares is absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> See `conformance(x)` for the findings.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> and `DERIVED`</span>

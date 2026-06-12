@@ -51,13 +51,13 @@ spec <- artoo_spec(
 #
 # The FDA convention is one dataset per transport file.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable the spec declares but the data lacks (added as
-#> empty): `BRTHDTC`
+#> 1 variable the spec declares is absent from the data (not added):
+#> `BRTHDTC`.
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
 xpt_members(p)
 #>   member name        label nvars nobs
-#> 1      1   DM Demographics    26   60
+#> 1      1   DM Demographics    25   60
 
 # ---- Example 2: survey a multi-member file, then read one member ----
 #
@@ -75,6 +75,6 @@ writeBin(
 )
 xpt_members(multi)
 #>   member name                          label nvars nobs
-#> 1      1   DM                   Demographics    26   60
+#> 1      1   DM                   Demographics    25   60
 #> 2      2 ADSL Subject-Level Analysis Dataset    48   60
 ```

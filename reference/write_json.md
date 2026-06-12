@@ -105,9 +105,8 @@ for the generic dispatcher.
 # apply_spec() attaches the metadata; write_json() serializes the full
 # itemGroup plus the data rows.
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
-#> Scaffolded 6 variables the spec declares but the data lacks (added as
-#> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and
-#> `MMS1TSBL`
+#> 6 variables the spec declares are absent from the data (not added):
+#> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
 path <- tempfile(fileext = ".json")
 write_json(adsl, path)
 
@@ -117,12 +116,12 @@ write_json(adsl, path)
 # the written file shows the full metadata the file carries (DM is SDTM,
 # so it conforms against the bundled sdtm_spec).
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable the spec declares but the data lacks (added as
-#> empty): `BRTHDTC`
+#> 1 variable the spec declares is absent from the data (not added):
+#> `BRTHDTC`.
 path2 <- tempfile(fileext = ".json")
 write_json(dm, path2, created = as.POSIXct("2020-01-01", tz = "UTC"))
 columns(path2)
-#> <artoo_columns> DM -- 26 variables, 60 obs
+#> <artoo_columns> DM -- 25 variables, 60 obs
 #> #   Variable  Type  Len  Format  Label                              Key
 #> 1   STUDYID   Char  7            Study Identifier                   1
 #> 2   DOMAIN    Char  2            Domain Abbreviation
@@ -131,23 +130,22 @@ columns(path2)
 #> 5   RFSTDTC   Char  10           Subject Reference Start Date/Time
 #> 6   RFENDTC   Char  10           Subject Reference End Date/Time
 #> 7   SITEID    Char  3            Study Site Identifier
-#> 8   BRTHDTC   Char  1            Date/Time of Birth
-#> 9   AGE       Num                Age
-#> 10  AGEU      Char  5            Age Units
-#> 11  SEX       Char  16           Sex
-#> 12  RACE      Char  41           Race
-#> 13  ETHNIC    Char  22           Ethnicity
-#> 14  ARMCD     Char  8            Planned Arm Code
-#> 15  ARM       Char  20           Description of Planned Arm
-#> 16  COUNTRY   Char  3            Country
-#> 17  RFXSTDTC  Char  10
-#> 18  RFXENDTC  Char  10
-#> 19  RFICDTC   Char  1
-#> 20  RFPENDTC  Char  16
-#> 21  DTHDTC    Char  10
-#> 22  DTHFL     Char  1
-#> 23  ACTARMCD  Char  8
-#> 24  ACTARM    Char  20
-#> 25  DMDTC     Char  10
-#> 26  DMDY      Num
+#> 8   AGE       Num                Age
+#> 9   AGEU      Char  5            Age Units
+#> 10  SEX       Char  16           Sex
+#> 11  RACE      Char  41           Race
+#> 12  ETHNIC    Char  22           Ethnicity
+#> 13  ARMCD     Char  8            Planned Arm Code
+#> 14  ARM       Char  20           Description of Planned Arm
+#> 15  COUNTRY   Char  3            Country
+#> 16  RFXSTDTC  Char  10
+#> 17  RFXENDTC  Char  10
+#> 18  RFICDTC   Char  1
+#> 19  RFPENDTC  Char  16
+#> 20  DTHDTC    Char  10
+#> 21  DTHFL     Char  1
+#> 22  ACTARMCD  Char  8
+#> 23  ACTARM    Char  20
+#> 24  DMDTC     Char  10
+#> 25  DMDY      Num
 ```

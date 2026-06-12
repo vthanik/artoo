@@ -41,8 +41,8 @@ per-dataset metadata tables.
 
 ## Conform
 
-Apply the spec to a raw frame — scaffold, coerce, order, sort, stamp
-metadata — and derive single variables through spec codelists.
+Apply the spec to a raw frame — coerce, order, sort, stamp metadata —
+and derive single variables through spec codelists.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   : Conform a data frame to its spec

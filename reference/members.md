@@ -61,8 +61,8 @@ one dataset's variable pane.
 
 ``` r
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable the spec declares but the data lacks (added as
-#> empty): `BRTHDTC`
+#> 1 variable the spec declares is absent from the data (not added):
+#> `BRTHDTC`.
 
 # ---- Example 1: one dataset in a file ----
 #
@@ -72,7 +72,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file1ac025061d4c.json  DM      Demographics  60       26         json
+#> file1aa83cd813c1.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
@@ -85,6 +85,6 @@ write_rds(dm, file.path(dir, "dm.rds"))
 members(dir)
 #> <artoo_members> 2 datasets
 #> file     member  label         records  variables  format
-#> dm.json  DM      Demographics  60       26         json
-#> dm.rds   DM      Demographics  60       26         rds
+#> dm.json  DM      Demographics  60       25         json
+#> dm.rds   DM      Demographics  60       25         rds
 ```

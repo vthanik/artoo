@@ -66,9 +66,6 @@ raw$AGE[1] <- raw$AGE[1] + 0.5
 apply_spec(raw, strict, "ADSL", conformance = "off")
 ```
 
-    Scaffolded 6 variables the spec declares but the data lacks (added as empty):
-    `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`
-
     Error:
     ! Coercion to the spec dataTypes would lose data.
     ✖ Integer coercion would truncate fractional values in: AGE (1).
@@ -112,8 +109,7 @@ mis-shaped files:
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 ```
 
-    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-    `BRTHDTC`
+    1 variable the spec declares is absent from the data (not added): `BRTHDTC`.
 
 ``` r
 
@@ -142,8 +138,8 @@ dm$SEX[1] <- "X9"
 apply_spec(dm, sdtm_spec, "DM", conformance = "abort")
 ```
 
-    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-    `BRTHDTC`
+    1 variable the spec declares is absent from the data (not added): `BRTHDTC`.
+    ℹ See `conformance(x)` for the findings.
 
     Error:
     ! Data does not conform to the spec for "DM".

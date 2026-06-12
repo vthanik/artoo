@@ -89,13 +89,12 @@
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-`BRTHDTC`</code></pre>
+<pre><code>1 variable the spec declares is absent from the data (not added): `BRTHDTC`.</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">dm</span><span class="op">$</span><span class="va">BRTHDTC</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "character"</code></pre>
+<pre><code>[1] "NULL"</code></pre>
 </div>
 </div>
 </section><section class="level2"><h2 id="typed-dates-realize-to-r-classes">2. Typed dates realize to R classes<a class="anchor" aria-label="anchor" href="#typed-dates-realize-to-r-classes"></a>
@@ -105,8 +104,8 @@
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>Scaffolded 6 variables the spec declares but the data lacks (added as empty):
-`TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`</code></pre>
+<pre><code>6 variables the spec declares are absent from the data (not added): `TRTDURD`,
+`DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">$</span><span class="va">TRTSDT</span><span class="op">)</span></span></code></pre></div>

@@ -100,10 +100,14 @@ reads back. Hand it to any `write_*()` codec.
 
 ## Details
 
-**Ordered pipeline.** Five fixed steps run in order: scaffold missing
-spec variables (typed `NA`), coerce each column to its CDISC dataType,
-reorder columns to the spec, sort rows by the dataset keys, then stamp
-the metadata.
+**Ordered pipeline.** Four fixed steps run in order: coerce each column
+to its CDISC dataType, reorder columns to the spec, sort rows by the
+dataset keys, then stamp the metadata. A spec variable the data lacks is
+never fabricated as an empty column: artoo is a lossless carrier, not a
+deriver. It is reported instead, an informational heads-up at apply time
+plus a `missing_variable` finding (when mandatory) or
+`missing_permissible` (when not), and left absent, so the conformed
+frame carries only the columns the data actually had.
 
 **Extras are kept by default.** A column the spec does not declare
 survives the pipeline (ordered after the declared ones), is *reported*
@@ -159,13 +163,14 @@ for what the stamp attaches.
 ``` r
 # ---- Example 1: conform ADSL, then read its metadata ----
 #
-# The bundled adam_spec describes ADSL; the raw frame is scaffolded,
-# coerced, ordered, sorted, and stamped with the CDISC metadata
-# get_meta() reads back.
+# The bundled adam_spec describes ADSL; the raw frame is coerced,
+# ordered, sorted, and stamped with the CDISC metadata get_meta() reads
+# back. Variables the spec declares but this extract never derived are
+# reported (not added), readable via conformance().
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
-#> Scaffolded 6 variables the spec declares but the data lacks (added as
-#> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and
-#> `MMS1TSBL`
+#> 6 variables the spec declares are absent from the data (not added):
+#> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
+#> ℹ See `conformance(x)` for the findings.
 get_meta(adsl)@dataset$records
 #> [1] 60
 
@@ -178,25 +183,27 @@ get_meta(adsl)@dataset$records
 raw <- cdisc_dm
 raw$DERIVED <- seq_len(nrow(raw))
 dm <- apply_spec(raw, sdtm_spec, "DM")
-#> Scaffolded 1 variable the spec declares but the data lacks (added as
-#> empty): `BRTHDTC`
+#> 1 variable the spec declares is absent from the data (not added):
+#> `BRTHDTC`.
+#> ℹ See `conformance(x)` for the findings.
 findings <- conformance(dm)
 findings[findings$check == "extra_variable", c("variable", "message")]
 #>    variable                                        message
-#> 1  RFXSTDTC Column 'RFXSTDTC' is not declared in the spec.
-#> 2  RFXENDTC Column 'RFXENDTC' is not declared in the spec.
-#> 3   RFICDTC  Column 'RFICDTC' is not declared in the spec.
-#> 4  RFPENDTC Column 'RFPENDTC' is not declared in the spec.
-#> 5    DTHDTC   Column 'DTHDTC' is not declared in the spec.
-#> 6     DTHFL    Column 'DTHFL' is not declared in the spec.
-#> 7  ACTARMCD Column 'ACTARMCD' is not declared in the spec.
-#> 8    ACTARM   Column 'ACTARM' is not declared in the spec.
-#> 9     DMDTC    Column 'DMDTC' is not declared in the spec.
-#> 10     DMDY     Column 'DMDY' is not declared in the spec.
-#> 11  DERIVED  Column 'DERIVED' is not declared in the spec.
+#> 2  RFXSTDTC Column 'RFXSTDTC' is not declared in the spec.
+#> 3  RFXENDTC Column 'RFXENDTC' is not declared in the spec.
+#> 4   RFICDTC  Column 'RFICDTC' is not declared in the spec.
+#> 5  RFPENDTC Column 'RFPENDTC' is not declared in the spec.
+#> 6    DTHDTC   Column 'DTHDTC' is not declared in the spec.
+#> 7     DTHFL    Column 'DTHFL' is not declared in the spec.
+#> 8  ACTARMCD Column 'ACTARMCD' is not declared in the spec.
+#> 9    ACTARM   Column 'ACTARM' is not declared in the spec.
+#> 10    DMDTC    Column 'DMDTC' is not declared in the spec.
+#> 11     DMDY     Column 'DMDY' is not declared in the spec.
+#> 12  DERIVED  Column 'DERIVED' is not declared in the spec.
 trimmed <- apply_spec(raw, sdtm_spec, "DM", extra = "drop")
-#> Scaffolded 1 variable the spec declares but the data lacks (added as
-#> empty): `BRTHDTC`
+#> 1 variable the spec declares is absent from the data (not added):
+#> `BRTHDTC`.
+#> ℹ See `conformance(x)` for the findings.
 #> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,
 #> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,
 #> and `DERIVED`

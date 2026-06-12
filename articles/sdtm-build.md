@@ -87,7 +87,7 @@ never translates values, so submission values stay exactly as collected;
 is the explicit single-variable translator when you need to move between
 a code and its decode.
 
-## 4. Conform: scaffold, coerce, order, sort, stamp
+## 4. Conform: coerce, order, sort, stamp
 
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
 runs the fixed pipeline and stamps the CDISC metadata. `extra = "drop"`
@@ -99,8 +99,8 @@ recorded by the `extra_variable` finding, so the drop is never silent:
 conformed <- apply_spec(dm, sdtm_spec, "DM", extra = "drop")
 ```
 
-    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-    `BRTHDTC`
+    1 variable the spec declares is absent from the data (not added): `BRTHDTC`.
+    ℹ See `conformance(x)` for the findings.
     Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`, `RFPENDTC`,
     `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`, and `AGE_CHECK`
 
@@ -121,7 +121,7 @@ numeric carries none:
 columns(conformed)
 ```
 
-    <artoo_columns> DM -- 16 variables, 60 obs
+    <artoo_columns> DM -- 15 variables, 60 obs
     #   Variable  Type  Len  Format  Label                              Key
     1   STUDYID   Char  7            Study Identifier                   1
     2   DOMAIN    Char  2            Domain Abbreviation
@@ -130,15 +130,14 @@ columns(conformed)
     5   RFSTDTC   Char  10           Subject Reference Start Date/Time
     6   RFENDTC   Char  10           Subject Reference End Date/Time
     7   SITEID    Char  3            Study Site Identifier
-    8   BRTHDTC   Char  1            Date/Time of Birth
-    9   AGE       Num                Age
-    10  AGEU      Char  5            Age Units
-    11  SEX       Char  16           Sex
-    12  RACE      Char  41           Race
-    13  ETHNIC    Char  22           Ethnicity
-    14  ARMCD     Char  8            Planned Arm Code
-    15  ARM       Char  20           Description of Planned Arm
-    16  COUNTRY   Char  3            Country
+    8   AGE       Num                Age
+    9   AGEU      Char  5            Age Units
+    10  SEX       Char  16           Sex
+    11  RACE      Char  41           Race
+    12  ETHNIC    Char  22           Ethnicity
+    13  ARMCD     Char  8            Planned Arm Code
+    14  ARM       Char  20           Description of Planned Arm
+    15  COUNTRY   Char  3            Country
 
 ## 5. Fan out to every deliverable
 
@@ -160,7 +159,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1feb5799933c.json  DM      Demographics  60       16         json
+    file1fd33e8d4bc0.json  DM      Demographics  60       15         json
 
 ## Where to next
 

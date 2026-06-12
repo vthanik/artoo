@@ -143,9 +143,8 @@ dispatcher.</p></div>
 <span class="r-in"><span><span class="co"># apply_spec() attaches the metadata; write_json() serializes the full</span></span></span>
 <span class="r-in"><span><span class="co"># itemGroup plus the data rows.</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> `MMS1TSBL`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 6 variables the spec declares are absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.</span>
 <span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_json</span><span class="op">(</span><span class="va">adsl</span>, <span class="va">path</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -155,12 +154,12 @@ dispatcher.</p></div>
 <span class="r-in"><span><span class="co"># the written file shows the full metadata the file carries (DM is SDTM,</span></span></span>
 <span class="r-in"><span><span class="co"># so it conforms against the bundled sdtm_spec).</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 variable the spec declares is absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
 <span class="r-in"><span><span class="va">path2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_json</span><span class="op">(</span><span class="va">dm</span>, <span class="va">path2</span>, created <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2020-01-01"</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="columns.html">columns</a></span><span class="op">(</span><span class="va">path2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_columns&gt; DM -- 26 variables, 60 obs</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_columns&gt; DM -- 25 variables, 60 obs</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> #   Variable  Type  Len  Format  Label                              Key</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1   STUDYID   Char  7            Study Identifier                   1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2   DOMAIN    Char  2            Domain Abbreviation</span>
@@ -169,25 +168,24 @@ dispatcher.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5   RFSTDTC   Char  10           Subject Reference Start Date/Time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6   RFENDTC   Char  10           Subject Reference End Date/Time</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 7   SITEID    Char  3            Study Site Identifier</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8   BRTHDTC   Char  1            Date/Time of Birth</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9   AGE       Num                Age</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10  AGEU      Char  5            Age Units</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  SEX       Char  16           Sex</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12  RACE      Char  41           Race</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13  ETHNIC    Char  22           Ethnicity</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14  ARMCD     Char  8            Planned Arm Code</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15  ARM       Char  20           Description of Planned Arm</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16  COUNTRY   Char  3            Country</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 17  RFXSTDTC  Char  10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 18  RFXENDTC  Char  10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 19  RFICDTC   Char  1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 20  RFPENDTC  Char  16</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 21  DTHDTC    Char  10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 22  DTHFL     Char  1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23  ACTARMCD  Char  8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 24  ACTARM    Char  20</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 25  DMDTC     Char  10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 26  DMDY      Num</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   AGE       Num                Age</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   AGEU      Char  5            Age Units</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  SEX       Char  16           Sex</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  RACE      Char  41           Race</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  ETHNIC    Char  22           Ethnicity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  ARMCD     Char  8            Planned Arm Code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  ARM       Char  20           Description of Planned Arm</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15  COUNTRY   Char  3            Country</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16  RFXSTDTC  Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17  RFXENDTC  Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18  RFICDTC   Char  1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19  RFPENDTC  Char  16</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20  DTHDTC    Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21  DTHFL     Char  1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22  ACTARMCD  Char  8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23  ACTARM    Char  20</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24  DMDTC     Char  10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25  DMDY      Num</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -97,16 +97,17 @@ for spec integrity.
 ## Examples
 
 ``` r
-# ---- Example 1: a conformed dataset has no findings ----
+# ---- Example 1: a conformed frame surfaces only the genuine gaps ----
 #
-# apply_spec() scaffolds, coerces, and orders to spec; checking the result
-# against the same spec returns zero rows.
+# apply_spec() coerces and orders to spec but never fabricates a variable
+# the data lacks; checking the result reports the permissible variables
+# this extract never derived (here, six) instead of hiding them as empty
+# columns.
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
-#> Scaffolded 6 variables the spec declares but the data lacks (added as
-#> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and
-#> `MMS1TSBL`
+#> 6 variables the spec declares are absent from the data (not added):
+#> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
 nrow(check_spec(adsl, adam_spec, "ADSL"))
-#> [1] 6
+#> [1] 12
 
 # ---- Example 2: raw data surfaces divergences ----
 #

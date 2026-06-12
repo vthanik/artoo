@@ -99,13 +99,13 @@ see <code><a href="write_xpt.html">write_xpt()</a></code>).</p>
 <span class="r-in"><span><span class="co">#</span></span></span>
 <span class="r-in"><span><span class="co"># The FDA convention is one dataset per transport file.</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 1 variable the spec declares is absent from the data (not added):</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".xpt"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="write_xpt.html">write_xpt</a></span><span class="op">(</span><span class="va">dm</span>, <span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">xpt_members</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   member name        label nvars nobs</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1      1   DM Demographics    26   60</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      1   DM Demographics    25   60</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: survey a multi-member file, then read one member ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -123,7 +123,7 @@ see <code><a href="write_xpt.html">write_xpt()</a></code>).</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">xpt_members</span><span class="op">(</span><span class="va">multi</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   member name                          label nvars nobs</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1      1   DM                   Demographics    26   60</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1      1   DM                   Demographics    25   60</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2      2 ADSL Subject-Level Analysis Dataset    48   60</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

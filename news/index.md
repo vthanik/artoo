@@ -75,14 +75,22 @@ no backward compatibility is kept with the vport surface.
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   was reduced to five load-bearing arguments:
   `apply_spec(x, spec, dataset, conformance =, na_position =)`. The
-  pipeline is fixed — scaffold, coerce, order, sort, stamp — with no
-  subsetting knob (`steps`, `profile` dropped); codelist translation
-  lives in
+  pipeline is fixed — coerce, order, sort, stamp — with no subsetting
+  knob (`steps`, `profile` dropped); codelist translation lives in
   [`decode_column()`](https://vthanik.github.io/artoo/reference/decode_column.md)
   (`decode`, `no_match`, `trim`, `ignore_case` dropped); `checks`
   controls are passed to
   [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
   directly.
+
+- [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  no longer scaffolds: a variable the spec declares but the data lacks
+  is no longer added as an empty typed-`NA` column. It is reported
+  instead, an informational heads-up at apply time plus a
+  `missing_variable` finding (when mandatory) or `missing_permissible`
+  (when not), and left absent. artoo is a lossless carrier, not a
+  deriver: fabricating an empty derived column both modified the data
+  and masked that an expected variable was never produced.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   never drops a column: a variable the spec does not declare survives
@@ -190,9 +198,7 @@ no backward compatibility is kept with the vport surface.
 ### Docs
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
-  scaffold message now says why a variable was added (the spec declares
-  it but the data lacks it). Its `extra` argument documents why `"keep"`
-  is the lossless default, and
+  `extra` argument documents why `"keep"` is the lossless default, and
   [`spec_methods()`](https://vthanik.github.io/artoo/reference/spec_methods.md)
   /
   [`spec_comments()`](https://vthanik.github.io/artoo/reference/spec_comments.md)

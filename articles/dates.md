@@ -23,15 +23,14 @@ stealth:
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 ```
 
-    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
-    `BRTHDTC`
+    1 variable the spec declares is absent from the data (not added): `BRTHDTC`.
 
 ``` r
 
 class(dm$BRTHDTC)
 ```
 
-    [1] "character"
+    [1] "NULL"
 
 ## 2. Typed dates realize to R classes
 
@@ -47,8 +46,8 @@ and on every read:
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
 ```
 
-    Scaffolded 6 variables the spec declares but the data lacks (added as empty):
-    `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`
+    6 variables the spec declares are absent from the data (not added): `TRTDURD`,
+    `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
 
 ``` r
 
