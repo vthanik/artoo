@@ -163,28 +163,6 @@ test_that("xpt read records targetDataType = integer for numeric temporals", {
   expect_s3_class(back$TRTSDT, "Date")
 })
 
-test_that("scaffolded temporal variables honor the storage form", {
-  # No targetDataType -> ISO text -> character NA; integer -> numeric NA.
-  spec <- dtc_spec()
-  out <- apply_spec(
-    data.frame(USUBJID = "01-001", stringsAsFactors = FALSE),
-    spec,
-    "DM",
-    conformance = "off"
-  )
-  expect_type(out$BRTHDTC, "character")
-  expect_true(is.na(out$BRTHDTC))
-
-  spec_num <- dtc_spec(target = "integer")
-  out_num <- apply_spec(
-    data.frame(USUBJID = "01-001", stringsAsFactors = FALSE),
-    spec_num,
-    "DM",
-    conformance = "off"
-  )
-  expect_type(out_num$BRTHDTC, "double")
-})
-
 # ---- iso8601_format conformance --------------------------------------------
 
 test_that("iso8601_format accepts CDISC partial and placeholder forms", {

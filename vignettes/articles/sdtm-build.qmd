@@ -58,7 +58,7 @@ head(spec_codelists(sdtm_spec))
 as collected; `decode_column()` is the explicit single-variable translator
 when you need to move between a code and its decode.
 
-## 4. Conform: scaffold, coerce, order, sort, stamp
+## 4. Conform: coerce, order, sort, stamp
 
 `apply_spec()` runs the fixed pipeline and stamps the CDISC metadata.
 `extra = "drop"` trims the QC temporaries to exactly the spec's columns —

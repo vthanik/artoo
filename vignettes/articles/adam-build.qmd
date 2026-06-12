@@ -61,7 +61,7 @@ decode to code — the `RACEN`-from-`RACE` shape); `apply_spec()` itself
 never translates values, so submission values stay untouched unless you
 ask.
 
-## 4. Conform: scaffold, coerce, order, sort, stamp
+## 4. Conform: coerce, order, sort, stamp
 
 `apply_spec()` runs the fixed pipeline and stamps the CDISC metadata.
 `extra = "drop"` trims the derivation temporaries to exactly the spec's

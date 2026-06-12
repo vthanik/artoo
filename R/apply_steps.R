@@ -5,9 +5,9 @@
 # mutated, so any step aborting leaves the caller's input untouched
 # (the transactional guarantee). Steps are NOT exported: they are not
 # independently meaningful and inviting mis-composition. The pipeline is
-# fixed — scaffold, coerce, order, sort, stamp; the extra = "drop"
+# fixed — coerce, order, sort, stamp; the extra = "drop"
 # trim lives in apply_spec() itself, AFTER the findings are computed,
-# so it is an output policy, not a sixth step.
+# so it is an output policy, not a fifth step.
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort
@@ -46,41 +46,7 @@
   )
 }
 
-# 1. Add spec variables missing from x, as the type-correct NA. A temporal
-# variable with no numeric targetDataType is ISO 8601 text by CDISC
-# definition (the --DTC convention), so it scaffolds as character NA.
-#' @noRd
-.scaffold_vars <- function(x, info, call = rlang::caller_env()) {
-  missing <- setdiff(info$spec_vars, names(x))
-  if (!length(missing)) {
-    return(x)
-  }
-  rows <- match(missing, info$vars$variable)
-  types <- info$vars$data_type[rows]
-  tdts <- if ("target_data_type" %in% names(info$vars)) {
-    info$vars$target_data_type[rows]
-  } else {
-    rep(NA_character_, length(rows))
-  }
-  n <- nrow(x)
-  for (i in seq_along(missing)) {
-    iso_text <- !is.na(types[i]) &&
-      types[i] %in% c("date", "datetime", "time") &&
-      is.na(tdts[i])
-    x[[missing[i]]] <- if (iso_text) {
-      rep(NA_character_, n)
-    } else {
-      .na_for_type(types[i], n)
-    }
-  }
-  .artoo_inform(
-    "Scaffolded {length(missing)} variable{?s} the spec declares but the data lacks (added as empty): {.var {missing}}",
-    kind = "apply"
-  )
-  x
-}
-
-# 2. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
+# 1. Coerce each column to its CDISC dataType storage; warn on NA-introduction.
 # Lossy numeric coercion (truncated fractions, 32-bit overflow) always
 # aborts: silent data damage in a submission dataset is a data-integrity
 # event, and the cure is fixing the spec's dataType, not accepting the loss.
@@ -309,7 +275,7 @@
   out
 }
 
-# 3. Reorder columns to the spec's variable order. Columns the spec does
+# 2. Reorder columns to the spec's variable order. Columns the spec does
 # not declare are never dropped; they trail the declared ones.
 #' @noRd
 .order_cols <- function(x, info, call = rlang::caller_env()) {
@@ -317,7 +283,7 @@
   x[c(ordered, setdiff(names(x), ordered))]
 }
 
-# 4. Sort rows by the dataset's keys; record the keys used in `artoo.sort`.
+# 3. Sort rows by the dataset's keys; record the keys used in `artoo.sort`.
 # `na_position` controls where missing key values land: "first" (SAS PROC
 # SORT / FDA convention, the default) or "last" (R / pandas / Polars).
 #' @noRd
@@ -339,17 +305,26 @@
   x
 }
 
-# 5. Build the artoo_meta from the spec, stamp records, attach it. Temporal
+# 4. Build the artoo_meta from the spec, stamp records, attach it. Temporal
 # storage forms are resolved here, where the metadata meets the data: a
 # numeric-backed date/datetime/time column with no spec targetDataType gets
 # targetDataType = "integer" recorded (see .meta_resolve_temporal_targets),
-# so every codec and sidecar agrees on the exchange form. Columns the spec
-# does not declare (apply_spec never drops them) get a meta entry inferred
-# from their R class, so the meta describes the WHOLE frame and every codec
-# writes it losslessly without per-codec fallbacks.
+# so every codec and sidecar agrees on the exchange form. A spec variable the
+# data lacks gets NO meta entry (apply_spec never fabricates it; it surfaces as
+# a missing_variable / missing_permissible finding instead), and a column the
+# spec does not declare gets a meta entry inferred from its R class, so the
+# meta describes EXACTLY the frame and every codec writes it losslessly
+# without per-codec fallbacks.
 #' @noRd
 .stamp_meta <- function(x, info, spec, dataset, call = rlang::caller_env()) {
   meta <- .meta_from_spec(spec, dataset, records = nrow(x), call = call)
+  # The spec declares every variable; the frame may lack some (apply_spec no
+  # longer scaffolds). Drop those phantom meta entries so the meta never
+  # describes a column the frame does not carry.
+  present <- intersect(names(meta@columns), names(x))
+  if (length(present) != length(meta@columns)) {
+    meta <- .meta_select_columns(meta, present)
+  }
   meta <- .meta_resolve_temporal_targets(meta, x)
   extra <- setdiff(names(x), names(meta@columns))
   if (length(extra)) {

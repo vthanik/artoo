@@ -103,10 +103,10 @@ test_that("a fully numbered order does not warn", {
   )
 })
 
-test_that("scaffold progress carries class artoo_message_apply", {
+test_that("the missing-variable heads-up carries class artoo_message_apply", {
   spec <- demo_sdtm_spec()
   raw <- cdisc_dm
-  raw$AGE <- NULL # in the spec -> scaffolded back
+  raw$AGE <- NULL # declared by the spec, now absent -> reported, not added
   expect_message(
     apply_spec(raw, spec, "DM", conformance = "off"),
     class = "artoo_message_apply"

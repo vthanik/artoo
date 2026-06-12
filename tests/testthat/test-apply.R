@@ -43,13 +43,79 @@ test_that("apply_spec conforms ADSL and stamps metadata", {
   expect_identical(meta@dataset$records, nrow(adsl))
 })
 
-test_that("apply_spec scaffolds missing spec variables as typed NA", {
+test_that("apply_spec reports a missing spec variable instead of fabricating it", {
   spec <- demo_adam_spec()
   raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "AGE"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
+  out <- suppressMessages(apply_spec(raw, spec, "ADSL", conformance = "off"))
 
-  expect_true("AGE" %in% names(out))
-  expect_true(all(is.na(out$AGE)))
+  # The variable the data lacks is left absent (artoo is a carrier, not a
+  # deriver), and surfaces as a conformance finding instead of an empty column.
+  expect_false("AGE" %in% names(out))
+  f <- check_spec(out, spec, "ADSL")
+  expect_true(
+    "AGE" %in%
+      f$variable[
+        f$check %in% c("missing_variable", "missing_permissible")
+      ]
+  )
+  # Dropping AGE does not change how the columns the data DID carry conform:
+  # each is identical to the same column from the full-data run.
+  full <- suppressMessages(apply_spec(
+    cdisc_adsl,
+    spec,
+    "ADSL",
+    conformance = "off"
+  ))
+  for (nm in intersect(names(out), names(full))) {
+    expect_identical(out[[nm]], full[[nm]], info = nm)
+  }
+})
+
+test_that("a missing mandatory spec variable is an error finding and warns", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm[, setdiff(names(cdisc_dm), "USUBJID"), drop = FALSE]
+  out <- NULL
+  suppressMessages(
+    expect_warning(
+      out <- apply_spec(raw, spec, "DM"),
+      class = "artoo_warning_conformance"
+    )
+  )
+  expect_false("USUBJID" %in% names(out))
+  mv <- conformance(out)
+  mv <- mv[mv$check == "missing_variable", , drop = FALSE]
+  expect_true("USUBJID" %in% mv$variable)
+  expect_identical(unique(mv$severity), "error")
+})
+
+test_that("missing permissible variables surface as warnings without aborting", {
+  # The bundled adam_spec declares six ADSL variables this extract never
+  # derived; all are permissible, so the default call attaches them as
+  # warning-severity findings and emits no conformance warning.
+  out <- NULL
+  expect_no_warning(
+    out <- suppressMessages(apply_spec(cdisc_adsl, adam_spec, "ADSL"))
+  )
+  gaps <- c("TRTDURD", "DISONDT", "EOSSTT", "DCSREAS", "EOSDISP", "MMS1TSBL")
+  expect_false(any(gaps %in% names(out)))
+  mp <- conformance(out)
+  mp <- mp[mp$check == "missing_permissible", , drop = FALSE]
+  expect_setequal(intersect(gaps, mp$variable), gaps)
+  expect_identical(unique(mp$severity), "warning")
+})
+
+test_that("the missing-variable heads-up fires even under conformance = off", {
+  expect_message(
+    apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off"),
+    class = "artoo_message_apply"
+  )
+})
+
+test_that("the conformed frame's meta columns equal its frame columns (no phantom)", {
+  out <- suppressMessages(
+    apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
+  )
+  expect_identical(names(get_meta(out)@columns), names(out))
 })
 
 test_that("apply_spec never drops an undeclared column", {
@@ -98,16 +164,6 @@ test_that("apply_spec realizes date columns to Date with the SAS epoch (bug guar
   r_epoch_days <- as.numeric(unclass(adsl$TRTSDT))
   ok <- !is.na(sas_days)
   expect_equal(sas_days[ok], r_epoch_days[ok] + 3653)
-})
-
-test_that("a scaffolded date variable without targetDataType is ISO-text NA", {
-  # The spec types TRTSDT "date" with no targetDataType: by the CDISC
-  # storage rule that is ISO 8601 text, so the scaffold is character NA.
-  spec <- demo_adam_spec()
-  raw <- cdisc_adsl[, setdiff(names(cdisc_adsl), "TRTSDT"), drop = FALSE]
-  out <- apply_spec(raw, spec, "ADSL", conformance = "off")
-  expect_type(out$TRTSDT, "character")
-  expect_true(all(is.na(out$TRTSDT)))
 })
 
 test_that("apply_spec does not mutate its input (transactional)", {

@@ -15,10 +15,14 @@
 #' mutated; if any step aborts, the call leaves your data untouched.
 #'
 #' @details
-#' **Ordered pipeline.** Five fixed steps run in order: scaffold missing
-#' spec variables (typed `NA`), coerce each column to its CDISC dataType,
-#' reorder columns to the spec, sort rows by the dataset keys, then stamp
-#' the metadata.
+#' **Ordered pipeline.** Four fixed steps run in order: coerce each column
+#' to its CDISC dataType, reorder columns to the spec, sort rows by the
+#' dataset keys, then stamp the metadata. A spec variable the data lacks is
+#' never fabricated as an empty column: artoo is a lossless carrier, not a
+#' deriver. It is reported instead, an informational heads-up at apply time
+#' plus a `missing_variable` finding (when mandatory) or `missing_permissible`
+#' (when not), and left absent, so the conformed frame carries only the
+#' columns the data actually had.
 #'
 #' **Extras are kept by default.** A column the spec does not declare
 #' survives the pipeline (ordered after the declared ones), is *reported*
@@ -102,9 +106,10 @@
 #' @examples
 #' # ---- Example 1: conform ADSL, then read its metadata ----
 #' #
-#' # The bundled adam_spec describes ADSL; the raw frame is scaffolded,
-#' # coerced, ordered, sorted, and stamped with the CDISC metadata
-#' # get_meta() reads back.
+#' # The bundled adam_spec describes ADSL; the raw frame is coerced,
+#' # ordered, sorted, and stamped with the CDISC metadata get_meta() reads
+#' # back. Variables the spec declares but this extract never derived are
+#' # reported (not added), readable via conformance().
 #' adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 #' get_meta(adsl)@dataset$records
 #'
@@ -157,11 +162,30 @@ apply_spec <- function(
   .check_dataset_arg(spec, dataset, call = call)
 
   info <- .apply_info(spec, dataset, call = call)
-  out <- .scaffold_vars(x, info, call)
-  out <- .coerce_types(out, info, call)
+  out <- .coerce_types(x, info, call)
   out <- .order_cols(out, info, call)
   out <- .sort_keys(out, info, na_position, call)
   out <- .stamp_meta(out, info, spec, dataset, call)
+
+  # A spec variable the data lacks is never fabricated: artoo is a lossless
+  # carrier, not a deriver, so an absent declared variable is reported, not
+  # filled with an empty column. Announce it here and let check_spec() raise
+  # the structured missing_variable / missing_permissible finding. The
+  # heads-up fires under every conformance mode so the signal survives
+  # conformance = "off"; the conformance() hint appears only when findings
+  # are actually attached.
+  missing <- setdiff(info$spec_vars, names(out))
+  if (length(missing)) {
+    .artoo_inform(
+      c(
+        "{length(missing)} variable{?s} the spec declares {?is/are} absent from the data (not added): {.var {missing}}.",
+        if (conformance != "off") {
+          c("i" = "See {.code conformance(x)} for the findings.")
+        }
+      ),
+      kind = "apply"
+    )
+  }
 
   if (conformance != "off") {
     findings <- check_spec(out, spec, dataset)

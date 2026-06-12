@@ -77,7 +77,7 @@ reference:
 
 - title: Conform
   desc: >
-    Apply the spec to a raw frame — scaffold, coerce, order, sort, stamp
+    Apply the spec to a raw frame — coerce, order, sort, stamp
     metadata — and derive single variables through spec codelists.
   contents:
   - apply_spec

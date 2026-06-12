@@ -391,21 +391,3 @@ test_that(">24h, negative, and fractional times round-trip every codec", {
     )
   }
 })
-
-test_that("a scaffolded time variable is hms after apply_spec", {
-  spec <- artoo_spec(
-    data.frame(dataset = "ADVS"),
-    data.frame(
-      dataset = "ADVS",
-      variable = c("USUBJID", "ATM"),
-      data_type = c("string", "time"),
-      target_data_type = c(NA, "integer"),
-      display_format = c(NA, "TIME8."),
-      stringsAsFactors = FALSE
-    )
-  )
-  raw <- data.frame(USUBJID = c("01-001", "01-002"), stringsAsFactors = FALSE)
-  out <- apply_spec(raw, spec, "ADVS", conformance = "off")
-  expect_s3_class(out$ATM, "hms")
-  expect_true(all(is.na(out$ATM)))
-})

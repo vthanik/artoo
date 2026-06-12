@@ -55,7 +55,7 @@ library(artoo)
 # 2.1 example (one spec = one standard; this one is ADaMIG 1.1)
 adam_spec
 
-# Scaffold, coerce, order, sort, stamp metadata, then write — the writers
+# Coerce, order, sort, stamp metadata, then write — the writers
 # return their input invisibly, so one conformed frame fans out to every
 # deliverable format.
 path <- tempfile(fileext = ".xpt")

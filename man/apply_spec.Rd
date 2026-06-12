@@ -78,10 +78,14 @@ the metadata it now carries makes that write lossless. The input is never
 mutated; if any step aborts, the call leaves your data untouched.
 }
 \details{
-\strong{Ordered pipeline.} Five fixed steps run in order: scaffold missing
-spec variables (typed \code{NA}), coerce each column to its CDISC dataType,
-reorder columns to the spec, sort rows by the dataset keys, then stamp
-the metadata.
+\strong{Ordered pipeline.} Four fixed steps run in order: coerce each column
+to its CDISC dataType, reorder columns to the spec, sort rows by the
+dataset keys, then stamp the metadata. A spec variable the data lacks is
+never fabricated as an empty column: artoo is a lossless carrier, not a
+deriver. It is reported instead, an informational heads-up at apply time
+plus a \code{missing_variable} finding (when mandatory) or \code{missing_permissible}
+(when not), and left absent, so the conformed frame carries only the
+columns the data actually had.
 
 \strong{Extras are kept by default.} A column the spec does not declare
 survives the pipeline (ordered after the declared ones), is \emph{reported}
@@ -119,9 +123,10 @@ values (\code{SEX} stays \code{"M"}); codelist translation is its own verb,
 \examples{
 # ---- Example 1: conform ADSL, then read its metadata ----
 #
-# The bundled adam_spec describes ADSL; the raw frame is scaffolded,
-# coerced, ordered, sorted, and stamped with the CDISC metadata
-# get_meta() reads back.
+# The bundled adam_spec describes ADSL; the raw frame is coerced,
+# ordered, sorted, and stamped with the CDISC metadata get_meta() reads
+# back. Variables the spec declares but this extract never derived are
+# reported (not added), readable via conformance().
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 get_meta(adsl)@dataset$records
 

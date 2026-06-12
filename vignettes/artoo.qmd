@@ -46,11 +46,12 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 
 ## 2. Apply the spec
 
-`apply_spec()` is the conform pipeline: it scaffolds the variables the spec
-declares (typed `NA`), coerces each column to its CDISC data type, orders
-the columns, sorts by the dataset keys, and stamps the result with its
-metadata. The input is never mutated, no column is ever dropped, and a
-coercion that would damage values aborts before it runs.
+`apply_spec()` is the conform pipeline: it coerces each column to its CDISC
+data type, orders the columns, sorts by the dataset keys, and stamps the
+result with its metadata. A variable the spec declares but the data lacks is
+reported, never fabricated as an empty column. The input is never mutated, no
+column is ever dropped, and a coercion that would damage values aborts before
+it runs.
 
 ```{r}
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")

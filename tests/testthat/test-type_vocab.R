@@ -71,15 +71,6 @@ test_that(".type_storage maps the date/time and URI types", {
   expect_equal(artoo:::.type_storage("nonsense"), "character")
 })
 
-test_that(".na_for_type returns a typed NA per dataType", {
-  expect_identical(
-    artoo:::.na_for_type("integer", 2L),
-    c(NA_integer_, NA_integer_)
-  )
-  expect_identical(artoo:::.na_for_type("string", 1L), NA_character_)
-  expect_identical(artoo:::.na_for_type("float", 1L), NA_real_)
-})
-
 test_that(".coerce_to_type reports NA introduced by lossy coercion", {
   res <- artoo:::.coerce_to_type(c("1", "x", "3"), "integer")
   expect_equal(res$value, c(1L, NA, 3L))

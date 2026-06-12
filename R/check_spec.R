@@ -57,10 +57,12 @@
 #'   and `message`, one row per divergence. Zero rows means the data conforms.
 #'
 #' @examples
-#' # ---- Example 1: a conformed dataset has no findings ----
+#' # ---- Example 1: a conformed frame surfaces only the genuine gaps ----
 #' #
-#' # apply_spec() scaffolds, coerces, and orders to spec; checking the result
-#' # against the same spec returns zero rows.
+#' # apply_spec() coerces and orders to spec but never fabricates a variable
+#' # the data lacks; checking the result reports the permissible variables
+#' # this extract never derived (here, six) instead of hiding them as empty
+#' # columns.
 #' adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
 #' nrow(check_spec(adsl, adam_spec, "ADSL"))
 #'

@@ -5,5 +5,5 @@
     Output
       <artoo_members> 1 dataset
       file     member  label         records  variables  format
-      dm.json  DM      Demographics  60       26         json
+      dm.json  DM      Demographics  60       25         json
 

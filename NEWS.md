@@ -61,10 +61,17 @@ no backward compatibility is kept with the vport surface.
 
 * `apply_spec()` was reduced to five load-bearing arguments:
   `apply_spec(x, spec, dataset, conformance =, na_position =)`. The
-  pipeline is fixed — scaffold, coerce, order, sort, stamp — with no
+  pipeline is fixed — coerce, order, sort, stamp — with no
   subsetting knob (`steps`, `profile` dropped); codelist translation
   lives in `decode_column()` (`decode`, `no_match`, `trim`, `ignore_case`
   dropped); `checks` controls are passed to `check_spec()` directly.
+* `apply_spec()` no longer scaffolds: a variable the spec declares but the
+  data lacks is no longer added as an empty typed-`NA` column. It is reported
+  instead, an informational heads-up at apply time plus a `missing_variable`
+  finding (when mandatory) or `missing_permissible` (when not), and left
+  absent. artoo is a lossless carrier, not a deriver: fabricating an empty
+  derived column both modified the data and masked that an expected variable
+  was never produced.
 * `apply_spec()` never drops a column: a variable the spec does not
   declare survives the pipeline, is reported by the `extra_variable`
   finding, gets a class-inferred metadata entry at stamp time, and
@@ -151,10 +158,9 @@ no backward compatibility is kept with the vport surface.
 
 ## Docs
 
-* `apply_spec()`'s scaffold message now says why a variable was added (the
-  spec declares it but the data lacks it). Its `extra` argument documents why
-  `"keep"` is the lossless default, and `spec_methods()` / `spec_comments()`
-  enumerate every column of the data frame they return.
+* `apply_spec()`'s `extra` argument documents why `"keep"` is the lossless
+  default, and `spec_methods()` / `spec_comments()` enumerate every column of
+  the data frame they return.
 
 * The introductory vignette is now the package-named `vignette("artoo")` and
   surfaces as a top-level "Get started" navbar entry rather than an item in

@@ -141,12 +141,6 @@
   )
 }
 
-#' A typed NA vector for a CDISC dataType
-#' @noRd
-.na_for_type <- function(data_type, n = 0L) {
-  .na_mode(.type_storage(data_type), n)
-}
-
 #' Coerce a vector to the storage of a CDISC dataType
 #'
 #' Returns a list with `value` (the coerced vector), `n_na_introduced`
