@@ -156,6 +156,9 @@
 #' **Check:** [check_spec()] for the findings; [conformance()] to read them
 #' back.
 #'
+#' **Fix the spec:** [set_type()] to retype a variable the data disagrees
+#' with, [repair_spec()] to apply every integer fix from a findings frame.
+#'
 #' **Translate:** [decode_column()] for codelist value mapping.
 #'
 #' **Metadata:** [get_meta()] / [set_meta()] for what the stamp attaches.

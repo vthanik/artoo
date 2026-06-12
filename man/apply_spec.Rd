@@ -178,6 +178,9 @@ trimmed <- apply_spec(raw, sdtm_spec, "DM", extra = "drop")
 \strong{Check:} \code{\link[=check_spec]{check_spec()}} for the findings; \code{\link[=conformance]{conformance()}} to read them
 back.
 
+\strong{Fix the spec:} \code{\link[=set_type]{set_type()}} to retype a variable the data disagrees
+with, \code{\link[=repair_spec]{repair_spec()}} to apply every integer fix from a findings frame.
+
 \strong{Translate:} \code{\link[=decode_column]{decode_column()}} for codelist value mapping.
 
 \strong{Metadata:} \code{\link[=get_meta]{get_meta()}} / \code{\link[=set_meta]{set_meta()}} for what the stamp attaches.

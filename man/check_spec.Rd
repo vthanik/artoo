@@ -89,6 +89,7 @@ head(check_spec(raw, adam_spec, "ADSL")[, c("check", "variable", "severity")])
 
 }
 \seealso{
-\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=artoo_checks]{artoo_checks()}} to select
-dimensions; \code{\link[=validate_spec]{validate_spec()}} for spec integrity.
+\code{\link[=apply_spec]{apply_spec()}} which runs this; \code{\link[=check_study]{check_study()}} for the same
+check across a whole study; \code{\link[=artoo_checks]{artoo_checks()}} to select dimensions;
+\code{\link[=validate_spec]{validate_spec()}} for spec integrity.
 }

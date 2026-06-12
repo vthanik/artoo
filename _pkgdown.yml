@@ -53,11 +53,15 @@ reference:
   desc: >
     Build a artoo_spec — the canonical CDISC-shaped description of your
     datasets, one CDISC standard each — or read one from native JSON, a
-    Pinnacle 21 workbook, or Define-XML, and write it back out.
+    Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
+    R when the data disagrees: retype a variable, or repair every integer
+    mismatch a check surfaced.
   contents:
   - artoo_spec
   - read_spec
   - write_spec
+  - set_type
+  - repair_spec
   - is_artoo_spec
 
 - title: Spec accessors
@@ -95,10 +99,12 @@ reference:
 
 - title: Check
   desc: >
-    Conformance findings for the data, integrity findings for the spec
-    itself, and the control object that scopes both.
+    Conformance findings for the data — one dataset or a whole study —
+    integrity findings for the spec itself, and the control object that
+    scopes both.
   contents:
   - check_spec
+  - check_study
   - conformance
   - artoo_checks
   - is_artoo_checks

@@ -81,8 +81,9 @@
 #' raw$NOTASPEC <- 1
 #' head(check_spec(raw, adam_spec, "ADSL")[, c("check", "variable", "severity")])
 #'
-#' @seealso [apply_spec()] which runs this; [artoo_checks()] to select
-#'   dimensions; [validate_spec()] for spec integrity.
+#' @seealso [apply_spec()] which runs this; [check_study()] for the same
+#'   check across a whole study; [artoo_checks()] to select dimensions;
+#'   [validate_spec()] for spec integrity.
 #' @export
 check_spec <- function(
   x,

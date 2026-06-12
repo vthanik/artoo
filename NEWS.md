@@ -201,6 +201,12 @@ no backward compatibility is kept with the vport surface.
 
 ## Docs
 
+* The pkgdown reference index gains `set_type()` and `repair_spec()` (in the
+  Specification group) and `check_study()` (in the Check group), and the site
+  root now serves an `llms.txt` function map for machine-readable discovery.
+  `apply_spec()` cross-links the spec-fix verbs and `check_spec()` cross-links
+  `check_study()`.
+
 * `apply_spec()`'s `extra` argument documents why `"keep"` is the lossless
   default, and `spec_methods()` / `spec_comments()` enumerate every column of
   the data frame they return.
