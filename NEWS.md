@@ -103,6 +103,14 @@ no backward compatibility is kept with the vport surface.
 
 ## Inspect
 
+* New `members()`: the format-neutral inventory of the dataset(s) a path
+  holds, one row per dataset (`file`, `member`, `label`, `records`,
+  `variables`, `format`), dispatched by extension through the codec registry.
+  A SAS XPORT library lists every member, a single-dataset file (`.json`,
+  `.ndjson`, `.parquet`, `.rds`) reports one row, and a directory inventories
+  each dataset file it holds. The format-neutral companion to the xpt-specific
+  `xpt_members()`.
+
 * New `artoo_encodings()`: the encodings clinical data travels in, one row
   per encoding with the name under each ecosystem — `sas` (session
   encoding), `r` (the standard IANA name `iconv()` uses), and `python`
