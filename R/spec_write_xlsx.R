@@ -24,27 +24,37 @@
   stats::setNames(names(map), unname(map))
 }
 
-# Project one spec slot onto its P21 sheet: pick the mapped columns that
-# exist, in P21 header order, renamed to the P21 headers. Logical columns
-# become the P21 "Yes"/"No" convention. Returns NULL for an empty slot so
-# the sheet is omitted entirely.
+# Project one spec slot onto its P21 sheet: the mapped columns that exist
+# (in P21 header order, renamed to the P21 headers), then any foreign columns
+# the source carried that artoo does not model, emitted verbatim under their
+# own names. The reader already retains those foreign columns, so re-emitting
+# them keeps the xlsx round-trip from silently dropping user columns. Canonical
+# columns that have no P21 header (`itemoid`, `target_data_type`,
+# `key_sequence`, ...) are listed in `canonical` and stay unemitted -- they
+# survive only through the lossless native JSON. Logical columns become the P21
+# "Yes"/"No" convention. Returns NULL when no MAPPED column is present, so a
+# slot carrying only foreign columns does not conjure a sheet.
 #' @noRd
-.p21_sheet_frame <- function(df, map) {
+.p21_sheet_frame <- function(df, map, canonical = unname(map)) {
   if (is.null(df) || !is.data.frame(df) || !nrow(df)) {
     return(NULL)
   }
   rev_map <- .p21_rev(map)
-  cols <- intersect(names(rev_map), names(df))
-  if (!length(cols)) {
+  mapped <- intersect(names(rev_map), names(df))
+  if (!length(mapped)) {
     return(NULL)
   }
-  out <- df[cols]
-  for (nm in names(out)) {
+  foreign <- setdiff(names(df), c(canonical, names(rev_map), ".artoo_row"))
+  out <- df[c(mapped, foreign)]
+  for (nm in foreign) {
+    out[[nm]] <- as.character(out[[nm]])
+  }
+  for (nm in mapped) {
     if (is.logical(out[[nm]])) {
       out[[nm]] <- ifelse(is.na(out[[nm]]), NA, ifelse(out[[nm]], "Yes", "No"))
     }
   }
-  names(out) <- unname(rev_map[cols])
+  names(out) <- c(unname(rev_map[mapped]), foreign)
   out
 }
 
@@ -112,16 +122,43 @@
 
   sheets <- list(
     Define = .p21_study_sheet(spec@study),
-    Datasets = .p21_sheet_frame(datasets, .p21_ds_map),
-    Variables = .p21_sheet_frame(variables, .p21_var_map),
+    Datasets = .p21_sheet_frame(
+      datasets,
+      .p21_ds_map,
+      names(.spec_cols_datasets)
+    ),
+    Variables = .p21_sheet_frame(
+      variables,
+      .p21_var_map,
+      names(.spec_cols_variables)
+    ),
+    # The value-level slot has no fixed schema; its canonical columns are
+    # exactly the P21-mapped ones, so the default `canonical` applies.
     ValueLevel = .p21_sheet_frame(values, .p21_value_map),
     # The P21 Codelists "Comment" column is free text, not a Comment-ID
     # reference; .p21_codelist_map deliberately has no comment_id entry, so
-    # the projection can never emit one (mirroring the reader).
-    Codelists = .p21_sheet_frame(spec@codelists, .p21_codelist_map),
-    Methods = .p21_sheet_frame(spec@methods, .p21_method_map),
-    Comments = .p21_sheet_frame(spec@comments, .p21_comment_map),
-    Documents = .p21_sheet_frame(spec@documents, .p21_document_map)
+    # the projection can never emit one (mirroring the reader). Listing
+    # comment_id as canonical keeps it out of the foreign-column passthrough.
+    Codelists = .p21_sheet_frame(
+      spec@codelists,
+      .p21_codelist_map,
+      names(.spec_cols_codelists)
+    ),
+    Methods = .p21_sheet_frame(
+      spec@methods,
+      .p21_method_map,
+      names(.spec_cols_methods)
+    ),
+    Comments = .p21_sheet_frame(
+      spec@comments,
+      .p21_comment_map,
+      names(.spec_cols_comments)
+    ),
+    Documents = .p21_sheet_frame(
+      spec@documents,
+      .p21_document_map,
+      names(.spec_cols_documents)
+    )
   )
   # Datasets and Variables are the sheets the reader requires; the optional
   # ones are omitted when empty.

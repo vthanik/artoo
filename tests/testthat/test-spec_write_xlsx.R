@@ -121,6 +121,40 @@ test_that("a P21 xlsx round-trip preserves the representable surface", {
   expect_identical(back@documents$href, spec@documents$href)
 })
 
+test_that("write_spec(xlsx) preserves foreign columns (no silent drop)", {
+  # The reader retains unmapped P21 columns (they ride along as character
+  # columns); the writer must re-emit them so an xlsx round-trip does not
+  # silently drop user columns. Regression: .p21_sheet_frame previously
+  # projected only the mapped columns via intersect() and dropped the rest.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = c("DM", "DM"),
+      variable = c("USUBJID", "AGE"),
+      data_type = c("string", "integer"),
+      order = 1:2,
+      sponsor_note = c("keep me", "and me"), # a column artoo does not model
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+
+  vars_sheet <- as.data.frame(readxl::read_excel(p, sheet = "Variables"))
+  # The foreign column is written out verbatim under its own header.
+  expect_true("sponsor_note" %in% names(vars_sheet))
+  # A canonical column with no P21 header (itemoid) stays unemitted.
+  expect_false("itemoid" %in% names(vars_sheet))
+
+  # And the foreign column survives a full round-trip back into the spec.
+  back <- read_spec(p)
+  v <- spec_variables(back)
+  expect_identical(
+    v$sponsor_note[match(c("USUBJID", "AGE"), v$variable)],
+    c("keep me", "and me")
+  )
+})
+
 test_that("the workbook Data Type column speaks the Define/ODM vocabulary", {
   # P21 / Define-XML have no "string": a character variable is "text". The
   # writer must re-encode the canonical dataType, and a read folds it back.

@@ -45,6 +45,10 @@ ODM vocabulary the workbook expects: a character variable is \code{text}
 (not the Dataset-JSON \code{string}), and \code{decimal} / \code{double} collapse to
 \code{float}, \code{boolean} / \code{URI} to \code{text}.
 
+Columns the P21 vocabulary does not model are not lost: a foreign column
+carried on a slot is re-emitted verbatim under its own header, so an xlsx
+round-trip keeps user columns.
+
 \strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) do not survive an xlsx round-trip;
 persist to JSON when you need the spec back exactly. The \verb{Data Type}
