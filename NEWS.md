@@ -90,6 +90,13 @@ no backward compatibility is kept with the vport surface.
   (`conformance = "off"` never bypassed it), and the abort now names the
   knob: `on_coercion_loss = "keep"`, `set_type()`, and `check_spec()`.
 
+* New `check_study()`: run `check_spec()` over a named list of a study's
+  datasets and return one stacked findings frame, so "is my whole study
+  submittable?" is one call instead of a per-dataset loop with one abort at
+  a time. The result subclasses the findings frame (it filters like one and
+  feeds `repair_spec()` directly); printing it renders the dataset-by-check
+  count matrix.
+
 ## Spec I/O
 
 * `write_spec()` dispatches on the file extension: `.json` writes the

@@ -10,7 +10,7 @@ repair_spec(spec, findings)
 \item{spec}{\emph{The specification to repair.} \verb{<artoo_spec>: required}.}
 
 \item{findings}{\emph{A findings data frame.} \verb{<data.frame>: required}. The
-result of \code{\link[=check_spec]{check_spec()}} or \code{check_study()}; must carry the \code{check},
+result of \code{\link[=check_spec]{check_spec()}} or \code{\link[=check_study]{check_study()}}; must carry the \code{check},
 \code{dataset}, and \code{variable} columns.}
 }
 \value{
@@ -20,7 +20,7 @@ is never mutated.
 }
 \description{
 Take the \code{integer_fraction} and \code{integer_overflow} findings a
-\code{\link[=check_spec]{check_spec()}} or \code{check_study()} run reports and return a new spec with
+\code{\link[=check_spec]{check_spec()}} or \code{\link[=check_study]{check_study()}} run reports and return a new spec with
 every offending variable retyped to \code{"float"}, so a frame that the
 original spec would refuse to coerce now conforms. This closes the loop on
 the spec-side fix: inspect the findings, then apply them all at once
@@ -63,6 +63,6 @@ identical(repair_spec(adam_spec, clean), adam_spec)
 \seealso{
 \strong{Primitive:} \code{\link[=set_type]{set_type()}} to retype a chosen variable directly.
 
-\strong{Findings:} \code{\link[=check_spec]{check_spec()}} for one dataset, \code{check_study()} across a
+\strong{Findings:} \code{\link[=check_spec]{check_spec()}} for one dataset, \code{\link[=check_study]{check_study()}} across a
 study. \strong{Persist:} \code{\link[=write_spec]{write_spec()}}.
 }

@@ -8,7 +8,7 @@
 #' Repair a spec from its conformance findings
 #'
 #' Take the `integer_fraction` and `integer_overflow` findings a
-#' [check_spec()] or `check_study()` run reports and return a new spec with
+#' [check_spec()] or [check_study()] run reports and return a new spec with
 #' every offending variable retyped to `"float"`, so a frame that the
 #' original spec would refuse to coerce now conforms. This closes the loop on
 #' the spec-side fix: inspect the findings, then apply them all at once
@@ -28,7 +28,7 @@
 #'
 #' @param spec *The specification to repair.* `<artoo_spec>: required`.
 #' @param findings *A findings data frame.* `<data.frame>: required`. The
-#'   result of [check_spec()] or `check_study()`; must carry the `check`,
+#'   result of [check_spec()] or [check_study()]; must carry the `check`,
 #'   `dataset`, and `variable` columns.
 #'
 #' @return *A new `<artoo_spec>`* with the flagged variables retyped to
@@ -59,7 +59,7 @@
 #' @seealso
 #' **Primitive:** [set_type()] to retype a chosen variable directly.
 #'
-#' **Findings:** [check_spec()] for one dataset, `check_study()` across a
+#' **Findings:** [check_spec()] for one dataset, [check_study()] across a
 #' study. **Persist:** [write_spec()].
 #' @export
 repair_spec <- function(spec, findings) {
