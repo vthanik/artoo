@@ -83,16 +83,26 @@
 # consumed natively: the line loop stops as soon as enough rows are read, so
 # a partial read of a huge file never parses the tail.
 #' @noRd
-.decode_ndjson <- function(path, n_max = Inf, call = rlang::caller_env()) {
+.decode_ndjson <- function(
+  path,
+  n_max = Inf,
+  encoding = NULL,
+  call = rlang::caller_env()
+) {
+  # Stream through the connection at the source charset (resolved to an iconv
+  # spelling file()/gzfile() accept), so readLines re-encodes each line to
+  # UTF-8 on the fly. This keeps the n_max slab streaming that reading the
+  # whole file through .to_internal (the read_json path) would defeat.
+  enc <- .resolve_charset(encoding %||% "UTF-8")
   head2 <- readBin(path, what = "raw", n = 2L)
   con <- if (
     length(head2) == 2L &&
       head2[1L] == as.raw(0x1F) &&
       head2[2L] == as.raw(0x8B)
   ) {
-    gzfile(path, "rt", encoding = "UTF-8")
+    gzfile(path, "rt", encoding = enc)
   } else {
-    file(path, "rt", encoding = "UTF-8")
+    file(path, "rt", encoding = enc)
   }
   on.exit(close(con), add = TRUE)
 
@@ -181,7 +191,14 @@
   cols <- vector("list", nc)
   for (k in seq_len(nc)) {
     cells <- if (length(acc[[k]])) do.call(c, acc[[k]]) else list()
-    cols[[k]] <- .json_decode_column(cells, meta@columns[[k]])
+    col <- .json_decode_column(cells, meta@columns[[k]])
+    # NFC-normalize character columns for parity with read_json (which routes
+    # through .to_internal). A no-op on ASCII / single-byte content, so the
+    # byte-golden round-trips stay stable.
+    if (is.character(col)) {
+      col <- .nfc(col)
+    }
+    cols[[k]] <- col
   }
   names(cols) <- col_names
   df <- structure(
@@ -288,6 +305,11 @@ write_ndjson <- function(
 #'   stream (`.ndjson.gz`) is inflated transparently. A file whose first line
 #'   is not the Dataset-JSON metadata object aborts with `artoo_error_codec`.
 #' @inheritParams read_dataset
+#' @param encoding *Source charset of the file bytes.* `<character(1)> |
+#'   NULL`. `NULL` (default) reads UTF-8, as Dataset-JSON requires. Pass an
+#'   IANA or SAS charset name (e.g. `"windows-1252"`) only to read a
+#'   non-conformant file a producer wrote in that charset; each line is
+#'   transcoded to UTF-8 on read, preserving the bounded `n_max` streaming.
 #'
 #' @return *A `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]).
@@ -313,12 +335,13 @@ write_ndjson <- function(
 #' @seealso [write_ndjson()] for the inverse; [read_json()] for the
 #'   array-form file; [read_dataset()] for the generic dispatcher.
 #' @export
-read_ndjson <- function(path, col_select = NULL, n_max = Inf) {
+read_ndjson <- function(path, col_select = NULL, n_max = Inf, encoding = NULL) {
   read_dataset(
     path,
     format = "ndjson",
     col_select = col_select,
-    n_max = n_max
+    n_max = n_max,
+    encoding = encoding
   )
 }
 

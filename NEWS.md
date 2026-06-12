@@ -143,6 +143,13 @@ no backward compatibility is kept with the vport surface.
   request; the gate lives in the one shared transcode helper, so all four
   writers rule identically.
 
+* `read_ndjson()` gained the `encoding =` argument the other readers already
+  carried, closing the last read-side asymmetry. Pass an IANA or SAS charset
+  (e.g. `"windows-1252"`) to read a non-conformant NDJSON file a producer
+  wrote in that charset; each line is transcoded to UTF-8 on read, preserving
+  the bounded `n_max` streaming. Character columns are now NFC-normalized on
+  read, matching `read_json()`.
+
 ## Inspect
 
 * New `members()`: the format-neutral inventory of the dataset(s) a path

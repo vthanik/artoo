@@ -246,3 +246,30 @@ test_that("write_ndjson gates invalid UTF-8 through on_invalid", {
   expect_no_warning(write_ndjson(df, p2, on_invalid = "ignore"))
   expect_identical(read_ndjson(p2)$USUBJID[1], "c")
 })
+
+test_that("read_ndjson(encoding=) transcodes non-UTF-8 source bytes to UTF-8", {
+  # A frame carrying a non-ASCII glyph, written as UTF-8, then re-encoded to
+  # windows-1252 to simulate a non-conformant producer.
+  df <- data.frame(
+    USUBJID = c("01-001", "01-002"),
+    NOTE = c("café", "café"), # e-acute
+    stringsAsFactors = FALSE
+  )
+  p_utf8 <- withr::local_tempfile(fileext = ".ndjson")
+  write_ndjson(df, p_utf8)
+
+  # Default read of the UTF-8 file recovers the glyph (NFC parity with json).
+  expect_equal(read_ndjson(p_utf8)$NOTE, c("café", "café"))
+
+  # Re-encode UTF-8 -> windows-1252 (e-acute becomes byte 0xE9).
+  txt <- rawToChar(readBin(p_utf8, "raw", n = file.size(p_utf8)))
+  Encoding(txt) <- "UTF-8"
+  w1252 <- iconv(txt, from = "UTF-8", to = "WINDOWS-1252", toRaw = TRUE)[[1]]
+  p_w1252 <- withr::local_tempfile(fileext = ".ndjson")
+  writeBin(w1252, p_w1252)
+
+  # encoding = "windows-1252" recovers the real glyph on read.
+  back <- read_ndjson(p_w1252, encoding = "windows-1252")
+  expect_equal(back$NOTE, c("café", "café"))
+  expect_true(all(validUTF8(back$NOTE)))
+})
