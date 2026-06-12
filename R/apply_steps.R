@@ -5,7 +5,9 @@
 # mutated, so any step aborting leaves the caller's input untouched
 # (the transactional guarantee). Steps are NOT exported: they are not
 # independently meaningful and inviting mis-composition. The pipeline is
-# fixed — scaffold, coerce, order, sort, stamp — with no subsetting knob.
+# fixed — scaffold, coerce, order, sort, stamp; the extra = "drop"
+# trim lives in apply_spec() itself, AFTER the findings are computed,
+# so it is an output policy, not a sixth step.
 
 # Pre-extract the per-dataset spec slices every step shares: the
 # order-sorted variable rows, the spec variable names, and the parsed sort

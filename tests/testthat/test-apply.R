@@ -19,10 +19,12 @@ demo_sdtm_spec <- function() {
 
 # ---- apply_spec surface -----------------------------------------------------
 
-test_that("apply_spec exposes exactly the five load-bearing arguments", {
+test_that("apply_spec exposes exactly the six load-bearing arguments", {
+  # extra= joined 2026-06-12 by explicit decision (consumer feedback 4.2),
+  # superseding the original five-argument lock.
   expect_named(
     formals(apply_spec),
-    c("x", "spec", "dataset", "conformance", "na_position")
+    c("x", "spec", "dataset", "conformance", "na_position", "extra")
   )
 })
 
@@ -319,4 +321,102 @@ test_that("the conformance abort carries the full findings frame as cnd$findings
   # The attached frame is the complete report, not just the error rows.
   expect_true(any(f$severity == "error"))
   expect_true(any(f$check == "codelist_membership" | f$variable == "SEX"))
+})
+
+# ---- extra = c("keep", "drop") (consumer feedback 4.2, unlocked) ------------
+
+test_that("extra = 'drop' trims to the spec, never silently", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$TMPFLAG <- "x"
+  raw$AVAL_RAW <- seq_len(nrow(raw)) + 0.5
+  msg <- NULL
+  withCallingHandlers(
+    out <- suppressWarnings(
+      apply_spec(raw, spec, "DM", extra = "drop")
+    ),
+    artoo_message_apply = function(cnd) {
+      if (grepl("Dropped", conditionMessage(cnd))) {
+        msg <<- conditionMessage(cnd)
+      }
+      invokeRestart("muffleMessage")
+    }
+  )
+  expect_false(any(c("TMPFLAG", "AVAL_RAW") %in% names(out)))
+  expect_match(msg, "Dropped 2 undeclared variables")
+  # The audit trail survives: extra_variable findings name what was dropped.
+  f <- conformance(out)
+  expect_setequal(
+    f$variable[f$check == "extra_variable"],
+    c("TMPFLAG", "AVAL_RAW")
+  )
+  # Meta describes exactly the returned frame; the findings attribute
+  # survives the [[<- NULL removal (a [cols] subset would strip it).
+  expect_setequal(names(get_meta(out)@columns), names(out))
+  expect_false(is.null(attr(out, "artoo.conformance")))
+})
+
+test_that("extra = 'drop' output writes only spec columns (round-trip)", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$SCRATCH <- "tmp"
+  out <- suppressMessages(suppressWarnings(
+    apply_spec(raw, spec, "DM", extra = "drop")
+  ))
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(out, p)
+  back <- read_json(p)
+  expect_false("SCRATCH" %in% names(back))
+  expect_identical(names(back), names(out))
+})
+
+test_that("extra = 'drop' with no extras is a silent no-op", {
+  spec <- demo_sdtm_spec()
+  kept <- suppressMessages(suppressWarnings(
+    apply_spec(cdisc_dm, spec, "DM")
+  ))
+  expect_no_message(
+    out <- suppressWarnings(
+      apply_spec(cdisc_dm, spec, "DM", extra = "drop", conformance = "off")
+    ),
+    message = "Dropped"
+  )
+  expect_identical(names(out), names(kept))
+})
+
+test_that("extra = 'drop' announces even under conformance = 'off'", {
+  # With checks off no extra_variable finding exists, so the unconditional
+  # message is the only trace of the drop -- it must fire.
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$TMPFLAG <- "x"
+  expect_message(
+    out <- suppressWarnings(
+      apply_spec(raw, spec, "DM", conformance = "off", extra = "drop")
+    ),
+    "Dropped 1 undeclared variable",
+    class = "artoo_message_apply"
+  )
+  expect_false("TMPFLAG" %in% names(out))
+})
+
+test_that("conformance = 'abort' still aborts before any drop happens", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$SEX[1] <- "X9" # error-severity finding
+  raw$TMPFLAG <- "x"
+  expect_error(
+    apply_spec(raw, spec, "DM", conformance = "abort", extra = "drop"),
+    class = "artoo_error_conformance"
+  )
+  # Transactional: the input is untouched.
+  expect_true("TMPFLAG" %in% names(raw))
+})
+
+test_that("the default keeps extras exactly as before", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$NOTSPEC <- "keep me"
+  out <- suppressWarnings(apply_spec(raw, spec, "DM"))
+  expect_true("NOTSPEC" %in% names(out))
 })

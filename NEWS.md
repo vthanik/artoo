@@ -44,6 +44,14 @@ no backward compatibility is kept with the vport surface.
 
 ## Conform
 
+* `apply_spec()` gained `extra = c("keep", "drop")`: `"keep"` (default)
+  preserves today's never-drop behavior; `"drop"` trims the output to
+  exactly the spec's columns — the `metatools::drop_unspec_vars()`
+  migration shape. The drop is never silent: it is announced
+  (`artoo_message_apply`) even under `conformance = "off"`, the
+  `extra_variable` finding remains the audit trail, and a
+  `conformance = "abort"` failure fires before any drop.
+
 * `apply_spec()`'s data-protection conditions now carry their evidence as
   data, not just prose: the lossy-coercion abort (`artoo_error_type`) and
   the NA-introduction warning (`artoo_warning_coercion`) attach

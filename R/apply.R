@@ -20,11 +20,17 @@
 #' reorder columns to the spec, sort rows by the dataset keys, then stamp
 #' the metadata.
 #'
-#' **Never drops a column.** A column the spec does not declare survives the
-#' pipeline (ordered after the declared ones), is *reported* by the
-#' `extra_variable` conformance finding, and round-trips through every
-#' `write_*()` codec with metadata inferred from its R class. Membership is
-#' reported, not enforced by destruction.
+#' **Extras are kept by default.** A column the spec does not declare
+#' survives the pipeline (ordered after the declared ones), is *reported*
+#' by the `extra_variable` conformance finding, and round-trips through
+#' every `write_*()` codec with metadata inferred from its R class —
+#' membership reported, never enforced by silent destruction.
+#' `extra = "drop"` opts in to trim-to-spec (the
+#' `metatools::drop_unspec_vars()` migration shape): the undeclared
+#' columns are removed *after* the findings are computed, so the
+#' `extra_variable` finding remains the audit trail of what was dropped,
+#' and the drop itself is always announced (`artoo_message_apply`) — even
+#' under `conformance = "off"`.
 #'
 #' **Lossless or abort.** A coercion that would damage values — an
 #' `integer` dataType truncating fractions or overflowing R's 32-bit range
@@ -62,6 +68,17 @@
 #'   (and the FDA submission convention) by ordering missings before present
 #'   values; `"last"` matches R's `order()` and the pandas/Polars default.
 #'   Both are lossless; pick the one your comparison target uses.
+#' @param extra *What happens to undeclared columns.* `<character(1)>`.
+#'   An "extra" is a column of `x` the spec does not declare — typically a
+#'   derivation temporary. One of:
+#'   * `"keep"` (default) extras ride along after the declared columns,
+#'     reported by the `extra_variable` finding.
+#'   * `"drop"` the returned frame carries exactly the spec's columns;
+#'     the drop is announced (`artoo_message_apply`) and the
+#'     `extra_variable` finding still reports what was removed.
+#'
+#'   **Interaction:** under `conformance = "abort"` an error-severity
+#'   finding aborts *before* any drop — the trim never masks a failure.
 #'
 #' @return *A conformed `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]) and, unless `conformance = "off"`, the findings frame
@@ -76,16 +93,19 @@
 #' adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
 #' get_meta(adsl)@dataset$records
 #'
-#' # ---- Example 2: an undeclared column survives, and is reported ----
+#' # ---- Example 2: extras are kept and reported, or dropped on request ----
 #' #
-#' # apply_spec() never drops data: a column outside the spec rides along
-#' # (reported by the extra_variable finding) and still writes losslessly.
-#' # DM is SDTM, so it conforms against the bundled sdtm_spec.
+#' # By default a column outside the spec rides along (reported by the
+#' # extra_variable finding) and still writes losslessly; extra = "drop"
+#' # trims to the spec, announced and still reported. DM is SDTM, so it
+#' # conforms against the bundled sdtm_spec.
 #' raw <- cdisc_dm
 #' raw$DERIVED <- seq_len(nrow(raw))
 #' dm <- apply_spec(raw, sdtm_spec, "DM")
 #' findings <- conformance(dm)
 #' findings[findings$check == "extra_variable", c("variable", "message")]
+#' trimmed <- apply_spec(raw, sdtm_spec, "DM", extra = "drop")
+#' "DERIVED" %in% names(trimmed)
 #'
 #' @seealso
 #' **Check:** [check_spec()] for the findings; [conformance()] to read them
@@ -100,11 +120,13 @@ apply_spec <- function(
   spec,
   dataset,
   conformance = c("warn", "abort", "off"),
-  na_position = c("first", "last")
+  na_position = c("first", "last"),
+  extra = c("keep", "drop")
 ) {
   call <- rlang::caller_env()
   conformance <- match.arg(conformance)
   na_position <- match.arg(na_position)
+  extra <- match.arg(extra)
 
   if (!is.data.frame(x)) {
     .artoo_abort(
@@ -159,6 +181,27 @@ apply_spec <- function(
           call = call
         )
       }
+    }
+  }
+
+  # Trim-to-spec runs LAST, after the findings were computed on the full
+  # frame: the extra_variable finding is the audit trail of what was
+  # dropped, and a conformance abort fires before any drop (transactional).
+  # Removal via [[<- NULL keeps the frame attributes (metadata_json,
+  # artoo.sort, artoo.conformance) that a [cols] subset would strip; the
+  # message is unconditional, so a drop is never silent even under
+  # conformance = "off", where no finding is computed at all.
+  if (extra == "drop") {
+    extras <- setdiff(names(out), info$spec_vars)
+    if (length(extras)) {
+      for (nm in extras) {
+        out[[nm]] <- NULL
+      }
+      out <- set_meta(out, .meta_select_columns(get_meta(out), names(out)))
+      .artoo_inform(
+        "Dropped {length(extras)} undeclared variable{?s}: {.var {extras}}",
+        kind = "apply"
+      )
     }
   }
   out
