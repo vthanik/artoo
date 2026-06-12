@@ -39,6 +39,21 @@ test_that(".parse_type rejects a missing or empty type", {
   expect_error(artoo:::.parse_type(""), class = "artoo_error_type")
 })
 
+test_that(".to_define_datatype encodes canonical types in the ODM vocabulary", {
+  expect_identical(artoo:::.to_define_datatype("string"), "text")
+  expect_identical(artoo:::.to_define_datatype("boolean"), "text")
+  expect_identical(artoo:::.to_define_datatype("URI"), "text")
+  expect_identical(artoo:::.to_define_datatype("decimal"), "float")
+  expect_identical(artoo:::.to_define_datatype("double"), "float")
+  expect_identical(
+    artoo:::.to_define_datatype(
+      c("integer", "float", "date", "datetime", "time")
+    ),
+    c("integer", "float", "date", "datetime", "time")
+  )
+  expect_true(is.na(artoo:::.to_define_datatype(NA_character_)))
+})
+
 test_that(".type_storage maps dataTypes to R storage modes", {
   expect_equal(artoo:::.type_storage("string"), "character")
   expect_equal(artoo:::.type_storage("integer"), "integer")

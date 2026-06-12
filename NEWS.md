@@ -82,7 +82,13 @@ no backward compatibility is kept with the vport surface.
   Pinnacle 21 workbook whose sheet names and headers derive from the P21
   reader's own maps, with foreign keys repeated on every row and the
   spec's standard on the Datasets sheet. Define-XML to P21 is one
-  composition: `read_spec("define.xml") |> write_spec("spec.xlsx")`.
+  composition: `read_spec("define.xml") |> write_spec("spec.xlsx")`. The
+  workbook's `Data Type` column is written in the Define-XML / ODM
+  vocabulary the format expects: a character variable is `text` (not the
+  Dataset-JSON `string`), with `decimal` / `double` collapsing to `float`
+  and `boolean` / `URI` to `text`. A read folds these back, so a round-trip
+  preserves `string`, `integer`, `float`, `date`, `datetime`, and `time`
+  exactly.
 
 ## Dataset I/O
 

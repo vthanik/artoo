@@ -10,7 +10,12 @@
 # Honest contract: native JSON is the lossless format; P21 xlsx is the
 # interchange format. Spec fields with no P21 column (itemoid,
 # target_data_type, per-variable key_sequence, codelist `extended`) are
-# not emitted and do not survive an xlsx round-trip.
+# not emitted and do not survive an xlsx round-trip. The data_type column is
+# re-encoded into the Define-XML / ODM vocabulary (.to_define_datatype): a
+# character variable becomes "text" (ODM has no "string"), and decimal/double
+# collapse to "float", boolean/URI to "text" -- a non-injective map, so those
+# four canonical spellings do not survive an xlsx round-trip (they fold to
+# string/float on read). The lossless native JSON keeps the canonical spelling.
 
 # Reverse a reader map (P21 header -> artoo column) into a writer map
 # (artoo column -> P21 header), preserving the reader's column order.
@@ -93,11 +98,23 @@
     datasets$standard <- spec@standard
   }
 
+  # Re-encode the canonical dataType into the Define-XML / ODM vocabulary the
+  # P21 "Data Type" column expects ("text", not "string"). Variables and
+  # ValueLevel are the only slots with a data_type column.
+  variables <- spec@variables
+  if ("data_type" %in% names(variables) && nrow(variables)) {
+    variables$data_type <- .to_define_datatype(variables$data_type)
+  }
+  values <- spec@values
+  if ("data_type" %in% names(values) && nrow(values)) {
+    values$data_type <- .to_define_datatype(values$data_type)
+  }
+
   sheets <- list(
     Define = .p21_study_sheet(spec@study),
     Datasets = .p21_sheet_frame(datasets, .p21_ds_map),
-    Variables = .p21_sheet_frame(spec@variables, .p21_var_map),
-    ValueLevel = .p21_sheet_frame(spec@values, .p21_value_map),
+    Variables = .p21_sheet_frame(variables, .p21_var_map),
+    ValueLevel = .p21_sheet_frame(values, .p21_value_map),
     # The P21 Codelists "Comment" column is free text, not a Comment-ID
     # reference; .p21_codelist_map deliberately has no comment_id entry, so
     # the projection can never emit one (mirroring the reader).

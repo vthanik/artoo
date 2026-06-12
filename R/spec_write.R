@@ -43,11 +43,19 @@
 #' cells), and the spec's [spec_standard()] as the Datasets sheet's
 #' `Standard` column. The study row writes back as the Define sheet's
 #' Attribute/Value pairs (`StudyName`, `StudyDescription`,
-#' `ProtocolName`).
+#' `ProtocolName`). The `Data Type` column is written in the Define-XML /
+#' ODM vocabulary the workbook expects: a character variable is `text`
+#' (not the Dataset-JSON `string`), and `decimal` / `double` collapse to
+#' `float`, `boolean` / `URI` to `text`.
 #'
 #' **Note:** fields with no P21 column (`itemoid`, `target_data_type`,
 #' per-variable `key_sequence`) do not survive an xlsx round-trip;
-#' persist to JSON when you need the spec back exactly.
+#' persist to JSON when you need the spec back exactly. The `Data Type`
+#' re-encoding is also non-injective: `decimal`, `double`, `boolean`, and
+#' `URI` fold to `float` or `text` on a read-back. A Define-XML
+#' `partialDate` / `partialDatetime` (and the other partial / incomplete
+#' subtypes) is read as the base `date` / `datetime` -- CDISC Dataset-JSON
+#' v1.1 has no partial dataType -- so it is written back as the base type.
 #'
 #' @param spec *The specification to serialise.* `<artoo_spec>: required`.
 #'   Build one with [artoo_spec()] or [read_spec()].

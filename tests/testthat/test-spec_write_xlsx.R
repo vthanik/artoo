@@ -121,6 +121,71 @@ test_that("a P21 xlsx round-trip preserves the representable surface", {
   expect_identical(back@documents$href, spec@documents$href)
 })
 
+test_that("the workbook Data Type column speaks the Define/ODM vocabulary", {
+  # P21 / Define-XML have no "string": a character variable is "text". The
+  # writer must re-encode the canonical dataType, and a read folds it back.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      length = 11L,
+      order = 1L,
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  vars <- as.data.frame(readxl::read_excel(p, sheet = "Variables"))
+  expect_identical(vars[["Data Type"]][vars$Variable == "USUBJID"], "text")
+  back <- read_spec(p)
+  expect_identical(
+    back@variables$data_type[back@variables$variable == "USUBJID"],
+    "string"
+  )
+})
+
+test_that("the dataType re-encoding collapse is locked (decimal/double/boolean/URI)", {
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("V1", "V2", "V3", "V4"),
+      data_type = c("decimal", "double", "boolean", "URI"),
+      order = 1:4,
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  vars <- as.data.frame(readxl::read_excel(p, sheet = "Variables"))
+  dt <- vars[["Data Type"]][match(c("V1", "V2", "V3", "V4"), vars$Variable)]
+  # decimal/double -> float; boolean/URI -> text (ODM has no other spelling).
+  expect_identical(dt, c("float", "float", "text", "text"))
+})
+
+test_that("a date variable carries no Length cell (Define length rule)", {
+  # Define-XML Length is present only for text/integer/float; a date variable
+  # with no declared length emits a blank Length cell.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = c("USUBJID", "RFSTDTC"),
+      data_type = c("string", "date"),
+      length = c(11L, NA_integer_),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".xlsx")
+  write_spec(spec, p)
+  vars <- as.data.frame(readxl::read_excel(p, sheet = "Variables"))
+  expect_equal(vars[["Length"]][vars$Variable == "USUBJID"], 11)
+  expect_true(is.na(vars[["Length"]][vars$Variable == "RFSTDTC"]))
+})
+
 test_that("a codelist comment_id is never emitted into the Codelists sheet", {
   # The P21 Codelists "Comment" column is free text, not a reference; the
   # writer must not exteriorise comment_id there, and a round-trip must not

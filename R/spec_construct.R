@@ -120,7 +120,7 @@
 #' @examples
 #' # ---- Example 1: build a spec from the bundled CDISC-pilot tables ----
 #' #
-#' # `cdisc_sdtm_datasets` and `cdisc_sdtm_variables` hold the CDISC pilot ADaM
+#' # `cdisc_sdtm_datasets` and `cdisc_sdtm_variables` hold the CDISC pilot SDTM
 #' # metadata in the shape artoo_spec() expects; the constructor
 #' # canonicalises every type and checks cross-slot integrity.
 #' spec <- artoo_spec(cdisc_sdtm_datasets, cdisc_sdtm_variables, codelists = cdisc_codelists)

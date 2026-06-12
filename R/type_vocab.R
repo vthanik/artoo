@@ -86,6 +86,39 @@
   )
 }
 
+# Canonical CDISC dataType -> the Define-XML / ODM DataType vocabulary that a
+# Pinnacle 21 workbook (and a future Define-XML writer) expects on the write
+# side. This is the inverse of .parse_type for the WRITE direction. The map is
+# deliberately NOT injective: ODM has no "string"/"decimal"/"double" spelling,
+# so a character variable becomes "text" and an exact/IEEE numeric becomes
+# "float". That collapse is acceptable because the P21 xlsx is the interchange
+# surface, not the lossless one (native JSON keeps the canonical spelling); a
+# read folds "text" back to "string" and "float" to "float".
+.define_datatypes <- c(
+  string = "text",
+  boolean = "text",
+  URI = "text",
+  decimal = "float",
+  double = "float",
+  integer = "integer",
+  float = "float",
+  date = "date",
+  datetime = "datetime",
+  time = "time"
+)
+
+#' Encode a canonical CDISC dataType in the Define-XML / ODM vocabulary
+#'
+#' Vectorized. An NA, or a value already in the Define vocabulary, passes
+#' through verbatim (every canonical artoo dataType is a key, so in practice
+#' only NA falls through).
+#' @noRd
+.to_define_datatype <- function(x) {
+  hit <- .define_datatypes[as.character(x)]
+  # ifelse() inherits names from the condition, so unname the result.
+  unname(ifelse(is.na(hit), as.character(x), hit))
+}
+
 # R storage mode used to hold a column of a given CDISC dataType. Dates,
 # datetimes, and times are held as numeric (SAS-style; the displayFormat
 # carries the SAS format) — the codec layer realises the ISO-string vs

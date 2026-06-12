@@ -40,11 +40,19 @@ sheets are omitted), foreign keys repeated on every row (no merged
 cells), and the spec's \code{\link[=spec_standard]{spec_standard()}} as the Datasets sheet's
 \code{Standard} column. The study row writes back as the Define sheet's
 Attribute/Value pairs (\code{StudyName}, \code{StudyDescription},
-\code{ProtocolName}).
+\code{ProtocolName}). The \verb{Data Type} column is written in the Define-XML /
+ODM vocabulary the workbook expects: a character variable is \code{text}
+(not the Dataset-JSON \code{string}), and \code{decimal} / \code{double} collapse to
+\code{float}, \code{boolean} / \code{URI} to \code{text}.
 
 \strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) do not survive an xlsx round-trip;
-persist to JSON when you need the spec back exactly.
+persist to JSON when you need the spec back exactly. The \verb{Data Type}
+re-encoding is also non-injective: \code{decimal}, \code{double}, \code{boolean}, and
+\code{URI} fold to \code{float} or \code{text} on a read-back. A Define-XML
+\code{partialDate} / \code{partialDatetime} (and the other partial / incomplete
+subtypes) is read as the base \code{date} / \code{datetime} -- CDISC Dataset-JSON
+v1.1 has no partial dataType -- so it is written back as the base type.
 }
 \examples{
 # ---- Example 1: persist a spec to JSON, then read it back ----
