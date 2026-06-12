@@ -34,11 +34,11 @@
 #' that contract, so trimming data is always an explicit, announced choice
 #' rather than a default side effect.
 #' `extra = "drop"` opts in to trim-to-spec (the returned frame carries
-#' exactly the spec's columns): the undeclared
-#' columns are removed *after* the findings are computed, so the
-#' `extra_variable` finding remains the audit trail of what was dropped,
-#' and the drop itself is always announced (`artoo_message_apply`) — even
-#' under `conformance = "off"`.
+#' exactly the spec's columns): the undeclared columns are removed *before*
+#' the check, so the findings describe exactly the returned frame (a dropped
+#' column is never reported as `extra_variable`), and the drop itself is
+#' always announced (`artoo_message_apply`) as the audit trail of what was
+#' removed — even under `conformance = "off"`.
 #'
 #' **Lossless or abort.** A coercion that would damage values — an
 #' `integer` dataType truncating fractions or overflowing R's 32-bit range
@@ -88,11 +88,15 @@
 #'   * `"keep"` (default) extras ride along after the declared columns,
 #'     reported by the `extra_variable` finding.
 #'   * `"drop"` the returned frame carries exactly the spec's columns;
-#'     the drop is announced (`artoo_message_apply`) and the
-#'     `extra_variable` finding still reports what was removed.
+#'     the drop is announced (`artoo_message_apply`), and that message is
+#'     the audit trail of what was removed.
 #'
-#'   **Interaction:** under `conformance = "abort"` an error-severity
-#'   finding aborts *before* any drop — the trim never masks a failure.
+#'   **Interaction:** the drop runs *before* the check, so [conformance()]
+#'   reports only the columns the returned frame keeps. Under
+#'   `conformance = "abort"` an error-severity finding still aborts (those
+#'   findings arise only on spec-declared columns, which the drop never
+#'   touches) and the input is never mutated, so the trim cannot mask a
+#'   failure.
 #'
 #'   **Note:** `"keep"` is the default deliberately. artoo is a lossless
 #'   carrier, so the metadata step never silently discards a column;
@@ -187,6 +191,27 @@ apply_spec <- function(
     )
   }
 
+  # Trim-to-spec runs BEFORE the check so the findings describe exactly the
+  # columns the returned frame carries: a dropped column is never reported as
+  # extra_variable / variable_name. The drop is its own audit trail via the
+  # unconditional inform below, which fires even under conformance = "off"
+  # (where no finding is computed at all). Removal via [[<- NULL keeps the
+  # frame attributes (metadata_json, artoo.sort) that a [cols] subset would
+  # strip; set_meta then trims the column metadata to match.
+  if (extra == "drop") {
+    extras <- setdiff(names(out), info$spec_vars)
+    if (length(extras)) {
+      for (nm in extras) {
+        out[[nm]] <- NULL
+      }
+      out <- set_meta(out, .meta_select_columns(get_meta(out), names(out)))
+      .artoo_inform(
+        "Dropped {length(extras)} undeclared variable{?s}: {.var {extras}}",
+        kind = "apply"
+      )
+    }
+  }
+
   if (conformance != "off") {
     findings <- check_spec(out, spec, dataset)
     attr(out, "artoo.conformance") <- findings
@@ -220,27 +245,6 @@ apply_spec <- function(
           call = call
         )
       }
-    }
-  }
-
-  # Trim-to-spec runs LAST, after the findings were computed on the full
-  # frame: the extra_variable finding is the audit trail of what was
-  # dropped, and a conformance abort fires before any drop (transactional).
-  # Removal via [[<- NULL keeps the frame attributes (metadata_json,
-  # artoo.sort, artoo.conformance) that a [cols] subset would strip; the
-  # message is unconditional, so a drop is never silent even under
-  # conformance = "off", where no finding is computed at all.
-  if (extra == "drop") {
-    extras <- setdiff(names(out), info$spec_vars)
-    if (length(extras)) {
-      for (nm in extras) {
-        out[[nm]] <- NULL
-      }
-      out <- set_meta(out, .meta_select_columns(get_meta(out), names(out)))
-      .artoo_inform(
-        "Dropped {length(extras)} undeclared variable{?s}: {.var {extras}}",
-        kind = "apply"
-      )
     }
   }
   out

@@ -52,12 +52,16 @@ derivation temporary. One of:
 \item \code{"keep"} (default) extras ride along after the declared columns,
 reported by the \code{extra_variable} finding.
 \item \code{"drop"} the returned frame carries exactly the spec's columns;
-the drop is announced (\code{artoo_message_apply}) and the
-\code{extra_variable} finding still reports what was removed.
+the drop is announced (\code{artoo_message_apply}), and that message is
+the audit trail of what was removed.
 }
 
-\strong{Interaction:} under \code{conformance = "abort"} an error-severity
-finding aborts \emph{before} any drop — the trim never masks a failure.
+\strong{Interaction:} the drop runs \emph{before} the check, so \code{\link[=conformance]{conformance()}}
+reports only the columns the returned frame keeps. Under
+\code{conformance = "abort"} an error-severity finding still aborts (those
+findings arise only on spec-declared columns, which the drop never
+touches) and the input is never mutated, so the trim cannot mask a
+failure.
 
 \strong{Note:} \code{"keep"} is the default deliberately. artoo is a lossless
 carrier, so the metadata step never silently discards a column;
@@ -97,11 +101,11 @@ metadata-application step that silently discarded columns would break
 that contract, so trimming data is always an explicit, announced choice
 rather than a default side effect.
 \code{extra = "drop"} opts in to trim-to-spec (the returned frame carries
-exactly the spec's columns): the undeclared
-columns are removed \emph{after} the findings are computed, so the
-\code{extra_variable} finding remains the audit trail of what was dropped,
-and the drop itself is always announced (\code{artoo_message_apply}) — even
-under \code{conformance = "off"}.
+exactly the spec's columns): the undeclared columns are removed \emph{before}
+the check, so the findings describe exactly the returned frame (a dropped
+column is never reported as \code{extra_variable}), and the drop itself is
+always announced (\code{artoo_message_apply}) as the audit trail of what was
+removed — even under \code{conformance = "off"}.
 
 \strong{Lossless or abort.} A coercion that would damage values — an
 \code{integer} dataType truncating fractions or overflowing R's 32-bit range

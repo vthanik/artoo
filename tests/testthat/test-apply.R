@@ -492,16 +492,42 @@ test_that("extra = 'drop' trims to the spec, never silently", {
   )
   expect_false(any(c("TMPFLAG", "AVAL_RAW") %in% names(out)))
   expect_match(msg, "Dropped 2 undeclared variables")
-  # The audit trail survives: extra_variable findings name what was dropped.
+  # Findings describe the returned frame: the dropped columns are gone, so no
+  # extra_variable finding names them. The "Dropped ..." message is the audit
+  # trail of what was removed.
   f <- conformance(out)
-  expect_setequal(
-    f$variable[f$check == "extra_variable"],
-    c("TMPFLAG", "AVAL_RAW")
-  )
-  # Meta describes exactly the returned frame; the findings attribute
-  # survives the [[<- NULL removal (a [cols] subset would strip it).
+  expect_length(f$variable[f$check == "extra_variable"], 0L)
+  # Meta describes exactly the returned frame; the findings attribute is set
+  # on the trimmed frame (the check runs after the drop).
   expect_setequal(names(get_meta(out)@columns), names(out))
   expect_false(is.null(attr(out, "artoo.conformance")))
+})
+
+test_that("extra = 'drop' findings describe the returned frame, not the dropped columns", {
+  # Origin bug: a >8-char derivation temporary dropped via extra = "drop" was
+  # still reported by conformance() as extra_variable AND variable_name,
+  # because the check ran on the pre-drop frame. The check now runs after the
+  # drop, so the returned frame's findings name only what it actually carries.
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$FIRST_RESP_DT <- "2020-01-01" # 13 chars: extra_variable + variable_name
+
+  kept <- suppressMessages(suppressWarnings(
+    apply_spec(raw, spec, "DM", extra = "keep")
+  ))
+  fk <- conformance(kept)
+  # With keep, the surviving long column trips both data-column checks.
+  expect_true("FIRST_RESP_DT" %in% fk$variable[fk$check == "extra_variable"])
+  expect_true("FIRST_RESP_DT" %in% fk$variable[fk$check == "variable_name"])
+
+  dropped <- suppressMessages(suppressWarnings(
+    apply_spec(raw, spec, "DM", extra = "drop")
+  ))
+  fd <- conformance(dropped)
+  # With drop, the column is gone, so neither finding names it.
+  expect_false("FIRST_RESP_DT" %in% fd$variable)
+  expect_length(fd$variable[fd$check == "extra_variable"], 0L)
+  expect_length(fd$variable[fd$check == "variable_name"], 0L)
 })
 
 test_that("extra = 'drop' output writes only spec columns (round-trip)", {
@@ -548,13 +574,18 @@ test_that("extra = 'drop' announces even under conformance = 'off'", {
   expect_false("TMPFLAG" %in% names(out))
 })
 
-test_that("conformance = 'abort' still aborts before any drop happens", {
+test_that("conformance = 'abort' with extra = 'drop' aborts and never mutates the input", {
   spec <- demo_sdtm_spec()
   raw <- cdisc_dm
-  raw$SEX[1] <- "X9" # error-severity finding
+  raw$SEX[1] <- "X9" # error-severity finding on a spec-declared column
   raw$TMPFLAG <- "x"
+  # The drop now runs before the check (on the working copy); the error
+  # finding is on a spec column the drop never touches, so the abort still
+  # fires. suppressMessages swallows the unconditional "Dropped" inform.
   expect_error(
-    apply_spec(raw, spec, "DM", conformance = "abort", extra = "drop"),
+    suppressMessages(
+      apply_spec(raw, spec, "DM", conformance = "abort", extra = "drop")
+    ),
     class = "artoo_error_conformance"
   )
   # Transactional: the input is untouched.
