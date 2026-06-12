@@ -10,9 +10,10 @@ spec_methods(spec)
 \item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 }
 \value{
-\emph{A data frame of method metadata} (\code{method_id}, \code{name}, \code{type},
-\code{description}, ...), one row per method. Empty when the spec defines no
-methods.
+\emph{A data frame of method metadata}, one row per method, with all
+eight columns: \code{method_id}, \code{description}, \code{name}, \code{type},
+\code{expression_context}, \code{expression_code}, \code{document_id}, \code{pages}. Empty
+when the spec defines no methods.
 }
 \description{
 Return the method definitions a specification carries. Variables and

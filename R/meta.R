@@ -195,7 +195,7 @@
 # ---- build artoo_meta from a bare frame (no spec) ---------------------------
 
 # One column entry derived from a data frame column's attributes and R class
-# (the no-spec path). A user/haven `label`/`format.sas` attribute wins;
+# (the no-spec path). A user-set `label`/`format.sas` attribute wins;
 # otherwise the dataType and default displayFormat are inferred from the class
 # so a plain frame still writes with sensible metadata.
 #' @noRd
@@ -586,8 +586,8 @@ set_meta <- function(x, meta) {
 }
 
 # Project the per-column label and SAS display format from the meta onto the
-# matching frame columns, so labelled/gtsummary/viewer tooling reads them like
-# haven. The meta stays the SSOT; the attrs are a projection — set when the
+# matching frame columns, so downstream labelled-frame tooling and viewers
+# read them. The meta stays the SSOT; the attrs are a projection — set when the
 # meta carries a value, strip when it does not, so a meta update never leaves a
 # stale attr that .col_meta_from_attrs would later resurrect on a bare-frame
 # write. Idempotent: set_meta(set_meta(x, m), m) == set_meta(x, m).
@@ -597,7 +597,7 @@ set_meta <- function(x, meta) {
   for (nm in names(x)) {
     cm <- cols[[nm]]
     # A column the meta does not describe: it has no opinion, leave any
-    # user/haven attrs (e.g. a label that is the column's only metadata) alone.
+    # user-set attrs (e.g. a label that is the column's only metadata) alone.
     if (is.null(cm)) {
       next
     }

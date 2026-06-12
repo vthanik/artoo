@@ -57,7 +57,12 @@ the drop is announced (\code{artoo_message_apply}) and the
 }
 
 \strong{Interaction:} under \code{conformance = "abort"} an error-severity
-finding aborts \emph{before} any drop — the trim never masks a failure.}
+finding aborts \emph{before} any drop — the trim never masks a failure.
+
+\strong{Note:} \code{"keep"} is the default deliberately. artoo is a lossless
+carrier, so the metadata step never silently discards a column;
+extras are surfaced every run (the \code{extra_variable} finding, and a
+warning under \code{conformance = "warn"}), making \code{"drop"} a conscious opt-in.}
 }
 \value{
 \emph{A conformed \verb{<data.frame>}} carrying \code{artoo_meta} (read it with
@@ -82,9 +87,13 @@ the metadata.
 survives the pipeline (ordered after the declared ones), is \emph{reported}
 by the \code{extra_variable} conformance finding, and round-trips through
 every \verb{write_*()} codec with metadata inferred from its R class —
-membership reported, never enforced by silent destruction.
-\code{extra = "drop"} opts in to trim-to-spec (the
-\code{metatools::drop_unspec_vars()} migration shape): the undeclared
+membership reported, never enforced by silent destruction. Keeping is
+the default because artoo is lossless by construction: a
+metadata-application step that silently discarded columns would break
+that contract, so trimming data is always an explicit, announced choice
+rather than a default side effect.
+\code{extra = "drop"} opts in to trim-to-spec (the returned frame carries
+exactly the spec's columns): the undeclared
 columns are removed \emph{after} the findings are computed, so the
 \code{extra_variable} finding remains the audit trail of what was dropped,
 and the drop itself is always announced (\code{artoo_message_apply}) — even

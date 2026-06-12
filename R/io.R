@@ -8,7 +8,7 @@
 
 # The artoo_meta to write with: the frame's own metadata_json when present,
 # else one derived from its column attributes + R classes (so a bare or
-# haven-shaped frame still writes with labels/formats/types). NULL only for a
+# labelled frame still writes with labels/formats/types). NULL only for a
 # 0-column frame.
 #' @noRd
 .maybe_meta <- function(x) {

@@ -46,8 +46,7 @@ no backward compatibility is kept with the vport surface.
 
 * `apply_spec()` gained `extra = c("keep", "drop")`: `"keep"` (default)
   preserves today's never-drop behavior; `"drop"` trims the output to
-  exactly the spec's columns — the `metatools::drop_unspec_vars()`
-  migration shape. The drop is never silent: it is announced
+  exactly the spec's columns. The drop is never silent: it is announced
   (`artoo_message_apply`) even under `conformance = "off"`, the
   `extra_variable` finding remains the audit trail, and a
   `conformance = "abort"` failure fires before any drop.
@@ -151,6 +150,11 @@ no backward compatibility is kept with the vport surface.
   time.
 
 ## Docs
+
+* `apply_spec()`'s scaffold message now says why a variable was added (the
+  spec declares it but the data lacks it). Its `extra` argument documents why
+  `"keep"` is the lossless default, and `spec_methods()` / `spec_comments()`
+  enumerate every column of the data frame they return.
 
 * Five task-oriented articles joined the site (web-only, not in the
   package tarball): an end-to-end ADaM build, any-to-any conversion,

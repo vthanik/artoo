@@ -363,9 +363,10 @@ spec_study <- function(spec, field = NULL) {
 #'
 #' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
-#' @return *A data frame of method metadata* (`method_id`, `name`, `type`,
-#'   `description`, ...), one row per method. Empty when the spec defines no
-#'   methods.
+#' @return *A data frame of method metadata*, one row per method, with all
+#'   eight columns: `method_id`, `description`, `name`, `type`,
+#'   `expression_context`, `expression_code`, `document_id`, `pages`. Empty
+#'   when the spec defines no methods.
 #'
 #' @examples
 #' # ---- Example 1: the methods a spec defines ----
@@ -398,8 +399,9 @@ spec_methods <- function(spec) {
 #'
 #' @param spec *The specification to read.* `<artoo_spec>: required`.
 #'
-#' @return *A data frame of comment metadata* (`comment_id`, `description`,
-#'   ...), one row per comment. Empty when the spec defines no comments.
+#' @return *A data frame of comment metadata*, one row per comment, with all
+#'   four columns: `comment_id`, `description`, `document_id`, `pages`. Empty
+#'   when the spec defines no comments.
 #'
 #' @examples
 #' # ---- Example 1: the comments a spec defines ----

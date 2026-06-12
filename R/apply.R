@@ -24,9 +24,13 @@
 #' survives the pipeline (ordered after the declared ones), is *reported*
 #' by the `extra_variable` conformance finding, and round-trips through
 #' every `write_*()` codec with metadata inferred from its R class —
-#' membership reported, never enforced by silent destruction.
-#' `extra = "drop"` opts in to trim-to-spec (the
-#' `metatools::drop_unspec_vars()` migration shape): the undeclared
+#' membership reported, never enforced by silent destruction. Keeping is
+#' the default because artoo is lossless by construction: a
+#' metadata-application step that silently discarded columns would break
+#' that contract, so trimming data is always an explicit, announced choice
+#' rather than a default side effect.
+#' `extra = "drop"` opts in to trim-to-spec (the returned frame carries
+#' exactly the spec's columns): the undeclared
 #' columns are removed *after* the findings are computed, so the
 #' `extra_variable` finding remains the audit trail of what was dropped,
 #' and the drop itself is always announced (`artoo_message_apply`) — even
@@ -85,6 +89,11 @@
 #'
 #'   **Interaction:** under `conformance = "abort"` an error-severity
 #'   finding aborts *before* any drop — the trim never masks a failure.
+#'
+#'   **Note:** `"keep"` is the default deliberately. artoo is a lossless
+#'   carrier, so the metadata step never silently discards a column;
+#'   extras are surfaced every run (the `extra_variable` finding, and a
+#'   warning under `conformance = "warn"`), making `"drop"` a conscious opt-in.
 #'
 #' @return *A conformed `<data.frame>`* carrying `artoo_meta` (read it with
 #'   [get_meta()]) and, unless `conformance = "off"`, the findings frame

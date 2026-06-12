@@ -10,8 +10,9 @@ spec_comments(spec)
 \item{spec}{\emph{The specification to read.} \verb{<artoo_spec>: required}.}
 }
 \value{
-\emph{A data frame of comment metadata} (\code{comment_id}, \code{description},
-...), one row per comment. Empty when the spec defines no comments.
+\emph{A data frame of comment metadata}, one row per comment, with all
+four columns: \code{comment_id}, \code{description}, \code{document_id}, \code{pages}. Empty
+when the spec defines no comments.
 }
 \description{
 Return the comment definitions a specification carries. Datasets,

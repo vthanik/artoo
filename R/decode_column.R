@@ -2,8 +2,7 @@
 # codelist. The single-column companion to apply_spec()'s decode step: the
 # same mapper (.map_codelist_values), the same policies, but aimed at the
 # everyday ADaM task of deriving a coded variable from its decode (RACEN
-# from RACE) or vice versa — the metatools::create_var_from_codelist()
-# shape, driven by the artoo_spec instead of a metacore object.
+# from RACE) or vice versa, driven by the artoo_spec codelist.
 
 #' Derive or translate a variable through its codelist
 #'

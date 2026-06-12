@@ -74,7 +74,7 @@
     }
   }
   .artoo_inform(
-    "Scaffolded {length(missing)} variable{?s}: {.var {missing}}",
+    "Scaffolded {length(missing)} variable{?s} the spec declares but the data lacks (added as empty): {.var {missing}}",
     kind = "apply"
   )
   x
