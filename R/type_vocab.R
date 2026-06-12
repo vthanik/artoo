@@ -122,6 +122,13 @@
 #' can warn on lossy coercion.
 #' @noRd
 .coerce_to_type <- function(x, data_type) {
+  # Factor through labels, not level codes (see .coerce_mode); this also
+  # makes the lossy check below compare authored values, not codes -- without
+  # it, as.numeric(<factor>) and as.numeric(value) are the same codes and the
+  # guard silently agrees with itself.
+  if (is.factor(x)) {
+    x <- as.character(x)
+  }
   mode <- .type_storage(data_type)
   before_na <- is.na(x)
   value <- .coerce_mode(x, mode)

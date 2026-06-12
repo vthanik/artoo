@@ -304,6 +304,98 @@ test_that("the NA-introduction warning carries cnd$variables (na_introduced)", {
   expect_identical(w$variables$n, nrow(raw))
 })
 
+# ---- factor inputs coerce through labels, never level codes -----------------
+
+test_that("apply_spec() coerces a factor column through its labels, not codes", {
+  # On main, as.integer(<factor>) returned the level codes (1, 2), silently
+  # writing the wrong values. The conformed column must carry the authored
+  # label values (10, 20).
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "FCTNUM",
+      label = "Factor of numeric labels",
+      data_type = "integer",
+      length = 8L,
+      order = max(cdisc_sdtm_variables$order, na.rm = TRUE) + 1L,
+      codelist_id = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$FCTNUM <- factor(rep_len(c("10", "20"), nrow(raw)))
+  out <- apply_spec(raw, spec, "DM", conformance = "off")
+  expect_type(out$FCTNUM, "integer")
+  # Labels (10, 20), never the codes (1, 2). setequal is order-independent
+  # because the sort step reorders rows by key.
+  expect_setequal(out$FCTNUM, c(10L, 20L))
+})
+
+test_that("apply_spec() surfaces NA from a non-numeric factor in cnd$variables", {
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "FCTBAD",
+      label = "Non-numeric factor",
+      data_type = "integer",
+      length = 8L,
+      order = max(cdisc_sdtm_variables$order, na.rm = TRUE) + 1L,
+      codelist_id = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$FCTBAD <- factor(rep_len(c("M", "F"), nrow(raw)))
+  w <- NULL
+  withCallingHandlers(
+    out <- apply_spec(raw, spec, "DM", conformance = "off"),
+    artoo_warning_coercion = function(cnd) {
+      w <<- cnd
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_true(all(is.na(out$FCTBAD)))
+  expect_identical(
+    w$variables$reason[w$variables$variable == "FCTBAD"],
+    "na_introduced"
+  )
+})
+
+test_that("apply_spec() detects 32-bit overflow in a factor's labels", {
+  # Proves the apply-path overflow pre-check (which reads x[[v]] directly,
+  # before .coerce_to_type) now sees the labels: a factor whose label overflows
+  # int range must abort with reason 'overflowed', not pass as level code 1.
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "FBIG",
+      label = "Overflowing factor",
+      data_type = "integer",
+      length = 8L,
+      order = max(cdisc_sdtm_variables$order, na.rm = TRUE) + 1L,
+      codelist_id = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$FBIG <- factor(rep_len("9999999999", nrow(raw)))
+  e <- tryCatch(
+    apply_spec(raw, spec, "DM", conformance = "off"),
+    artoo_error_type = function(e) e
+  )
+  expect_s3_class(e, "artoo_error_type")
+  expect_identical(
+    e$variables$reason[e$variables$variable == "FBIG"],
+    "overflowed"
+  )
+})
+
 test_that("the conformance abort carries the full findings frame as cnd$findings", {
   spec <- demo_sdtm_spec()
   raw <- cdisc_dm

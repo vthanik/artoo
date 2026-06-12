@@ -98,6 +98,14 @@
       next
     }
     old <- attributes(x[[v]])
+    # Coerce a factor to its labels up front: the 32-bit overflow pre-check
+    # and the temporal realiser below both read x[[v]] directly, and
+    # as.numeric(<factor>) would see level codes, not the authored values.
+    # The label (and any other non-structural attr) survives via `old`,
+    # re-attached below; class/levels are intentionally dropped (keep_off).
+    if (is.factor(x[[v]])) {
+      x[[v]] <- as.character(x[[v]])
+    }
     if (dt %in% c("date", "datetime", "time")) {
       # Realize to the R presentation class (Date/POSIXct/hms) using
       # the spec displayFormat (default by dataType when absent). dataType

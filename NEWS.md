@@ -141,6 +141,15 @@ no backward compatibility is kept with the vport surface.
 
 ## Fixes
 
+* `apply_spec()` now coerces a `factor` column through its labels, never its
+  integer level codes. A factor of numeric labels declared `integer` or
+  `float` previously wrote the codes (`factor(c("10", "20"))` became `1, 2`)
+  with no abort and no warning, because the lossy guard compared codes to
+  codes and the `double` path had no guard at all. Factors are normalized to
+  character at every coercion read site (the value coercion, the lossy and
+  32-bit-overflow checks, and the temporal realizer), so a non-numeric label
+  now becomes `NA` and is reported by the coercion warning.
+
 * The declaration-driven writers (Dataset-JSON, NDJSON, the Parquet
   sidecar, rds) now reconcile the carried metadata to the frame before
   serializing, the same overlay semantics `write_xpt()` always had. A

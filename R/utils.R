@@ -64,6 +64,13 @@
 # truncation) lives in .coerce_to_type().
 #' @noRd
 .coerce_mode <- function(x, mode) {
+  # A factor coerces through its LABELS, never its integer level codes:
+  # as.integer(factor("10")) is the code (1L), not the value (10L). Convert
+  # to labels first so every mode sees the data the user authored. The
+  # boolean and string paths were already safe; integer/double were not.
+  if (is.factor(x)) {
+    x <- as.character(x)
+  }
   switch(
     mode,
     character = as.character(x),

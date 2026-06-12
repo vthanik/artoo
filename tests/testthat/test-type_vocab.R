@@ -82,3 +82,45 @@ test_that(".coerce_to_type counts fractional values truncated to integer (review
   expect_identical(res$n_lossy, 1L)
   expect_identical(res$n_na_introduced, 0L)
 })
+
+test_that(".coerce_to_type coerces a factor through its LABELS, not level codes", {
+  # Bug: as.integer(<factor>) returns the integer LEVEL CODES (1,2,3), not the
+  # authored values (10,20,30). On main this returned c(1L,2L,3L) and the lossy
+  # guard agreed with itself (n_lossy == 0), writing wrong values silently.
+  res <- artoo:::.coerce_to_type(factor(c("10", "20", "30")), "integer")
+  expect_identical(res$value, c(10L, 20L, 30L))
+  expect_identical(res$n_lossy, 0L)
+  expect_identical(res$n_na_introduced, 0L)
+})
+
+test_that(".coerce_to_type coerces a factor to float through labels (no-guard path)", {
+  # The double path has NO lossy guard, so a factor->float corruption was
+  # entirely silent on main: factor(c("1.5","2.5")) became c(1,2) (codes).
+  res <- artoo:::.coerce_to_type(factor(c("1.5", "2.5")), "float")
+  expect_identical(res$value, c(1.5, 2.5))
+  expect_identical(res$n_na_introduced, 0L)
+})
+
+test_that(".coerce_to_type flags NA when a factor label cannot coerce to integer", {
+  # Non-numeric labels become NA (and the na_introduced guard now fires),
+  # instead of silently mapping to level codes 1,2.
+  res <- artoo:::.coerce_to_type(factor(c("M", "F")), "integer")
+  expect_identical(res$value, c(NA_integer_, NA_integer_))
+  expect_identical(res$n_na_introduced, 2L)
+})
+
+test_that(".coerce_to_type leaves a factor's labels intact for a string dataType", {
+  # The string path was already safe (as.character(factor) = labels); guard it.
+  res <- artoo:::.coerce_to_type(factor(c("M", "F")), "string")
+  expect_identical(res$value, c("M", "F"))
+  expect_identical(res$n_na_introduced, 0L)
+})
+
+test_that(".coerce_mode coerces a factor through labels for its other callers", {
+  # .coerce_mode is also called directly (spec_construct), so it owns the guard
+  # too: a factor of numeric labels must become the values, not the codes.
+  expect_identical(
+    artoo:::.coerce_mode(factor(c("10", "20")), "integer"),
+    c(10L, 20L)
+  )
+})
