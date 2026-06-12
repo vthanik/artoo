@@ -26,7 +26,7 @@ navbar:
   type: light
   bg: none
   structure:
-    left: [reference, articles, news]
+    left: [intro, reference, articles, news]
     right: [search, github]
 
 home:
@@ -154,15 +154,11 @@ reference:
   - cdisc_suppdm
 
 articles:
-- title: Get started
-  navbar: ~
-  contents:
-  - getting-started
-
 - title: Task guides
   navbar: Task guides
   contents:
   - articles/adam-build
+  - articles/sdtm-build
   - articles/convert
   - articles/dates
   - articles/validation

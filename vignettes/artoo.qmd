@@ -26,8 +26,9 @@ one from Define-XML, a Pinnacle 21 workbook, or artoo's native JSON;
 `artoo_spec()` assembles one from metadata frames.
 
 The package bundles ready-made specs built from the official CDISC
-Define-XML 2.1 release examples. `adam_spec` covers the ADaM datasets; the
-same spec also ships as a P21 workbook you can open in Excel:
+Define-XML 2.1 release examples — `adam_spec` for ADaM (ADSL, ADAE) and
+`sdtm_spec` for SDTM (DM, VS, TS, SUPPDM). Each also ships as a P21
+workbook you can open in Excel:
 
 ```{r}
 adam_spec
@@ -60,6 +61,15 @@ frame with `conformance()`:
 
 ```{r}
 nrow(conformance(adsl))
+```
+
+The pipeline is standard-neutral: an SDTM domain conforms identically —
+only the spec and the dataset change. The full SDTM walkthrough is its own
+[task guide](articles/sdtm-build.html).
+
+```{r}
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM")
+nrow(conformance(dm))
 ```
 
 ## 3. Inspect the columns
@@ -118,6 +128,7 @@ archived is what you analysed.
 ## Where to next
 
 - The task guides: [an end-to-end ADaM build](articles/adam-build.html),
+  [an end-to-end SDTM build](articles/sdtm-build.html),
   [any-to-any conversion](articles/convert.html),
   [dates, times, and `--DTC`](articles/dates.html),
   [validation & qualification](articles/validation.html), and
