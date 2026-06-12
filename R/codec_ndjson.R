@@ -31,6 +31,9 @@
     )
   }
   created <- created %||% Sys.time()
+  # Same contract as the .json codec: the metadata line must describe
+  # exactly the rows that follow it.
+  meta <- .meta_reconcile(meta, x)
   special <- .json_prepare_special(x, meta, strict, path, call)
 
   # Gate UTF-8 validity, then canonicalise to NFC (same contract as the

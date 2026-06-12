@@ -248,7 +248,7 @@ test_that(".to_target validates a UTF-8 target (invalid bytes hit on_invalid)", 
 })
 
 test_that(".to_target UTF-8 validation honours declared marks and NA", {
-  # A column legitimately marked latin1 transcodes cleanly -- never flagged.
+  # A column legitimately marked latin1 transcodes cleanly — never flagged.
   lat <- rawToChar(as.raw(c(0x63, 0xE9)))
   Encoding(lat) <- "latin1"
   expect_identical(artoo:::.to_target(lat, "UTF-8", "error"), "cé")

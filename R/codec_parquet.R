@@ -62,6 +62,13 @@
     )
   }
 
+  # The sidecar must describe exactly the columns the parquet file carries;
+  # reconcile a meta whose frame was mutated after apply_spec() (the read
+  # path realizes columns from the sidecar, so a stale one mis-realizes).
+  if (is_artoo_meta(meta)) {
+    meta <- .meta_reconcile(meta, x)
+  }
+
   # Parquet bytes stay UTF-8 (the format's STRING type is UTF-8 by spec); an
   # explicit `encoding` is recorded as the source-charset metadata so a later
   # write_xpt() can reproduce the original bytes. Validate the name loudly.

@@ -386,7 +386,7 @@ test_that("extra = 'drop' with no extras is a silent no-op", {
 
 test_that("extra = 'drop' announces even under conformance = 'off'", {
   # With checks off no extra_variable finding exists, so the unconditional
-  # message is the only trace of the drop -- it must fire.
+  # message is the only trace of the drop — it must fire.
   spec <- demo_sdtm_spec()
   raw <- cdisc_dm
   raw$TMPFLAG <- "x"

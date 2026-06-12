@@ -198,7 +198,7 @@
 # The xpt storage length: the meta length when set, else max byte width for
 # a character column, else 8 (full IEEE precision) for a numeric one. Bytes,
 # not chars: an xpt LENGTH is a byte width, so a multibyte value must count
-# its bytes (chars would undercount and truncate) -- and byte counting never
+# its bytes (chars would undercount and truncate) — and byte counting never
 # fails on invalid-UTF-8 input the way type = "chars" does, so inference
 # stays alive long enough for the codecs' on_invalid gate to rule.
 #' @noRd

@@ -78,6 +78,11 @@
     )
   }
   created <- created %||% Sys.time()
+  # The columns declaration derives from the meta while the rows stream from
+  # the frame; reconcile so the two can never disagree (a frame mutated
+  # after apply_spec() would otherwise write a corrupt or, worse, silently
+  # misaligned file). A congruent meta reconciles to itself.
+  meta <- .meta_reconcile(meta, x)
 
   # The namespaced `_artoo` block carries what strict CDISC cannot: special
   # missing tags, the recorded source encoding, informats. It appears only

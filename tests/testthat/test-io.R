@@ -354,3 +354,55 @@ test_that("read_rds(encoding=) preserves a column label through the transcode", 
   back <- read_rds(path, encoding = "windows-1252") # forces .recode_col
   expect_identical(attr(back$SITE, "label"), "Site")
 })
+
+# ---- meta-frame reconciliation (root cause of the stale-meta corruption) ---
+
+test_that("a column added after apply_spec() writes correctly (reconciled meta)", {
+  # The frame is the data's source of truth; the meta is a descriptive
+  # overlay. A column added post-apply previously made the json writers
+  # declare k columns while streaming k+1 values per row — a corrupt
+  # file. The encoders now reconcile the meta to the frame (the same
+  # overlay semantics xpt has always had), so the file is sound and the
+  # new column carries inferred metadata.
+  dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+  dm$ADDED <- "x"
+  for (ext in c(".json", ".ndjson", ".parquet", ".rds")) {
+    p <- withr::local_tempfile(fileext = ext)
+    write_dataset(dm, p)
+    back <- read_dataset(p)
+    expect_identical(back$ADDED[1], "x", info = ext)
+    expect_identical(names(back), names(dm), info = ext)
+    expect_true("ADDED" %in% names(get_meta(back)@columns), info = ext)
+  }
+})
+
+test_that("a column dropped after apply_spec() leaves no stale declaration", {
+  dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+  dm$AGE <- NULL
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(dm, p)
+  back <- read_json(p)
+  expect_false("AGE" %in% names(back))
+  expect_false("AGE" %in% names(get_meta(back)@columns))
+})
+
+test_that("reordered columns write values under the RIGHT names (regression)", {
+  # Regression for SILENT corruption: same column set, different order,
+  # previously wrote every value under the wrong column name (USUBJID came
+  # back as an arm label).
+  dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+  meta <- get_meta(dm)
+  rev_dm <- set_meta(dm[, rev(names(dm))], meta)
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(rev_dm, p)
+  back <- read_json(p)
+  expect_identical(back$USUBJID[1], dm$USUBJID[1])
+  # The declaration follows the frame, so the file is in frame order.
+  expect_identical(names(back), rev(names(dm)))
+})
+
+test_that("a congruent meta reconciles to itself (byte-stability guard)", {
+  dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+  meta <- get_meta(dm)
+  expect_identical(artoo:::.meta_reconcile(meta, dm), meta)
+})

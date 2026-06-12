@@ -426,10 +426,15 @@ test_that("write_json never flags declared-latin1 or factor columns (regression)
   p <- withr::local_tempfile(fileext = ".json")
   write_json(dm, p, created = frozen)
   expect_identical(read_json(p)$USUBJID[1], "cé")
-  # The gate covers character columns only; a factor column's (pre-existing)
-  # write behavior is unchanged -- the write itself still succeeds.
-  dm2 <- apply_spec(cdisc_dm, spec, "DM", conformance = "off")
-  dm2$FCT <- factor(rep_len(c("a", "b"), nrow(dm2)))
+  # The on_invalid gate covers character columns only; a factor column in a
+  # bare frame (metadata inferred, so meta and frame agree) string-ifies
+  # through the inferred dataType and round-trips as character.
+  df <- data.frame(
+    USUBJID = c("01-001", "01-002"),
+    SEXF = factor(c("F", "M")),
+    stringsAsFactors = FALSE
+  )
   p2 <- withr::local_tempfile(fileext = ".json")
-  expect_no_error(write_json(dm2, p2, created = frozen))
+  expect_no_error(write_json(df, p2, created = frozen))
+  expect_identical(read_json(p2)$SEXF, c("F", "M"))
 })

@@ -22,6 +22,9 @@
     # rds is R-native and faithful: strings are saved as-is (Encoding marks
     # survive saveRDS), never transcoded. An explicit `encoding` only records
     # the source charset so a later write_xpt() can reproduce the bytes.
+    # Reconcile first, so the saved metadata_json describes exactly the
+    # columns the frame carries (a stale attribute would persist verbatim).
+    meta <- .meta_reconcile(meta, x)
     if (!is.null(encoding)) {
       .resolve_charset(encoding, call)
       meta <- .meta_set_encoding(meta, encoding)

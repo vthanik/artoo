@@ -708,18 +708,8 @@ sync_meta <- function(x, meta = NULL) {
       call = call
     )
   }
-  known <- intersect(names(x), names(meta@columns))
-  synced <- .meta_select_columns(meta, known)
-  fresh <- setdiff(names(x), known)
+  fresh <- setdiff(names(x), names(meta@columns))
   if (length(fresh)) {
-    cols <- synced@columns
-    for (nm in fresh) {
-      cols[[nm]] <- .col_from_frame_col(nm, x[[nm]], synced@dataset$name)
-    }
-    cols <- cols[names(x)] # data order
-    ds <- synced@dataset
-    ds$keys <- .meta_keys(cols)
-    synced <- artoo_meta_class(dataset = ds, columns = cols)
     .artoo_inform(
       c(
         "Synthesized metadata for {length(fresh)} new column{?s}: {.var {fresh}}.",
@@ -728,8 +718,34 @@ sync_meta <- function(x, meta = NULL) {
       kind = "meta"
     )
   }
-  synced <- .meta_set_records(synced, nrow(x))
-  set_meta(x, synced)
+  set_meta(x, .meta_reconcile(meta, x))
+}
+
+# Reconcile a meta to the frame it must describe: keep the entries for
+# columns the frame still has (in FRAME order), infer fresh entries for the
+# columns the meta lacks, recompute keys, and sync the record count. This is
+# the per-column overlay semantics the xpt codec has always had, factored
+# out so every declaration-driven codec (json family, the parquet sidecar,
+# rds) describes exactly the data it streams — a frame mutated after
+# apply_spec() (column added, dropped, or reordered) can therefore never
+# produce a file whose declaration disagrees with its rows. A congruent
+# meta reconciles to itself, so byte goldens are unaffected.
+#' @noRd
+.meta_reconcile <- function(meta, x) {
+  known <- intersect(names(x), names(meta@columns))
+  out <- .meta_select_columns(meta, known)
+  fresh <- setdiff(names(x), known)
+  if (length(fresh)) {
+    cols <- out@columns
+    for (nm in fresh) {
+      cols[[nm]] <- .col_from_frame_col(nm, x[[nm]], out@dataset$name)
+    }
+    cols <- cols[names(x)] # data order
+    ds <- out@dataset
+    ds$keys <- .meta_keys(cols)
+    out <- artoo_meta_class(dataset = ds, columns = cols)
+  }
+  .meta_set_records(out, nrow(x))
 }
 
 # Reduce a meta to a column subset (col_select). Columns are reordered to
