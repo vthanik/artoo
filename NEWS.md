@@ -44,6 +44,14 @@ no backward compatibility is kept with the vport surface.
 
 ## Conform
 
+* `apply_spec()`'s data-protection conditions now carry their evidence as
+  data, not just prose: the lossy-coercion abort (`artoo_error_type`) and
+  the NA-introduction warning (`artoo_warning_coercion`) attach
+  `cnd$variables` — a data frame of `variable`, `data_type`, `n`,
+  `reason` — and the `conformance = "abort"` failure attaches the complete
+  findings frame as `cnd$findings`, so a pipeline collects every mismatch
+  in one `tryCatch()` pass instead of parsing messages.
+
 * `apply_spec()` was reduced to five load-bearing arguments:
   `apply_spec(x, spec, dataset, conformance =, na_position =)`. The
   pipeline is fixed — scaffold, coerce, order, sort, stamp — with no

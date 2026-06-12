@@ -85,9 +85,10 @@
 #' @noRd
 .coerce_types <- function(x, info, call = rlang::caller_env()) {
   vars <- info$vars
-  introduced <- character(0)
-  truncated <- character(0)
-  overflowed <- character(0)
+  # One structured record per (variable, reason). The data frame attached
+  # to the condition is the source of truth; the message strings are
+  # DERIVED from it below, so message and data can never drift.
+  records <- list()
   for (i in seq_len(nrow(vars))) {
     v <- vars$variable[i]
     dt <- vars$data_type[i]
@@ -123,7 +124,12 @@
         nv <- suppressWarnings(as.numeric(x[[v]]))
         n_over <- sum(!is.na(nv) & abs(nv) > .Machine$integer.max)
         if (n_over > 0L) {
-          overflowed <- c(overflowed, sprintf("%s (%d)", v, n_over))
+          records[[length(records) + 1L]] <- list(
+            variable = v,
+            data_type = dt,
+            n = n_over,
+            reason = "overflowed"
+          )
         }
       }
       res <- .coerce_to_type(x[[v]], dt)
@@ -131,22 +137,50 @@
       keep_off <- c("class", "levels", "names")
       n_na <- res$n_na_introduced
       if (res$n_lossy > 0L) {
-        truncated <- c(truncated, sprintf("%s (%d)", v, res$n_lossy))
+        records[[length(records) + 1L]] <- list(
+          variable = v,
+          data_type = dt,
+          n = res$n_lossy,
+          reason = "truncated"
+        )
       }
     }
     for (a in setdiff(names(old), keep_off)) {
       attr(x[[v]], a) <- old[[a]]
     }
     if (n_na > 0L) {
-      introduced <- c(introduced, sprintf("%s (%d)", v, n_na))
+      records[[length(records) + 1L]] <- list(
+        variable = v,
+        data_type = dt,
+        n = n_na,
+        reason = "na_introduced"
+      )
     }
+  }
+  rec_frame <- function(reasons) {
+    keep <- records[
+      vapply(records, function(r) r$reason %in% reasons, logical(1))
+    ]
+    data.frame(
+      variable = vapply(keep, function(r) r$variable, character(1)),
+      data_type = vapply(keep, function(r) r$data_type, character(1)),
+      n = vapply(keep, function(r) as.integer(r$n), integer(1)),
+      reason = vapply(keep, function(r) r$reason, character(1)),
+      stringsAsFactors = FALSE
+    )
+  }
+  rec_strings <- function(df) {
+    sprintf("%s (%d)", df$variable, df$n)
   }
   # Truncation and overflow damage values (a fractional height losing its
   # decimals is a data-integrity event, not a nuisance); the pipeline aborts
   # BEFORE any value is touched — there is no opt-out. Checked ahead of the
   # NA-introduction warning so an abort is never preceded by a half-report
   # of the same values.
-  if (length(truncated) || length(overflowed)) {
+  lossy_df <- rec_frame(c("truncated", "overflowed"))
+  if (nrow(lossy_df)) {
+    truncated <- rec_strings(lossy_df[lossy_df$reason == "truncated", ])
+    overflowed <- rec_strings(lossy_df[lossy_df$reason == "overflowed", ])
     lossy <- c(
       if (length(truncated)) {
         sprintf(
@@ -168,16 +202,20 @@
         "i" = "Fix the spec: dataType {.val float} or {.val decimal} keeps fractions; a wider type avoids overflow."
       ),
       kind = "type",
+      variables = lossy_df,
       call = call
     )
   }
-  if (length(introduced)) {
+  na_df <- rec_frame("na_introduced")
+  if (nrow(na_df)) {
+    introduced <- rec_strings(na_df)
     .artoo_warn(
       c(
-        "Coercion introduced NA in {length(introduced)} variable{?s}.",
+        "Coercion introduced NA in {nrow(na_df)} variable{?s}.",
         "i" = "{introduced}"
       ),
       kind = "coercion",
+      variables = na_df,
       call = call
     )
   }

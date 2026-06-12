@@ -67,7 +67,14 @@ reported, not enforced by destruction.
 \code{integer} dataType truncating fractions or overflowing R's 32-bit range
 — aborts with \code{artoo_error_type} before any value is touched. There is
 no opt-out: fix the spec (dataType \code{"float"} or \code{"decimal"} keeps
-fractions) rather than accept silent damage.
+fractions) rather than accept silent damage. The condition carries the
+offending rows as data: \code{cnd$variables} is a data frame with columns
+\code{variable}, \code{data_type}, \code{n}, and \code{reason} (\code{"truncated"} /
+\code{"overflowed"}), so a pipeline can collect every mismatch in one
+\code{tryCatch(..., artoo_error_type = function(cnd) cnd$variables)} pass.
+The NA-introduction warning (\code{artoo_warning_coercion}) carries the same
+frame with \code{reason = "na_introduced"}, and a \code{conformance = "abort"}
+failure carries the complete findings frame as \code{cnd$findings}.
 
 \strong{Values are never translated.} Coded variables keep their submission
 values (\code{SEX} stays \code{"M"}); codelist translation is its own verb,

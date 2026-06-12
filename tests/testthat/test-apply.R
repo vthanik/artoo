@@ -226,3 +226,97 @@ test_that("integer overflow under coercion is named precisely and aborts", {
     regexp = "overflow"
   )
 })
+
+# ---- structured condition data (consumer feedback 4.3) ----------------------
+
+test_that("the lossy-coercion abort carries the offending rows as cnd$variables", {
+  # A pipeline must be able to collect every type mismatch programmatically,
+  # not parse the cli message. The condition carries a data frame with one
+  # row per (variable, reason).
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = c("HEIGHTBL", "SUBJN", "MIXED"),
+      label = c("Height", "Subject N", "Mixed failure"),
+      data_type = "integer",
+      length = 8L,
+      order = max(cdisc_sdtm_variables$order, na.rm = TRUE) + 1:3,
+      codelist_id = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$HEIGHTBL <- 162.5 # truncates in every row
+  raw$SUBJN <- 9999999999 # overflows 32-bit in every row
+  raw$MIXED <- rep_len(c(1.5, 9999999999), nrow(raw)) # both reasons, one var
+  e <- tryCatch(
+    apply_spec(raw, spec, "DM", conformance = "off"),
+    artoo_error_type = function(e) e
+  )
+  v <- e$variables
+  expect_s3_class(v, "data.frame")
+  expect_identical(names(v), c("variable", "data_type", "n", "reason"))
+  expect_identical(
+    v$reason[v$variable == "HEIGHTBL"],
+    "truncated"
+  )
+  expect_identical(
+    v$reason[v$variable == "SUBJN"],
+    "overflowed"
+  )
+  # One variable failing both ways yields two rows, one per reason.
+  expect_setequal(v$reason[v$variable == "MIXED"], c("truncated", "overflowed"))
+  expect_identical(v$n[v$variable == "HEIGHTBL"], nrow(raw))
+  expect_type(v$n, "integer")
+})
+
+test_that("the NA-introduction warning carries cnd$variables (na_introduced)", {
+  vars <- rbind(
+    cdisc_sdtm_variables,
+    data.frame(
+      dataset = "DM",
+      variable = "BADNUM",
+      label = "Not numeric",
+      data_type = "integer",
+      length = 8L,
+      order = max(cdisc_sdtm_variables$order, na.rm = TRUE) + 1L,
+      codelist_id = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  )
+  spec <- artoo_spec(cdisc_sdtm_datasets, vars, codelists = cdisc_codelists)
+  raw <- cdisc_dm
+  raw$BADNUM <- "not a number"
+  w <- NULL
+  withCallingHandlers(
+    out <- apply_spec(raw, spec, "DM", conformance = "off"),
+    artoo_warning_coercion = function(cnd) {
+      w <<- cnd
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_identical(w$variables$variable, "BADNUM")
+  expect_identical(w$variables$reason, "na_introduced")
+  expect_identical(w$variables$n, nrow(raw))
+})
+
+test_that("the conformance abort carries the full findings frame as cnd$findings", {
+  spec <- demo_sdtm_spec()
+  raw <- cdisc_dm
+  raw$SEX[1] <- "X9"
+  e <- tryCatch(
+    apply_spec(raw, spec, "DM", conformance = "abort"),
+    artoo_error_conformance = function(e) e
+  )
+  f <- e$findings
+  expect_s3_class(f, "data.frame")
+  expect_identical(
+    names(f),
+    c("check", "dimension", "severity", "dataset", "variable", "message")
+  )
+  # The attached frame is the complete report, not just the error rows.
+  expect_true(any(f$severity == "error"))
+  expect_true(any(f$check == "codelist_membership" | f$variable == "SEX"))
+})

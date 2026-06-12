@@ -30,7 +30,14 @@
 #' `integer` dataType truncating fractions or overflowing R's 32-bit range
 #' — aborts with `artoo_error_type` before any value is touched. There is
 #' no opt-out: fix the spec (dataType `"float"` or `"decimal"` keeps
-#' fractions) rather than accept silent damage.
+#' fractions) rather than accept silent damage. The condition carries the
+#' offending rows as data: `cnd$variables` is a data frame with columns
+#' `variable`, `data_type`, `n`, and `reason` (`"truncated"` /
+#' `"overflowed"`), so a pipeline can collect every mismatch in one
+#' `tryCatch(..., artoo_error_type = function(cnd) cnd$variables)` pass.
+#' The NA-introduction warning (`artoo_warning_coercion`) carries the same
+#' frame with `reason = "na_introduced"`, and a `conformance = "abort"`
+#' failure carries the complete findings frame as `cnd$findings`.
 #'
 #' **Values are never translated.** Coded variables keep their submission
 #' values (`SEX` stays `"M"`); codelist translation is its own verb,
@@ -133,7 +140,15 @@ apply_spec <- function(
         stats::setNames(.cli_escape(shown), rep("x", length(shown)))
       )
       if (conformance == "abort") {
-        .artoo_abort(msg, kind = "conformance", call = call)
+        # The warn path returns the frame with the findings attribute; the
+        # abort path is the only place the report would otherwise be lost,
+        # so the condition carries it whole.
+        .artoo_abort(
+          msg,
+          kind = "conformance",
+          findings = findings,
+          call = call
+        )
       } else {
         .artoo_warn(
           c(
