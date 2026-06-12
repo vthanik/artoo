@@ -3,7 +3,7 @@
     Code
       print(check_study(adam_spec, list(ADSL = adsl)))
     Output
-      <artoo_study_findings> 1 dataset: 1 error, 22 warnings, 4 notes
+      <artoo_study_findings> 1 dataset: 1 error, 11 warnings, 15 notes
       
            codelist_membership_extensible extra_variable integer_fraction label_match
       ADSL                              1              5                1           3

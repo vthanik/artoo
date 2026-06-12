@@ -61,6 +61,14 @@ data is checked against, matching \code{\link[=apply_spec]{apply_spec()}}'s deco
 \code{"none"}/\code{"to_code"} check against the codelist \code{term}s, \code{"to_decode"}
 against the \code{decode}s. \code{\link[=apply_spec]{apply_spec()}} threads its own \code{decode} through, so
 a decoded column is not wrongly flagged.
+
+\strong{Fatal vs informational coercion checks.} Only \code{integer_fraction} and
+\code{integer_overflow} carry error severity: they mark data an \code{integer}
+dataType cannot hold without loss, which \code{\link[=apply_spec]{apply_spec()}} refuses to coerce
+(its \code{on_coercion_loss} governs that gate). \code{type_mismatch} is a note: a
+column stored more widely than the spec declares (an integer-valued
+double, for instance) coerces cleanly, so it is informational, not a
+blocker.
 }
 \examples{
 # ---- Example 1: a conformed frame surfaces only the genuine gaps ----

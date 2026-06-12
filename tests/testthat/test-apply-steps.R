@@ -132,12 +132,18 @@ test_that("a duplicated spec variable aborts at construction, with the rows", {
 
 # ---- check_spec dimensions --------------------------------------------------
 
-test_that("check_spec flags type_mismatch", {
+test_that("check_spec flags type_mismatch as a note (not a blocking warning)", {
   spec <- demo_adam_spec()
   raw <- cdisc_adsl
   raw$AGE <- as.character(raw$AGE) # spec wants integer storage
   res <- check_spec(raw, spec, "ADSL")
   expect_true("AGE" %in% res$variable[res$check == "type_mismatch"])
+  # type_mismatch is informational: storage differs but coerces cleanly. The
+  # fatal coercion checks are integer_fraction / integer_overflow.
+  expect_identical(
+    unique(res$severity[res$check == "type_mismatch"]),
+    "note"
+  )
 })
 
 test_that("check_spec flags length_overflow", {

@@ -464,11 +464,11 @@
   {
     "id": "type_mismatch",
     "dimension": "variable",
-    "severity": "warning",
+    "severity": "note",
     "requires_data": true,
     "scope": "scoped",
     "status": "implemented",
-    "description": "A column's storage differs from the spec dataType.",
+    "description": "A column's storage differs from the spec dataType (informational; integer-valued doubles coerce cleanly).",
     "reason": null,
     "engine": "data"
   },

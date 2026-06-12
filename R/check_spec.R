@@ -37,6 +37,14 @@
 #' against the `decode`s. [apply_spec()] threads its own `decode` through, so
 #' a decoded column is not wrongly flagged.
 #'
+#' **Fatal vs informational coercion checks.** Only `integer_fraction` and
+#' `integer_overflow` carry error severity: they mark data an `integer`
+#' dataType cannot hold without loss, which [apply_spec()] refuses to coerce
+#' (its `on_coercion_loss` governs that gate). `type_mismatch` is a note: a
+#' column stored more widely than the spec declares (an integer-valued
+#' double, for instance) coerces cleanly, so it is informational, not a
+#' blocker.
+#'
 #' @param x *The data frame to check.* `<data.frame>: required`. Typically
 #'   the output of [apply_spec()], but any frame works.
 #' @param spec *The specification to check against.* `<artoo_spec>:

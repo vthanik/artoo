@@ -97,6 +97,13 @@ no backward compatibility is kept with the vport surface.
   feeds `repair_spec()` directly); printing it renders the dataset-by-check
   count matrix.
 
+* `check_spec()`'s `type_mismatch` finding is now severity `note`, not
+  `warning`: a column stored more widely than the spec declares (an
+  integer-valued double under an `integer` dataType, say) coerces cleanly,
+  so it is informational. The only fatal coercion checks are
+  `integer_fraction` and `integer_overflow`; down-ranking `type_mismatch`
+  unclutters a findings report so the genuine blockers stand out.
+
 ## Spec I/O
 
 * `write_spec()` dispatches on the file extension: `.json` writes the
