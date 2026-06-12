@@ -27,13 +27,14 @@ rule catalog."><meta property="og:image" content="https://vthanik.github.io/arto
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -143,8 +144,9 @@ dimensions; <code><a href="validate_spec.html">validate_spec()</a></code> for sp
 <span class="r-in"><span><span class="co"># apply_spec() scaffolds, coerces, and orders to spec; checking the result</span></span></span>
 <span class="r-in"><span><span class="co"># against the same spec returns zero rows.</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> `EOSDISP`, and `MMS1TSBL`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `MMS1TSBL`</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu">check_spec</span><span class="op">(</span><span class="va">adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 6</span>
 <span class="r-in"><span></span></span>

@@ -105,7 +105,8 @@ get_meta(back)@columns$STUDYID$label
 # Build a two-member file by concatenating two single-member files (every
 # member section is 80-byte padded), then read one dataset out of it.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable: `BRTHDTC`
+#> Scaffolded 1 variable the spec declares but the data lacks (added as
+#> empty): `BRTHDTC`
 p_dm <- tempfile(fileext = ".xpt")
 write_xpt(dm, p_dm)
 multi <- tempfile(fileext = ".xpt")

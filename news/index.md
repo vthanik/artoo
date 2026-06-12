@@ -56,11 +56,10 @@ no backward compatibility is kept with the vport surface.
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   gained `extra = c("keep", "drop")`: `"keep"` (default) preserves
   today’s never-drop behavior; `"drop"` trims the output to exactly the
-  spec’s columns — the `metatools::drop_unspec_vars()` migration shape.
-  The drop is never silent: it is announced (`artoo_message_apply`) even
-  under `conformance = "off"`, the `extra_variable` finding remains the
-  audit trail, and a `conformance = "abort"` failure fires before any
-  drop.
+  spec’s columns. The drop is never silent: it is announced
+  (`artoo_message_apply`) even under `conformance = "off"`, the
+  `extra_variable` finding remains the audit trail, and a
+  `conformance = "abort"` failure fires before any drop.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
   data-protection conditions now carry their evidence as data, not just
@@ -105,7 +104,13 @@ no backward compatibility is kept with the vport surface.
   workbook whose sheet names and headers derive from the P21 reader’s
   own maps, with foreign keys repeated on every row and the spec’s
   standard on the Datasets sheet. Define-XML to P21 is one composition:
-  `read_spec("define.xml") |> write_spec("spec.xlsx")`.
+  `read_spec("define.xml") |> write_spec("spec.xlsx")`. The workbook’s
+  `Data Type` column is written in the Define-XML / ODM vocabulary the
+  format expects: a character variable is `text` (not the Dataset-JSON
+  `string`), with `decimal` / `double` collapsing to `float` and
+  `boolean` / `URI` to `text`. A read folds these back, so a round-trip
+  preserves `string`, `integer`, `float`, `date`, `datetime`, and `time`
+  exactly.
 
 ### Dataset I/O
 
@@ -126,6 +131,17 @@ no backward compatibility is kept with the vport surface.
 ### Inspect
 
 - New
+  [`members()`](https://vthanik.github.io/artoo/reference/members.md):
+  the format-neutral inventory of the dataset(s) a path holds, one row
+  per dataset (`file`, `member`, `label`, `records`, `variables`,
+  `format`), dispatched by extension through the codec registry. A SAS
+  XPORT library lists every member, a single-dataset file (`.json`,
+  `.ndjson`, `.parquet`, `.rds`) reports one row, and a directory
+  inventories each dataset file it holds. The format-neutral companion
+  to the xpt-specific
+  [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md).
+
+- New
   [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md):
   the encodings clinical data travels in, one row per encoding with the
   name under each ecosystem — `sas` (session encoding), `r` (the
@@ -137,10 +153,16 @@ no backward compatibility is kept with the vport surface.
 - New
   [`columns()`](https://vthanik.github.io/artoo/reference/columns.md):
   the SAS `PROC CONTENTS` / Universal Viewer variable pane (`#`,
-  Variable, Type, Len, Format, Informat, Label, plus the CDISC Key
-  sequence), polymorphic over a stamped frame, any plain data frame
-  (attributes inferred), or a file path dispatched through the codec
-  registry. A multi-member XPORT path without `member =` points at
+  Variable, Type, Len, Format, Label, plus the CDISC Key sequence, and
+  Informat only when a variable carries one), polymorphic over a stamped
+  frame, any plain data frame (attributes inferred), or a file path
+  dispatched through the codec registry. The pane mirrors physical
+  storage: a Char column always shows a byte length (inferred when the
+  spec declares none, so an ISO-8601 `--DTC` column is never blank), a
+  numeric shows none (an 8-byte IEEE double has no character width; a
+  Define-XML numeric length is a digit-width kept in metadata), and
+  format and informat names render uppercase. A multi-member XPORT path
+  without `member =` points at
   [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md).
 
 ### Data
@@ -167,13 +189,40 @@ no backward compatibility is kept with the vport surface.
 
 ### Docs
 
-- Five task-oriented articles joined the site (web-only, not in the
-  package tarball): an end-to-end ADaM build, any-to-any conversion,
-  dates/times/`--DTC` carriage, validation & qualification, and a
-  common-errors page that triggers every `artoo_error_<kind>` live with
-  its fix.
+- [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)’s
+  scaffold message now says why a variable was added (the spec declares
+  it but the data lacks it). Its `extra` argument documents why `"keep"`
+  is the lossless default, and
+  [`spec_methods()`](https://vthanik.github.io/artoo/reference/spec_methods.md)
+  /
+  [`spec_comments()`](https://vthanik.github.io/artoo/reference/spec_comments.md)
+  enumerate every column of the data frame they return.
+
+- The introductory vignette is now the package-named
+  [`vignette("artoo")`](https://vthanik.github.io/artoo/articles/artoo.md)
+  and surfaces as a top-level “Get started” navbar entry rather than an
+  item in the Articles dropdown. It is standard-neutral: the quick tour
+  conforms an SDTM domain beside the ADaM one, so both standards are
+  first-class from the first page.
+
+- Six task-oriented articles joined the site (web-only, not in the
+  package tarball): an end-to-end ADaM build, an end-to-end SDTM build,
+  any-to-any conversion, dates/times/`--DTC` carriage, validation &
+  qualification, and a common-errors page that triggers every
+  `artoo_error_<kind>` live with its fix.
 
 ### Fixes
+
+- [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  now coerces a `factor` column through its labels, never its integer
+  level codes. A factor of numeric labels declared `integer` or `float`
+  previously wrote the codes (`factor(c("10", "20"))` became `1, 2`)
+  with no abort and no warning, because the lossy guard compared codes
+  to codes and the `double` path had no guard at all. Factors are
+  normalized to character at every coercion read site (the value
+  coercion, the lossy and 32-bit-overflow checks, and the temporal
+  realizer), so a non-numeric label now becomes `NA` and is reported by
+  the coercion warning.
 
 - The declaration-driven writers (Dataset-JSON, NDJSON, the Parquet
   sidecar, rds) now reconcile the carried metadata to the frame before

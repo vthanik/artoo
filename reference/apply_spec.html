@@ -25,13 +25,14 @@ mutated; if any step aborts, the call leaves your data untouched."><meta propert
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -124,7 +125,11 @@ reported by the <code>extra_variable</code> finding.</p></li>
 the drop is announced (<code>artoo_message_apply</code>) and the
 <code>extra_variable</code> finding still reports what was removed.</p></li>
 </ul><p><strong>Interaction:</strong> under <code>conformance = "abort"</code> an error-severity
-finding aborts <em>before</em> any drop — the trim never masks a failure.</p></dd>
+finding aborts <em>before</em> any drop — the trim never masks a failure.</p>
+<p><strong>Note:</strong> <code>"keep"</code> is the default deliberately. artoo is a lossless
+carrier, so the metadata step never silently discards a column;
+extras are surfaced every run (the <code>extra_variable</code> finding, and a
+warning under <code>conformance = "warn"</code>), making <code>"drop"</code> a conscious opt-in.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -143,9 +148,13 @@ the metadata.</p>
 survives the pipeline (ordered after the declared ones), is <em>reported</em>
 by the <code>extra_variable</code> conformance finding, and round-trips through
 every <code>write_*()</code> codec with metadata inferred from its R class —
-membership reported, never enforced by silent destruction.
-<code>extra = "drop"</code> opts in to trim-to-spec (the
-<code>metatools::drop_unspec_vars()</code> migration shape): the undeclared
+membership reported, never enforced by silent destruction. Keeping is
+the default because artoo is lossless by construction: a
+metadata-application step that silently discarded columns would break
+that contract, so trimming data is always an explicit, announced choice
+rather than a default side effect.
+<code>extra = "drop"</code> opts in to trim-to-spec (the returned frame carries
+exactly the spec's columns): the undeclared
 columns are removed <em>after</em> the findings are computed, so the
 <code>extra_variable</code> finding remains the audit trail of what was dropped,
 and the drop itself is always announced (<code>artoo_message_apply</code>) — even
@@ -182,8 +191,9 @@ back.</p>
 <span class="r-in"><span><span class="co"># coerced, ordered, sorted, and stamped with the CDISC metadata</span></span></span>
 <span class="r-in"><span><span class="co"># get_meta() reads back.</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> `EOSDISP`, and `MMS1TSBL`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `MMS1TSBL`</span>
 <span class="r-in"><span><span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span><span class="op">@</span><span class="va">dataset</span><span class="op">$</span><span class="va">records</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 60</span>
 <span class="r-in"><span></span></span>
@@ -196,7 +206,8 @@ back.</p>
 <span class="r-in"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_dm</span></span></span>
 <span class="r-in"><span><span class="va">raw</span><span class="op">$</span><span class="va">DERIVED</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable: `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
 <span class="r-in"><span><span class="va">findings</span> <span class="op">&lt;-</span> <span class="fu"><a href="conformance.html">conformance</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">findings</span><span class="op">[</span><span class="va">findings</span><span class="op">$</span><span class="va">check</span> <span class="op">==</span> <span class="st">"extra_variable"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"message"</span><span class="op">)</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    variable                                        message</span>
@@ -212,7 +223,8 @@ back.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 10     DMDY     Column 'DMDY' is not declared in the spec.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 11  DERIVED  Column 'DERIVED' is not declared in the spec.</span>
 <span class="r-in"><span><span class="va">trimmed</span> <span class="op">&lt;-</span> <span class="fu">apply_spec</span><span class="op">(</span><span class="va">raw</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, extra <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable: `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> and `DERIVED`</span>

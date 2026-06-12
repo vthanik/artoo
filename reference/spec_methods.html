@@ -21,13 +21,14 @@ complete (has a description)."><meta property="og:image" content="https://vthani
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -71,9 +72,10 @@ complete (has a description).</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><em>A data frame of method metadata</em> (<code>method_id</code>, <code>name</code>, <code>type</code>,
-<code>description</code>, ...), one row per method. Empty when the spec defines no
-methods.</p>
+    <p><em>A data frame of method metadata</em>, one row per method, with all
+eight columns: <code>method_id</code>, <code>description</code>, <code>name</code>, <code>type</code>,
+<code>expression_context</code>, <code>expression_code</code>, <code>document_id</code>, <code>pages</code>. Empty
+when the spec defines no methods.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

@@ -2,11 +2,12 @@
 <url><loc>https://vthanik.github.io/artoo/404.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/LICENSE-text.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/adam-build.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/articles/artoo.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/convert.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/dates.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/errors.html</loc></url>
-<url><loc>https://vthanik.github.io/artoo/articles/getting-started.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/index.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/articles/sdtm-build.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/validation.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/authors.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/index.html</loc></url>
@@ -34,6 +35,7 @@
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_checks.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_meta.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_spec.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/members.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_dataset.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_json.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_ndjson.html</loc></url>

@@ -25,13 +25,14 @@ is the lingua franca the rest of artoo reads, applies, and serialises."><meta pr
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -191,7 +192,7 @@ with <code>artoo_error_spec</code>.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># ---- Example 1: build a spec from the bundled CDISC-pilot tables ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
-<span class="r-in"><span><span class="co"># `cdisc_sdtm_datasets` and `cdisc_sdtm_variables` hold the CDISC pilot ADaM</span></span></span>
+<span class="r-in"><span><span class="co"># `cdisc_sdtm_datasets` and `cdisc_sdtm_variables` hold the CDISC pilot SDTM</span></span></span>
 <span class="r-in"><span><span class="co"># metadata in the shape artoo_spec() expects; the constructor</span></span></span>
 <span class="r-in"><span><span class="co"># canonicalises every type and checks cross-slot integrity.</span></span></span>
 <span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu">artoo_spec</span><span class="op">(</span><span class="va">cdisc_sdtm_datasets</span>, <span class="va">cdisc_sdtm_variables</span>, codelists <span class="op">=</span> <span class="va">cdisc_codelists</span><span class="op">)</span></span></span>

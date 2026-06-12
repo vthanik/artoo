@@ -17,7 +17,8 @@ Parquet key-value sidecar, rds attributes):
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 ```
 
-    Scaffolded 1 variable: `BRTHDTC`
+    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
+    `BRTHDTC`
 
 ``` r
 

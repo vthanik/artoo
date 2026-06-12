@@ -120,7 +120,8 @@ write_xpt(adsl, path)
 # survived the transport. DM is SDTM, so it conforms against the bundled
 # sdtm_spec.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable: `BRTHDTC`
+#> Scaffolded 1 variable the spec declares but the data lacks (added as
+#> empty): `BRTHDTC`
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
 get_meta(read_xpt(path8))@dataset$records

@@ -20,9 +20,10 @@ spec_methods(spec)
 
 ## Value
 
-*A data frame of method metadata* (`method_id`, `name`, `type`,
-`description`, ...), one row per method. Empty when the spec defines no
-methods.
+*A data frame of method metadata*, one row per method, with all eight
+columns: `method_id`, `description`, `name`, `type`,
+`expression_context`, `expression_code`, `document_id`, `pages`. Empty
+when the spec defines no methods.
 
 ## See also
 

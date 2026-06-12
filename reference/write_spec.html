@@ -25,13 +25,14 @@ Define-XML to P21 bridge in one line."><meta property="og:image" content="https:
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -101,10 +102,18 @@ sheets are omitted), foreign keys repeated on every row (no merged
 cells), and the spec's <code><a href="spec_standard.html">spec_standard()</a></code> as the Datasets sheet's
 <code>Standard</code> column. The study row writes back as the Define sheet's
 Attribute/Value pairs (<code>StudyName</code>, <code>StudyDescription</code>,
-<code>ProtocolName</code>).</p>
+<code>ProtocolName</code>). The <code>Data Type</code> column is written in the Define-XML /
+ODM vocabulary the workbook expects: a character variable is <code>text</code>
+(not the Dataset-JSON <code>string</code>), and <code>decimal</code> / <code>double</code> collapse to
+<code>float</code>, <code>boolean</code> / <code>URI</code> to <code>text</code>.</p>
 <p><strong>Note:</strong> fields with no P21 column (<code>itemoid</code>, <code>target_data_type</code>,
 per-variable <code>key_sequence</code>) do not survive an xlsx round-trip;
-persist to JSON when you need the spec back exactly.</p>
+persist to JSON when you need the spec back exactly. The <code>Data Type</code>
+re-encoding is also non-injective: <code>decimal</code>, <code>double</code>, <code>boolean</code>, and
+<code>URI</code> fold to <code>float</code> or <code>text</code> on a read-back. A Define-XML
+<code>partialDate</code> / <code>partialDatetime</code> (and the other partial / incomplete
+subtypes) is read as the base <code>date</code> / <code>datetime</code> – CDISC Dataset-JSON
+v1.1 has no partial dataType – so it is written back as the base type.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

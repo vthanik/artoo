@@ -111,10 +111,13 @@ the file extension, plus a short wrapper per format.
 
 ## Inspect
 
-The SAS-viewer-style variable pane, on a frame or a file.
+The SAS-viewer-style variable pane, and the dataset inventory of a file
+or directory.
 
 - [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) :
   View a dataset's variable attributes, SAS-style
+- [`members()`](https://vthanik.github.io/artoo/reference/members.md) :
+  List the datasets in a file or directory
 - [`xpt_members()`](https://vthanik.github.io/artoo/reference/xpt_members.md)
   : List the members of a SAS XPORT transport file
 

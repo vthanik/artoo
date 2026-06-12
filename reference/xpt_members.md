@@ -51,7 +51,8 @@ spec <- artoo_spec(
 #
 # The FDA convention is one dataset per transport file.
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
-#> Scaffolded 1 variable: `BRTHDTC`
+#> Scaffolded 1 variable the spec declares but the data lacks (added as
+#> empty): `BRTHDTC`
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
 xpt_members(p)

@@ -85,6 +85,11 @@ apply_spec(
   **Interaction:** under `conformance = "abort"` an error-severity
   finding aborts *before* any drop — the trim never masks a failure.
 
+  **Note:** `"keep"` is the default deliberately. artoo is a lossless
+  carrier, so the metadata step never silently discards a column; extras
+  are surfaced every run (the `extra_variable` finding, and a warning
+  under `conformance = "warn"`), making `"drop"` a conscious opt-in.
+
 ## Value
 
 *A conformed `<data.frame>`* carrying `artoo_meta` (read it with
@@ -104,13 +109,16 @@ the metadata.
 survives the pipeline (ordered after the declared ones), is *reported*
 by the `extra_variable` conformance finding, and round-trips through
 every `write_*()` codec with metadata inferred from its R class —
-membership reported, never enforced by silent destruction.
-`extra = "drop"` opts in to trim-to-spec (the
-`metatools::drop_unspec_vars()` migration shape): the undeclared columns
-are removed *after* the findings are computed, so the `extra_variable`
-finding remains the audit trail of what was dropped, and the drop itself
-is always announced (`artoo_message_apply`) — even under
-`conformance = "off"`.
+membership reported, never enforced by silent destruction. Keeping is
+the default because artoo is lossless by construction: a
+metadata-application step that silently discarded columns would break
+that contract, so trimming data is always an explicit, announced choice
+rather than a default side effect. `extra = "drop"` opts in to
+trim-to-spec (the returned frame carries exactly the spec's columns):
+the undeclared columns are removed *after* the findings are computed, so
+the `extra_variable` finding remains the audit trail of what was
+dropped, and the drop itself is always announced (`artoo_message_apply`)
+— even under `conformance = "off"`.
 
 **Lossless or abort.** A coercion that would damage values — an
 `integer` dataType truncating fractions or overflowing R's 32-bit range
@@ -155,8 +163,9 @@ for what the stamp attaches.
 # coerced, ordered, sorted, and stamped with the CDISC metadata
 # get_meta() reads back.
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
-#> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,
-#> `EOSDISP`, and `MMS1TSBL`
+#> Scaffolded 6 variables the spec declares but the data lacks (added as
+#> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and
+#> `MMS1TSBL`
 get_meta(adsl)@dataset$records
 #> [1] 60
 
@@ -169,7 +178,8 @@ get_meta(adsl)@dataset$records
 raw <- cdisc_dm
 raw$DERIVED <- seq_len(nrow(raw))
 dm <- apply_spec(raw, sdtm_spec, "DM")
-#> Scaffolded 1 variable: `BRTHDTC`
+#> Scaffolded 1 variable the spec declares but the data lacks (added as
+#> empty): `BRTHDTC`
 findings <- conformance(dm)
 findings[findings$check == "extra_variable", c("variable", "message")]
 #>    variable                                        message
@@ -185,7 +195,8 @@ findings[findings$check == "extra_variable", c("variable", "message")]
 #> 10     DMDY     Column 'DMDY' is not declared in the spec.
 #> 11  DERIVED  Column 'DERIVED' is not declared in the spec.
 trimmed <- apply_spec(raw, sdtm_spec, "DM", extra = "drop")
-#> Scaffolded 1 variable: `BRTHDTC`
+#> Scaffolded 1 variable the spec declares but the data lacks (added as
+#> empty): `BRTHDTC`
 #> Dropped 11 undeclared variables: `RFXSTDTC`, `RFXENDTC`, `RFICDTC`,
 #> `RFPENDTC`, `DTHDTC`, `DTHFL`, `ACTARMCD`, `ACTARM`, `DMDTC`, `DMDY`,
 #> and `DERIVED`

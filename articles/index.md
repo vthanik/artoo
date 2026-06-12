@@ -1,14 +1,11 @@
 # Articles
 
-### Get started
-
-- [Getting started with
-  artoo](https://vthanik.github.io/artoo/articles/getting-started.md):
-
 ### Task guides
 
 - [An end-to-end ADaM
   build](https://vthanik.github.io/artoo/articles/adam-build.md):
+- [An end-to-end SDTM
+  build](https://vthanik.github.io/artoo/articles/sdtm-build.md):
 - [Any-to-any
   conversion](https://vthanik.github.io/artoo/articles/convert.md):
 - [Dates, times, and

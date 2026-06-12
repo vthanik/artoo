@@ -20,8 +20,9 @@ spec_comments(spec)
 
 ## Value
 
-*A data frame of comment metadata* (`comment_id`, `description`, ...),
-one row per comment. Empty when the spec defines no comments.
+*A data frame of comment metadata*, one row per comment, with all four
+columns: `comment_id`, `description`, `document_id`, `pages`. Empty when
+the spec defines no comments.
 
 ## See also
 

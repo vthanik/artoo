@@ -23,13 +23,14 @@ write_dataset() with format = "json".'><meta property="og:image" content="https:
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/artoo.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with artoo</a></li>
-    <li><hr class="dropdown-divider"></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Task guides</h6></li>
     <li><a class="dropdown-item" href="../articles/adam-build.html">An end-to-end ADaM build</a></li>
+    <li><a class="dropdown-item" href="../articles/sdtm-build.html">An end-to-end SDTM build</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
     <li><a class="dropdown-item" href="../articles/dates.html">Dates, times, and --DTC</a></li>
     <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
@@ -144,8 +145,9 @@ dispatcher.</p></div>
 <span class="r-in"><span><span class="co"># apply_spec() attaches the metadata; write_json() serializes the full</span></span></span>
 <span class="r-in"><span><span class="co"># itemGroup plus the data rows.</span></span></span>
 <span class="r-in"><span><span class="va">adsl</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> `EOSDISP`, and `MMS1TSBL`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 6 variables the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> `MMS1TSBL`</span>
 <span class="r-in"><span><span class="va">path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_json</span><span class="op">(</span><span class="va">adsl</span>, <span class="va">path</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -155,28 +157,29 @@ dispatcher.</p></div>
 <span class="r-in"><span><span class="co"># the written file shows the full metadata the file carries (DM is SDTM,</span></span></span>
 <span class="r-in"><span><span class="co"># so it conforms against the bundled sdtm_spec).</span></span></span>
 <span class="r-in"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable: `BRTHDTC`</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Scaffolded 1 variable the spec declares but the data lacks (added as</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> empty): `BRTHDTC`</span>
 <span class="r-in"><span><span class="va">path2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_json</span><span class="op">(</span><span class="va">dm</span>, <span class="va">path2</span>, created <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2020-01-01"</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="columns.html">columns</a></span><span class="op">(</span><span class="va">path2</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_columns&gt; DM -- 26 variables, 60 obs</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> #   Variable  Type  Len  Format  Informat  Label                              Key</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   STUDYID   Char  7                      Study Identifier                   1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   DOMAIN    Char  2                      Domain Abbreviation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   USUBJID   Char  14                     Unique Subject Identifier          2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   SUBJID    Char  6                      Subject Identifier for the Study</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   RFSTDTC   Char                         Subject Reference Start Date/Time</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   RFENDTC   Char                         Subject Reference End Date/Time</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   SITEID    Char  3                      Study Site Identifier</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8   BRTHDTC   Char                         Date/Time of Birth</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9   AGE       Num   2                      Age</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10  AGEU      Char  5                      Age Units</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  SEX       Char  16                     Sex</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12  RACE      Char  41                     Race</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13  ETHNIC    Char  22                     Ethnicity</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14  ARMCD     Char  8                      Planned Arm Code</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15  ARM       Char  20                     Description of Planned Arm</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16  COUNTRY   Char  3                      Country</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> #   Variable  Type  Len  Format  Label                              Key</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   STUDYID   Char  7            Study Identifier                   1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   DOMAIN    Char  2            Domain Abbreviation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   USUBJID   Char  14           Unique Subject Identifier          2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   SUBJID    Char  6            Subject Identifier for the Study</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   RFSTDTC   Char  10           Subject Reference Start Date/Time</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   RFENDTC   Char  10           Subject Reference End Date/Time</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   SITEID    Char  3            Study Site Identifier</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   BRTHDTC   Char  1            Date/Time of Birth</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   AGE       Num                Age</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  AGEU      Char  5            Age Units</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  SEX       Char  16           Sex</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  RACE      Char  41           Race</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13  ETHNIC    Char  22           Ethnicity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14  ARMCD     Char  8            Planned Arm Code</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15  ARM       Char  20           Description of Planned Arm</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16  COUNTRY   Char  3            Country</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 17  RFXSTDTC  Char  10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 18  RFXENDTC  Char  10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 19  RFICDTC   Char  1</span>
@@ -186,7 +189,7 @@ dispatcher.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 23  ACTARMCD  Char  8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 24  ACTARM    Char  20</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 25  DMDTC     Char  10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 26  DMDY      Num   8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26  DMDY      Num</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

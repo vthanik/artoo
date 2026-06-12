@@ -23,7 +23,8 @@ stealth:
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 ```
 
-    Scaffolded 1 variable: `BRTHDTC`
+    Scaffolded 1 variable the spec declares but the data lacks (added as empty):
+    `BRTHDTC`
 
 ``` r
 
@@ -46,8 +47,8 @@ and on every read:
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
 ```
 
-    Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`,
-    and `MMS1TSBL`
+    Scaffolded 6 variables the spec declares but the data lacks (added as empty):
+    `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`
 
 ``` r
 

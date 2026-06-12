@@ -102,8 +102,9 @@ for spec integrity.
 # apply_spec() scaffolds, coerces, and orders to spec; checking the result
 # against the same spec returns zero rows.
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
-#> Scaffolded 6 variables: `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`,
-#> `EOSDISP`, and `MMS1TSBL`
+#> Scaffolded 6 variables the spec declares but the data lacks (added as
+#> empty): `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and
+#> `MMS1TSBL`
 nrow(check_spec(adsl, adam_spec, "ADSL"))
 #> [1] 6
 
