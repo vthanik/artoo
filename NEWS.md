@@ -99,6 +99,19 @@ no backward compatibility is kept with the vport surface.
   preserves `string`, `integer`, `float`, `date`, `datetime`, and `time`
   exactly.
 
+* New `set_type()`: return a spec with one or more variables retyped, e.g.
+  `set_type(spec, "ADSL", AGE = "float")`. The supported, in-R way to
+  correct a spec's dataType when the data disagrees with it, instead of
+  reaching into the object: the type is canonicalised through the CDISC
+  vocabulary and the rebuilt spec is re-validated. The original is
+  unchanged.
+
+* New `repair_spec()`: take the `integer_fraction` / `integer_overflow`
+  findings `check_spec()` reports and return a spec with every offending
+  variable retyped to `float`, so a frame the original spec would refuse to
+  coerce conforms after one call. Built on `set_type()`; compose with
+  `write_spec()` to persist the corrected workbook.
+
 ## Dataset I/O
 
 * `write_json()`, `write_ndjson()`, and `write_parquet()` gained the
