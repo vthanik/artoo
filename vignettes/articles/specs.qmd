@@ -1,0 +1,113 @@
+---
+title: "Specifications"
+format: html
+---
+
+```{r}
+#| include: false
+library(artoo)
+```
+
+A `artoo_spec` is artoo's single source of truth: the variables, CDISC data
+types, lengths, labels, controlled-terminology codelists, and sort keys for
+exactly **one** CDISC standard. Read one from the metadata you already have,
+inspect it as plain data frames, fix it in R when the data disagrees, and
+write it back &mdash; the spec is the contract every later step honors.
+
+![The artoo lossless round-trip, with the spec and its fix-and-inspect verbs feeding apply_spec.](../man/figures/round-trip-hero.svg){fig-alt="A spec plus data flow into apply_spec; set_type and check_spec feed in to fix and inspect the spec before it is applied." width="100%"}
+
+## 1. Read a spec
+
+`read_spec()` ingests a specification from Define-XML 2.x, a Pinnacle 21
+workbook, or artoo's own native JSON, and returns a `artoo_spec`. The bundled
+ADaM spec also ships as a P21 workbook, so this runs as-is:
+
+```{r}
+p21 <- system.file("extdata", "adam-spec.xlsx", package = "artoo")
+spec <- read_spec(p21)
+spec
+```
+
+A workbook can carry several standards or duplicate roles; scope the read
+when you need just one:
+
+```r
+read_spec("define.xml", datasets = "ADSL", on_duplicate = "first")
+```
+
+## 2. Inspect with the `spec_*` accessors
+
+Each accessor returns a plain data frame (or character vector), so the spec
+slots straight into ordinary base R work &mdash; filter, join, summarise. The
+datasets a spec covers:
+
+```{r}
+spec_datasets(spec)
+```
+
+The variable table is the one you reach for most; here, four columns of it:
+
+```{r}
+spec_variables(spec, "ADSL")[, c("variable", "label", "data_type", "length")] |>
+  head()
+```
+
+The sort keys that `apply_spec()` will order by, and the controlled
+terminology a coded variable is bound to:
+
+```{r}
+spec_keys(spec, "ADSL")
+
+head(spec_codelists(spec))
+```
+
+`spec_standard()`, `spec_study()`, `spec_methods()`, `spec_comments()`, and
+`spec_documents()` expose the remaining slots the same way.
+
+## 3. Fix it in place
+
+When the data disagrees with the spec, fix the spec in one line &mdash; never
+reach into internals. `set_type()` retypes a variable; the spec is immutable,
+so it returns an updated copy:
+
+```{r}
+spec <- set_type(spec, "ADSL", AGE = "float")
+v <- spec_variables(spec, "ADSL")
+v$data_type[v$variable == "AGE"]
+```
+
+When a check has already found integer-vs-fraction mismatches, `repair_spec()`
+applies the fix for every one of them at once, from the findings frame:
+
+```{r}
+findings <- check_spec(cdisc_adsl, spec, "ADSL")
+spec <- repair_spec(spec, findings)
+```
+
+## 4. Write it back
+
+`write_spec()` is the inverse of `read_spec()` on each format: native JSON is
+fully lossless, and the P21 workbook is the interchange form. Round-trip a
+corrected spec through JSON:
+
+```{r}
+out <- tempfile(fileext = ".json")
+write_spec(spec, out)
+identical(spec_standard(read_spec(out)), spec_standard(spec))
+```
+
+Because the two verbs are inverses, format conversion is one composition:
+
+```r
+read_spec("define.xml") |> write_spec("spec.xlsx")
+```
+
+## Where to next
+
+- [Conform & validate](conform.html) &mdash; apply this spec to data, then
+  check every finding.
+- [Formats & lossless conversion](convert.html) &mdash; move a conformed
+  dataset between formats without loss.
+- [Recipes](recipes.html) &mdash; the spec in an end-to-end ADaM and SDTM
+  build.
+- [Get started](artoo.html) &mdash; the round-trip from the top.

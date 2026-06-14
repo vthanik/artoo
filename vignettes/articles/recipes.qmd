@@ -1,0 +1,150 @@
+---
+title: "Recipes"
+format: html
+---
+
+```{r}
+#| include: false
+library(artoo)
+```
+
+These are the everyday programming loops a clinical programmer runs &mdash;
+an ADaM analysis dataset, an SDTM domain, a codelist decode, the temporal
+shapes &mdash; each rendered **live** below from the bundled demo data, so
+what you see is exactly what the code produces. Every recipe ends on a
+conformed result; the closing line shows how to **ship it** to any
+deliverable, just by changing the extension.
+
+![The artoo lossless round-trip, the loop every recipe walks.](../man/figures/round-trip-hero.svg){fig-alt="A spec plus data go through apply_spec, write to a file, and read back identical, closing a lossless round-trip loop." width="100%"}
+
+## An ADaM build: ADSL
+
+A real derivation program accumulates working columns the spec never
+declares &mdash; here an age-group cut. Those are "extras"; `extra = "drop"`
+trims them to exactly the spec's columns, recorded by the `extra_variable`
+finding so the drop is never silent. `apply_spec()` then coerces, orders,
+sorts, and stamps:
+
+```{r}
+#| message: false
+adsl_raw <- cdisc_adsl
+adsl_raw$AGEGR1_TMP <- cut(
+  adsl_raw$AGE,
+  breaks = c(-Inf, 64, 74, Inf),
+  labels = c("<65", "65-74", ">=75")
+)
+adsl_raw$AGEGR1 <- as.character(adsl_raw$AGEGR1_TMP)
+
+adsl <- apply_spec(adsl_raw, adam_spec, "ADSL", extra = "drop")
+columns(adsl)
+```
+
+```{r}
+#| eval: false
+write_xpt(adsl, "adsl.xpt") # ship: or .json / .parquet / .rds
+```
+
+## An SDTM build: DM
+
+The pipeline is identical &mdash; only the spec and the data change. Assemble
+the domain (with a QC temporary), conform, then read the result back as a
+one-line inventory with `members()`:
+
+```{r}
+#| message: false
+dm_raw <- cdisc_dm
+dm_raw$AGE_CHECK <- dm_raw$AGE >= 18
+
+dm <- apply_spec(dm_raw, sdtm_spec, "DM", extra = "drop", conformance = "off")
+
+json <- tempfile(fileext = ".json")
+write_json(dm, json)
+members(json)
+```
+
+```{r}
+#| eval: false
+write_xpt(dm, "dm.xpt") # ship: or .json / .parquet / .rds
+```
+
+## Codelists: decode in either direction
+
+`decode_column()` reads the codelist a variable is bound to in the spec and
+maps in either direction &mdash; here, deriving the numeric `RACEN` code from
+the `RACE` decode (`direction = "to_code"`):
+
+```{r}
+#| message: false
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
+coded <- decode_column(
+  adsl, adam_spec, "ADSL",
+  from = "RACE", to = "RACEN", direction = "to_code"
+)
+unique(coded[, c("RACE", "RACEN")])
+```
+
+A value outside the codelist's terms aborts (`artoo_error_codelist`) unless
+you pass `no_match = "keep"` / `"na"`.
+
+## Dates, times, and `--DTC`
+
+Clinical dates travel in two shapes, and artoo keeps the distinction
+explicit through `dataType`, `targetDataType`, and `displayFormat`. **Scope
+note:** this is about *carriage* &mdash; partial-date imputation is an
+analysis decision your SAP owns; artoo never imputes.
+
+An SDTM `--DTC` variable typed `date` is ISO 8601 text by the CDISC storage
+rule, so it stays character through the pipeline, partial values included
+(`"2024-03"` is a legal ISO date, and padding it would be imputation by
+stealth):
+
+```{r}
+#| message: false
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
+class(dm$RFSTDTC)
+```
+
+A variable typed `date` with no `targetDataType` realizes to an R `Date` in
+memory:
+
+```{r}
+#| message: false
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off")
+class(adsl$DISONSDT)
+```
+
+The ADaM numeric-date convention is the other shape: a variable carried as
+an `integer` SAS-epoch day count, with a `displayFormat` (`date9.`) telling
+SAS how to render it. `TRTSDT` is one, and the format rides in the metadata:
+
+```{r}
+class(adsl$TRTSDT)
+
+p <- tempfile(fileext = ".json")
+write_json(adsl, p)
+get_meta(read_json(p))@columns$TRTSDT[c("dataType", "displayFormat")]
+```
+
+SAS `TIME` values import as `hms` (seconds since midnight), so values past
+24 hours, negative values, and fractional seconds all survive:
+
+```{r}
+hms::as_hms(30615)
+```
+
+Either date shape round-trips byte-faithfully &mdash; the SAS-epoch
+(1960-01-01) versus R-epoch conversion happens inside the codecs, never in
+your code:
+
+```{r}
+identical(read_json(p)$TRTSDT, adsl$TRTSDT)
+```
+
+## Where to next
+
+- [Specifications](specs.html) &mdash; the spec each recipe starts from.
+- [Conform & validate](conform.html) &mdash; `apply_spec()` and the findings
+  in depth.
+- [Formats & lossless conversion](convert.html) &mdash; the round trips these
+  ship lines rely on.
+- [Get started](artoo.html) &mdash; the round-trip from the top.

@@ -49,13 +49,13 @@ home:
     href: https://github.com/phuse-org/phuse-scripts/tree/master/data/adam
 
 reference:
-- title: Specification
+- title: Specs
   desc: >
     Build a artoo_spec — the canonical CDISC-shaped description of your
     datasets, one CDISC standard each — or read one from native JSON, a
     Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
-    R when the data disagrees: retype a variable, or repair every integer
-    mismatch a check surfaced.
+    R when the data disagrees, then read any slot back with the spec_*
+    accessors.
   contents:
   - artoo_spec
   - read_spec
@@ -63,12 +63,6 @@ reference:
   - set_type
   - repair_spec
   - is_artoo_spec
-
-- title: Spec accessors
-  desc: >
-    One slot each from the spec — the standard, the study block, and the
-    per-dataset metadata tables.
-  contents:
   - spec_standard
   - spec_study
   - spec_datasets
@@ -79,41 +73,32 @@ reference:
   - spec_comments
   - spec_documents
 
-- title: Conform
+- title: Conform & validate
   desc: >
-    Apply the spec to a raw frame — coerce, order, sort, stamp
-    metadata — and derive single variables through spec codelists.
+    Apply the spec to a raw frame — coerce, order, sort, stamp metadata —
+    decode single variables through its codelists, and read or replace the
+    artoo_meta the result carries. Then surface every conformance finding
+    for one dataset or a whole study, plus the spec's own integrity, with
+    the control object that scopes both.
   contents:
   - apply_spec
   - decode_column
-
-- title: Metadata
-  desc: >
-    The artoo_meta every conformed frame carries: read it, replace it,
-    and keep it in step with the data.
-  contents:
   - get_meta
   - set_meta
   - sync_meta
   - is_artoo_meta
-
-- title: Check
-  desc: >
-    Conformance findings for the data — one dataset or a whole study —
-    integrity findings for the spec itself, and the control object that
-    scopes both.
-  contents:
   - check_spec
   - check_study
+  - validate_spec
   - conformance
   - artoo_checks
   - is_artoo_checks
-  - validate_spec
 
 - title: Read and write
   desc: >
-    Lossless dataset I/O across every supported format. Generic dispatch
-    on the file extension, plus a short wrapper per format.
+    Lossless dataset I/O across every supported format — generic dispatch
+    on the file extension, plus a short wrapper per format — and the
+    SAS-viewer-style variable pane and dataset inventory for any file.
   contents:
   - read_dataset
   - write_dataset
@@ -127,29 +112,19 @@ reference:
   - write_parquet
   - read_rds
   - write_rds
-
-- title: Inspect
-  desc: >
-    The SAS-viewer-style variable pane, and the dataset inventory of a
-    file or directory.
-  contents:
   - columns
   - members
   - xpt_members
 
-- title: Formats and encodings
+- title: Reference data
   desc: >
-    Reference tables: which codecs this session can read and write, and
-    the encoding names R, SAS, and Python use for the same bytes.
+    Reference tables for the codecs this session can read and write and the
+    encoding names R, SAS, and Python share, plus the bundled CDISC pilot
+    specs, metadata tables, and datasets used throughout the docs — all
+    rebuilt from public sources.
   contents:
   - artoo_formats
   - artoo_encodings
-
-- title: Demo data
-  desc: >
-    Bundled CDISC pilot specs, metadata tables, and datasets used
-    throughout the docs — all rebuilt from public sources.
-  contents:
   - cdisc_specs
   - cdisc_spec
   - cdisc_adsl
@@ -160,8 +135,10 @@ reference:
   - cdisc_suppdm
 
 articles:
-- title: Task guides
+- title: Articles
   navbar: ~
   contents:
+  - articles/specs
+  - articles/conform
   - articles/convert
-  - articles/validation
+  - articles/recipes

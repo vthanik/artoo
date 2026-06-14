@@ -2,7 +2,7 @@
 title: "Get started with artoo"
 vignette: >
   %\VignetteIndexEntry{Get started with artoo}
-  %\VignetteEngine{quarto::format}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 format: html
 ---
@@ -12,53 +12,14 @@ format: html
 library(artoo)
 ```
 
-`artoo` carries clinical-trial datasets losslessly across SAS XPORT,
-CDISC Dataset-JSON, NDJSON, Apache Parquet, and RDS through one canonical,
-CDISC-shaped metadata model. The whole package is a single loop: a **spec**
-plus **data** go through `apply_spec()`, write to a **file**, and read back
-**identical**. That loop is the lossless guarantee.
+This guide walks the whole artoo round-trip once, on the bundled demo data.
+A **spec** plus your **data** go through `apply_spec()`, write to a **file**,
+and read back **identical** &mdash; that loop is artoo's lossless guarantee.
+Every step below runs as-is; there is nothing to download.
 
-::: {.rt-figure}
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 250" width="100%" role="img" aria-label="The artoo lossless round-trip: spec plus data go through apply_spec (scaffold, coerce, order, sort, stamp), then write to a file, then read back to identical data; set_type and check_spec fix and inspect the spec, and the whole loop is lossless, so what you read back equals what you wrote.">
-  <defs>
-    <marker id="rt-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
-    </marker>
-    <marker id="rt-arrow-blue" markerWidth="11" markerHeight="11" refX="7.5" refY="3.2" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M0,0 L7.5,3.2 L0,6.4 Z" fill="#3b82f6"/>
-    </marker>
-  </defs>
-  <rect x="1" y="1" width="1038" height="248" fill="#ffffff" stroke="#efefef" stroke-width="2"/>
-  <text x="99" y="32" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#64748b">fix &#183; inspect the spec</text>
-  <text x="99" y="51" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#1e293b">set_type() &#183; check_spec()</text>
-  <line x1="99" y1="60" x2="99" y2="83" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#rt-arrow)"/>
-  <g stroke="#94a3b8" stroke-width="1.8">
-    <line x1="176" y1="112" x2="207" y2="112" marker-end="url(#rt-arrow)"/>
-    <line x1="382" y1="112" x2="413" y2="112" marker-end="url(#rt-arrow)"/>
-    <line x1="538" y1="112" x2="569" y2="112" marker-end="url(#rt-arrow)"/>
-    <line x1="666" y1="112" x2="697" y2="112" marker-end="url(#rt-arrow)"/>
-    <line x1="822" y1="112" x2="853" y2="112" marker-end="url(#rt-arrow)"/>
-  </g>
-  <rect x="24" y="86" width="150" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
-  <text x="99" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">spec + data</text>
-  <rect x="210" y="86" width="170" height="52" fill="#3b82f6" stroke="#2563eb" stroke-width="1.5"/>
-  <text x="295" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14.5" font-weight="600" fill="#ffffff">apply_spec()</text>
-  <text x="295" y="160" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#64748b">scaffold &#183; coerce &#183; order &#183; sort &#183; stamp</text>
-  <rect x="416" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
-  <text x="476" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">write_*()</text>
-  <rect x="572" y="86" width="92" height="52" fill="#eef3fb" stroke="#c7dbff" stroke-width="1.5"/>
-  <text x="618" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e3a5f">file</text>
-  <rect x="700" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
-  <text x="760" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">read_*()</text>
-  <rect x="856" y="86" width="160" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
-  <text x="936" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">identical data</text>
-  <path d="M936,140 V202 H99 V143" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#rt-arrow-blue)"/>
-  <text x="517" y="228" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#3b82f6">lossless round-trip &#8212; what you read back equals what you wrote</text>
-</svg>
-:::
+## The round-trip at a glance
 
-This vignette walks that loop once, start to finish: **spec &rarr; apply
-&rarr; inspect &rarr; write &rarr; read back**, all on the bundled demo data.
+![The artoo lossless round-trip: a spec plus data go through apply_spec (scaffold, coerce, order, sort, stamp), then write to a file, then read back to identical data; set_type and check_spec fix and inspect the spec.](../man/figures/round-trip-hero.svg){fig-alt="A spec plus data flow into apply_spec, which scaffolds, coerces, orders, sorts, and stamps; the result writes to a file and reads back to identical data. A dashed loop labelled lossless round-trip closes from identical data back to the start, and set_type and check_spec feed in to fix and inspect the spec." width="100%"}
 
 ## 1. Get a spec
 
@@ -172,10 +133,16 @@ archived is what you analysed.
 
 ## Where to next
 
-- The task guides: [any-to-any conversion](https://vthanik.github.io/artoo/articles/convert.html)
-  and [validation & qualification](https://vthanik.github.io/artoo/articles/validation.html).
-- `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
-- `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
-- `?read_dataset` — generic I/O and the per-format wrappers.
-- `?adam_spec` — the bundled demo specs and datasets.
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.html) &mdash;
+  read a spec from Define-XML or a workbook, inspect it with the `spec_*`
+  accessors, and fix it in place with `set_type()` / `repair_spec()`.
+- [Conform & validate](https://vthanik.github.io/artoo/articles/conform.html) &mdash;
+  `apply_spec()` in depth, then every conformance finding from `check_spec()`
+  and `check_study()`, and the errors artoo raises.
+- [Formats & lossless conversion](https://vthanik.github.io/artoo/articles/convert.html) &mdash;
+  any-to-any round trips, encodings, the `on_invalid` policy, and the
+  qualification evidence a regulated pipeline needs.
+- [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) &mdash;
+  end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist decoding,
+  each rendered live on the demo data.
 ```
