@@ -94,7 +94,9 @@ data type, orders the columns, sorts by the dataset keys, and stamps the
 result with its metadata. A variable the spec declares but the data lacks is
 reported, never fabricated as an empty column. The input is never mutated, no
 column is ever dropped, and a coercion that would damage values aborts before
-it runs.
+it runs &mdash; with two honest one-line exits: keep the wider source type with
+`apply_spec(..., on_coercion_loss = "keep")`, or retype the spec with
+`set_type()`.
 
 ```{r}
 adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
@@ -108,8 +110,7 @@ nrow(conformance(adsl))
 ```
 
 The pipeline is standard-neutral: an SDTM domain conforms identically &mdash;
-only the spec and the dataset change. The full SDTM walkthrough is its own
-[task guide](https://vthanik.github.io/artoo/articles/sdtm-build.html).
+only the spec and the dataset change.
 
 ```{r}
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM")
@@ -171,13 +172,8 @@ archived is what you analysed.
 
 ## Where to next
 
-- The task guides: [an end-to-end ADaM build](https://vthanik.github.io/artoo/articles/adam-build.html),
-  [an end-to-end SDTM build](https://vthanik.github.io/artoo/articles/sdtm-build.html),
-  [any-to-any conversion](https://vthanik.github.io/artoo/articles/convert.html),
-  [dates, times, and `--DTC`](https://vthanik.github.io/artoo/articles/dates.html),
-  [validation & qualification](https://vthanik.github.io/artoo/articles/validation.html),
-  [how artoo compares](https://vthanik.github.io/artoo/articles/compare.html), and
-  [common errors](https://vthanik.github.io/artoo/articles/errors.html).
+- The task guides: [any-to-any conversion](https://vthanik.github.io/artoo/articles/convert.html)
+  and [validation & qualification](https://vthanik.github.io/artoo/articles/validation.html).
 - `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
 - `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
 - `?read_dataset` — generic I/O and the per-format wrappers.

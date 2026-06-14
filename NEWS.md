@@ -211,7 +211,7 @@ no backward compatibility is kept with the vport surface.
   default, and `spec_methods()` / `spec_comments()` enumerate every column of
   the data frame they return.
 
-* The introductory vignette is `vignette("get-started")`, anchored by a
+* The introductory vignette is `vignette("artoo")`, anchored by a
   hand-authored round-trip diagram that also banners the home page, and
   surfaces as a top-level "Get started" navbar entry rather than an item in
   the Articles dropdown. It is standard-neutral: the quick tour conforms an

@@ -90,5 +90,5 @@ names, and Unicode NFC (UAX #15).
 
 ## Where to next
 
-- [Common errors](errors.html) — each condition class, triggered live.
+- [Get started](artoo.html) — the round-trip from the top.
 - [Any-to-any conversion](convert.html) — the round trips themselves.

@@ -28,10 +28,6 @@ navbar:
   structure:
     left: [intro, reference, articles, news]
     right: [search, github]
-  components:
-    intro:
-      text: Get started
-      href: articles/get-started.html
 
 home:
   # Match the sibling site's sidebar: Links / License / Citation / Developers.
@@ -164,17 +160,8 @@ reference:
   - cdisc_suppdm
 
 articles:
-- title: Get started
-  navbar: ~
-  contents:
-  - get-started
 - title: Task guides
   navbar: ~
   contents:
-  - articles/adam-build
-  - articles/sdtm-build
   - articles/convert
-  - articles/dates
   - articles/validation
-  - articles/compare
-  - articles/errors

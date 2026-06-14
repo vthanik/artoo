@@ -88,6 +88,6 @@ XPT but not as Dataset-JSON", or vice versa.
 
 ## Where to next
 
-- [An end-to-end ADaM build](adam-build.html) — the derivation loop.
+- [Get started](artoo.html) — the round-trip from the top.
 - [Validation & qualification](validation.html) — what "lossless" buys
   in a regulated setting.

@@ -164,7 +164,7 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 
 ## Learn more
 
-- `vignette("get-started")` — the whole workflow, start to finish: spec → apply → inspect → write → read back, for both SDTM and ADaM.
+- `vignette("artoo")` — the whole workflow, start to finish: spec → apply → inspect → write → read back, for both SDTM and ADaM.
 
 ## License
 
