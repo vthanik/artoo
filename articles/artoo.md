@@ -1,19 +1,24 @@
 # Get started with artoo
 
-`artoo` carries clinical-trial datasets losslessly across SAS XPORT,
-CDISC Dataset-JSON, NDJSON, Apache Parquet, and RDS through one
-canonical, CDISC-shaped metadata model. The whole package is a single
-loop: a **spec** plus **data** go through
+This guide walks the whole artoo round-trip once, on the bundled demo
+data. A **spec** plus your **data** go through
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md),
-write to a **file**, and read back **identical**. That loop is the
-lossless guarantee.
+write to a **file**, and read back **identical** — that loop is artoo’s
+lossless guarantee. Every step below runs as-is; there is nothing to
+download.
 
-![](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCAxMDQwIDI1MCIgd2lkdGg9IjEwMCUiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iVGhlIGFydG9vIGxvc3NsZXNzIHJvdW5kLXRyaXA6IHNwZWMgcGx1cyBkYXRhIGdvIHRocm91Z2ggYXBwbHlfc3BlYyAoc2NhZmZvbGQsIGNvZXJjZSwgb3JkZXIsIHNvcnQsIHN0YW1wKSwgdGhlbiB3cml0ZSB0byBhIGZpbGUsIHRoZW4gcmVhZCBiYWNrIHRvIGlkZW50aWNhbCBkYXRhOyBzZXRfdHlwZSBhbmQgY2hlY2tfc3BlYyBmaXggYW5kIGluc3BlY3QgdGhlIHNwZWMsIGFuZCB0aGUgd2hvbGUgbG9vcCBpcyBsb3NzbGVzcywgc28gd2hhdCB5b3UgcmVhZCBiYWNrIGVxdWFscyB3aGF0IHlvdSB3cm90ZS4iPjxkZWZzPjxtYXJrZXIgaWQ9InJ0LWFycm93IiBtYXJrZXJ3aWR0aD0iMTAiIG1hcmtlcmhlaWdodD0iMTAiIHJlZng9IjciIHJlZnk9IjMiIG9yaWVudD0iYXV0byIgbWFya2VydW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMCwwIEw3LDMgTDAsNiBaIiBmaWxsPSIjOTRhM2I4IiAvPjwvbWFya2VyPjxtYXJrZXIgaWQ9InJ0LWFycm93LWJsdWUiIG1hcmtlcndpZHRoPSIxMSIgbWFya2VyaGVpZ2h0PSIxMSIgcmVmeD0iNy41IiByZWZ5PSIzLjIiIG9yaWVudD0iYXV0byIgbWFya2VydW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMCwwIEw3LjUsMy4yIEwwLDYuNCBaIiBmaWxsPSIjM2I4MmY2IiAvPjwvbWFya2VyPjwvZGVmcz48cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMTAzOCIgaGVpZ2h0PSIyNDgiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iI2VmZWZlZiIgc3Ryb2tlLXdpZHRoPSIyIiAvPjx0ZXh0IHg9Ijk5IiB5PSIzMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgJiMzOTtTZWdvZSBVSSYjMzk7LCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwLjUiIGZpbGw9IiM2NDc0OGIiPmZpeCDCtyBpbnNwZWN0IHRoZSBzcGVjPC90ZXh0Pjx0ZXh0IHg9Ijk5IiB5PSI1MSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMxZTI5M2IiPnNldF90eXBlKCkgwrcgY2hlY2tfc3BlYygpPC90ZXh0PjxsaW5lIHgxPSI5OSIgeTE9IjYwIiB4Mj0iOTkiIHkyPSI4MyIgc3Ryb2tlPSIjOTRhM2I4IiBzdHJva2Utd2lkdGg9IjEuNiIgbWFya2VyLWVuZD0idXJsKCNydC1hcnJvdykiPjwvbGluZT48ZyBzdHJva2U9IiM5NGEzYjgiIHN0cm9rZS13aWR0aD0iMS44Ij48bGluZSB4MT0iMTc2IiB5MT0iMTEyIiB4Mj0iMjA3IiB5Mj0iMTEyIiBtYXJrZXItZW5kPSJ1cmwoI3J0LWFycm93KSI+PC9saW5lPjxsaW5lIHgxPSIzODIiIHkxPSIxMTIiIHgyPSI0MTMiIHkyPSIxMTIiIG1hcmtlci1lbmQ9InVybCgjcnQtYXJyb3cpIj48L2xpbmU+PGxpbmUgeDE9IjUzOCIgeTE9IjExMiIgeDI9IjU2OSIgeTI9IjExMiIgbWFya2VyLWVuZD0idXJsKCNydC1hcnJvdykiPjwvbGluZT48bGluZSB4MT0iNjY2IiB5MT0iMTEyIiB4Mj0iNjk3IiB5Mj0iMTEyIiBtYXJrZXItZW5kPSJ1cmwoI3J0LWFycm93KSI+PC9saW5lPjxsaW5lIHgxPSI4MjIiIHkxPSIxMTIiIHgyPSI4NTMiIHkyPSIxMTIiIG1hcmtlci1lbmQ9InVybCgjcnQtYXJyb3cpIj48L2xpbmU+PC9nPjxyZWN0IHg9IjI0IiB5PSI4NiIgd2lkdGg9IjE1MCIgaGVpZ2h0PSI1MiIgZmlsbD0iI2Y5ZjlmOSIgc3Ryb2tlPSIjZTVlN2ViIiBzdHJva2Utd2lkdGg9IjEuNSIgLz48dGV4dCB4PSI5OSIgeT0iMTEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiMxZTI5M2IiPnNwZWMgKyBkYXRhPC90ZXh0PjxyZWN0IHg9IjIxMCIgeT0iODYiIHdpZHRoPSIxNzAiIGhlaWdodD0iNTIiIGZpbGw9IiMzYjgyZjYiIHN0cm9rZT0iIzI1NjNlYiIgc3Ryb2tlLXdpZHRoPSIxLjUiIC8+PHRleHQgeD0iMjk1IiB5PSIxMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxNC41IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjZmZmZmZmIj5hcHBseV9zcGVjKCk8L3RleHQ+PHRleHQgeD0iMjk1IiB5PSIxNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sICYjMzk7U2Vnb2UgVUkmIzM5Oywgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iIzY0NzQ4YiI+c2NhZmZvbGQgwrcgY29lcmNlIMK3IG9yZGVyIMK3IHNvcnQgwrcgc3RhbXA8L3RleHQ+PHJlY3QgeD0iNDE2IiB5PSI4NiIgd2lkdGg9IjEyMCIgaGVpZ2h0PSI1MiIgZmlsbD0iI2Y5ZjlmOSIgc3Ryb2tlPSIjZTVlN2ViIiBzdHJva2Utd2lkdGg9IjEuNSIgLz48dGV4dCB4PSI0NzYiIHk9IjExMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgbW9ub3NwYWNlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjMWUyOTNiIj53cml0ZV88L3RleHQ+PC9zdmc+)*()
-fileread\_*() identical datalossless round-trip — what you read back
-equals what you wrote
+## The round-trip at a glance
 
-This vignette walks that loop once, start to finish: **spec → apply →
-inspect → write → read back**, all on the bundled demo data.
+![A spec plus data flow into apply_spec, which scaffolds, coerces,
+orders, sorts, and stamps; the result writes to a file and reads back to
+identical data. A dashed loop labelled lossless round-trip closes from
+identical data back to the start, and set_type and check_spec feed in to
+fix and inspect the spec.](../reference/figures/round-trip-hero.svg)
+
+The artoo lossless round-trip: a spec plus data go through apply_spec
+(scaffold, coerce, order, sort, stamp), then write to a file, then read
+back to identical data; set_type and check_spec fix and inspect the
+spec.
 
 ## 1. Get a spec
 
@@ -288,19 +293,24 @@ archived is what you analysed.
 
 ## Where to next
 
-- The task guides: [any-to-any
-  conversion](https://vthanik.github.io/artoo/articles/convert.html) and
-  [validation &
-  qualification](https://vthanik.github.io/artoo/articles/validation.html).
-- [`?apply_spec`](https://vthanik.github.io/artoo/reference/apply_spec.md),
-  [`?check_spec`](https://vthanik.github.io/artoo/reference/check_spec.md),
-  [`?decode_column`](https://vthanik.github.io/artoo/reference/decode_column.md)
-  — the conform surface.
-- [`?read_spec`](https://vthanik.github.io/artoo/reference/read_spec.md),
-  [`?write_spec`](https://vthanik.github.io/artoo/reference/write_spec.md),
-  [`?spec_variables`](https://vthanik.github.io/artoo/reference/spec_variables.md)
-  — the spec surface.
-- [`?read_dataset`](https://vthanik.github.io/artoo/reference/read_dataset.md)
-  — generic I/O and the per-format wrappers.
-- [`?adam_spec`](https://vthanik.github.io/artoo/reference/cdisc_specs.md)
-  — the bundled demo specs and datasets. \`\`\`
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
+  — read a spec from Define-XML or a workbook, inspect it with the
+  `spec_*` accessors, and fix it in place with
+  [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
+  /
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md).
+- [Conform &
+  validate](https://vthanik.github.io/artoo/articles/conform.html) —
+  [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  in depth, then every conformance finding from
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  and
+  [`check_study()`](https://vthanik.github.io/artoo/reference/check_study.md),
+  and the errors artoo raises.
+- [Formats & lossless
+  conversion](https://vthanik.github.io/artoo/articles/convert.html) —
+  any-to-any round trips, encodings, the `on_invalid` policy, and the
+  qualification evidence a regulated pipeline needs.
+- [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) —
+  end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist
+  decoding, each rendered live on the demo data. \`\`\`

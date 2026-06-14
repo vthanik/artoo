@@ -283,18 +283,20 @@ no backward compatibility is kept with the vport surface.
 
 - The introductory vignette is
   [`vignette("artoo")`](https://vthanik.github.io/artoo/articles/artoo.md),
-  anchored by a hand-authored round-trip diagram that also banners the
-  home page, and surfaces as a top-level “Get started” navbar entry
-  rather than an item in the Articles dropdown. It is standard-neutral:
-  the quick tour conforms an SDTM domain beside the ADaM one, so both
-  standards are first-class from the first page.
+  anchored by a hand-authored round-trip diagram (shared with the home
+  page), and surfaces as a top-level “Get started” navbar entry. It is
+  standard-neutral: the quick tour conforms an SDTM domain beside the
+  ADaM one, so both standards are first-class from the first page.
 
-- Seven task-oriented articles joined the site (web-only, not in the
-  package tarball): an end-to-end ADaM build, an end-to-end SDTM build,
-  any-to-any conversion, dates/times/`--DTC` carriage, validation &
-  qualification, a “How artoo compares” orientation page, and a
-  common-errors page that triggers every `artoo_error_<kind>` live with
-  its fix.
+- Four task-oriented articles joined the site (web-only, not in the
+  package tarball): specifications (read, inspect, repair a spec);
+  conform & validate
+  ([`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md),
+  the conformance checks, and every `artoo_error_<kind>` triggered live
+  with its fix); formats & lossless conversion (any-to-any round trips,
+  encodings, and qualification evidence); and recipes (end-to-end ADaM
+  and SDTM builds, dates and `--DTC`, and codelist decoding, rendered
+  live on the demo data).
 
 ### Fixes
 

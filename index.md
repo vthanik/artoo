@@ -1,20 +1,10 @@
 # artoo
 
-![The artoo lossless round-trip: a spec plus data go through
-apply_spec(), write to a file, and read back identical; set_type() and
-check_spec() fix and inspect the
-spec.](reference/figures/round-trip-hero.svg)
-
 **artoo** is a lightweight, lossless, CDISC-native reader and writer for
 clinical-trial datasets. It moves data between **SAS XPORT (XPT)**,
-**CDISC Dataset-JSON v1.1**, **Apache Parquet**, and **RDS** through one
-canonical metadata model, so converting between any two formats is
+**CDISC Dataset-JSON v1.1**, **NDJSON**, **Apache Parquet**, and **RDS**
+through one canonical metadata model, so converting between any two is
 lossless *by construction* — not by best effort.
-
-It is **pure R and lightweight**: no external SAS or Java runtime, and
-no heavy I/O dependency. One metadata model carries labels, CDISC data
-types, lengths, SAS display formats, controlled-terminology references,
-and sort keys identically across every format.
 
 ## Installation
 
@@ -35,23 +25,8 @@ disk — one pipeable chain:
 
 library(artoo)
 
-# A ready-made ADaM spec, bundled from the official CDISC Define-XML
-# 2.1 example (one spec = one standard; this one is ADaMIG 1.1)
-adam_spec
-#> <artoo_spec>
-#> Study: CDISC-Sample
-#> Standard: ADaMIG 1.1
-#> Datasets:  2
-#> Variables: 104
-#> Codelists: 30
-#> Methods: 54
-#> Comments: 22
-#> Documents: 9
-#> Spec for: ADSL, ADAE
-
-# Coerce, order, sort, stamp metadata, then write — the writers
-# return their input invisibly, so one conformed frame fans out to every
-# deliverable format.
+# Coerce, order, sort, stamp metadata, then write. The writers return their
+# input invisibly, so one conformed frame fans out to every deliverable.
 path <- tempfile(fileext = ".xpt")
 adsl <- cdisc_adsl |>
   apply_spec(adam_spec, "ADSL") |>
@@ -60,15 +35,14 @@ adsl <- cdisc_adsl |>
 #> `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
 #> ℹ See `conformance(x)` for the findings.
 
-# Read it back — labels, formats, types, and record count intact
+# Read it back — labels, formats, types, and record count intact.
 get_meta(read_xpt(path))@dataset$records
 #> [1] 60
 ```
 
 [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) is
-the quick look a SAS programmer expects from `PROC CONTENTS` — on a
-conformed frame or straight off a file (a metadata-carrying format also
-shows the CDISC `Key` sequence; XPORT bytes cannot store it):
+the quick look a SAS programmer expects from `PROC CONTENTS`, on a
+conformed frame or straight off a file:
 
 ``` r
 
@@ -125,37 +99,39 @@ columns(adsl)
 #> 48  MMSETOT   Num
 ```
 
-Conformance is data, not console noise: `conformance(adsl)` returns
-every finding as a frame (`check`, `severity`, `variable`, `message`)
-with a sectioned print, and
-[`decode_column()`](https://vthanik.github.io/artoo/reference/decode_column.md)
-derives coded variables straight from the spec’s codelists.
+![The artoo lossless round-trip: a spec plus data go through
+apply_spec(), write to a file, and read back identical; set_type() and
+check_spec() fix and inspect the
+spec.](reference/figures/round-trip-hero.svg)
 
-## Any-to-any, lossless
+## Why artoo?
 
-One conformed dataset becomes a file in any supported format, and any
-file becomes any other, with the metadata carried straight through:
+- **Lossless by construction.** One canonical metadata model carries
+  labels, CDISC data types, lengths, SAS display formats,
+  controlled-terminology references, and sort keys identically across
+  every format, so any-to-any conversion preserves them — not by best
+  effort, by design.
+- **Lossless or loud.** A coercion that would truncate or an unencodable
+  byte aborts with a classed condition before it can damage data; there
+  is no silent-truncation path.
+- **Pure R and lightweight.** No external SAS or Java runtime, and no
+  heavy I/O dependency.
+- **CDISC-native.** Types, dates and `--DTC` text, and codelists follow
+  the Dataset-JSON v1.1 vocabulary; specs read from Define-XML, Pinnacle
+  21 workbooks, or native JSON.
 
-``` r
+## Where artoo fits
 
-json <- tempfile(fileext = ".json")
-write_json(adsl, json)
-
-# Dataset-JSON on disk -> a submission XPT, no spec re-application
-out <- tempfile(fileext = ".xpt")
-write_xpt(read_json(json), out)
-```
+artoo is the carrier between the formats a clinical-trial dataset
+travels in: the XPORT a regulator expects, the Dataset-JSON modern CDISC
+exchange uses, the Parquet an analytics stack reads, and an R-native
+checkpoint. Reach for it whenever a dataset must change formats without
+losing the metadata that makes it submission-ready — labels, types,
+lengths, display formats, codelists, and keys — and you want that
+guarantee enforced rather than hoped for. It is a focused reader/writer,
+not a validation suite or a table renderer.
 
 ## Supported formats
-
-``` R
-#>    format read write    extensions
-#> 1    json TRUE  TRUE          json
-#> 2  ndjson TRUE  TRUE ndjson, jsonl
-#> 3 parquet TRUE  TRUE   parquet, pq
-#> 4     rds TRUE  TRUE           rds
-#> 5     xpt TRUE  TRUE    xpt, xport
-```
 
 | Format | Reader | Writer | Use |
 |----|----|----|----|
@@ -178,24 +154,23 @@ while `targetDataType = "integer"` drives the ADaM numeric-date
 convention. SAS `TIME` values arrive as `hms` (seconds since midnight),
 and `>24h`, negative, and fractional times round-trip every format.
 
-## Specs from anywhere
+## Documentation
 
-[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
-reads Define-XML 2.x, Pinnacle 21 workbooks, and artoo’s native JSON;
-[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
-writes native JSON (lossless) and P21 workbooks (interchange).
-Conversion is one composition:
-
-``` r
-
-read_spec("define.xml") |> write_spec("spec.xlsx")
-```
-
-## Learn more
-
-- [`vignette("artoo")`](https://vthanik.github.io/artoo/articles/artoo.md)
-  — the whole workflow, start to finish: spec → apply → inspect → write
-  → read back, for both SDTM and ADaM.
+- [Get started](https://vthanik.github.io/artoo/articles/artoo.html) —
+  the whole round-trip, start to finish, on bundled data.
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
+  — read, inspect, and repair a spec.
+- [Conform &
+  validate](https://vthanik.github.io/artoo/articles/conform.html) —
+  [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  and every conformance finding.
+- [Formats & lossless
+  conversion](https://vthanik.github.io/artoo/articles/convert.html) —
+  any-to-any round trips and qualification evidence.
+- [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) —
+  end-to-end ADaM and SDTM builds, dates, and codelists, rendered live.
+- [Reference](https://vthanik.github.io/artoo/reference/index.html) —
+  every function, grouped by stage.
 
 ## License
 

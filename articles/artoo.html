@@ -44,8 +44,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
-    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+<li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -77,12 +79,14 @@
 
 
 
-    <p><code>artoo</code> carries clinical-trial datasets losslessly across SAS XPORT, CDISC Dataset-JSON, NDJSON, Apache Parquet, and RDS through one canonical, CDISC-shaped metadata model. The whole package is a single loop: a <strong>spec</strong> plus <strong>data</strong> go through <code><a href="../reference/apply_spec.html">apply_spec()</a></code>, write to a <strong>file</strong>, and read back <strong>identical</strong>. That loop is the lossless guarantee.</p>
-<div class="rt-figure">
-<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 1040 250" width="100%" role="img" aria-label="The artoo lossless round-trip: spec plus data go through apply_spec (scaffold, coerce, order, sort, stamp), then write to a file, then read back to identical data; set_type and check_spec fix and inspect the spec, and the whole loop is lossless, so what you read back equals what you wrote."><defs><marker id="rt-arrow" markerwidth="10" markerheight="10" refx="7" refy="3" orient="auto" markerunits="userSpaceOnUse"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"></path></marker><marker id="rt-arrow-blue" markerwidth="11" markerheight="11" refx="7.5" refy="3.2" orient="auto" markerunits="userSpaceOnUse"><path d="M0,0 L7.5,3.2 L0,6.4 Z" fill="#3b82f6"></path></marker></defs><rect x="1" y="1" width="1038" height="248" fill="#ffffff" stroke="#efefef" stroke-width="2"></rect><text x="99" y="32" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#64748b">fix · inspect the spec</text><text x="99" y="51" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#1e293b">set_type() · check_spec()</text><line x1="99" y1="60" x2="99" y2="83" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#rt-arrow)"></line><g stroke="#94a3b8" stroke-width="1.8"><line x1="176" y1="112" x2="207" y2="112" marker-end="url(#rt-arrow)"></line><line x1="382" y1="112" x2="413" y2="112" marker-end="url(#rt-arrow)"></line><line x1="538" y1="112" x2="569" y2="112" marker-end="url(#rt-arrow)"></line><line x1="666" y1="112" x2="697" y2="112" marker-end="url(#rt-arrow)"></line><line x1="822" y1="112" x2="853" y2="112" marker-end="url(#rt-arrow)"></line></g><rect x="24" y="86" width="150" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"></rect><text x="99" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">spec + data</text><rect x="210" y="86" width="170" height="52" fill="#3b82f6" stroke="#2563eb" stroke-width="1.5"></rect><text x="295" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14.5" font-weight="600" fill="#ffffff">apply_spec()</text><text x="295" y="160" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#64748b">scaffold · coerce · order · sort · stamp</text><rect x="416" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"></rect><text x="476" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">write_</text></svg><em>() <rect x="572" y="86" width="92" height="52" fill="#eef3fb" stroke="#c7dbff" stroke-width="1.5"><text x="618" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e3a5f">file</text><rect x="700" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"><text x="760" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">read_</text></rect></rect></em>() <rect x="856" y="86" width="160" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"><text x="936" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">identical data</text><path d="M936,140 V202 H99 V143" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#rt-arrow-blue)"><text x="517" y="228" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#3b82f6">lossless round-trip — what you read back equals what you wrote</text></path></rect>
+    <p>This guide walks the whole artoo round-trip once, on the bundled demo data. A <strong>spec</strong> plus your <strong>data</strong> go through <code><a href="../reference/apply_spec.html">apply_spec()</a></code>, write to a <strong>file</strong>, and read back <strong>identical</strong> — that loop is artoo’s lossless guarantee. Every step below runs as-is; there is nothing to download.</p>
+<section class="level2"><h2 id="the-round-trip-at-a-glance">The round-trip at a glance<a class="anchor" aria-label="anchor" href="#the-round-trip-at-a-glance"></a>
+</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A spec plus data flow into apply_spec, which scaffolds, coerces, orders, sorts, and stamps; the result writes to a file and reads back to identical data. A dashed loop labelled lossless round-trip closes from identical data back to the start, and set_type and check_spec feed in to fix and inspect the spec."></p>
+<figcaption>The artoo lossless round-trip: a spec plus data go through apply_spec (scaffold, coerce, order, sort, stamp), then write to a file, then read back to identical data; set_type and check_spec fix and inspect the spec.</figcaption></figure>
 </div>
-<p>This vignette walks that loop once, start to finish: <strong>spec → apply → inspect → write → read back</strong>, all on the bundled demo data.</p>
-<section class="level2"><h2 id="get-a-spec">1. Get a spec<a class="anchor" aria-label="anchor" href="#get-a-spec"></a>
+</section><section class="level2"><h2 id="get-a-spec">1. Get a spec<a class="anchor" aria-label="anchor" href="#get-a-spec"></a>
 </h2>
 <p>A <code>artoo_spec</code> is the canonical description of your datasets: variables, CDISC data types, lengths, labels, controlled-terminology codelists, and sort keys — always for exactly <strong>one</strong> CDISC standard. <code><a href="../reference/read_spec.html">read_spec()</a></code> reads one from Define-XML, a Pinnacle 21 workbook, or artoo’s native JSON; <code><a href="../reference/artoo_spec.html">artoo_spec()</a></code> assembles one from metadata frames.</p>
 <p>The package bundles ready-made specs built from the official CDISC Define-XML 2.1 release examples — <code>adam_spec</code> for ADaM (ADSL, ADAE) and <code>sdtm_spec</code> for SDTM (DM, VS, TS, SUPPDM). Each also ships as a P21 workbook you can open in Excel:</p>
@@ -292,15 +296,14 @@ Spec for: ADSL, ADAE</code></pre>
 </section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
 </h2>
 <ul>
-<li>The task guides: <a href="https://vthanik.github.io/artoo/articles/convert.html">any-to-any conversion</a> and <a href="https://vthanik.github.io/artoo/articles/validation.html">validation &amp; qualification</a>.</li>
 <li>
-<code><a href="../reference/apply_spec.html">?apply_spec</a></code>, <code><a href="../reference/check_spec.html">?check_spec</a></code>, <code><a href="../reference/decode_column.html">?decode_column</a></code> — the conform surface.</li>
+<a href="https://vthanik.github.io/artoo/articles/specs.html">Specifications</a> — read a spec from Define-XML or a workbook, inspect it with the <code>spec_*</code> accessors, and fix it in place with <code><a href="../reference/set_type.html">set_type()</a></code> / <code><a href="../reference/repair_spec.html">repair_spec()</a></code>.</li>
 <li>
-<code><a href="../reference/read_spec.html">?read_spec</a></code>, <code><a href="../reference/write_spec.html">?write_spec</a></code>, <code><a href="../reference/spec_variables.html">?spec_variables</a></code> — the spec surface.</li>
+<a href="https://vthanik.github.io/artoo/articles/conform.html">Conform &amp; validate</a> — <code><a href="../reference/apply_spec.html">apply_spec()</a></code> in depth, then every conformance finding from <code><a href="../reference/check_spec.html">check_spec()</a></code> and <code><a href="../reference/check_study.html">check_study()</a></code>, and the errors artoo raises.</li>
 <li>
-<code><a href="../reference/read_dataset.html">?read_dataset</a></code> — generic I/O and the per-format wrappers.</li>
+<a href="https://vthanik.github.io/artoo/articles/convert.html">Formats &amp; lossless conversion</a> — any-to-any round trips, encodings, the <code>on_invalid</code> policy, and the qualification evidence a regulated pipeline needs.</li>
 <li>
-<code><a href="../reference/cdisc_specs.html">?adam_spec</a></code> — the bundled demo specs and datasets. ```</li>
+<a href="https://vthanik.github.io/artoo/articles/recipes.html">Recipes</a> — end-to-end ADaM and SDTM builds, dates and <code>--DTC</code>, and codelist decoding, each rendered live on the demo data. ```</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

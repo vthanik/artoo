@@ -1,10 +1,18 @@
-# Any-to-any conversion
+# Formats & lossless conversion
 
 artoo’s conversion story is one sentence: every codec reads and writes
 the same canonical metadata, so any format converts to any other without
 loss. This article shows the round trips, what “lossless” means
-concretely, and how the encoding policy keeps a single bad byte from
-deciding which formats your dataset can travel in.
+concretely, how the encoding policy keeps a single bad byte from
+deciding which formats your dataset can travel in, and the evidence a
+regulated pipeline can point to.
+
+![A conformed frame writes to a file in any format and reads back
+identical; the dashed loop labelled lossless round-trip closes from
+identical data back to the
+start.](../reference/figures/round-trip-hero.svg)
+
+The artoo lossless round-trip, centred on write and read across formats.
 
 ## 1. One metadata model, four carriers
 
@@ -109,10 +117,61 @@ so the bytes arrive as the characters they were — but the policy means a
 mis-declared byte in one record no longer makes a dataset “submittable
 as XPT but not as Dataset-JSON”, or vice versa.
 
+## 4. Qualification: the evidence behind “lossless”
+
+The first question a pharma organization asks of any package in a
+submission pipeline is “can we qualify this?”. None of the below is a
+regulatory claim — qualification is your process — but every property is
+machine-checkable in your own environment.
+
+**Lossless or loud.** Read-write-read returns the same values and the
+same metadata; a lossy coercion or an unencodable byte aborts rather
+than damaging data; even the explicit `extra = "drop"` trim announces
+itself and leaves a finding. The data-protection conditions carry their
+evidence as data, so a harness asserts on it programmatically:
+
+``` r
+
+vars <- spec_variables(adam_spec)
+vars$data_type[vars$variable == "AGE"] <- "integer"
+strict <- artoo_spec(
+  adam_spec@datasets, vars,
+  codelists = adam_spec@codelists,
+  study = spec_study(adam_spec)
+)
+raw <- cdisc_adsl
+raw$AGE[1] <- raw$AGE[1] + 0.5
+tryCatch(
+  apply_spec(raw, strict, "ADSL", conformance = "off"),
+  artoo_error_type = function(cnd) cnd$variables
+)
+```
+
+      variable data_type n    reason
+    1      AGE   integer 1 truncated
+
+**The development gates**, enforced on every change and in CI:
+`R CMD check` at 0 errors / 0 warnings / 0 notes; a test suite in the
+thousands of assertions, including byte-level golden files for the
+codecs, a cross-format round-trip matrix, and fuzzed-input tests that
+assert every failure is a classed artoo condition; line coverage of at
+least 95% on every file in `R/`; and reproducible demo data, every
+bundled object rebuilt by script from public, checksum-pinned sources.
+
+**Standards the behavior is pinned to**, cited in the docs rather than
+re-invented: CDISC Dataset-JSON v1.1 (type vocabulary, UTF-8), the FDA
+Study Data Technical Conformance Guide (XPORT expectations, ASCII gate),
+SAS XPORT v5/v8 (TS-140/TS-340), RFC 8259, IANA character set names, and
+Unicode NFC (UAX \#15).
+
 ## Where to next
 
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
+  the spec whose metadata every codec carries.
+- [Conform &
+  validate](https://vthanik.github.io/artoo/articles/conform.md) —
+  produce the conformed frame these writers persist.
+- [Recipes](https://vthanik.github.io/artoo/articles/recipes.md) —
+  conversion inside an end-to-end ADaM and SDTM build.
 - [Get started](https://vthanik.github.io/artoo/articles/artoo.md) — the
   round-trip from the top.
-- [Validation &
-  qualification](https://vthanik.github.io/artoo/articles/validation.md)
-  — what “lossless” buys in a regulated setting.

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Any-to-any conversion • artoo</title>
+<title>Formats &amp; lossless conversion • artoo</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -19,7 +19,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="convert_files/libs/quarto-html/popper.min.js"></script><script src="convert_files/libs/quarto-html/tippy.umd.min.js"></script><link href="convert_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="convert_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Any-to-any conversion">
+<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Formats &amp; lossless conversion">
 <meta property="og:image" content="https://vthanik.github.io/artoo/logo.svg">
 </head>
 <body>
@@ -44,8 +44,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/convert.html">Any-to-any conversion</a></li>
-    <li><a class="dropdown-item" href="../articles/validation.html">Validation &amp; qualification</a></li>
+<li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
+    <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -63,7 +65,7 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>Any-to-any conversion</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Formats &amp; lossless conversion</h1>
 
 
 
@@ -77,7 +79,11 @@
 
 
 
-    <p>artoo’s conversion story is one sentence: every codec reads and writes the same canonical metadata, so any format converts to any other without loss. This article shows the round trips, what “lossless” means concretely, and how the encoding policy keeps a single bad byte from deciding which formats your dataset can travel in.</p>
+    <p>artoo’s conversion story is one sentence: every codec reads and writes the same canonical metadata, so any format converts to any other without loss. This article shows the round trips, what “lossless” means concretely, how the encoding policy keeps a single bad byte from deciding which formats your dataset can travel in, and the evidence a regulated pipeline can point to.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A conformed frame writes to a file in any format and reads back identical; the dashed loop labelled lossless round-trip closes from identical data back to the start."></p>
+<figcaption>The artoo lossless round-trip, centred on write and read across formats.</figcaption></figure>
+</div>
 <section class="level2"><h2 id="one-metadata-model-four-carriers">1. One metadata model, four carriers<a class="anchor" aria-label="anchor" href="#one-metadata-model-four-carriers"></a>
 </h2>
 <p>A conformed frame carries its <code>artoo_meta</code>; each writer embeds it in the format’s own idiom (XPORT NAMESTR records, the Dataset-JSON itemGroup, a Parquet key-value sidecar, rds attributes):</p>
@@ -151,13 +157,43 @@
 </div>
 </div>
 <p>The right fix is upstream — re-read the source with its true <code>encoding=</code> so the bytes arrive as the characters they were — but the policy means a mis-declared byte in one record no longer makes a dataset “submittable as XPT but not as Dataset-JSON”, or vice versa.</p>
+</section><section class="level2"><h2 id="qualification-the-evidence-behind-lossless">4. Qualification: the evidence behind “lossless”<a class="anchor" aria-label="anchor" href="#qualification-the-evidence-behind-lossless"></a>
+</h2>
+<p>The first question a pharma organization asks of any package in a submission pipeline is “can we qualify this?”. None of the below is a regulatory claim — qualification is your process — but every property is machine-checkable in your own environment.</p>
+<p><strong>Lossless or loud.</strong> Read-write-read returns the same values and the same metadata; a lossy coercion or an unencodable byte aborts rather than damaging data; even the explicit <code>extra = "drop"</code> trim announces itself and leaves a finding. The data-protection conditions carry their evidence as data, so a harness asserts on it programmatically:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">vars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spec_variables.html">spec_variables</a></span><span class="op">(</span><span class="va">adam_spec</span><span class="op">)</span></span>
+<span><span class="va">vars</span><span class="op">$</span><span class="va">data_type</span><span class="op">[</span><span class="va">vars</span><span class="op">$</span><span class="va">variable</span> <span class="op">==</span> <span class="st">"AGE"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"integer"</span></span>
+<span><span class="va">strict</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/artoo_spec.html">artoo_spec</a></span><span class="op">(</span></span>
+<span>  <span class="va">adam_spec</span><span class="op">@</span><span class="va">datasets</span>, <span class="va">vars</span>,</span>
+<span>  codelists <span class="op">=</span> <span class="va">adam_spec</span><span class="op">@</span><span class="va">codelists</span>,</span>
+<span>  study <span class="op">=</span> <span class="fu"><a href="../reference/spec_study.html">spec_study</a></span><span class="op">(</span><span class="va">adam_spec</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_adsl</span></span>
+<span><span class="va">raw</span><span class="op">$</span><span class="va">AGE</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">raw</span><span class="op">$</span><span class="va">AGE</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="fl">0.5</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">raw</span>, <span class="va">strict</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span>,</span>
+<span>  artoo_error_type <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">cnd</span><span class="op">)</span> <span class="va">cnd</span><span class="op">$</span><span class="va">variables</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  variable data_type n    reason
+1      AGE   integer 1 truncated</code></pre>
+</div>
+</div>
+<p><strong>The development gates</strong>, enforced on every change and in CI: <code>R CMD check</code> at 0 errors / 0 warnings / 0 notes; a test suite in the thousands of assertions, including byte-level golden files for the codecs, a cross-format round-trip matrix, and fuzzed-input tests that assert every failure is a classed artoo condition; line coverage of at least 95% on every file in <code>R/</code>; and reproducible demo data, every bundled object rebuilt by script from public, checksum-pinned sources.</p>
+<p><strong>Standards the behavior is pinned to</strong>, cited in the docs rather than re-invented: CDISC Dataset-JSON v1.1 (type vocabulary, UTF-8), the FDA Study Data Technical Conformance Guide (XPORT expectations, ASCII gate), SAS XPORT v5/v8 (TS-140/TS-340), RFC 8259, IANA character set names, and Unicode NFC (UAX #15).</p>
 </section><section class="level2"><h2 id="where-to-next">Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
 </h2>
 <ul>
 <li>
-<a href="artoo.html">Get started</a> — the round-trip from the top.</li>
+<a href="specs.html">Specifications</a> — the spec whose metadata every codec carries.</li>
 <li>
-<a href="validation.html">Validation &amp; qualification</a> — what “lossless” buys in a regulated setting.</li>
+<a href="conform.html">Conform &amp; validate</a> — produce the conformed frame these writers persist.</li>
+<li>
+<a href="recipes.html">Recipes</a> — conversion inside an end-to-end ADaM and SDTM build.</li>
+<li>
+<a href="artoo.html">Get started</a> — the round-trip from the top.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

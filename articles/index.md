@@ -1,8 +1,10 @@
 # Articles
 
-### Task guides
+### Articles
 
-- [Any-to-any
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.md):
+- [Conform &
+  validate](https://vthanik.github.io/artoo/articles/conform.md):
+- [Formats & lossless
   conversion](https://vthanik.github.io/artoo/articles/convert.md):
-- [Validation &
-  qualification](https://vthanik.github.io/artoo/articles/validation.md):
+- [Recipes](https://vthanik.github.io/artoo/articles/recipes.md):

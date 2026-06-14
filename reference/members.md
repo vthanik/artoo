@@ -72,7 +72,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file1ab34de981e8.json  DM      Demographics  60       25         json
+#> file1a6965192f1c.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
