@@ -8,29 +8,37 @@ This is the first submission of artoo to CRAN.
 
 - Local: macOS 26.5.1 (aarch64-apple-darwin20), R 4.5.3 --
   `R CMD check --as-cran`: OK.
-- To run before submission: win-builder (R-release and R-devel) and R-hub
-  (Linux, macOS, Windows).
+- win-builder, R-devel (x86_64-w64-mingw32): 1 NOTE (see below).
+- macOS builder, R-release (mac.r-project.org): OK.
+- GitHub Actions: Ubuntu (R-devel, R-release, R-oldrel-1), macOS, and
+  Windows (R-release): OK.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes.
-
-Locally a single NOTE appears:
+The only NOTE is the standard first-submission NOTE on win-builder:
 
 ```
-checking for future file timestamps ... NOTE
-  unable to verify current time
+* checking CRAN incoming feasibility ... NOTE
+Maintainer: 'Vignesh Thanikachalam <about.vignesh@gmail.com>'
+
+New submission
+
+Possibly misspelled words in DESCRIPTION:
+  ADaM CDISC SDTM XPORT XPT losslessly
 ```
 
-This is an environmental artifact of the check machine's clock-verification
-step (no network access to the time server), not a property of the package.
-It does not appear on CRAN's build machines.
+The flagged words are all intentional: ADaM, CDISC, SDTM, XPORT, and XPT are
+standard clinical-data-interchange abbreviations, each written in full on
+first mention with the abbreviation in parentheses; "losslessly" is the
+correct adverb of "lossless".
+
+On the local check machine a different, environmental NOTE can appear
+("checking for future file timestamps ... unable to verify current time"),
+caused by the check machine having no network access to the time server. It
+does not appear on win-builder or on CRAN's build machines.
 
 ## Notes for the reviewer
 
-- The DESCRIPTION uses standard clinical-data-interchange abbreviations
-  (CDISC, SDTM, ADaM, XPORT / XPT). Each is written in full on first mention,
-  with the abbreviation in parentheses.
 - The package has no references describing its methods: it implements public
   data-exchange standards (CDISC Dataset-JSON, SAS XPORT) that are cited in
   the function documentation.
