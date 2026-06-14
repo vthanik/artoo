@@ -1,0 +1,98 @@
+# How artoo compares
+
+artoo is built around one idea: take a **specification** and a **data
+frame**, conform the data to it, and write it out **losslessly** — to
+whichever CDISC-relevant format you need, from a single package.
+
+The tools below overlap with parts of that path. They are mature, widely
+used, and each excellent at what it focuses on. This page is
+**orientation, not a benchmark** — a way to see where artoo fits next to
+them, so you can pick the right tool for the job in front of you.
+
+## What each tool is built around
+
+| Tool | Built around | A natural fit when… |
+|----|----|----|
+| **artoo** | the whole spec → conform → validate → write loop, in one package, lossless across formats | you want one tool from spec to file, and you need more than one output format from the same spec |
+| **metacore + metatools + xportr** | a composable pharmaverse pipeline — a spec object (metacore), spec-driven helpers (metatools), and metadata-application + XPT writing (xportr) | you’re already working in an admiral/pharmaverse pipeline and want building blocks that compose with it |
+| **haven** | fast, faithful reading and writing of SAS/Stata/SPSS files | you simply need to read or write an XPT/SAS file, without a spec layer |
+| **datasetjson** | the Dataset-JSON format specifically | Dataset-JSON is your format and you want a focused implementation of it |
+
+These overlap rather than compete: artoo and the metacore stack both
+read the same CDISC specs; artoo and haven both read and write XPT.
+
+## What a conform-and-write looks like in artoo
+
+The example below runs as-is on the bundled demo data — a spec plus a
+data frame to a conformed, written XPT:
+
+``` r
+
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
+write_xpt(adsl, tempfile(fileext = ".xpt"))
+```
+
+[`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+runs the whole metadata pass in one fixed, documented order, and is
+**lossless by default**: if applying the spec would lose data (for
+example, coercing a fractional value to `integer`), it pauses and names
+the option to continue rather than truncating silently — see [common
+errors](https://vthanik.github.io/artoo/articles/errors.md).
+
+The same idea in the metacore/xportr style is a short pipeline of
+focused steps — both approaches are valid; they just package the work
+differently:
+
+``` r
+
+# illustrative — the pharmaverse building-block style
+mc <- metacore::spec_to_metacore("adam-spec.xlsx") |>
+  metacore::select_dataset("ADSL")
+
+adsl <- raw_adsl |>
+  metatools::drop_unspec_vars(mc) |>
+  xportr::xportr_type(mc) |>
+  xportr::xportr_label(mc) |>
+  xportr::xportr_order(mc) |>
+  xportr::xportr_write("adsl.xpt")
+```
+
+## Choosing by fit
+
+- **Reach for haven** when the job is reading or writing a single file
+  and a spec layer would be overhead. artoo’s own
+  [`read_xpt()`](https://vthanik.github.io/artoo/reference/read_xpt.md)/[`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  cover the same ground once you’re already in artoo.
+- **Reach for datasetjson** when Dataset-JSON is the whole task.
+- **Reach for the metacore + metatools + xportr stack** when you’re
+  inside a pharmaverse/admiral pipeline and want components that slot
+  into it, with the large body of examples and team familiarity that
+  comes with them.
+- **Reach for artoo** when you’d like one package to carry the spec →
+  conform → validate → write path, and especially when you need several
+  output formats (XPT, Dataset-JSON, NDJSON, Parquet) from the *same*
+  spec.
+
+## Using them together
+
+Adopting artoo isn’t all-or-nothing. Because it reads the same CDISC
+specs and the same file formats, it sits comfortably alongside what you
+already use:
+
+- Keep your admiral derivations; use artoo only for the
+  conform-and-write step.
+- Or use artoo purely for I/O (`read_xpt`/`write_xpt`/`read_json`) in an
+  existing pipeline, and add
+  [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
+  later if it helps.
+
+The goal isn’t to replace good tools — it’s to give you one lossless
+path when that’s what you want.
+
+## Where to next
+
+- [Get started](https://vthanik.github.io/artoo/articles/get-started.md)
+  — the round-trip from the top.
+- [Validation &
+  qualification](https://vthanik.github.io/artoo/articles/validation.md)
+  — the evidence a regulated pipeline needs.

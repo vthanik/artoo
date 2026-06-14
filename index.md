@@ -1,5 +1,10 @@
 # artoo
 
+![The artoo lossless round-trip: a spec plus data go through
+apply_spec(), write to a file, and read back identical; set_type() and
+check_spec() fix and inspect the
+spec.](reference/figures/round-trip-hero.svg)
+
 **artoo** is a lightweight, lossless, CDISC-native reader and writer for
 clinical-trial datasets. It moves data between **SAS XPORT (XPT)**,
 **CDISC Dataset-JSON v1.1**, **Apache Parquet**, and **RDS** through one
@@ -188,7 +193,7 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 
 ## Learn more
 
-- [`vignette("artoo")`](https://vthanik.github.io/artoo/articles/artoo.md)
+- [`vignette("get-started")`](https://vthanik.github.io/artoo/articles/get-started.md)
   — the whole workflow, start to finish: spec → apply → inspect → write
   → read back, for both SDTM and ADaM.
 

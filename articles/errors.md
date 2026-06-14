@@ -9,6 +9,10 @@ fix. This page triggers each kind live and expands the fix. The kinds:
 [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
 internals rather than user-facing aborts).
 
+Hit one of these? Paste the message you got and Ctrl-F this page — each
+kind below is triggered live, so the rendered output is the real abort,
+and the **Fix** under it is the one thing to change.
+
 ## `artoo_error_input` — the call is malformed
 
 Wrong argument types, unknown datasets, unknown fields:
@@ -162,3 +166,5 @@ fix the data (or the spec) finding by finding. Under the default
 - [An end-to-end ADaM
   build](https://vthanik.github.io/artoo/articles/adam-build.md) — the
   loop these guards protect.
+- [Get started](https://vthanik.github.io/artoo/articles/get-started.md)
+  — the round-trip from the top.
