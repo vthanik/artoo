@@ -211,17 +211,18 @@ no backward compatibility is kept with the vport surface.
   default, and `spec_methods()` / `spec_comments()` enumerate every column of
   the data frame they return.
 
-* The introductory vignette is now the package-named `vignette("artoo")` and
+* The introductory vignette is `vignette("get-started")`, anchored by a
+  hand-authored round-trip diagram that also banners the home page, and
   surfaces as a top-level "Get started" navbar entry rather than an item in
   the Articles dropdown. It is standard-neutral: the quick tour conforms an
   SDTM domain beside the ADaM one, so both standards are first-class from the
   first page.
 
-* Six task-oriented articles joined the site (web-only, not in the
+* Seven task-oriented articles joined the site (web-only, not in the
   package tarball): an end-to-end ADaM build, an end-to-end SDTM build,
   any-to-any conversion, dates/times/`--DTC` carriage, validation &
-  qualification, and a common-errors page that triggers every
-  `artoo_error_<kind>` live with its fix.
+  qualification, a "How artoo compares" orientation page, and a common-errors
+  page that triggers every `artoo_error_<kind>` live with its fix.
 
 ## Fixes
 

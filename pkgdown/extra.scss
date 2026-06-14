@@ -303,3 +303,20 @@ main table.table {
   th { border-bottom: 2px solid mix($body-color, $body-bg, 25%) }
   td, th { padding: 0.5rem 0.75rem }
 }
+
+// ── Round-trip diagram: frame the inline SVG in a clean light card ───────────
+.rt-figure {
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  border: 1px solid $faint-border;
+  text-align: center;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 920px;
+    margin: 0 auto;
+  }
+}

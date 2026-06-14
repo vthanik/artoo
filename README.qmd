@@ -19,11 +19,15 @@ knitr::opts_chunk$set(
 
 # artoo <a href="https://vthanik.github.io/artoo/"><img src="man/figures/logo.png" align="right" height="139" alt="artoo website" /></a>
 
+<div id="pkg-badges">
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/vthanik/artoo/graph/badge.svg)](https://app.codecov.io/gh/vthanik/artoo)
 [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 <!-- badges: end -->
+</div>
+
+<img src="man/figures/round-trip-hero.svg" width="100%" alt="The artoo lossless round-trip: a spec plus data go through apply_spec(), write to a file, and read back identical; set_type() and check_spec() fix and inspect the spec.">
 
 **artoo** is a lightweight, lossless, CDISC-native reader
 and writer for clinical-trial datasets. It moves data between **SAS XPORT
@@ -131,7 +135,7 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 
 ## Learn more
 
-- `vignette("artoo")` — the whole workflow, start to finish:
+- `vignette("get-started")` — the whole workflow, start to finish:
   spec → apply → inspect → write → read back, for both SDTM and ADaM.
 
 ## License

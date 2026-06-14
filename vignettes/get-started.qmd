@@ -1,0 +1,185 @@
+---
+title: "Get started with artoo"
+vignette: >
+  %\VignetteIndexEntry{Get started with artoo}
+  %\VignetteEngine{quarto::format}
+  %\VignetteEncoding{UTF-8}
+format: html
+---
+
+```{r}
+#| include: false
+library(artoo)
+```
+
+`artoo` carries clinical-trial datasets losslessly across SAS XPORT,
+CDISC Dataset-JSON, NDJSON, Apache Parquet, and RDS through one canonical,
+CDISC-shaped metadata model. The whole package is a single loop: a **spec**
+plus **data** go through `apply_spec()`, write to a **file**, and read back
+**identical**. That loop is the lossless guarantee.
+
+::: {.rt-figure}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 250" width="100%" role="img" aria-label="The artoo lossless round-trip: spec plus data go through apply_spec (scaffold, coerce, order, sort, stamp), then write to a file, then read back to identical data; set_type and check_spec fix and inspect the spec, and the whole loop is lossless, so what you read back equals what you wrote.">
+  <defs>
+    <marker id="rt-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/>
+    </marker>
+    <marker id="rt-arrow-blue" markerWidth="11" markerHeight="11" refX="7.5" refY="3.2" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7.5,3.2 L0,6.4 Z" fill="#3b82f6"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="1038" height="248" fill="#ffffff" stroke="#efefef" stroke-width="2"/>
+  <text x="99" y="32" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10.5" fill="#64748b">fix &#183; inspect the spec</text>
+  <text x="99" y="51" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="#1e293b">set_type() &#183; check_spec()</text>
+  <line x1="99" y1="60" x2="99" y2="83" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#rt-arrow)"/>
+  <g stroke="#94a3b8" stroke-width="1.8">
+    <line x1="176" y1="112" x2="207" y2="112" marker-end="url(#rt-arrow)"/>
+    <line x1="382" y1="112" x2="413" y2="112" marker-end="url(#rt-arrow)"/>
+    <line x1="538" y1="112" x2="569" y2="112" marker-end="url(#rt-arrow)"/>
+    <line x1="666" y1="112" x2="697" y2="112" marker-end="url(#rt-arrow)"/>
+    <line x1="822" y1="112" x2="853" y2="112" marker-end="url(#rt-arrow)"/>
+  </g>
+  <rect x="24" y="86" width="150" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="99" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">spec + data</text>
+  <rect x="210" y="86" width="170" height="52" fill="#3b82f6" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="295" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14.5" font-weight="600" fill="#ffffff">apply_spec()</text>
+  <text x="295" y="160" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" fill="#64748b">scaffold &#183; coerce &#183; order &#183; sort &#183; stamp</text>
+  <rect x="416" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="476" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">write_*()</text>
+  <rect x="572" y="86" width="92" height="52" fill="#eef3fb" stroke="#c7dbff" stroke-width="1.5"/>
+  <text x="618" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e3a5f">file</text>
+  <rect x="700" y="86" width="120" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="760" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">read_*()</text>
+  <rect x="856" y="86" width="160" height="52" fill="#f9f9f9" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="936" y="112" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#1e293b">identical data</text>
+  <path d="M936,140 V202 H99 V143" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#rt-arrow-blue)"/>
+  <text x="517" y="228" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#3b82f6">lossless round-trip &#8212; what you read back equals what you wrote</text>
+</svg>
+:::
+
+This vignette walks that loop once, start to finish: **spec &rarr; apply
+&rarr; inspect &rarr; write &rarr; read back**, all on the bundled demo data.
+
+## 1. Get a spec
+
+A `artoo_spec` is the canonical description of your datasets: variables,
+CDISC data types, lengths, labels, controlled-terminology codelists, and
+sort keys &mdash; always for exactly **one** CDISC standard. `read_spec()` reads
+one from Define-XML, a Pinnacle 21 workbook, or artoo's native JSON;
+`artoo_spec()` assembles one from metadata frames.
+
+The package bundles ready-made specs built from the official CDISC
+Define-XML 2.1 release examples &mdash; `adam_spec` for ADaM (ADSL, ADAE) and
+`sdtm_spec` for SDTM (DM, VS, TS, SUPPDM). Each also ships as a P21
+workbook you can open in Excel:
+
+```{r}
+adam_spec
+
+p21 <- system.file("extdata", "adam-spec.xlsx", package = "artoo")
+identical(spec_standard(read_spec(p21)), spec_standard(adam_spec))
+```
+
+Because `read_spec()` and `write_spec()` are inverses on each format,
+format conversion is one composition &mdash; Define-XML in, P21 workbook out:
+
+```r
+read_spec("define.xml") |> write_spec("spec.xlsx")
+```
+
+## 2. Apply the spec
+
+`apply_spec()` is the conform pipeline: it coerces each column to its CDISC
+data type, orders the columns, sorts by the dataset keys, and stamps the
+result with its metadata. A variable the spec declares but the data lacks is
+reported, never fabricated as an empty column. The input is never mutated, no
+column is ever dropped, and a coercion that would damage values aborts before
+it runs.
+
+```{r}
+adsl <- apply_spec(cdisc_adsl, adam_spec, "ADSL")
+```
+
+The conformance findings ride along on the result &mdash; read them back as a
+frame with `conformance()`:
+
+```{r}
+nrow(conformance(adsl))
+```
+
+The pipeline is standard-neutral: an SDTM domain conforms identically &mdash;
+only the spec and the dataset change. The full SDTM walkthrough is its own
+[task guide](https://vthanik.github.io/artoo/articles/sdtm-build.html).
+
+```{r}
+dm <- apply_spec(cdisc_dm, sdtm_spec, "DM")
+nrow(conformance(dm))
+```
+
+## 3. Inspect the columns
+
+`columns()` is the quick look a SAS programmer expects from
+`PROC CONTENTS`: one row per variable with position, type, length, format,
+label, and the CDISC key sequence. It works on a conformed frame, any
+plain data frame, or a file path:
+
+```{r}
+columns(adsl)
+```
+
+## 4. Write to any format — losslessly
+
+Every writer carries the full metadata model, so the write is lossless by
+construction. The writers return their input invisibly, so one conformed
+frame fans out to every deliverable:
+
+```{r}
+xpt <- tempfile(fileext = ".xpt")
+json <- tempfile(fileext = ".json")
+
+adsl |>
+  write_xpt(xpt) |>
+  write_json(json)
+```
+
+Any file converts to any other without re-applying the spec &mdash; the
+metadata travels inside (or beside) the container:
+
+```{r}
+parquet <- tempfile(fileext = ".parquet")
+write_parquet(read_json(json), parquet)
+```
+
+## 5. Read back, intact
+
+Reading restores the values, the R classes (dates as `Date`, times as
+`hms`), the labels, and the metadata &mdash; identically from every format:
+
+```{r}
+back <- read_json(json)
+get_meta(back)@dataset$records
+columns(back)
+```
+
+One honest caveat: the XPORT byte layout stores only name, label, length,
+and formats, so `columns()` on an `.xpt` path shows a blank `Key` &mdash; the
+key sequence (like codelist references) rides the metadata-carrying
+formats and the in-session frame, never the 1980s transport bytes.
+
+That round-trip identity is the whole point: what you submit is what you
+archived is what you analysed.
+
+## Where to next
+
+- The task guides: [an end-to-end ADaM build](https://vthanik.github.io/artoo/articles/adam-build.html),
+  [an end-to-end SDTM build](https://vthanik.github.io/artoo/articles/sdtm-build.html),
+  [any-to-any conversion](https://vthanik.github.io/artoo/articles/convert.html),
+  [dates, times, and `--DTC`](https://vthanik.github.io/artoo/articles/dates.html),
+  [validation & qualification](https://vthanik.github.io/artoo/articles/validation.html),
+  [how artoo compares](https://vthanik.github.io/artoo/articles/compare.html), and
+  [common errors](https://vthanik.github.io/artoo/articles/errors.html).
+- `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
+- `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
+- `?read_dataset` — generic I/O and the per-format wrappers.
+- `?adam_spec` — the bundled demo specs and datasets.
+```

@@ -16,6 +16,10 @@ fix. This page triggers each kind live and expands the fix. The kinds:
 `validation`, which classifies `validate_spec()` internals rather than
 user-facing aborts).
 
+Hit one of these? Paste the message you got and Ctrl-F this page — each
+kind below is triggered live, so the rendered output is the real abort,
+and the **Fix** under it is the one thing to change.
+
 ## `artoo_error_input` — the call is malformed
 
 Wrong argument types, unknown datasets, unknown fields:
@@ -122,3 +126,4 @@ fix the data (or the spec) finding by finding. Under the default
   as an evidence surface.
 - [An end-to-end ADaM build](adam-build.html) — the loop these guards
   protect.
+- [Get started](get-started.html) — the round-trip from the top.
