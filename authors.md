@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/v0.1.0/DESCRIPTION)
 
 Thanikachalam V (2026). *artoo: Lossless CDISC-Native Input and Output
 for Clinical Datasets*. R package version 0.1.0,
