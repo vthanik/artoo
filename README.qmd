@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 
 <div id="pkg-badges">
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/artoo)](https://CRAN.R-project.org/package=artoo)
 [![R-CMD-check](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/vthanik/artoo/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/vthanik/artoo/graph/badge.svg)](https://app.codecov.io/gh/vthanik/artoo)
 [![Project Status: Active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
