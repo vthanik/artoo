@@ -75,7 +75,10 @@ orders the columns, sorts by the dataset keys, and stamps the result
 with its metadata. A variable the spec declares but the data lacks is
 reported, never fabricated as an empty column. The input is never
 mutated, no column is ever dropped, and a coercion that would damage
-values aborts before it runs.
+values aborts before it runs — with two honest one-line exits: keep the
+wider source type with `apply_spec(..., on_coercion_loss = "keep")`, or
+retype the spec with
+[`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md).
 
 ``` r
 
@@ -98,9 +101,7 @@ nrow(conformance(adsl))
     [1] 12
 
 The pipeline is standard-neutral: an SDTM domain conforms identically —
-only the spec and the dataset change. The full SDTM walkthrough is its
-own [task
-guide](https://vthanik.github.io/artoo/articles/sdtm-build.html).
+only the spec and the dataset change.
 
 ``` r
 
@@ -287,19 +288,10 @@ archived is what you analysed.
 
 ## Where to next
 
-- The task guides: [an end-to-end ADaM
-  build](https://vthanik.github.io/artoo/articles/adam-build.html), [an
-  end-to-end SDTM
-  build](https://vthanik.github.io/artoo/articles/sdtm-build.html),
-  [any-to-any
-  conversion](https://vthanik.github.io/artoo/articles/convert.html),
-  [dates, times, and
-  `--DTC`](https://vthanik.github.io/artoo/articles/dates.html),
+- The task guides: [any-to-any
+  conversion](https://vthanik.github.io/artoo/articles/convert.html) and
   [validation &
-  qualification](https://vthanik.github.io/artoo/articles/validation.html),
-  [how artoo
-  compares](https://vthanik.github.io/artoo/articles/compare.html), and
-  [common errors](https://vthanik.github.io/artoo/articles/errors.html).
+  qualification](https://vthanik.github.io/artoo/articles/validation.html).
 - [`?apply_spec`](https://vthanik.github.io/artoo/reference/apply_spec.md),
   [`?check_spec`](https://vthanik.github.io/artoo/reference/check_spec.md),
   [`?decode_column`](https://vthanik.github.io/artoo/reference/decode_column.md)

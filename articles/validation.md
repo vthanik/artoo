@@ -96,8 +96,8 @@ IANA character set names, and Unicode NFC (UAX \#15).
 
 ## Where to next
 
-- [Common errors](https://vthanik.github.io/artoo/articles/errors.md) —
-  each condition class, triggered live.
+- [Get started](https://vthanik.github.io/artoo/articles/artoo.md) — the
+  round-trip from the top.
 - [Any-to-any
   conversion](https://vthanik.github.io/artoo/articles/convert.md) — the
   round trips themselves.

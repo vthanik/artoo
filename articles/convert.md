@@ -111,9 +111,8 @@ as XPT but not as Dataset-JSON”, or vice versa.
 
 ## Where to next
 
-- [An end-to-end ADaM
-  build](https://vthanik.github.io/artoo/articles/adam-build.md) — the
-  derivation loop.
+- [Get started](https://vthanik.github.io/artoo/articles/artoo.md) — the
+  round-trip from the top.
 - [Validation &
   qualification](https://vthanik.github.io/artoo/articles/validation.md)
   — what “lossless” buys in a regulated setting.

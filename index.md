@@ -193,7 +193,7 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 
 ## Learn more
 
-- [`vignette("get-started")`](https://vthanik.github.io/artoo/articles/get-started.md)
+- [`vignette("artoo")`](https://vthanik.github.io/artoo/articles/artoo.md)
   — the whole workflow, start to finish: spec → apply → inspect → write
   → read back, for both SDTM and ADaM.
 
