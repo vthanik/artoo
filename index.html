@@ -80,15 +80,21 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the released version from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"artoo"</span><span class="op">)</span></span></code></pre></div>
+<p>Or the development version from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"vthanik/artoo"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"vthanik/artoo"</span><span class="op">)</span></span>
+<span><span class="co"># or</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"vthanik/artoo"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
 <p>A spec describes the dataset; <code><a href="reference/apply_spec.html">apply_spec()</a></code> conforms a raw frame to it; the writers carry every piece of metadata to disk — one pipeable chain:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://vthanik.github.io/artoo/">artoo</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Coerce, order, sort, stamp metadata, then write. The writers return their</span></span>
@@ -105,7 +111,7 @@
 <span><span class="fu"><a href="reference/get_meta.html">get_meta</a></span><span class="op">(</span><span class="fu"><a href="reference/read_xpt.html">read_xpt</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span><span class="op">)</span><span class="op">@</span><span class="va">dataset</span><span class="op">$</span><span class="va">records</span></span>
 <span><span class="co">#&gt; [1] 60</span></span></code></pre></div>
 <p><code><a href="reference/columns.html">columns()</a></code> is the quick look a SAS programmer expects from <code>PROC CONTENTS</code>, on a conformed frame or straight off a file:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/columns.html">columns</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;artoo_columns&gt; ADSL -- 48 variables, 60 obs</span></span>
 <span><span class="co">#&gt; #   Variable  Type  Len  Format  Label                                     Key</span></span>

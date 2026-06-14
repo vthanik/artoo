@@ -8,10 +8,21 @@ lossless *by construction* — not by best effort.
 
 ## Installation
 
+Install the released version from CRAN:
+
+``` r
+
+install.packages("artoo")
+```
+
+Or the development version from GitHub:
+
 ``` r
 
 # install.packages("pak")
 pak::pak("vthanik/artoo")
+# or
+remotes::install_github("vthanik/artoo")
 ```
 
 ## Quick start
