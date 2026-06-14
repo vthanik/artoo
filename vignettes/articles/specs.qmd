@@ -14,8 +14,6 @@ exactly **one** CDISC standard. Read one from the metadata you already have,
 inspect it as plain data frames, fix it in R when the data disagrees, and
 write it back &mdash; the spec is the contract every later step honors.
 
-![The artoo lossless round-trip, with the spec and its fix-and-inspect verbs feeding apply_spec.](../man/figures/round-trip-hero.svg){fig-alt="A spec plus data flow into apply_spec; set_type and check_spec feed in to fix and inspect the spec before it is applied." width="100%"}
-
 ## 1. Read a spec
 
 `read_spec()` ingests a specification from Define-XML 2.x, a Pinnacle 21

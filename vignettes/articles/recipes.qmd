@@ -15,8 +15,6 @@ what you see is exactly what the code produces. Every recipe ends on a
 conformed result; the closing line shows how to **ship it** to any
 deliverable, just by changing the extension.
 
-![The artoo lossless round-trip, the loop every recipe walks.](../man/figures/round-trip-hero.svg){fig-alt="A spec plus data go through apply_spec, write to a file, and read back identical, closing a lossless round-trip loop." width="100%"}
-
 ## An ADaM build: ADSL
 
 A real derivation program accumulates working columns the spec never

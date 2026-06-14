@@ -14,8 +14,6 @@ This article shows the round trips, what "lossless" means concretely, how
 the encoding policy keeps a single bad byte from deciding which formats your
 dataset can travel in, and the evidence a regulated pipeline can point to.
 
-![The artoo lossless round-trip, centred on write and read across formats.](../man/figures/round-trip-hero.svg){fig-alt="A conformed frame writes to a file in any format and reads back identical; the dashed loop labelled lossless round-trip closes from identical data back to the start." width="100%"}
-
 ## 1. One metadata model, four carriers
 
 A conformed frame carries its `artoo_meta`; each writer embeds it in the
