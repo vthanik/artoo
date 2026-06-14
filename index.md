@@ -99,11 +99,6 @@ columns(adsl)
 #> 48  MMSETOT   Num
 ```
 
-![The artoo lossless round-trip: a spec plus data go through
-apply_spec(), write to a file, and read back identical; set_type() and
-check_spec() fix and inspect the
-spec.](reference/figures/round-trip-hero.svg)
-
 ## Why artoo?
 
 - **Lossless by construction.** One canonical metadata model carries
