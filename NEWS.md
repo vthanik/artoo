@@ -1,4 +1,4 @@
-# artoo 0.0.0.9000
+# artoo 0.1.0
 
 artoo is the clean-slate, KISS/DRY redesign of the package once called
 vport: a lightweight, lossless, CDISC-native reader/writer for
