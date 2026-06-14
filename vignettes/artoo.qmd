@@ -66,7 +66,7 @@ nrow(conformance(adsl))
 
 The pipeline is standard-neutral: an SDTM domain conforms identically —
 only the spec and the dataset change. The full SDTM walkthrough is its own
-[task guide](articles/sdtm-build.html).
+[task guide](https://vthanik.github.io/artoo/articles/sdtm-build.html).
 
 ```{r}
 dm <- apply_spec(cdisc_dm, sdtm_spec, "DM")
@@ -128,12 +128,12 @@ archived is what you analysed.
 
 ## Where to next
 
-- The task guides: [an end-to-end ADaM build](articles/adam-build.html),
-  [an end-to-end SDTM build](articles/sdtm-build.html),
-  [any-to-any conversion](articles/convert.html),
-  [dates, times, and `--DTC`](articles/dates.html),
-  [validation & qualification](articles/validation.html), and
-  [common errors](articles/errors.html).
+- The task guides: [an end-to-end ADaM build](https://vthanik.github.io/artoo/articles/adam-build.html),
+  [an end-to-end SDTM build](https://vthanik.github.io/artoo/articles/sdtm-build.html),
+  [any-to-any conversion](https://vthanik.github.io/artoo/articles/convert.html),
+  [dates, times, and `--DTC`](https://vthanik.github.io/artoo/articles/dates.html),
+  [validation & qualification](https://vthanik.github.io/artoo/articles/validation.html), and
+  [common errors](https://vthanik.github.io/artoo/articles/errors.html).
 - `?apply_spec`, `?check_spec`, `?decode_column` — the conform surface.
 - `?read_spec`, `?write_spec`, `?spec_variables` — the spec surface.
 - `?read_dataset` — generic I/O and the per-format wrappers.
