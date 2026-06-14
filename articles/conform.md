@@ -10,13 +10,6 @@ and
 return every finding at once, and every abort artoo raises is a classed
 condition that names its fix. This article covers both.
 
-![A spec plus data flow into apply_spec, which scaffolds, coerces,
-orders, sorts, and stamps; check_spec and check_study inspect the result
-for findings.](../reference/figures/round-trip-hero.svg)
-
-The artoo lossless round-trip, centred on apply_spec and the check
-verbs.
-
 ## 1. Conform with `apply_spec()`
 
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)

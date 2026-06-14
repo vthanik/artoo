@@ -7,12 +7,6 @@ what you see is exactly what the code produces. Every recipe ends on a
 conformed result; the closing line shows how to **ship it** to any
 deliverable, just by changing the extension.
 
-![A spec plus data go through apply_spec, write to a file, and read back
-identical, closing a lossless round-trip
-loop.](../reference/figures/round-trip-hero.svg)
-
-The artoo lossless round-trip, the loop every recipe walks.
-
 ## An ADaM build: ADSL
 
 A real derivation program accumulates working columns the spec never
@@ -115,7 +109,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file21da1a74cac2.json  DM      Demographics  60       15         json
+    file1f264b8c9776.json  DM      Demographics  60       15         json
 
 ``` r
 

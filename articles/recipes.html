@@ -80,10 +80,6 @@
 
 
     <p>These are the everyday programming loops a clinical programmer runs — an ADaM analysis dataset, an SDTM domain, a codelist decode, the temporal shapes — each rendered <strong>live</strong> below from the bundled demo data, so what you see is exactly what the code produces. Every recipe ends on a conformed result; the closing line shows how to <strong>ship it</strong> to any deliverable, just by changing the extension.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A spec plus data go through apply_spec, write to a file, and read back identical, closing a lossless round-trip loop."></p>
-<figcaption>The artoo lossless round-trip, the loop every recipe walks.</figcaption></figure>
-</div>
 <section class="level2"><h2 id="an-adam-build-adsl">An ADaM build: ADSL<a class="anchor" aria-label="anchor" href="#an-adam-build-adsl"></a>
 </h2>
 <p>A real derivation program accumulates working columns the spec never declares — here an age-group cut. Those are “extras”; <code>extra = "drop"</code> trims them to exactly the spec’s columns, recorded by the <code>extra_variable</code> finding so the drop is never silent. <code><a href="../reference/apply_spec.html">apply_spec()</a></code> then coerces, orders, sorts, and stamps:</p>
@@ -172,7 +168,7 @@
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;artoo_members&gt; 1 dataset
 file                   member  label         records  variables  format
-file21da1a74cac2.json  DM      Demographics  60       15         json</code></pre>
+file1f264b8c9776.json  DM      Demographics  60       15         json</code></pre>
 </div>
 </div>
 <div class="cell">

@@ -80,10 +80,6 @@
 
 
     <p>A <code>artoo_spec</code> is artoo’s single source of truth: the variables, CDISC data types, lengths, labels, controlled-terminology codelists, and sort keys for exactly <strong>one</strong> CDISC standard. Read one from the metadata you already have, inspect it as plain data frames, fix it in R when the data disagrees, and write it back — the spec is the contract every later step honors.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A spec plus data flow into apply_spec; set_type and check_spec feed in to fix and inspect the spec before it is applied."></p>
-<figcaption>The artoo lossless round-trip, with the spec and its fix-and-inspect verbs feeding apply_spec.</figcaption></figure>
-</div>
 <section class="level2"><h2 id="read-a-spec">1. Read a spec<a class="anchor" aria-label="anchor" href="#read-a-spec"></a>
 </h2>
 <p><code><a href="../reference/read_spec.html">read_spec()</a></code> ingests a specification from Define-XML 2.x, a Pinnacle 21 workbook, or artoo’s own native JSON, and returns a <code>artoo_spec</code>. The bundled ADaM spec also ships as a P21 workbook, so this runs as-is:</p>

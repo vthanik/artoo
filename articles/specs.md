@@ -7,13 +7,6 @@ already have, inspect it as plain data frames, fix it in R when the data
 disagrees, and write it back — the spec is the contract every later step
 honors.
 
-![A spec plus data flow into apply_spec; set_type and check_spec feed in
-to fix and inspect the spec before it is
-applied.](../reference/figures/round-trip-hero.svg)
-
-The artoo lossless round-trip, with the spec and its fix-and-inspect
-verbs feeding apply_spec.
-
 ## 1. Read a spec
 
 [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)

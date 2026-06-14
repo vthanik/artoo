@@ -7,13 +7,6 @@ concretely, how the encoding policy keeps a single bad byte from
 deciding which formats your dataset can travel in, and the evidence a
 regulated pipeline can point to.
 
-![A conformed frame writes to a file in any format and reads back
-identical; the dashed loop labelled lossless round-trip closes from
-identical data back to the
-start.](../reference/figures/round-trip-hero.svg)
-
-The artoo lossless round-trip, centred on write and read across formats.
-
 ## 1. One metadata model, four carriers
 
 A conformed frame carries its `artoo_meta`; each writer embeds it in the

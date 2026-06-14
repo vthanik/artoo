@@ -80,10 +80,6 @@
 
 
     <p>artoo’s conversion story is one sentence: every codec reads and writes the same canonical metadata, so any format converts to any other without loss. This article shows the round trips, what “lossless” means concretely, how the encoding policy keeps a single bad byte from deciding which formats your dataset can travel in, and the evidence a regulated pipeline can point to.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A conformed frame writes to a file in any format and reads back identical; the dashed loop labelled lossless round-trip closes from identical data back to the start."></p>
-<figcaption>The artoo lossless round-trip, centred on write and read across formats.</figcaption></figure>
-</div>
 <section class="level2"><h2 id="one-metadata-model-four-carriers">1. One metadata model, four carriers<a class="anchor" aria-label="anchor" href="#one-metadata-model-four-carriers"></a>
 </h2>
 <p>A conformed frame carries its <code>artoo_meta</code>; each writer embeds it in the format’s own idiom (XPORT NAMESTR records, the Dataset-JSON itemGroup, a Parquet key-value sidecar, rds attributes):</p>

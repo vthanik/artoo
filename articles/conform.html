@@ -80,10 +80,6 @@
 
 
     <p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> is the heart of artoo: it conforms a raw frame to a spec — coerce, order, sort, stamp — and never silently damages data. Validation is the same surface read the other way: <code><a href="../reference/check_spec.html">check_spec()</a></code> and <code><a href="../reference/check_study.html">check_study()</a></code> return every finding at once, and every abort artoo raises is a classed condition that names its fix. This article covers both.</p>
-<div class="quarto-figure quarto-figure-center">
-<figure><p><img src="../reference/figures/round-trip-hero.svg" style="width:100.0%" alt="A spec plus data flow into apply_spec, which scaffolds, coerces, orders, sorts, and stamps; check_spec and check_study inspect the result for findings."></p>
-<figcaption>The artoo lossless round-trip, centred on apply_spec and the check verbs.</figcaption></figure>
-</div>
 <section class="level2"><h2 id="conform-with-apply_spec">1. Conform with <code>apply_spec()</code>
 <a class="anchor" aria-label="anchor" href="#conform-with-apply_spec"></a>
 </h2>
