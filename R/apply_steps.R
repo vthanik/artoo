@@ -323,7 +323,13 @@
     return(x)
   }
   na_last <- identical(na_position, "last")
-  ord <- do.call(order, c(unname(as.list(x[keys])), list(na.last = na_last)))
+  # method = "radix" pins C-locale (byte) collation: deterministic across
+  # locales (so a byte-stable XPORT snapshot stays stable) and matching SAS
+  # PROC SORT for ASCII. Default order() collates character keys by LC_COLLATE.
+  ord <- do.call(
+    order,
+    c(unname(as.list(x[keys])), list(na.last = na_last, method = "radix"))
+  )
   x <- x[ord, , drop = FALSE]
   rownames(x) <- NULL
   attr(x, "artoo.sort") <- keys

@@ -179,7 +179,15 @@
   }
   mode <- .type_storage(data_type)
   before_na <- is.na(x)
-  value <- .coerce_mode(x, mode)
+  # A `decimal` is held as a string to preserve exact precision, so a numeric
+  # source must format at round-trip precision (NOT as.character(), which uses
+  # R's 15-digit default and drops the last ulp). NaN/Inf, invalid as a CDISC
+  # numeric, become NA here and surface through the coercion-loss accounting.
+  value <- if (identical(data_type, "decimal")) {
+    .double_to_string(x)
+  } else {
+    .coerce_mode(x, mode)
+  }
   after_na <- is.na(value)
   n_lossy <- 0L
   if (mode == "integer") {

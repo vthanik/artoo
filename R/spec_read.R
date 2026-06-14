@@ -531,7 +531,7 @@ read_spec <- function(
 
   # Drop P21 codelist header rows (an id/name but no submission term) and
   # trailing blank-key rows in the supporting-metadata sheets.
-  codelists <- .drop_termless(codelists)
+  codelists <- .scope_codelists(codelists, call)
   methods <- .drop_blank_key(methods, "method_id")
   comments <- .drop_blank_key(comments, "comment_id")
   documents <- .drop_blank_key(documents, "document_id")
@@ -701,18 +701,21 @@ read_spec <- function(
   invisible(df)
 }
 
-# Drop codelist rows that carry no submission term (P21 list-header rows).
+# Finalize the P21 codelists frame: drop list-header rows (an id/name but no
+# submission term), then verify every surviving term resolves to a codelist.
+# .fill_down leaves row 1 unfilled, so a first-row term with a merged-away id
+# would otherwise ride in as an orphan (codelist_id NA); catch it loudly, the
+# way a blank dataset is caught for variables.
 #' @noRd
-.drop_termless <- function(df) {
-  if (is.null(df) || !("term" %in% names(df))) {
-    return(df)
-  }
-  keep <- !is.na(df$term) & nzchar(trimws(df$term))
-  df[keep, , drop = FALSE]
+.scope_codelists <- function(codelists, call = rlang::caller_env()) {
+  codelists <- .drop_blank_key(codelists, "term")
+  .check_filled(codelists, "codelist_id", "Codelists", call)
+  codelists
 }
 
 # Drop rows whose primary key is blank (P21 sheets often have trailing
-# rows with only Pages/Notes filled).
+# rows with only Pages/Notes filled, and codelist list-header rows carry an
+# id/name but no submission term).
 #' @noRd
 .drop_blank_key <- function(df, key) {
   if (is.null(df) || !(key %in% names(df))) {

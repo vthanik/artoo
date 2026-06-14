@@ -86,7 +86,8 @@
     }
   })
   out <- do.call(rbind, rows)
-  out <- out[order(out$file, out$member), , drop = FALSE]
+  # method = "radix": deterministic C-locale order, independent of LC_COLLATE.
+  out <- out[order(out$file, out$member, method = "radix"), , drop = FALSE]
   out
 }
 

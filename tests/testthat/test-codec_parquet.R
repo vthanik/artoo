@@ -275,3 +275,20 @@ test_that("write_parquet gates invalid UTF-8 through on_invalid", {
   expect_no_warning(write_parquet(dm, p2, on_invalid = "ignore"))
   expect_identical(read_parquet(p2)$USUBJID[1], "c")
 })
+
+# ---- Regression: factor class consistency (code review 2026-06-14) ----
+
+test_that("a factor column reads back as character, matching the JSON codec", {
+  skip_if_not_installed("nanoparquet")
+  df <- data.frame(SEX = factor(c("M", "F", "M")), AGE = c(40L, 50L, 60L))
+  pp <- withr::local_tempfile(fileext = ".parquet")
+  write_parquet(df, pp)
+  pj <- withr::local_tempfile(fileext = ".json")
+  write_json(df, pj)
+  # Pre-fix parquet returned a factor while JSON returned character.
+  expect_identical(class(read_parquet(pp)$SEX), "character")
+  expect_identical(
+    as.character(read_parquet(pp)$SEX),
+    as.character(read_json(pj)$SEX)
+  )
+})

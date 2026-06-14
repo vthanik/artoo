@@ -55,28 +55,20 @@
     .meta_payload(meta, extensions = !isTRUE(strict), special = special)
   )
 
-  tmp <- tempfile(tmpdir = dirname(path), fileext = ".ndjson.tmp")
-  con <- .json_out_con(tmp, path)
-  ok <- FALSE
-  tryCatch(
-    {
+  .with_atomic_write(
+    path,
+    ".ndjson.tmp",
+    function(tmp) {
+      con <- .json_out_con(tmp, path)
+      on.exit(try(close(con), silent = TRUE))
       writeBin(c(.json_head_raw(head_obj), charToRaw("\n")), con)
       .json_stream_rows(x, meta, con, call, sep = "\n", progress = TRUE)
       if (nrow(x) > 0L) {
         writeBin(charToRaw("\n"), con)
       }
-      close(con)
-      ok <- TRUE
     },
-    finally = if (!ok) {
-      try(close(con), silent = TRUE)
-      if (file.exists(tmp)) {
-        unlink(tmp)
-      }
-    }
+    call
   )
-  .move_into_place(tmp, path)
-  invisible(path)
 }
 
 # decode contract: (path, <codec args>, call) -> list(data, meta). n_max is

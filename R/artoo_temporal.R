@@ -297,7 +297,16 @@
       if (length(p) != 3L || anyNA(p)) {
         return(NA_real_)
       }
-      as.numeric(p[1L]) * 3600 + as.numeric(p[2L]) * 60 + as.numeric(p[3L])
+      h <- as.numeric(p[1L])
+      mi <- as.numeric(p[2L])
+      se <- as.numeric(p[3L])
+      # Out-of-range minutes/seconds make the time impossible (e.g. "00:99:99"):
+      # return NA so .keep_if_lossy keeps the column character and a later
+      # deflate fails loud, rather than fabricating a valid-looking hms.
+      if (anyNA(c(h, mi, se)) || mi < 0 || mi >= 60 || se < 0 || se >= 60) {
+        return(NA_real_)
+      }
+      h * 3600 + mi * 60 + se
     },
     numeric(1)
   )

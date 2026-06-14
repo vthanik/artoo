@@ -744,3 +744,29 @@ test_that("itemoid_unique flags a duplicated itemOID across the spec", {
   ))
   expect_false(any(ok@findings$check == "itemoid_unique"))
 })
+
+# ---- Regression: integer length warning (code review 2026-06-14) ----
+
+test_that("an integer variable with no length does not warn for text length", {
+  mk <- function(dt) {
+    artoo_spec(
+      datasets = data.frame(
+        dataset = "DM",
+        label = "d",
+        stringsAsFactors = FALSE
+      ),
+      variables = data.frame(
+        dataset = "DM",
+        variable = "V",
+        data_type = dt,
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+  int <- as.data.frame(validate_spec(mk("integer")))
+  # Pre-fix needs_len bundled "integer" with "string", flagging a valid spec.
+  expect_false("variable_length_for_text" %in% int$check)
+  # A string variable with no length still warns.
+  str <- as.data.frame(validate_spec(mk("string")))
+  expect_true("variable_length_for_text" %in% str$check)
+})

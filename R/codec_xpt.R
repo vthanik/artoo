@@ -30,6 +30,11 @@
 # .ieee_to_ibm()'s silent overflow-to-missing mapping.
 .xpt_ibm_max <- 16^63
 
+# IBM-370 smallest positive normalized magnitude (16^-65 == 2^-260). A finite
+# nonzero value below this underflows to zero in .ieee_to_ibm(); the codec
+# aborts loudly so the loss is never silent, symmetric with the overflow guard.
+.xpt_ibm_min <- 16^-65
+
 # CDISC dataType -> SAS variable type: 1 numeric, 2 character. Dispatched off
 # the META dataType, never is.character(col): a conformed `decimal` is an R
 # character vector and a `boolean` is logical, yet both store as SAS numerics.
@@ -408,6 +413,18 @@
           call = call
         )
       }
+      nz <- fin & num != 0
+      if (any(abs(num[nz]) < .xpt_ibm_min)) {
+        .artoo_abort(
+          c(
+            "Column {.var {nm}} underflows the IBM-370 magnitude limit.",
+            "x" = "Values below about 5.4e-79 cannot be represented and would become zero.",
+            "i" = "Rescale the column, or store it in a different unit."
+          ),
+          kind = "codec",
+          call = call
+        )
+      }
       bytes <- .ieee_to_ibm(num, missing = tag)
       nlng <- 8L
     } else {
@@ -633,11 +650,12 @@
 
   # Atomic write: build in a temp file, then rename over the target so a crash
   # mid-write never corrupts a prior good file. Cleanup runs only on error.
-  tmp <- tempfile(tmpdir = dirname(path), fileext = ".xpt.tmp")
-  con <- file(tmp, "wb")
-  ok <- FALSE
-  tryCatch(
-    {
+  .with_atomic_write(
+    path,
+    ".xpt.tmp",
+    function(tmp) {
+      con <- file(tmp, "wb")
+      on.exit(try(close(con), silent = TRUE))
       writeBin(.xpt_library_header(version, created), con)
       writeBin(
         .xpt_member_header(ds_name, ds_label, nvars, version, created),
@@ -652,18 +670,9 @@
       if (nobs > 0L && obs_length > 0L) {
         writeBin(.xpt_obs_buffer(recs, nobs, obs_length), con)
       }
-      close(con)
-      ok <- TRUE
     },
-    finally = if (!ok) {
-      try(close(con), silent = TRUE)
-      if (file.exists(tmp)) {
-        unlink(tmp)
-      }
-    }
+    call
   )
-
-  .move_into_place(tmp, path, call)
   invisible(path)
 }
 

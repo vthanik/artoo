@@ -161,3 +161,36 @@ test_that("a conformed clean dataset still has zero findings", {
   out <- apply_spec(df, .w3_spec(), "AE", conformance = "off")
   expect_identical(nrow(check_spec(out, .w3_spec(), "AE")), 0L)
 })
+
+# ---- Regression: mandatory = NA (code review 2026-06-14) ----
+
+test_that("mandatory = NA does not exempt NA values from the codelist check", {
+  cl <- data.frame(
+    codelist_id = "CL.SEX",
+    term = c("M", "F"),
+    stringsAsFactors = FALSE
+  )
+  mk <- function(mand) {
+    artoo_spec(
+      datasets = data.frame(
+        dataset = "DM",
+        label = "d",
+        stringsAsFactors = FALSE
+      ),
+      variables = data.frame(
+        dataset = "DM",
+        variable = "SEX",
+        data_type = "string",
+        codelist_id = "CL.SEX",
+        mandatory = mand,
+        stringsAsFactors = FALSE
+      ),
+      codelists = cl
+    )
+  }
+  dat <- data.frame(SEX = c("M", "F", NA, "X"), stringsAsFactors = FALSE)
+  rd <- as.data.frame(check_spec(dat, mk(NA), dataset = "DM"))
+  msg <- rd$message[rd$check == "codelist_membership"]
+  # Pre-fix isTRUE(NA) exempted the NA value, flagging only "X" (1 value).
+  expect_match(msg, "2 value")
+})

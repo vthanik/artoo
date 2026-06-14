@@ -220,6 +220,15 @@ artoo_spec <- function(
       stringsAsFactors = FALSE,
       check.names = FALSE
     )
+    # An all-NA column has no type signal on a JSON round-trip: jsonlite writes
+    # [null, ...] and reads it back as logical, so write_spec()/read_spec()
+    # would flip a character value-level column (e.g. an all-NA method_id) to
+    # logical. Canonicalize every all-NA column to character; this constructor
+    # runs on both build and read, so the round-trip becomes a fixed point.
+    allna <- vapply(values, function(col) all(is.na(col)), logical(1))
+    if (any(allna)) {
+      values[allna] <- lapply(values[allna], as.character)
+    }
   }
 
   # Derive per-variable key_sequence from the dataset-level keys string when

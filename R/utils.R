@@ -119,6 +119,38 @@
   out
 }
 
+# Format a double vector as the shortest decimal string that parses back to
+# the IDENTICAL double (round-trip exact). This is how artoo holds a `decimal`
+# dataType in memory and writes it to JSON: a plain as.character() uses R's
+# 15-digit default and drops the last ulp (0.1 + 0.2 came back 0.3), the exact
+# loss the JSON number formatter avoids with digits = 17. 15 digits keep clean
+# values clean; the rare value that needs more falls through to 17 (17 decimal
+# digits uniquely identify any IEEE double). Character and NA pass through
+# unchanged, so a decimal already carried as an exact string is never reformatted.
+#' @noRd
+.double_to_string <- function(x) {
+  if (is.character(x)) {
+    return(x)
+  }
+  x <- as.double(x)
+  out <- rep(NA_character_, length(x))
+  # is.finite() also screens NaN/Inf to NA, so a non-finite value never
+  # formats to the literal "Inf"/"NaN"; for a `decimal` that NA is then caught
+  # by the conform coercion-loss gate.
+  ok <- is.finite(x)
+  if (!any(ok)) {
+    return(out)
+  }
+  v <- x[ok]
+  s <- formatC(v, format = "g", digits = 15L, width = -1L)
+  need <- as.double(s) != v
+  if (any(need)) {
+    s[need] <- formatC(v[need], format = "g", digits = 17L, width = -1L)
+  }
+  out[ok] <- s
+  out
+}
+
 # A typed NA of the given storage mode, length `n`.
 #' @noRd
 .na_mode <- function(mode, n = 0L) {
@@ -162,6 +194,34 @@
     }
     unlink(tmp)
   }
+  invisible(path)
+}
+
+# Write to `path` atomically. `write_fn` receives the sibling temp path and
+# does the writing (a connection-based codec opens and on.exit-closes its own
+# connection inside write_fn). On any error the temp file is removed and the
+# prior good file is left untouched (the error propagates, skipping the move);
+# on success the temp file is renamed over the target. One home for the
+# tempfile + cleanup + rename dance the four codecs used to each repeat.
+#' @noRd
+.with_atomic_write <- function(
+  path,
+  fileext,
+  write_fn,
+  call = rlang::caller_env()
+) {
+  tmp <- tempfile(tmpdir = dirname(path), fileext = fileext)
+  ok <- FALSE
+  tryCatch(
+    {
+      write_fn(tmp)
+      ok <- TRUE
+    },
+    finally = if (!ok && file.exists(tmp)) {
+      unlink(tmp)
+    }
+  )
+  .move_into_place(tmp, path, call)
   invisible(path)
 }
 

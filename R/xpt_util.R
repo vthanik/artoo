@@ -98,13 +98,29 @@
 .int_to_pib4 <- function(x) {
   writeBin(as.integer(x), raw(), size = 4L, endian = "big")
 }
+# PIB fields are UNSIGNED. readBin's default signed = TRUE makes a 2-byte
+# length >= 32768 (a wide character field) read back negative, which then
+# slices the obs record backwards; signed = FALSE reads the full 0-65535 range.
 #' @noRd
 .pib2_to_int <- function(raw2) {
-  readBin(raw2, what = integer(), size = 2L, n = 1L, endian = "big")
+  readBin(
+    raw2,
+    what = integer(),
+    size = 2L,
+    n = 1L,
+    signed = FALSE,
+    endian = "big"
+  )
 }
+# readBin cannot read an unsigned 4-byte integer (it is always signed at
+# size 4), so a npos / count >= 2^31 would come back negative. Assemble the
+# big-endian bytes by hand; the result is a double beyond the 32-bit range, an
+# integer within it, both exact.
 #' @noRd
 .pib4_to_int <- function(raw4) {
-  readBin(raw4, what = integer(), size = 4L, n = 1L, endian = "big")
+  b <- as.integer(raw4)
+  v <- b[1L] * 16777216 + b[2L] * 65536 + b[3L] * 256 + b[4L]
+  if (v <= .Machine$integer.max) as.integer(v) else v
 }
 
 # Raw header bytes to a trimmed byte-passthrough string (drop NULs and

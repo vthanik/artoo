@@ -71,3 +71,30 @@ test_that(".move_into_place falls back to copy when rename fails", {
   expect_false(file.exists(tmp))
   expect_identical(readLines(path), "hi")
 })
+
+# ---- Regression: shared atomic write (code review 2026-06-14) ----
+
+test_that(".with_atomic_write preserves the target and cleans up on error", {
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "out.txt")
+  writeLines("original", path)
+  expect_error(
+    artoo:::.with_atomic_write(path, ".tmp", function(tmp) stop("boom")),
+    "boom"
+  )
+  expect_identical(readLines(path), "original")
+  expect_length(list.files(dir, pattern = "\\.tmp$"), 0L)
+})
+
+test_that(".with_atomic_write renames the temp file over the target on success", {
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "out.txt")
+  res <- artoo:::.with_atomic_write(
+    path,
+    ".tmp",
+    function(tmp) writeLines("new", tmp)
+  )
+  expect_identical(readLines(path), "new")
+  expect_identical(res, path)
+  expect_length(list.files(dir, pattern = "\\.tmp$"), 0L)
+})
