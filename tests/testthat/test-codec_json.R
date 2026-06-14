@@ -438,3 +438,71 @@ test_that("write_json never flags declared-latin1 or factor columns (regression)
   expect_no_error(write_json(df, p2, created = frozen))
   expect_identical(read_json(p2)$SEXF, c("F", "M"))
 })
+
+# ---- Regression: numeric fidelity (code review 2026-06-14) ----
+
+# Minimal one-variable spec for the numeric-fidelity regressions.
+one_var_spec <- function(dt) {
+  artoo_spec(
+    datasets = data.frame(
+      dataset = "DS",
+      label = "d",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DS",
+      variable = "X",
+      data_type = dt,
+      stringsAsFactors = FALSE
+    )
+  )
+}
+
+test_that("decimal columns round-trip at full precision, not 15 digits", {
+  v <- c(0.1 + 0.2, 1 / 3, 1.5, 123456789.98765431)
+  ap <- apply_spec(data.frame(X = v), one_var_spec("decimal"), "DS")
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(ap, p, created = frozen)
+  # Pre-fix as.character() wrote "0.3" and read back 0.29999999999999999.
+  expect_identical(as.numeric(read_json(p)$X), v)
+})
+
+test_that("integer values above the 32-bit range survive a JSON round-trip", {
+  ap <- apply_spec(
+    data.frame(X = c(3e9, -3e9, 5)),
+    one_var_spec("integer"),
+    "DS",
+    on_coercion_loss = "keep",
+    conformance = "off"
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(ap, p, created = frozen)
+  # Pre-fix as.integer() NA'd 3e9 on both write and read.
+  expect_identical(as.numeric(read_json(p)$X), c(3e9, -3e9, 5))
+})
+
+test_that("a large integer read from a foreign Dataset-JSON is not NA'd", {
+  p <- withr::local_tempfile(fileext = ".json")
+  writeLines(
+    paste0(
+      '{"datasetJSONVersion":"1.1.0","columns":[{"itemOID":"IT.BIG",',
+      '"name":"BIG","label":"Big","dataType":"integer"}],"rows":[[3000000000]]}'
+    ),
+    p
+  )
+  expect_identical(as.numeric(read_json(p)$BIG), 3e9)
+})
+
+test_that("Inf in a decimal column aborts instead of writing invalid JSON", {
+  # Pre-fix the decimal branch only as.character()'d, so [..,"Inf"] (invalid
+  # CDISC JSON) was written with no abort; the NaN/Inf gate now covers decimal.
+  cm <- list(dataType = "decimal")
+  expect_error(
+    artoo:::.json_col_literals(c(1, Inf), cm, "X", rlang::caller_env()),
+    class = "artoo_error_type"
+  )
+  expect_error(
+    artoo:::.json_col_literals(c(1, NaN), cm, "X", rlang::caller_env()),
+    class = "artoo_error_type"
+  )
+})

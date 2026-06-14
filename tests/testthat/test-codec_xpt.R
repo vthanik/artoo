@@ -1116,3 +1116,30 @@ test_that("a second member hidden in the floored-off v5 tail still aborts", {
   close(con)
   expect_error(read_xpt(p), class = "artoo_error_codec")
 })
+
+# ---- Regression: numeric magnitude guards (code review 2026-06-14) ----
+
+test_that("a tiny finite value aborts the write instead of underflowing to 0", {
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "DS",
+      label = "d",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DS",
+      variable = "CONC",
+      data_type = "float",
+      stringsAsFactors = FALSE
+    )
+  )
+  ap <- apply_spec(
+    data.frame(CONC = c(1, 1e-100)),
+    spec,
+    "DS",
+    conformance = "off"
+  )
+  p <- withr::local_tempfile(fileext = ".xpt")
+  # Pre-fix .ieee_to_ibm() silently flushed 1e-100 to 0 on write.
+  expect_error(write_xpt(ap, p, created = frozen), class = "artoo_error_codec")
+})

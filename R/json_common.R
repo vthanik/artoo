@@ -77,6 +77,24 @@
     out
   }
 
+  # Whole-number JSON literals for an integer dataType. Values inside R's
+  # 32-bit range emit byte-identically to the former as.integer() path; a
+  # larger integer (Dataset-JSON permits arbitrary precision) is written via
+  # %.0f instead of being silently NA'd by as.integer() overflow.
+  fill_int <- function(num) {
+    res <- rep("null", length(num))
+    keep <- !is.na(num)
+    if (any(keep)) {
+      v <- num[keep]
+      small <- abs(v) <= .Machine$integer.max
+      tok <- character(length(v))
+      tok[small] <- as.character(as.integer(v[small]))
+      tok[!small] <- sprintf("%.0f", v[!small])
+      res[keep] <- tok
+    }
+    res
+  }
+
   if (dt %in% c("date", "datetime", "time")) {
     if (identical(tgt, "integer")) {
       num <- .deflate_temporal(col, dt, var = nm, call = call)
@@ -88,30 +106,51 @@
   switch(
     dt,
     string = ,
-    URI = ,
-    decimal = fill(as.character(col), quoted = TRUE, na_extra = is.na(col)),
-    integer = fill(as.integer(col), quoted = FALSE, na_extra = is.na(col)),
+    URI = fill(as.character(col), quoted = TRUE, na_extra = is.na(col)),
+    decimal = {
+      # Exchanged as a JSON string to preserve exact precision. When the
+      # column is still numeric (an unconformed frame), format at round-trip
+      # precision; as.character() would drop the last ulp.
+      if (is.numeric(col)) {
+        .reject_nonfinite_json(col, nm, call)
+      }
+      fill(.double_to_string(col), quoted = TRUE, na_extra = is.na(col))
+    },
+    integer = {
+      num <- as.numeric(col)
+      .reject_nonfinite_json(num, nm, call)
+      fill_int(num)
+    },
     boolean = fill(as.logical(col), quoted = FALSE, na_extra = is.na(col)),
     float = ,
     double = {
       num <- as.numeric(col)
-      bad <- is.nan(num) | is.infinite(num)
-      if (any(bad)) {
-        offenders <- utils::head(unique(as.character(num[bad])), 3L)
-        .artoo_abort(
-          c(
-            "Column {.var {nm}} contains {.val {offenders}}.",
-            "x" = "NaN and infinite values are not valid in CDISC Dataset-JSON.",
-            "i" = "Recode them to NA, or use a string dataType."
-          ),
-          kind = "type",
-          call = call
-        )
-      }
+      .reject_nonfinite_json(num, nm, call)
       fill(num, quoted = FALSE)
     },
     fill(as.character(col), quoted = TRUE, na_extra = is.na(col))
   )
+}
+
+# NaN and infinite values are not valid CDISC Dataset-JSON numerics; reject
+# them loudly (shared by the integer/decimal/float/double branches) so they
+# never reach the file as a `null` or an invalid bare "Inf" token.
+#' @noRd
+.reject_nonfinite_json <- function(num, nm, call) {
+  bad <- is.nan(num) | is.infinite(num)
+  if (any(bad)) {
+    offenders <- utils::head(unique(as.character(num[bad])), 3L)
+    .artoo_abort(
+      c(
+        "Column {.var {nm}} contains {.val {offenders}}.",
+        "x" = "NaN and infinite values are not valid in CDISC Dataset-JSON.",
+        "i" = "Recode them to NA, or use a string dataType."
+      ),
+      kind = "type",
+      call = call
+    )
+  }
+  invisible(num)
 }
 
 # The shared strict-mode gate of the json/ndjson writers: collect the

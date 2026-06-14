@@ -118,27 +118,19 @@
   )
   head_raw <- .json_head_raw(head_obj)
 
-  tmp <- tempfile(tmpdir = dirname(path), fileext = ".json.tmp")
-  con <- .json_out_con(tmp, path)
-  ok <- FALSE
-  tryCatch(
-    {
+  .with_atomic_write(
+    path,
+    ".json.tmp",
+    function(tmp) {
+      con <- .json_out_con(tmp, path)
+      on.exit(try(close(con), silent = TRUE))
       writeBin(head_raw[-length(head_raw)], con) # head minus its closing }
       writeBin(charToRaw(",\"rows\":["), con)
       .json_stream_rows(x, meta, con, call, sep = ",", progress = TRUE)
       writeBin(charToRaw("]}"), con)
-      close(con)
-      ok <- TRUE
     },
-    finally = if (!ok) {
-      try(close(con), silent = TRUE)
-      if (file.exists(tmp)) {
-        unlink(tmp)
-      }
-    }
+    call
   )
-  .move_into_place(tmp, path)
-  invisible(path)
 }
 
 # ---- decode helpers ---------------------------------------------------------
@@ -200,12 +192,24 @@
     string = ,
     URI = .json_extract_chr(vals),
     decimal = .json_extract_chr(vals),
-    integer = as.integer(.json_extract_num(vals)),
+    integer = .json_int_or_dbl(.json_extract_num(vals)),
     float = ,
     double = .json_extract_num(vals),
     boolean = .json_extract_lgl(vals),
     .json_extract_chr(vals)
   )
+}
+
+# Realize an integer dataType column. Dataset-JSON integers are arbitrary
+# precision, so a value beyond R's 32-bit range stays a double (lossless)
+# instead of being silently coerced to NA by as.integer(); a column that fits
+# returns an integer vector, unchanged from before.
+#' @noRd
+.json_int_or_dbl <- function(num) {
+  if (all(is.na(num) | abs(num) <= .Machine$integer.max)) {
+    return(as.integer(num))
+  }
+  num
 }
 
 # Read the file, stripping a leading BOM and refusing an embedded NUL (plan

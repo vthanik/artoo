@@ -429,7 +429,9 @@
   if (!nrow(v) || !all(c("data_type", "length") %in% names(v))) {
     return(.empty_findings())
   }
-  needs_len <- v$data_type %in% c("string", "integer")
+  # Only a character (string) variable needs an XPORT byte length; an integer
+  # (numeric) variable does not, so it must not raise the missing-length flag.
+  needs_len <- v$data_type == "string"
   bad <- needs_len & is.na(v$length)
   .finding(
     "variable_length_for_text",
@@ -850,7 +852,9 @@
         next
       }
       col <- unique(df[[var]])
-      mand <- "mandatory" %in% names(rows) && isTRUE(rows$mandatory[i])
+      mand <- "mandatory" %in%
+        names(rows) &&
+        .is_mandatory(rows$mandatory[i])
 
       bad <- .codelist_violations(col, terms, mand)
       if (length(bad)) {

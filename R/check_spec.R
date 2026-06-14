@@ -370,7 +370,9 @@ check_spec <- function(
       if (run) {
         terms <- if (decode == "to_decode") clrows$decode else clrows$term
         terms <- terms[!is.na(terms)]
-        mand <- "mandatory" %in% names(vars) && isTRUE(vars$mandatory[i])
+        mand <- "mandatory" %in%
+          names(vars) &&
+          .is_mandatory(vars$mandatory[i])
         bad <- .codelist_violations(col, terms, mand)
         if (length(bad)) {
           shown <- ifelse(is.na(bad), "<NA>", as.character(bad))

@@ -140,3 +140,15 @@ test_that(".strvec_to_fixed_raw aborts on a value wider than the field", {
     class = "artoo_error_codec"
   )
 })
+
+# ---- Regression: PIB fields are unsigned (code review 2026-06-14) ----
+
+test_that("PIB readers decode unsigned values (>= 2^15 / 2^31)", {
+  # Pre-fix signed reads gave -25536 for a 40000-byte field length.
+  expect_identical(artoo:::.pib2_to_int(artoo:::.int_to_pib2(40000L)), 40000L)
+  expect_identical(artoo:::.pib2_to_int(as.raw(c(0xFF, 0xFF))), 65535L)
+  expect_identical(
+    artoo:::.pib4_to_int(as.raw(c(0x80, 0x00, 0x00, 0x00))),
+    2147483648
+  )
+})

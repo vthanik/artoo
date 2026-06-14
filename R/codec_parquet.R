@@ -109,10 +109,10 @@
   }
 
   # Atomic write: build in a temp file, then rename over the target.
-  tmp <- tempfile(tmpdir = dirname(path), fileext = ".parquet.tmp")
-  ok <- FALSE
-  tryCatch(
-    {
+  .with_atomic_write(
+    path,
+    ".parquet.tmp",
+    function(tmp) {
       if (is.null(kv)) {
         nanoparquet::write_parquet(x, tmp, compression = compression)
       } else {
@@ -123,14 +123,9 @@
           metadata = kv
         )
       }
-      ok <- TRUE
     },
-    finally = if (!ok && file.exists(tmp)) {
-      unlink(tmp)
-    }
+    call
   )
-  .move_into_place(tmp, path)
-  invisible(path)
 }
 
 # Read the parquet frame, using nanoparquet's native column projection when it
@@ -172,6 +167,14 @@
   rlang::check_installed("nanoparquet", reason = "to read Parquet files.")
 
   df <- .parquet_read_frame(path, col_select)
+  # nanoparquet restores an R factor as a factor; artoo's canonical model holds
+  # strings as character (the JSON codec returns character too), so a factor
+  # column would make the same data non-identical across formats. Defactor
+  # first, so the recode and meta-inference steps below see plain character.
+  fct <- vapply(df, is.factor, logical(1))
+  if (any(fct)) {
+    df[fct] <- lapply(df[fct], as.character)
+  }
   # Parquet STRING bytes are UTF-8; canonicalise to internal UTF-8 (NFC). An
   # explicit `encoding` instead reads a foreign file whose bytes are that
   # charset. Non-character columns pass through untouched.

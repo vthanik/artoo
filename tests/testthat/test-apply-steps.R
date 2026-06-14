@@ -251,3 +251,17 @@ test_that("decode_column exact matches never warn", {
     decode_column(df, .trim_spec(), "DM", from = "SEX")
   )
 })
+
+# ---- Regression: locale-independent key sort (code review 2026-06-14) ----
+
+test_that(".sort_keys uses radix (C-locale byte) order, not LC_COLLATE", {
+  x <- data.frame(
+    USUBJID = c("a", "B", "c", "A", "b"),
+    V = 1:5,
+    stringsAsFactors = FALSE
+  )
+  out <- artoo:::.sort_keys(x, list(keys = "USUBJID"))
+  # Byte order puts uppercase before lowercase, deterministically across
+  # locales; pre-fix order() collated by LC_COLLATE (e.g. a, A, b, B, c).
+  expect_identical(out$USUBJID, c("A", "B", "a", "b", "c"))
+})

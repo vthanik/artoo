@@ -371,3 +371,45 @@ test_that(".resolve_duplicate_variables reports source rows (Excel-style)", {
     fixed = TRUE
   )
 })
+
+# ---- Regression: spec round-trip + codelist scoping (code review 2026-06-14) ----
+
+test_that("an all-NA value-level column round-trips as character, not logical", {
+  vlm <- data.frame(
+    dataset = "ADSL",
+    variable = "PARAMCD",
+    label = "Height",
+    method_id = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  spec <- artoo_spec(
+    cdisc_adam_datasets,
+    cdisc_adam_variables,
+    codelists = cdisc_codelists,
+    values = vlm
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_spec(spec, p)
+  back <- read_spec(p)
+  # Pre-fix the all-NA method_id came back logical, so identical() failed.
+  expect_identical(class(back@values$method_id), "character")
+  expect_identical(back, spec)
+})
+
+test_that(".scope_codelists rejects a term that resolves to no codelist", {
+  # A first-row term with a blank id (the merged-cell fill cannot reach row 1).
+  bad <- data.frame(
+    codelist_id = c(NA_character_, "CL.SEX"),
+    term = c("MALE", "FEMALE"),
+    stringsAsFactors = FALSE
+  )
+  expect_error(artoo:::.scope_codelists(bad), class = "artoo_error_spec")
+
+  # A list-header row (id present, term blank) is dropped, not an error.
+  ok <- data.frame(
+    codelist_id = c("CL.SEX", "CL.SEX"),
+    term = c("", "FEMALE"),
+    stringsAsFactors = FALSE
+  )
+  expect_identical(nrow(artoo:::.scope_codelists(ok)), 1L)
+})

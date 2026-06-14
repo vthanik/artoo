@@ -391,3 +391,15 @@ test_that(">24h, negative, and fractional times round-trip every codec", {
     )
   }
 })
+
+# ---- Regression: impossible time tokens (code review 2026-06-14) ----
+
+test_that(".parse_hms_text returns NA for out-of-range minutes/seconds", {
+  # Pre-fix "00:99:99" parsed to 6039s and realized to a valid-looking hms.
+  expect_identical(artoo:::.parse_hms_text("00:99:99"), NA_real_)
+  expect_identical(artoo:::.parse_hms_text("00:60:00"), NA_real_)
+  expect_identical(artoo:::.parse_hms_text("23:59:59"), 86399)
+  # An impossible time stays character through realize (never a fabricated hms).
+  expect_type(artoo:::.realize_time(c("00:99:99")), "character")
+  expect_s3_class(artoo:::.realize_time(c("23:59:59")), "hms")
+})
