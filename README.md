@@ -99,12 +99,6 @@ columns(adsl)
 #> 48  MMSETOT   Num
 ```
 
-<div align="center">
-
-<img src="man/figures/round-trip-hero.svg" width="100%" alt="The artoo lossless round-trip: a spec plus data go through apply_spec(), write to a file, and read back identical; set_type() and check_spec() fix and inspect the spec.">
-
-</div>
-
 ## Why artoo?
 
 - **Lossless by construction.** One canonical metadata model carries labels, CDISC data types, lengths, SAS display formats, controlled-terminology references, and sort keys identically across every format, so any-to-any conversion preserves them — not by best effort, by design.
