@@ -1,6 +1,6 @@
 Package: artoo
 Title: Lossless CDISC-Native Input and Output for Clinical Datasets
-Version: 0.1.0
+Version: 0.1.1
 Authors@R:
     person("Vignesh", "Thanikachalam", , "about.vignesh@gmail.com",
            role = c("aut", "cre", "cph"))
@@ -13,7 +13,11 @@ Description: Reads and writes clinical-trial datasets losslessly across
     controlled-terminology references, and sort keys identically across
     every format, so conversion between any two formats is lossless by
     construction. Pure 'R' and lightweight, with no external 'SAS' or
-    'Java' runtime.
+    'Java' runtime. Implements the published format specifications for
+    CDISC Dataset-JSON
+    (<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>)
+    and 'SAS' XPORT
+    (<https://www.loc.gov/preservation/digital/formats/fdd/fdd000466.shtml>).
 License: MIT + file LICENSE
 URL: https://vthanik.github.io/artoo/, https://github.com/vthanik/artoo
 BugReports: https://github.com/vthanik/artoo/issues
