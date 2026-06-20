@@ -1,5 +1,17 @@
 # cran-comments
 
+## Resubmission
+
+This is a resubmission. In response to the reviewer's feedback:
+
+- Removed the use of `artoo:::` in the documentation. The `set_meta()`
+  example no longer reaches an internal function; it now builds the metadata
+  through the exported `apply_spec()` / `get_meta()` path.
+- On references: artoo has no methods reference to cite. It implements public
+  data-exchange standards (CDISC Dataset-JSON, SAS XPORT), not a novel
+  statistical method, so there is no `authors (year) <doi:...>` to add to
+  DESCRIPTION.
+
 ## Submission
 
 This is the first submission of artoo to CRAN.
