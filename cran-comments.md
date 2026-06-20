@@ -1,5 +1,20 @@
 # cran-comments
 
+## Resubmission
+
+This is a resubmission (version 0.1.1). In response to the reviewer's
+feedback:
+
+- Removed the use of `artoo:::` in the documentation. The `set_meta()`
+  example no longer reaches an internal function; it now builds the metadata
+  through the exported `apply_spec()` and `get_meta()` functions.
+- Added references for the implemented formats to the Description field. The
+  package has no methods paper, so the specifications it implements are cited
+  via URL as the note's `<https:...>` fallback allows: CDISC Dataset-JSON
+  (<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>)
+  and SAS XPORT
+  (<https://www.loc.gov/preservation/digital/formats/fdd/fdd000466.shtml>).
+
 ## Submission
 
 This is the first submission of artoo to CRAN.
@@ -39,9 +54,9 @@ does not appear on win-builder or on CRAN's build machines.
 
 ## Notes for the reviewer
 
-- The package has no references describing its methods: it implements public
-  data-exchange standards (CDISC Dataset-JSON, SAS XPORT) that are cited in
-  the function documentation.
+- The package has no methods paper. It implements public data-exchange
+  standards (CDISC Dataset-JSON, SAS XPORT), now cited by URL in the
+  Description field.
 - All examples run under `R CMD check`. Examples and the vignette that
   exercise the optional `nanoparquet`, `readxl`, `writexl`, and `xml2`
   back-ends are guarded with `requireNamespace()`, so the package checks
