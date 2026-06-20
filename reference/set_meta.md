@@ -105,15 +105,15 @@ set_meta(trimmed, meta)
 #> 4      23
 #> 5      21
 
-# ---- Example 2: stamp a bare frame straight from a spec ----
+# ---- Example 2: borrow metadata from a conformed dataset ----
 #
-# A writer with a raw frame and no apply step can build metadata from the
-# spec and attach it directly (DM is SDTM, so its spec is sdtm-shaped).
+# A writer with a raw frame can lift metadata off a conformed dataset and
+# stamp it onto the bare frame (DM is SDTM, so its spec is sdtm-shaped).
 sdtm <- artoo_spec(
   cdisc_sdtm_datasets, cdisc_sdtm_variables,
   codelists = cdisc_codelists
 )
-meta_dm <- artoo:::.meta_from_spec(sdtm, "DM")
+meta_dm <- get_meta(apply_spec(cdisc_dm, sdtm, "DM"))
 dm <- set_meta(cdisc_dm, meta_dm)
 is_artoo_meta(get_meta(dm))
 #> [1] TRUE

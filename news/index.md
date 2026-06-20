@@ -1,12 +1,12 @@
 # Changelog
 
-## artoo 0.1.0
+## artoo 0.1.1
 
-Initial release. artoo is a lightweight, lossless, CDISC-native reader
-and writer for clinical-trial datasets, built around one canonical
-metadata model (`artoo_meta`) so that conversion between any two
-supported formats is lossless by construction. Pure R and lightweight,
-with no external SAS or Java runtime.
+Initial CRAN release. artoo is a lightweight, lossless, CDISC-native
+reader and writer for clinical-trial datasets, built around one
+canonical metadata model (`artoo_meta`) so that conversion between any
+two supported formats is lossless by construction. Pure R and
+lightweight, with no external SAS or Java runtime.
 
 ### Formats
 
