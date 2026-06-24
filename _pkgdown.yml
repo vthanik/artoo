@@ -41,6 +41,8 @@ home:
     CDISC Dataset-JSON, Apache Parquet, and RDS through one canonical
     metadata model. Pure R and lightweight.
   links:
+  - text: artoo on CRAN
+    href: https://CRAN.R-project.org/package=artoo
   - text: CDISC Dataset-JSON v1.1
     href: https://cdisc-org.github.io/DataExchange-DatasetJson/
   - text: FDA Study Data Technical Conformance Guide
