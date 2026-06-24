@@ -2,6 +2,8 @@
 
 ## artoo 0.1.1
 
+CRAN release: 2026-06-24
+
 Initial CRAN release. artoo is a lightweight, lossless, CDISC-native
 reader and writer for clinical-trial datasets, built around one
 canonical metadata model (`artoo_meta`) so that conversion between any
