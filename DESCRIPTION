@@ -1,6 +1,6 @@
 Package: artoo
 Title: Lossless CDISC-Native Input and Output for Clinical Datasets
-Version: 0.1.1
+Version: 0.1.2
 Authors@R:
     person("Vignesh", "Thanikachalam", , "about.vignesh@gmail.com",
            role = c("aut", "cre", "cph"))

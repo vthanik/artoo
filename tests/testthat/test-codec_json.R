@@ -128,8 +128,8 @@ test_that("a whole-number double stays double on re-read (C1)", {
   write_json(ap, p)
   back <- read_json(p)
   expect_true(is.double(back$N))
-  # set_meta() now projects the column label/format.sas as attrs (haven
-  # parity); ignore just those two, the value+type are asserted strictly.
+  # set_meta() now projects the column label/format.sas as attrs (labelled-
+  # frame parity); ignore just those two, the value+type are asserted strictly.
   expect_equal(back$N, c(1, 2, 3), ignore_attr = c("label", "format.sas"))
 })
 
@@ -459,6 +459,17 @@ one_var_spec <- function(dt) {
 }
 
 test_that("decimal columns round-trip at full precision, not 15 digits", {
+  # Bit-exact double <-> shortest-string round-trip relies on the platform's
+  # strtod()/sprintf() being exact inverses, which only holds when R has long
+  # double. On a noLD build (and macOS arm64, where long double == double) the
+  # last ulp can shift, so 1/3 reads back one ulp off. The codec already writes
+  # the best round-trip string the C library allows, so guard the assertion on
+  # the capability rather than weakening it (a tolerance test could not tell the
+  # original bug, a 1-ulp write of "0.3", from a correct write).
+  skip_if_not(
+    capabilities("long.double"),
+    "needs long double for exact round-trip"
+  )
   v <- c(0.1 + 0.2, 1 / 3, 1.5, 123456789.98765431)
   ap <- apply_spec(data.frame(X = v), one_var_spec("decimal"), "DS")
   p <- withr::local_tempfile(fileext = ".json")
