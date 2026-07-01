@@ -1,5 +1,12 @@
 # Changelog
 
+## artoo 0.1.2
+
+- Guarded the decimal full-precision JSON round-trip test on
+  `capabilities("long.double")` so it skips on noLD builds, where
+  bit-exact double-to-string round-trips are not guaranteed by the
+  platform C library.
+
 ## artoo 0.1.1
 
 CRAN release: 2026-06-24
