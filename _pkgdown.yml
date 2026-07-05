@@ -30,11 +30,21 @@ navbar:
     right: [search, github]
 
 home:
-  # Match the sibling site's sidebar: Links / License / Citation / Developers.
-  # Omitting `dev` drops the "Dev status" badges section that pkgdown adds for
-  # development versions (the badges still show on the README / GitHub).
+  # Match the sibling site's sidebar: Links / AI-Agents / License / Citation /
+  # Developers. Omitting `dev` drops the "Dev status" badges section that
+  # pkgdown adds for development versions (the badges still show on the README
+  # / GitHub).
   sidebar:
-    structure: [links, license, citation, authors]
+    structure: [links, ai_agents, license, citation, authors]
+    components:
+      ai_agents:
+        title: AI / Agents
+        text: |
+          [Skill](https://github.com/vthanik/artoo/blob/main/pkgdown/assets/skills/artoo/SKILL.md)
+
+          [llms.txt](llms.txt)
+
+          [llms-full.txt](llms-full.txt)
   title: Lossless CDISC-native dataset I/O for R
   description: >
     Read and write clinical-trial datasets losslessly across SAS XPORT,
