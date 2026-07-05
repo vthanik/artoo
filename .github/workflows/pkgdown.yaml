@@ -59,6 +59,18 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
 
+      - name: Build llms-full.txt
+        # pkgdown 2.2 writes a per-page .md beside each .html and an index
+        # llms.txt, but no single full-content file. Concatenate every per-page
+        # .md (deterministic order) into llms-full.txt, next to llms.txt.
+        # dst_path resolves to docs/ (release) or docs/dev/ (a .9000 dev
+        # version) so the sidebar link is correct in both modes.
+        run: |
+          dst <- pkgdown::as_pkgdown(".")$dst_path
+          mds <- sort(list.files(dst, "[.]md$", recursive = TRUE, full.names = TRUE))
+          writeLines(unlist(lapply(mds, readLines, warn = FALSE)), file.path(dst, "llms-full.txt"))
+        shell: Rscript {0}
+
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
