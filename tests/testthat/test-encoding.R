@@ -462,3 +462,14 @@ test_that("write_xpt(on_invalid = 'fold') writes BASECHAR-style ASCII", {
   expect_identical(back$INVNAM, "Ozturk")
   expect_identical(back$SITE, "MUNCHEN")
 })
+
+test_that("artoo_encodings() lists the OEM/DOS rows the resolver accepts", {
+  e <- artoo_encodings()
+  oem <- e[e$sas %in% c("PCOEM437", "PCOEM850"), ]
+  expect_identical(oem$r, c("CP437", "CP850"))
+  expect_identical(oem$python, c("cp437", "cp850"))
+  # Every listed sas spelling must actually resolve.
+  for (nm in e$sas) {
+    expect_no_error(artoo:::.resolve_charset(nm))
+  }
+})
