@@ -1,4 +1,4 @@
-# artoo 0.1.2
+# artoo 0.1.3
 
 * `artoo_checks()` gained an `invalid_encoding` dimension (on by default):
   `check_spec()` flags character values whose bytes are not valid UTF-8, the
@@ -30,6 +30,8 @@
 
 * New article: *Migrating clinical data from WLATIN1 to UTF-8*, including
   the smart-punctuation fold table and the byte-length migration recipe.
+
+# artoo 0.1.2
 
 * Guarded the decimal full-precision JSON round-trip test on
   `capabilities("long.double")` so it skips on noLD builds, where bit-exact
