@@ -115,12 +115,14 @@ encodings only matter at the file boundary, exactly as in Python 3.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5  windows-1251 WCYRILLIC     cp1251</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6    ISO-8859-1    LATIN1    latin_1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 7   ISO-8859-15    LATIN9 iso8859_15</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8     Shift_JIS SHIFT-JIS  shift_jis</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9         CP932    MS-932      cp932</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10       EUC-JP    EUC-JP     euc_jp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11       EUC-KR    EUC-KR     euc_kr</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12        CP936    MS-936        gbk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13        CP950    MS-950      cp950</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8         CP437  PCOEM437      cp437</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9         CP850  PCOEM850      cp850</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10    Shift_JIS SHIFT-JIS  shift_jis</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11        CP932    MS-932      cp932</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12       EUC-JP    EUC-JP     euc_jp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13       EUC-KR    EUC-KR     euc_kr</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14        CP936    MS-936        gbk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15        CP950    MS-950      cp950</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                                            description</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1  Unicode; Dataset-JSON requirement and the modern default everywhere</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2    7-bit basic Latin; what the FDA expects inside a submission XPORT</span>
@@ -129,12 +131,14 @@ encodings only matter at the file boundary, exactly as in Python 3.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5                                                     Cyrillic Windows</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6                                   Western European Unix SAS (LATIN1)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 7                         Western European with the euro sign (LATIN9)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8               Japanese (PMDA submissions from Japanese SAS sessions)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9                       Japanese Windows (Microsoft Shift JIS variant)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10                                                       Japanese Unix</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11                                                              Korean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12                                    Simplified Chinese Windows (GBK)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13                                  Traditional Chinese Windows (Big5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8                                   US DOS (OEM); very old PC archives</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9                     Western European DOS (OEM); very old PC archives</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10              Japanese (PMDA submissions from Japanese SAS sessions)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11                      Japanese Windows (Microsoft Shift JIS variant)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12                                                       Japanese Unix</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13                                                              Korean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14                                    Simplified Chinese Windows (GBK)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15                                  Traditional Chinese Windows (Big5)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: look up a SAS session encoding ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>

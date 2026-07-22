@@ -74,12 +74,14 @@ artoo_encodings()
 #> 5  windows-1251 WCYRILLIC     cp1251
 #> 6    ISO-8859-1    LATIN1    latin_1
 #> 7   ISO-8859-15    LATIN9 iso8859_15
-#> 8     Shift_JIS SHIFT-JIS  shift_jis
-#> 9         CP932    MS-932      cp932
-#> 10       EUC-JP    EUC-JP     euc_jp
-#> 11       EUC-KR    EUC-KR     euc_kr
-#> 12        CP936    MS-936        gbk
-#> 13        CP950    MS-950      cp950
+#> 8         CP437  PCOEM437      cp437
+#> 9         CP850  PCOEM850      cp850
+#> 10    Shift_JIS SHIFT-JIS  shift_jis
+#> 11        CP932    MS-932      cp932
+#> 12       EUC-JP    EUC-JP     euc_jp
+#> 13       EUC-KR    EUC-KR     euc_kr
+#> 14        CP936    MS-936        gbk
+#> 15        CP950    MS-950      cp950
 #>                                                            description
 #> 1  Unicode; Dataset-JSON requirement and the modern default everywhere
 #> 2    7-bit basic Latin; what the FDA expects inside a submission XPORT
@@ -88,12 +90,14 @@ artoo_encodings()
 #> 5                                                     Cyrillic Windows
 #> 6                                   Western European Unix SAS (LATIN1)
 #> 7                         Western European with the euro sign (LATIN9)
-#> 8               Japanese (PMDA submissions from Japanese SAS sessions)
-#> 9                       Japanese Windows (Microsoft Shift JIS variant)
-#> 10                                                       Japanese Unix
-#> 11                                                              Korean
-#> 12                                    Simplified Chinese Windows (GBK)
-#> 13                                  Traditional Chinese Windows (Big5)
+#> 8                                   US DOS (OEM); very old PC archives
+#> 9                     Western European DOS (OEM); very old PC archives
+#> 10              Japanese (PMDA submissions from Japanese SAS sessions)
+#> 11                      Japanese Windows (Microsoft Shift JIS variant)
+#> 12                                                       Japanese Unix
+#> 13                                                              Korean
+#> 14                                    Simplified Chinese Windows (GBK)
+#> 15                                  Traditional Chinese Windows (Big5)
 
 # ---- Example 2: look up a SAS session encoding ----
 #

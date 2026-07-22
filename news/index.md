@@ -12,7 +12,8 @@
 - [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
   name resolution now accepts the SAS OEM/DOS encoding names
   (`pcoem437`, `pcoem850`, `pcoem852`, `pcoem858`, `pcoem862`,
-  `pcoem866`, `msdos737`).
+  `pcoem866`, `msdos737`), and the reference table lists the `PCOEM437`
+  / `PCOEM850` rows.
 
 - [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md),
   [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
