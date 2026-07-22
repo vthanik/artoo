@@ -27,3 +27,23 @@
       x Invalid bytes (hex-escaped): "c<e9>".
       i Re-read the source with the correct `encoding`, or set `on_invalid`.
 
+# .to_target translit still aborts on a character with no ASCII fold
+
+    Code
+      artoo:::.to_target(x, "US-ASCII", "translit")
+    Condition
+      Error:
+      ! Cannot encode 1 value to "US-ASCII" even after punctuation folding.
+      x Offending value: "Öztürk".
+      i Only smart punctuation has an ASCII fold; use `on_invalid = "fold"` to also strip accents, or write to Dataset-JSON (UTF-8).
+
+# .to_target fold aborts on a character with no standard ASCII fold
+
+    Code
+      artoo:::.to_target(x, "US-ASCII", "fold")
+    Condition
+      Error:
+      ! Cannot encode 1 value to "US-ASCII" even after ASCII folding.
+      x Offending value: "costs €100".
+      i The character has no standards-backed ASCII fold (ICU Latin-ASCII leaves it unmapped); write to Dataset-JSON (UTF-8), or set `on_invalid`.
+

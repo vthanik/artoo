@@ -8,7 +8,7 @@ write_parquet(
   x,
   path,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   compression = "snappy"
 )
 }
@@ -30,7 +30,9 @@ accepted.}
 \item{on_invalid}{\emph{Policy for values that are not valid UTF-8.}
 \verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
 \code{artoo_error_codec}), \code{"replace"} (substitute \verb{?} and warn with
-\code{artoo_warning_encoding}), or \code{"ignore"} (drop the invalid bytes).
+\code{artoo_warning_encoding}), \code{"ignore"} (drop the invalid bytes), or
+\code{"translit"} / \code{"fold"} (accepted for pipeline symmetry; behave as
+\code{"error"} here, since a byte-level invalidity has no character fold).
 See \code{\link[=write_json]{write_json()}} for when this fires; parquet STRING bytes are
 UTF-8 by spec, exactly like Dataset-JSON.}
 

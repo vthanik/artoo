@@ -153,4 +153,5 @@ articles:
   - articles/specs
   - articles/conform
   - articles/convert
+  - articles/migrate-encoding
   - articles/recipes

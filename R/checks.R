@@ -12,6 +12,7 @@
   "missing_permissible",
   "extra_variable",
   "type_mismatch",
+  "invalid_encoding",
   "length_overflow",
   "char_length_limit",
   "codelist_membership",
@@ -49,6 +50,10 @@
 #'   `<logical(1)>: default TRUE`.
 #' @param type_mismatch *Flag columns whose storage differs from the spec
 #'   dataType.* `<logical(1)>: default TRUE`.
+#' @param invalid_encoding *Flag character values whose bytes are not valid
+#'   UTF-8.* `<logical(1)>: default TRUE`. Invalid bytes mean the source was
+#'   read under a mis-declared encoding; re-read it with the true `encoding=`
+#'   before the corruption reaches a writer.
 #' @param length_overflow *Flag character values longer than the spec length.*
 #'   `<logical(1)>: default TRUE`.
 #' @param char_length_limit *Flag character values longer than the SAS XPORT
@@ -114,6 +119,7 @@ artoo_checks <- function(
   missing_permissible = TRUE,
   extra_variable = TRUE,
   type_mismatch = TRUE,
+  invalid_encoding = TRUE,
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
@@ -134,6 +140,7 @@ artoo_checks <- function(
     missing_permissible = missing_permissible,
     extra_variable = extra_variable,
     type_mismatch = type_mismatch,
+    invalid_encoding = invalid_encoding,
     length_overflow = length_overflow,
     char_length_limit = char_length_limit,
     codelist_membership = codelist_membership,

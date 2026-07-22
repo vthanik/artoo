@@ -194,3 +194,46 @@ test_that("mandatory = NA does not exempt NA values from the codelist check", {
   # Pre-fix isTRUE(NA) exempted the NA value, flagging only "X" (1 value).
   expect_match(msg, "2 value")
 })
+
+# ---- invalid_encoding --------------------------------------------------------
+
+test_that("invalid_encoding flags character bytes that do not validate as UTF-8", {
+  # A value read under a mis-declared encoding: raw windows-1252 bytes that
+  # are NOT valid UTF-8 (the SGF "CORRECTENCODING trap"). check_spec is the
+  # in-memory %VALIDCHS analogue, catching it before any codec does.
+  df <- data.frame(
+    USUBJID = "01-001",
+    AESEQ = 1L,
+    AESEV = rawToChar(as.raw(c(0x4D, 0xDC, 0x4E))), # "MÜN" in wlatin1 bytes
+    stringsAsFactors = FALSE
+  )
+  f <- check_spec(df, .w3_spec(), "AE")
+  ie <- f[f$check == "invalid_encoding", ]
+  expect_identical(ie$variable, "AESEV")
+  expect_identical(ie$severity, "error")
+  expect_match(ie$message, "not valid UTF-8")
+
+  # Toggle off.
+  f2 <- check_spec(
+    df,
+    .w3_spec(),
+    "AE",
+    checks = artoo_checks(invalid_encoding = FALSE)
+  )
+  expect_false(any(f2$check == "invalid_encoding"))
+})
+
+test_that("invalid_encoding passes clean UTF-8, ASCII, and NA values", {
+  df <- data.frame(
+    USUBJID = "01-001",
+    AESEQ = 1L,
+    AESEV = c("MILD"),
+    stringsAsFactors = FALSE
+  )
+  df$AESEV <- enc2utf8("SÉVÈRE") # multibyte but valid
+  f <- check_spec(df, .w3_spec(), "AE")
+  expect_false(any(f$check == "invalid_encoding"))
+  df$AESEV <- NA_character_
+  f2 <- check_spec(df, .w3_spec(), "AE")
+  expect_false(any(f2$check == "invalid_encoding"))
+})

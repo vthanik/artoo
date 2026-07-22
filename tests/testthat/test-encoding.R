@@ -273,3 +273,192 @@ test_that(".to_target UTF-8 validation honours declared marks and NA", {
   )
   expect_identical(attr(rep_out, "label"), "Free text")
 })
+
+# ---- transliteration (SAS NLS punctuation fold) -----------------------------
+
+test_that(".wlatin1_punct pins the SAS-published WLATIN1 punctuation code points", {
+  tbl <- artoo:::.wlatin1_punct
+  # The SAS 9.4 NLS "Smart Quotation Marks and Punctuation Characters" table:
+  # WLATIN1 single-byte code point -> the ASCII character SAS folds it to.
+  expected <- c(
+    "‚" = ",", # 82 single low-9 quotation mark
+    "„" = "\"", # 84 double low-9 quotation mark
+    "…" = "...", # 85 horizontal ellipsis
+    "‹" = "<", # 8B single left-pointing angle quotation mark
+    "‘" = "'", # 91 left single quotation mark
+    "’" = "'", # 92 right single quotation mark
+    "“" = "\"", # 93 left double quotation mark
+    "”" = "\"", # 94 right double quotation mark
+    "•" = "*", # 95 bullet
+    "–" = "-", # 96 en dash
+    "—" = "-", # 97 em dash
+    "›" = ">" # 9B single right-pointing angle quotation mark
+  )
+  expect_identical(tbl[names(expected)], expected)
+  # Every fold target is itself ASCII, or the fold would not help.
+  expect_true(all(validUTF8(tbl) & !grepl("[^\x01-\x7f]", tbl)))
+})
+
+test_that(".to_target translit folds smart punctuation to the SAS ASCII form", {
+  x <- paste0(
+    "Patient",
+    "’",
+    "s dose ",
+    "–",
+    " ",
+    "“",
+    "held",
+    "”",
+    "…"
+  )
+  expect_warning(
+    out <- artoo:::.to_target(x, "US-ASCII", "translit"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out, "Patient's dose - \"held\"...")
+  expect_false(grepl("[?]", out))
+})
+
+test_that(".to_target translit leaves a UTF-8 target untouched", {
+  # Nothing is unrepresentable in UTF-8, so there is nothing to fold: a
+  # translit write to Dataset-JSON must not quietly ASCII-fy the text.
+  x <- paste0("dose ", "–", " ", "“", "held", "”")
+  expect_identical(artoo:::.to_target(x, "UTF-8", "translit"), x)
+})
+
+test_that(".to_target translit still aborts on a character with no ASCII fold", {
+  # Folding punctuation is safe; silently stripping a person's diacritics is
+  # not, so residue after the fold hits the same loud abort as "error".
+  x <- "Öztürk"
+  expect_error(
+    artoo:::.to_target(x, "US-ASCII", "translit"),
+    class = "artoo_error_codec"
+  )
+  expect_snapshot(artoo:::.to_target(x, "US-ASCII", "translit"), error = TRUE)
+})
+
+test_that(".to_target translit is a no-op when nothing needs folding", {
+  x <- c("PARIS", NA_character_, "")
+  expect_no_warning(
+    out <- artoo:::.to_target(x, "US-ASCII", "translit")
+  )
+  expect_identical(out, x)
+})
+
+test_that(".to_target replace substitutes one ? per character, not per byte", {
+  # Regression: iconv(sub = "?") replaces each unrepresentable BYTE, so one
+  # right single quote (3 UTF-8 bytes) became "???" and inflated the value.
+  x <- paste0("Patient", "’", "s")
+  expect_warning(
+    out <- artoo:::.to_target(x, "US-ASCII", "replace"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out, "Patient?s")
+  x2 <- "Öztürk" # 2 non-ASCII chars, 2 bytes each
+  expect_warning(
+    out2 <- artoo:::.to_target(x2, "US-ASCII", "replace"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out2, "?zt?rk")
+})
+
+test_that("write_xpt(on_invalid = 'translit') emits legible ASCII", {
+  x <- data.frame(
+    USUBJID = "01-701-1015",
+    COMMENT = paste0("dose ", "–", " ", "“", "held", "”")
+  )
+  f <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(x, f, encoding = "US-ASCII", on_invalid = "translit"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(read_xpt(f)$COMMENT, "dose - \"held\"")
+})
+
+test_that(".sas_encoding_map covers the SAS OEM/DOS encoding names", {
+  # SGF4561-2020 Table 1: OEM/DOS names per language. Map them to the CPnnn
+  # spellings host iconv ships.
+  m <- artoo:::.sas_encoding_map
+  expect_identical(unname(m["pcoem437"]), "CP437")
+  expect_identical(unname(m["pcoem850"]), "CP850")
+  expect_identical(unname(m["pcoem852"]), "CP852")
+  expect_identical(unname(m["pcoem862"]), "CP862")
+  expect_identical(unname(m["pcoem866"]), "CP866")
+  expect_identical(unname(m["msdos737"]), "CP737")
+})
+
+# ---- fold (translit + ICU Latin-ASCII accent strip) --------------------------
+
+test_that(".latin1_fold pins the ICU Latin-ASCII mappings for the WLATIN1 range", {
+  tbl <- artoo:::.latin1_fold
+  # Spot-pin the classes: cased letters, ligatures, sharp s, eth/thorn,
+  # arithmetic signs, guillemets, vulgar fractions (ICU output verbatim,
+  # including its leading space on fractions).
+  expect_identical(
+    unname(tbl[c("Ö", "ö", "ß", "Æ", "œ", "Þ", "ð", "Š")]),
+    c("O", "o", "ss", "AE", "oe", "TH", "d", "S")
+  )
+  expect_identical(
+    unname(tbl[c("×", "÷", "«", "»", "½")]),
+    c("*", "/", "<<", ">>", " 1/2")
+  )
+  # Every fold target is pure ASCII.
+  expect_true(all(!grepl("[^\x01-\x7f]", tbl)))
+  # No overlap with the SAS punctuation table (that one applies first).
+  expect_length(intersect(names(tbl), names(artoo:::.wlatin1_punct)), 0L)
+})
+
+test_that(".to_target fold strips accents the way SAS BASECHAR / ICU do", {
+  expect_warning(
+    out <- artoo:::.to_target("Öztürk", "US-ASCII", "fold"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out, "Ozturk")
+  expect_warning(
+    out2 <- artoo:::.to_target(c("Straße", "Ærø", NA), "US-ASCII", "fold"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out2, c("Strasse", "AEro", NA))
+})
+
+test_that(".to_target fold includes the punctuation fold, SAS spelling first", {
+  # „ („) is ",," under ICU but "\"" in the SAS table; SAS wins.
+  x <- paste0("„", "quote", "”", " – café")
+  expect_warning(
+    out <- artoo:::.to_target(x, "US-ASCII", "fold"),
+    class = "artoo_warning_encoding"
+  )
+  expect_identical(out, "\"quote\" - cafe")
+})
+
+test_that(".to_target fold aborts on a character with no standard ASCII fold", {
+  # ICU Latin-ASCII leaves the Euro sign unmapped; fold must not invent one.
+  x <- "costs €100"
+  expect_error(
+    artoo:::.to_target(x, "US-ASCII", "fold"),
+    class = "artoo_error_codec"
+  )
+  expect_snapshot(artoo:::.to_target(x, "US-ASCII", "fold"), error = TRUE)
+})
+
+test_that(".to_target fold leaves a UTF-8 target and clean values untouched", {
+  x <- "Öztürk"
+  expect_identical(artoo:::.to_target(x, "UTF-8", "fold"), x)
+  clean <- c("PARIS", NA_character_, "")
+  expect_no_warning(out <- artoo:::.to_target(clean, "US-ASCII", "fold"))
+  expect_identical(out, clean)
+})
+
+test_that("write_xpt(on_invalid = 'fold') writes BASECHAR-style ASCII", {
+  x <- data.frame(INVNAM = "Öztürk", SITE = "MÜNCHEN")
+  f <- withr::local_tempfile(fileext = ".xpt")
+  # One warning per folded column, so capture the set rather than the first.
+  warns <- testthat::capture_warnings(
+    write_xpt(x, f, encoding = "US-ASCII", on_invalid = "fold")
+  )
+  expect_length(warns, 2L)
+  expect_match(warns, "Folded 1 value to ASCII", all = TRUE)
+  back <- read_xpt(f)
+  expect_identical(back$INVNAM, "Ozturk")
+  expect_identical(back$SITE, "MUNCHEN")
+})

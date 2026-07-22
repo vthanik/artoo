@@ -181,6 +181,31 @@ check_spec <- function(
 
     temporal <- !is.na(dt) && dt %in% c("date", "datetime", "time")
 
+    # Bytes that do not validate as UTF-8 mean the source was read under a
+    # mis-declared encoding: catch it first, before a writer aborts or a
+    # wrong transcode bakes mojibake into a file. The remaining value-level
+    # checks are skipped for the column regardless of the toggle — regex and
+    # trimws on invalid UTF-8 error outright, and a finding computed on
+    # corrupt bytes would be noise anyway.
+    if (is.character(col)) {
+      nbad <- sum(!validUTF8(col) & !is.na(col))
+      if (nbad > 0L) {
+        if (checks$invalid_encoding) {
+          found[[length(found) + 1L]] <- .finding(
+            "invalid_encoding",
+            dataset,
+            v,
+            sprintf(
+              "'%s' has %d value(s) whose bytes are not valid UTF-8; re-read the source with its true encoding.",
+              v,
+              nbad
+            )
+          )
+        }
+        next
+      }
+    }
+
     if (checks$type_mismatch && !is.na(dt)) {
       want <- .type_storage(dt)
       have <- .storage_of(col)

@@ -1,5 +1,36 @@
 # artoo 0.1.2
 
+* `artoo_checks()` gained an `invalid_encoding` dimension (on by default):
+  `check_spec()` flags character values whose bytes are not valid UTF-8, the
+  signature of a source read under a mis-declared encoding, before a writer
+  aborts on them.
+
+* `artoo_encodings()` name resolution now accepts the SAS OEM/DOS encoding
+  names (`pcoem437`, `pcoem850`, `pcoem852`, `pcoem858`, `pcoem862`,
+  `pcoem866`, `msdos737`).
+
+* `write_xpt()`, `write_json()`, `write_ndjson()`, and `write_parquet()`
+  accept `on_invalid = "translit"`, folding smart punctuation (curly quotes,
+  en/em dashes, ellipsis, bullet) to its exact ASCII form per the SAS NLS
+  punctuation table; characters with no fold still abort loudly.
+
+* `write_xpt()`, `write_json()`, `write_ndjson()`, and `write_parquet()`
+  also accept `on_invalid = "fold"`: the punctuation fold plus the ICU
+  Latin-ASCII accent strip (`Ö` to `O`, `ß` to `ss`, `Æ` to `AE`), pinned
+  as data so the result is identical on every platform; characters neither
+  table maps (the Euro sign) still abort.
+
+* `write_xpt()` now warns (`artoo_warning_encoding`) when a value forces a
+  column wider than its spec-declared length, instead of widening silently;
+  data is still never truncated.
+
+* `write_xpt()` and the other writers' `on_invalid = "replace"` now
+  substitutes one `?` per unrepresentable character instead of one per byte
+  (a curly quote previously became `???`).
+
+* New article: *Migrating clinical data from WLATIN1 to UTF-8*, including
+  the smart-punctuation fold table and the byte-length migration recipe.
+
 * Guarded the decimal full-precision JSON round-trip test on
   `capabilities("long.double")` so it skips on noLD builds, where bit-exact
   double-to-string round-trips are not guaranteed by the platform C library.
