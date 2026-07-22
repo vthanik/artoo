@@ -1,8 +1,6 @@
 # Changelog
 
-## artoo 0.1.2
-
-CRAN release: 2026-07-02
+## artoo 0.1.3
 
 - [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
   gained an `invalid_encoding` dimension (on by default):
@@ -49,6 +47,10 @@ CRAN release: 2026-07-02
 - New article: *Migrating clinical data from WLATIN1 to UTF-8*,
   including the smart-punctuation fold table and the byte-length
   migration recipe.
+
+## artoo 0.1.2
+
+CRAN release: 2026-07-02
 
 - Guarded the decimal full-precision JSON round-trip test on
   `capabilities("long.double")` so it skips on noLD builds, where

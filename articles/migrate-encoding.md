@@ -32,7 +32,8 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/Rtmpza7EBN/file1e2f2ee9a66.parquet' as "parquet".
+    ! Could not read '/tmp/Rtmp5oAgPc/file1e5656651e91.parquet' as
+      "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -183,8 +184,8 @@ write_xpt(name, tempfile(fileext = ".xpt"),
 
 ## 5. Accent stripping: the full fold, opted into
 
-Sometimes stripping accents *is* the documented migration decision —
-SAS’s `BASECHAR()` exists for exactly this. artoo’s equivalent is
+Sometimes stripping accents *is* the documented migration decision — the
+SAS `BASECHAR()` function exists for exactly this. artoo’s equivalent is
 `on_invalid = "fold"`: the punctuation table above **plus** the ICU
 Latin-ASCII transliteration for the rest of the WLATIN1 range (`À–ÿ` to
 their base letters, `Æ` → `AE`, `ß` → `ss`, `Þ` → `TH`, `×` → `*`, `«»`
