@@ -7,7 +7,8 @@
 
 * `artoo_encodings()` name resolution now accepts the SAS OEM/DOS encoding
   names (`pcoem437`, `pcoem850`, `pcoem852`, `pcoem858`, `pcoem862`,
-  `pcoem866`, `msdos737`).
+  `pcoem866`, `msdos737`), and the reference table lists the `PCOEM437` /
+  `PCOEM850` rows.
 
 * `write_xpt()`, `write_json()`, `write_ndjson()`, and `write_parquet()`
   accept `on_invalid = "translit"`, folding smart punctuation (curly quotes,
