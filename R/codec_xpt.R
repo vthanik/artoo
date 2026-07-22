@@ -308,6 +308,7 @@
   target_cs <- .resolve_charset(target_enc, call)
   fda_check <- !identical(toupper(target_cs), "UTF-8")
   fda_cols <- character(0)
+  widened <- character(0)
   recs <- vector("list", length(nms))
   for (i in seq_along(nms)) {
     nm <- nms[i]
@@ -446,6 +447,12 @@
         0L
       }
       nlng <- max(declared, max(bw, 1L))
+      # Widening past a spec-declared length keeps the data whole, but the
+      # shipped file now disagrees with the declared metadata (define.xml) —
+      # say so. The usual cause is multibyte UTF-8 under a char-counted spec.
+      if (declared > 0L && nlng > declared) {
+        widened <- c(widened, sprintf("%s (%d -> %d)", nm, declared, nlng))
+      }
       if (version == 5L && nlng > 200L) {
         .artoo_abort(
           c(
@@ -502,6 +509,17 @@
       c(
         "Truncated {length(label_trunc)} label{?s} to 40 bytes for xpt v5: {.var {label_trunc}}.",
         "i" = "Use {.code version = 8} to keep long labels."
+      ),
+      kind = "encoding",
+      call = call
+    )
+  }
+  if (length(widened)) {
+    .artoo_warn(
+      c(
+        "Widened {length(widened)} column{?s} past the declared spec length: {.val {widened}}.",
+        "i" = "Values need more bytes than the spec length; data was kept whole.",
+        "i" = "Update the spec length, or shorten the data, so the file matches its declared metadata."
       ),
       kind = "encoding",
       call = call
@@ -1550,11 +1568,21 @@
 #'   **Tip:** any SAS or IANA spelling listed by [artoo_encodings()] is
 #'   accepted.
 #' @param on_invalid *Policy for values not representable in `encoding`.*
-#'   `<character(1)>: default "error"`. One of `"error"` (abort with
-#'   `artoo_error_codec`, naming the offenders), `"replace"` (substitute
-#'   `?` and warn with `artoo_warning_encoding`), or `"ignore"` (drop
-#'   them). The same policy vocabulary as the UTF-8 writers
-#'   ([write_json()], [write_ndjson()], [write_parquet()]).
+#'   `<character(1)>: default "error"`. The same policy vocabulary as the
+#'   UTF-8 writers ([write_json()], [write_ndjson()], [write_parquet()]):
+#'
+#'   * `"error"` `(default)` — abort with `artoo_error_codec`, naming the
+#'     offenders.
+#'   * `"replace"` — substitute one `?` per unrepresentable character and
+#'     warn with `artoo_warning_encoding`.
+#'   * `"ignore"` — drop the unrepresentable characters silently.
+#'   * `"translit"` — fold smart punctuation (curly quotes, en/em dashes,
+#'     ellipsis, bullet) to its exact ASCII form per the SAS NLS punctuation
+#'     table and warn; a character with no fold (a diacritic) still aborts.
+#'
+#'   **Tip:** for a US-ASCII submission write, `"translit"` fixes the
+#'   word-processor punctuation that dominates real findings while keeping
+#'   genuine data corruption loud.
 #' @param created *Header timestamp.* `<POSIXct(1)> | NULL`. `NULL` (default)
 #'   stamps the current time; freeze it for byte-stable output.
 #'
@@ -1593,7 +1621,7 @@ write_xpt <- function(
   path,
   version = 5,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "replace", "ignore", "translit"),
   created = NULL
 ) {
   on_invalid <- match.arg(on_invalid)

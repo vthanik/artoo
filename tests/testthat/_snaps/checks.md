@@ -8,6 +8,7 @@
         [x] missing_permissible
         [x] extra_variable
         [x] type_mismatch
+        [x] invalid_encoding
         [x] length_overflow
         [x] char_length_limit
         [x] codelist_membership
@@ -32,6 +33,7 @@
         [x] missing_permissible
         [x] extra_variable
         [x] type_mismatch
+        [x] invalid_encoding
         [ ] length_overflow
         [x] char_length_limit
         [x] codelist_membership

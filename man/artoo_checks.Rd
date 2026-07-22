@@ -9,6 +9,7 @@ artoo_checks(
   missing_permissible = TRUE,
   extra_variable = TRUE,
   type_mismatch = TRUE,
+  invalid_encoding = TRUE,
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
@@ -36,6 +37,11 @@ absent from the data.} \verb{<logical(1)>: default TRUE}.}
 
 \item{type_mismatch}{\emph{Flag columns whose storage differs from the spec
 dataType.} \verb{<logical(1)>: default TRUE}.}
+
+\item{invalid_encoding}{\emph{Flag character values whose bytes are not valid
+UTF-8.} \verb{<logical(1)>: default TRUE}. Invalid bytes mean the source was
+read under a mis-declared encoding; re-read it with the true \verb{encoding=}
+before the corruption reaches a writer.}
 
 \item{length_overflow}{\emph{Flag character values longer than the spec length.}
 \verb{<logical(1)>: default TRUE}.}

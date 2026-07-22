@@ -67,6 +67,14 @@
   "latin9" = "ISO-8859-15",
   "lat9" = "ISO-8859-15",
   "latin10" = "ISO-8859-16",
+  # OEM/DOS single-byte (SGF4561-2020 Table 1)
+  "pcoem437" = "CP437",
+  "pcoem850" = "CP850",
+  "pcoem852" = "CP852",
+  "pcoem858" = "CP858",
+  "pcoem862" = "CP862",
+  "pcoem866" = "CP866",
+  "msdos737" = "CP737",
   # DBCS (CJK)
   "shift-jis" = "SHIFT_JIS",
   "sjis" = "SHIFT_JIS",
@@ -86,6 +94,37 @@
   "iso-8859-2" = "ISO-8859-2",
   "iso-8859-15" = "ISO-8859-15"
 )
+
+# WLATIN1 rows 8-F punctuation -> ASCII fold, pinned from the SAS 9.4 NLS
+# "Smart Quotation Marks and Punctuation Characters" table (Migrating Data
+# from WLATIN1 to UTF-8). Names are the Unicode characters (single-byte
+# 0x82..0x9B in Windows-1252); values are the ASCII replacements SAS's
+# KPROPDATA(..., "PUNC") applies. Used by on_invalid = "translit": folding
+# typographic punctuation is safe, anything else (diacritics) still aborts.
+.wlatin1_punct <- c(
+  "\u201a" = ",", # 82 single low-9 quotation mark
+  "\u201e" = "\"", # 84 double low-9 quotation mark
+  "\u2026" = "...", # 85 horizontal ellipsis
+  "\u2039" = "<", # 8B single left-pointing angle quotation mark
+  "\u2018" = "'", # 91 left single quotation mark
+  "\u2019" = "'", # 92 right single quotation mark
+  "\u201c" = "\"", # 93 left double quotation mark
+  "\u201d" = "\"", # 94 right double quotation mark
+  "\u2022" = "*", # 95 bullet
+  "\u2013" = "-", # 96 en dash
+  "\u2014" = "-", # 97 em dash
+  "\u203a" = ">" # 9B single right-pointing angle quotation mark
+)
+
+# Apply the punctuation fold to a UTF-8 character vector. fixed = TRUE per
+# entry; the table is tiny so a loop over 12 gsubs is the simple, exact form.
+#' @noRd
+.fold_punct <- function(x) {
+  for (i in seq_along(.wlatin1_punct)) {
+    x <- gsub(names(.wlatin1_punct)[i], .wlatin1_punct[[i]], x, fixed = TRUE)
+  }
+  x
+}
 
 # Module-level cache (mirrors artoo_temporal.R's .sas_* style). Populated by
 # .onLoad and lazily on first use so the resolver works under partial loads.
@@ -232,15 +271,18 @@
 # WRITE: UTF-8 (internal) -> target charset bytes, under an invalid-byte
 # policy. Returns a character vector whose stored bytes are the target
 # encoding (ready for charToRaw by the codec). "error" fails loud naming
-# offenders; "replace" substitutes "?" and warns; "ignore" drops. A UTF-8
-# target validates, then inherits losslessly: unmarked bytes that are not
-# valid UTF-8 hit the same on_invalid policy here instead of surfacing
-# later as a foreign utf8_normalize error inside a serializer.
+# offenders; "replace" substitutes one "?" per unrepresentable CHARACTER and
+# warns; "ignore" drops; "translit" folds WLATIN1-style smart punctuation to
+# its ASCII form (the SAS NLS table) and warns, aborting like "error" when a
+# character with no fold (a diacritic) remains. A UTF-8 target validates,
+# then inherits losslessly: unmarked bytes that are not valid UTF-8 hit the
+# same on_invalid policy here instead of surfacing later as a foreign
+# utf8_normalize error inside a serializer.
 #' @noRd
 .to_target <- function(
   x,
   to,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "replace", "ignore", "translit"),
   call = rlang::caller_env()
 ) {
   on_invalid <- match.arg(on_invalid)
@@ -261,7 +303,9 @@
       attributes(out) <- at
       return(out)
     }
-    if (on_invalid == "error") {
+    if (on_invalid %in% c("error", "translit")) {
+      # translit folds characters; a byte-level invalidity has no fold, so
+      # it aborts exactly like "error".
       shown <- utils::head(
         unique(iconv(out[bad], from = "UTF-8", to = "UTF-8", sub = "byte")),
         3L
@@ -292,40 +336,82 @@
     return(out)
   }
 
-  if (on_invalid == "error") {
-    rt <- iconv(x, from = "UTF-8", to = cs)
-    bad <- is.na(rt) & !is.na(x)
-    if (any(bad)) {
-      offenders <- utils::head(unique(x[bad]), 3L)
+  rt <- iconv(x, from = "UTF-8", to = cs)
+  bad <- is.na(rt) & !is.na(x)
+  if (!any(bad)) {
+    return(rt)
+  }
+
+  if (on_invalid == "translit") {
+    # Fold the SAS punctuation table, then re-encode. Punctuation folds are
+    # safe; a residue character (a diacritic, a symbol with no ASCII form)
+    # still aborts: silently stripping it would corrupt a name.
+    folded <- .fold_punct(enc2utf8(x[bad]))
+    rt2 <- iconv(folded, from = "UTF-8", to = cs)
+    still <- is.na(rt2) & !is.na(folded)
+    if (any(still)) {
+      offenders <- utils::head(unique(x[bad][still]), 3L)
       .artoo_abort(
         c(
-          "Cannot encode {sum(bad)} value{?s} to {.val {to}}.",
+          "Cannot encode {sum(still)} value{?s} to {.val {to}} even after punctuation folding.",
           "x" = "Offending value{?s}: {.val {offenders}}.",
-          "i" = "Write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
+          "i" = "Only smart punctuation has an ASCII fold; write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
         ),
         kind = "codec",
         call = call
       )
     }
+    rt[bad] <- rt2
+    .artoo_warn(
+      c(
+        "Transliterated smart punctuation to ASCII in {sum(bad)} value{?s} for {.val {to}}.",
+        "i" = "The fold follows the SAS NLS punctuation table (quotes, dashes, ellipsis, bullet)."
+      ),
+      kind = "encoding",
+      call = call
+    )
     return(rt)
   }
 
-  sub <- if (on_invalid == "replace") "?" else ""
-  rt <- iconv(x, from = "UTF-8", to = cs, sub = sub)
-  if (on_invalid == "replace") {
-    lost <- iconv(x, from = "UTF-8", to = cs)
-    n <- sum(is.na(lost) & !is.na(x))
-    if (n > 0L) {
-      .artoo_warn(
-        c(
-          "Replaced {n} unencodable value{?s} with {.val ?} for {.val {to}}.",
-          "i" = "Use {.code on_invalid = \"error\"} to fail loudly instead."
-        ),
-        kind = "encoding",
-        call = call
-      )
-    }
+  if (on_invalid == "error") {
+    offenders <- utils::head(unique(x[bad]), 3L)
+    .artoo_abort(
+      c(
+        "Cannot encode {sum(bad)} value{?s} to {.val {to}}.",
+        "x" = "Offending value{?s}: {.val {offenders}}.",
+        "i" = "Write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
+      ),
+      kind = "codec",
+      call = call
+    )
   }
+
+  if (on_invalid == "replace") {
+    # One "?" per unrepresentable CHARACTER (iconv's sub= replaces per BYTE,
+    # which turns one curly quote into "???" and inflates the byte width).
+    rt[bad] <- vapply(
+      enc2utf8(x[bad]),
+      function(v) {
+        ch <- strsplit(v, "", fixed = TRUE)[[1]]
+        ch[is.na(iconv(ch, from = "UTF-8", to = cs))] <- "?"
+        iconv(paste0(ch, collapse = ""), from = "UTF-8", to = cs)
+      },
+      character(1),
+      USE.NAMES = FALSE
+    )
+    .artoo_warn(
+      c(
+        "Replaced unencodable characters with {.val ?} in {sum(bad)} value{?s} for {.val {to}}.",
+        "i" = "Use {.code on_invalid = \"error\"} to fail loudly instead."
+      ),
+      kind = "encoding",
+      call = call
+    )
+    return(rt)
+  }
+
+  # ignore: drop the unencodable bytes silently.
+  rt[bad] <- iconv(x[bad], from = "UTF-8", to = cs, sub = "")
   rt
 }
 

@@ -29,7 +29,9 @@ test_that("members() lists every member of a multi-member xpt, matching xpt_memb
   )
   adsl <- apply_spec(cdisc_adsl, spec, "ADSL", conformance = "off")
   p <- withr::local_tempfile(fileext = ".xpt")
-  write_xpt(dm, p)
+  # The bundled pilot spec declares STUDYID length 7; the data needs 12
+  # bytes, so the writer widens and says so.
+  expect_warning(write_xpt(dm, p), class = "artoo_warning_encoding")
   p2 <- withr::local_tempfile(fileext = ".xpt")
   write_xpt(adsl, p2)
   multi <- withr::local_tempfile(fileext = ".xpt")

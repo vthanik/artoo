@@ -7,7 +7,7 @@
 write_ndjson(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "replace", "ignore", "translit"),
   created = NULL,
   strict = FALSE
 )
@@ -22,7 +22,9 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 \item{on_invalid}{\emph{Policy for values that are not valid UTF-8.}
 \verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
 \code{artoo_error_codec}), \code{"replace"} (substitute \verb{?} and warn with
-\code{artoo_warning_encoding}), or \code{"ignore"} (drop the invalid bytes).
+\code{artoo_warning_encoding}), \code{"ignore"} (drop the invalid bytes), or
+\code{"translit"} (accepted for pipeline symmetry; behaves as \code{"error"}
+here, since a byte-level invalidity has no punctuation fold).
 See \code{\link[=write_json]{write_json()}} for when this fires.}
 
 \item{created}{\emph{Creation timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL}

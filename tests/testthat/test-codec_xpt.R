@@ -220,7 +220,12 @@ test_that("F1: a char value longer than its declared length widens, not truncate
   meta <- artoo:::artoo_meta_class(dataset = ds, columns = cols)
   df <- set_meta(df, meta)
   p <- withr::local_tempfile(fileext = ".xpt")
-  write_xpt(df, p, created = frozen)
+  # Widening past the declared length is the point of this test; the writer
+  # now also announces it.
+  expect_warning(
+    write_xpt(df, p, created = frozen),
+    class = "artoo_warning_encoding"
+  )
   back <- read_xpt(p)
   expect_identical(back$LONGTXT, "ABCDEFGHIJ") # full 10 chars, not truncated to 3
 })
@@ -1142,4 +1147,39 @@ test_that("a tiny finite value aborts the write instead of underflowing to 0", {
   p <- withr::local_tempfile(fileext = ".xpt")
   # Pre-fix .ieee_to_ibm() silently flushed 1e-100 to 0 on write.
   expect_error(write_xpt(ap, p, created = frozen), class = "artoo_error_codec")
+})
+
+test_that("write_xpt warns when data widens a spec-declared length", {
+  # Declared length 6, but the UTF-8 bytes need 8: the writer must widen (no
+  # truncation) AND say so, or the shipped XPT silently disagrees with the
+  # define.xml length.
+  sp <- artoo_spec(
+    data.frame(dataset = "DM"),
+    data.frame(
+      dataset = "DM",
+      variable = "INVNAM",
+      data_type = "string",
+      length = 6L,
+      stringsAsFactors = FALSE
+    )
+  )
+  x <- apply_spec(
+    data.frame(INVNAM = "Öztürk", stringsAsFactors = FALSE),
+    sp,
+    "DM",
+    conformance = "off"
+  )
+  f <- withr::local_tempfile(fileext = ".xpt")
+  expect_warning(
+    write_xpt(x, f),
+    class = "artoo_warning_encoding"
+  )
+  expect_snapshot(out <- write_xpt(x, f))
+  expect_identical(get_meta(read_xpt(f))@columns$INVNAM$length, 8L)
+
+  # No meta / no declared length: byte-sizing is normal, not a warning.
+  g <- withr::local_tempfile(fileext = ".xpt")
+  expect_no_warning(
+    write_xpt(data.frame(INVNAM = "Öztürk"), g)
+  )
 })

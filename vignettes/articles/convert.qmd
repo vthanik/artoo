@@ -60,8 +60,10 @@ enc[enc$sas == "WLATIN1", ]
 
 A value that cannot be represented in the target — an unencodable
 character for xpt's target charset, or bytes that are not valid UTF-8 for
-Dataset-JSON / NDJSON / Parquet — hits the same three-way policy
-everywhere: `"error"` (default), `"replace"`, or `"ignore"`. The default
+Dataset-JSON / NDJSON / Parquet — hits the same policy everywhere:
+`"error"` (default), `"replace"`, `"ignore"`, or `"translit"` (fold smart
+punctuation to its exact ASCII form; see the
+[WLATIN1 → UTF-8 migration article](migrate-encoding.html)). The default
 names the offenders hex-escaped:
 
 ```{r}

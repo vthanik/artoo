@@ -473,6 +473,17 @@
     "engine": "data"
   },
   {
+    "id": "invalid_encoding",
+    "dimension": "variable",
+    "severity": "error",
+    "requires_data": true,
+    "scope": "scoped",
+    "status": "implemented",
+    "description": "A character variable holds bytes that are not valid UTF-8 (a mis-declared source encoding).",
+    "reason": null,
+    "engine": "data"
+  },
+  {
     "id": "length_overflow",
     "dimension": "variable",
     "severity": "warning",
