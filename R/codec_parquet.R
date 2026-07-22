@@ -259,8 +259,8 @@
 #'   `<character(1)>: default "error"`. One of `"error"` (abort with
 #'   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
 #'   `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
-#'   `"translit"` (accepted for pipeline symmetry; behaves as `"error"`
-#'   here, since a byte-level invalidity has no punctuation fold).
+#'   `"translit"` / `"fold"` (accepted for pipeline symmetry; behave as
+#'   `"error"` here, since a byte-level invalidity has no character fold).
 #'   See [write_json()] for when this fires; parquet STRING bytes are
 #'   UTF-8 by spec, exactly like Dataset-JSON.
 #' @param compression *Column compression codec.* `<character(1)>: default
@@ -297,7 +297,7 @@ write_parquet <- function(
   x,
   path,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   compression = "snappy"
 ) {
   on_invalid <- match.arg(on_invalid)

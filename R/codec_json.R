@@ -359,8 +359,8 @@
 #'   `artoo_error_codec`, naming the offenders with their invalid bytes
 #'   hex-escaped), `"replace"` (substitute `?` and warn with
 #'   `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
-#'   `"translit"` (like `"error"`; a byte-level invalidity has no
-#'   punctuation fold, the option exists so one policy value can thread a
+#'   `"translit"` / `"fold"` (like `"error"`; a byte-level invalidity has
+#'   no character fold, the options exist so one policy value can thread a
 #'   whole multi-format pipeline).
 #'   The same policy vocabulary as [write_xpt()]; text correctly read
 #'   through artoo is always valid UTF-8, so this only fires on bytes
@@ -406,7 +406,7 @@
 write_json <- function(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 ) {

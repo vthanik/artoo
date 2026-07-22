@@ -152,7 +152,44 @@ write_xpt(name, tempfile(fileext = ".xpt"),
 )
 ```
 
-## 5. The migration recipe
+## 5. Accent stripping: the full fold, opted into
+
+Sometimes stripping accents *is* the documented migration decision —
+SAS's `BASECHAR()` exists for exactly this. artoo's equivalent is
+`on_invalid = "fold"`: the punctuation table above **plus** the ICU
+Latin-ASCII transliteration for the rest of the WLATIN1 range (`À–ÿ` to
+their base letters, `Æ` → `AE`, `ß` → `ss`, `Þ` → `TH`, `×` → `*`,
+`«»` → `<<` `>>`, `½` → `1/2`). The table is pinned inside artoo, so —
+unlike `iconv //TRANSLIT`, whose output differs between Linux and macOS
+— the fold is byte-identical on every platform:
+
+```{r}
+#| warning: true
+names_df <- data.frame(INVNAM = c("Öztürk", "Straße", "Ærø"))
+folded_xpt <- tempfile(fileext = ".xpt")
+write_xpt(names_df, folded_xpt, encoding = "US-ASCII", on_invalid = "fold")
+read_xpt(folded_xpt)$INVNAM
+```
+
+The warning is the audit trail: the fold is one-way, and the original
+characters are not recoverable from the output. A character neither
+authority maps to ASCII — the Euro sign, the trademark sign, `µ`, `°` —
+still aborts, because artoo invents no mappings:
+
+```{r}
+#| error: true
+cost <- data.frame(COMMENT = "total €100")
+write_xpt(cost, tempfile(fileext = ".xpt"),
+  encoding = "US-ASCII", on_invalid = "fold"
+)
+```
+
+The escalation ladder, least to most lossy: `"error"` (refuse) →
+`"translit"` (fold punctuation only) → `"fold"` (also strip accents) →
+`"replace"` (`?` per character) → `"ignore"` (drop). Pick the earliest
+rung your migration plan allows.
+
+## 6. The migration recipe
 
 1. **Read with the true source encoding.** Let `read_xpt()` detect, or
    pass `encoding = "wlatin1"` explicitly for formats that cannot carry
@@ -164,7 +201,9 @@ write_xpt(name, tempfile(fileext = ".xpt"),
 3. **Write UTF-8 by default** (Dataset-JSON, Parquet, xpt v8 all carry
    it losslessly). For a US-ASCII submission XPT, write with
    `encoding = "US-ASCII", on_invalid = "translit"` — punctuation
-   folds, genuine data problems stay loud.
+   folds, genuine data problems stay loud. Escalate to
+   `on_invalid = "fold"` only when accent stripping is a documented
+   step of the migration plan.
 
 ## References
 

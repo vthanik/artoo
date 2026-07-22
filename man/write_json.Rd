@@ -7,7 +7,7 @@
 write_json(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 )
@@ -23,8 +23,8 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 \code{artoo_error_codec}, naming the offenders with their invalid bytes
 hex-escaped), \code{"replace"} (substitute \verb{?} and warn with
 \code{artoo_warning_encoding}), \code{"ignore"} (drop the invalid bytes), or
-\code{"translit"} (like \code{"error"}; a byte-level invalidity has no
-punctuation fold, the option exists so one policy value can thread a
+\code{"translit"} / \code{"fold"} (like \code{"error"}; a byte-level invalidity has
+no character fold, the options exist so one policy value can thread a
 whole multi-format pipeline).
 The same policy vocabulary as \code{\link[=write_xpt]{write_xpt()}}; text correctly read
 through artoo is always valid UTF-8, so this only fires on bytes

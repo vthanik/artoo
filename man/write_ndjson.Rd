@@ -7,7 +7,7 @@
 write_ndjson(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 )
@@ -23,8 +23,8 @@ output of \code{\link[=apply_spec]{apply_spec()}}, carrying \code{artoo_meta}.}
 \verb{<character(1)>: default "error"}. One of \code{"error"} (abort with
 \code{artoo_error_codec}), \code{"replace"} (substitute \verb{?} and warn with
 \code{artoo_warning_encoding}), \code{"ignore"} (drop the invalid bytes), or
-\code{"translit"} (accepted for pipeline symmetry; behaves as \code{"error"}
-here, since a byte-level invalidity has no punctuation fold).
+\code{"translit"} / \code{"fold"} (accepted for pipeline symmetry; behave as
+\code{"error"} here, since a byte-level invalidity has no character fold).
 See \code{\link[=write_json]{write_json()}} for when this fires.}
 
 \item{created}{\emph{Creation timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL}

@@ -14,6 +14,12 @@
   en/em dashes, ellipsis, bullet) to its exact ASCII form per the SAS NLS
   punctuation table; characters with no fold still abort loudly.
 
+* `write_xpt()`, `write_json()`, `write_ndjson()`, and `write_parquet()`
+  also accept `on_invalid = "fold"`: the punctuation fold plus the ICU
+  Latin-ASCII accent strip (`Ö` to `O`, `ß` to `ss`, `Æ` to `AE`), pinned
+  as data so the result is identical on every platform; characters neither
+  table maps (the Euro sign) still abort.
+
 * `write_xpt()` now warns (`artoo_warning_encoding`) when a value forces a
   column wider than its spec-declared length, instead of widening silently;
   data is still never truncated.

@@ -126,6 +126,121 @@
   x
 }
 
+# WLATIN1 upper range -> ASCII, pinned VERBATIM from the ICU "Latin-ASCII"
+# transliterator (the same fold SAS BASECHAR performs), so the result is
+# identical on every platform — unlike iconv //TRANSLIT, whose output differs
+# between glibc and macOS. Regenerate against ICU with:
+#   stringi::stri_trans_general(ch, "Latin-ASCII")
+# over the Windows-1252 code points. Characters ICU leaves unmapped (Euro,
+# dagger, per-mille, trademark, micro, degree, currency/legal symbols) are
+# deliberately ABSENT: they have no standards-backed ASCII form, and artoo
+# invents nothing — a value carrying one still aborts under "fold".
+# Punctuation is not duplicated here; .wlatin1_punct applies first and wins
+# where the two authorities disagree (ICU folds U+201E to ",,", SAS to '"').
+.latin1_fold <- c(
+  # 0x83-0x9F letters and spacing accents
+  "\u0192" = "f", # 83 latin small f with hook
+  "\u02c6" = "^", # 88 modifier circumflex
+  "\u0160" = "S", # 8A S caron
+  "\u0152" = "OE", # 8C ligature OE
+  "\u017d" = "Z", # 8E Z caron
+  "\u02dc" = "~", # 98 small tilde
+  "\u0161" = "s", # 9A s caron
+  "\u0153" = "oe", # 9C ligature oe
+  "\u017e" = "z", # 9E z caron
+  "\u0178" = "Y", # 9F Y diaeresis
+  # 0xA0-0xBF signs ICU maps
+  "\u00a0" = " ", # A0 no-break space
+  "\u00a1" = "!", # A1 inverted exclamation
+  "\u00a9" = "(C)", # A9 copyright
+  "\u00ab" = "<<", # AB left guillemet
+  "\u00ad" = "-", # AD soft hyphen
+  "\u00ae" = "(R)", # AE registered
+  "\u00b1" = "+/-", # B1 plus-minus
+  "\u00bb" = ">>", # BB right guillemet
+  "\u00bc" = " 1/4", # BC one quarter (ICU keeps a leading space)
+  "\u00bd" = " 1/2", # BD one half
+  "\u00be" = " 3/4", # BE three quarters
+  "\u00bf" = "?", # BF inverted question
+  # 0xC0-0xFF Latin letters and arithmetic signs
+  "\u00c0" = "A",
+  "\u00c1" = "A",
+  "\u00c2" = "A",
+  "\u00c3" = "A",
+  "\u00c4" = "A",
+  "\u00c5" = "A",
+  "\u00c6" = "AE",
+  "\u00c7" = "C",
+  "\u00c8" = "E",
+  "\u00c9" = "E",
+  "\u00ca" = "E",
+  "\u00cb" = "E",
+  "\u00cc" = "I",
+  "\u00cd" = "I",
+  "\u00ce" = "I",
+  "\u00cf" = "I",
+  "\u00d0" = "D",
+  "\u00d1" = "N",
+  "\u00d2" = "O",
+  "\u00d3" = "O",
+  "\u00d4" = "O",
+  "\u00d5" = "O",
+  "\u00d6" = "O",
+  "\u00d7" = "*",
+  "\u00d8" = "O",
+  "\u00d9" = "U",
+  "\u00da" = "U",
+  "\u00db" = "U",
+  "\u00dc" = "U",
+  "\u00dd" = "Y",
+  "\u00de" = "TH",
+  "\u00df" = "ss",
+  "\u00e0" = "a",
+  "\u00e1" = "a",
+  "\u00e2" = "a",
+  "\u00e3" = "a",
+  "\u00e4" = "a",
+  "\u00e5" = "a",
+  "\u00e6" = "ae",
+  "\u00e7" = "c",
+  "\u00e8" = "e",
+  "\u00e9" = "e",
+  "\u00ea" = "e",
+  "\u00eb" = "e",
+  "\u00ec" = "i",
+  "\u00ed" = "i",
+  "\u00ee" = "i",
+  "\u00ef" = "i",
+  "\u00f0" = "d",
+  "\u00f1" = "n",
+  "\u00f2" = "o",
+  "\u00f3" = "o",
+  "\u00f4" = "o",
+  "\u00f5" = "o",
+  "\u00f6" = "o",
+  "\u00f7" = "/",
+  "\u00f8" = "o",
+  "\u00f9" = "u",
+  "\u00fa" = "u",
+  "\u00fb" = "u",
+  "\u00fc" = "u",
+  "\u00fd" = "y",
+  "\u00fe" = "th",
+  "\u00ff" = "y"
+)
+
+# Full ASCII fold: SAS punctuation first (it wins the U+201E disagreement),
+# then the ICU Latin-ASCII table. Fixed gsubs throughout, applied only to
+# the offending values, so the loop over ~86 entries is not a hot path.
+#' @noRd
+.fold_ascii <- function(x) {
+  x <- .fold_punct(x)
+  for (i in seq_along(.latin1_fold)) {
+    x <- gsub(names(.latin1_fold)[i], .latin1_fold[[i]], x, fixed = TRUE)
+  }
+  x
+}
+
 # Module-level cache (mirrors artoo_temporal.R's .sas_* style). Populated by
 # .onLoad and lazily on first use so the resolver works under partial loads.
 .artoo_iconv <- new.env(parent = emptyenv())
@@ -282,7 +397,7 @@
 .to_target <- function(
   x,
   to,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   call = rlang::caller_env()
 ) {
   on_invalid <- match.arg(on_invalid)
@@ -303,9 +418,9 @@
       attributes(out) <- at
       return(out)
     }
-    if (on_invalid %in% c("error", "translit")) {
-      # translit folds characters; a byte-level invalidity has no fold, so
-      # it aborts exactly like "error".
+    if (on_invalid %in% c("error", "translit", "fold")) {
+      # translit/fold act on characters; a byte-level invalidity has no
+      # fold, so it aborts exactly like "error".
       shown <- utils::head(
         unique(iconv(out[bad], from = "UTF-8", to = "UTF-8", sub = "byte")),
         3L
@@ -342,34 +457,50 @@
     return(rt)
   }
 
-  if (on_invalid == "translit") {
-    # Fold the SAS punctuation table, then re-encode. Punctuation folds are
-    # safe; a residue character (a diacritic, a symbol with no ASCII form)
-    # still aborts: silently stripping it would corrupt a name.
-    folded <- .fold_punct(enc2utf8(x[bad]))
+  if (on_invalid %in% c("translit", "fold")) {
+    # translit folds the SAS punctuation table only; fold adds the ICU
+    # Latin-ASCII accent strip (the BASECHAR analogue). Either way a residue
+    # character with no standards-backed ASCII form still aborts: silently
+    # dropping it would corrupt the value.
+    fold_fn <- if (on_invalid == "fold") .fold_ascii else .fold_punct
+    folded <- fold_fn(enc2utf8(x[bad]))
     rt2 <- iconv(folded, from = "UTF-8", to = cs)
     still <- is.na(rt2) & !is.na(folded)
     if (any(still)) {
       offenders <- utils::head(unique(x[bad][still]), 3L)
+      what <- if (on_invalid == "fold") {
+        "ASCII folding"
+      } else {
+        "punctuation folding"
+      }
+      hint <- if (on_invalid == "fold") {
+        "The character has no standards-backed ASCII fold (ICU Latin-ASCII leaves it unmapped); write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
+      } else {
+        "Only smart punctuation has an ASCII fold; use {.code on_invalid = \"fold\"} to also strip accents, or write to Dataset-JSON (UTF-8)."
+      }
       .artoo_abort(
         c(
-          "Cannot encode {sum(still)} value{?s} to {.val {to}} even after punctuation folding.",
+          "Cannot encode {sum(still)} value{?s} to {.val {to}} even after {what}.",
           "x" = "Offending value{?s}: {.val {offenders}}.",
-          "i" = "Only smart punctuation has an ASCII fold; write to Dataset-JSON (UTF-8), or set {.arg on_invalid}."
+          "i" = hint
         ),
         kind = "codec",
         call = call
       )
     }
     rt[bad] <- rt2
-    .artoo_warn(
+    msg <- if (on_invalid == "fold") {
+      c(
+        "Folded {sum(bad)} value{?s} to ASCII for {.val {to}} (accents stripped).",
+        "i" = "The fold follows the SAS NLS punctuation table plus ICU Latin-ASCII; the original characters are not recoverable from the output."
+      )
+    } else {
       c(
         "Transliterated smart punctuation to ASCII in {sum(bad)} value{?s} for {.val {to}}.",
         "i" = "The fold follows the SAS NLS punctuation table (quotes, dashes, ellipsis, bullet)."
-      ),
-      kind = "encoding",
-      call = call
-    )
+      )
+    }
+    .artoo_warn(msg, kind = "encoding", call = call)
     return(rt)
   }
 

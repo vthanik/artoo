@@ -1573,16 +1573,21 @@
 #'
 #'   * `"error"` `(default)` — abort with `artoo_error_codec`, naming the
 #'     offenders.
-#'   * `"replace"` — substitute one `?` per unrepresentable character and
-#'     warn with `artoo_warning_encoding`.
-#'   * `"ignore"` — drop the unrepresentable characters silently.
 #'   * `"translit"` — fold smart punctuation (curly quotes, en/em dashes,
 #'     ellipsis, bullet) to its exact ASCII form per the SAS NLS punctuation
 #'     table and warn; a character with no fold (a diacritic) still aborts.
+#'   * `"fold"` — `"translit"` plus the ICU Latin-ASCII accent strip
+#'     (`Ö` to `O`, `ß` to `ss`, `Æ` to `AE`), and warn. Lossy on names —
+#'     the original characters are not recoverable; a character neither
+#'     table maps (the Euro sign) still aborts.
+#'   * `"replace"` — substitute one `?` per unrepresentable character and
+#'     warn with `artoo_warning_encoding`.
+#'   * `"ignore"` — drop the unrepresentable characters silently.
 #'
 #'   **Tip:** for a US-ASCII submission write, `"translit"` fixes the
 #'   word-processor punctuation that dominates real findings while keeping
-#'   genuine data corruption loud.
+#'   genuine data corruption loud; reach for `"fold"` only when accent
+#'   stripping is an accepted, documented step of the migration.
 #' @param created *Header timestamp.* `<POSIXct(1)> | NULL`. `NULL` (default)
 #'   stamps the current time; freeze it for byte-stable output.
 #'
@@ -1621,7 +1626,7 @@ write_xpt <- function(
   path,
   version = 5,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL
 ) {
   on_invalid <- match.arg(on_invalid)

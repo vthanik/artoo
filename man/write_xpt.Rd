@@ -9,7 +9,7 @@ write_xpt(
   path,
   version = 5,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL
 )
 }
@@ -36,17 +36,22 @@ UTF-8 writers (\code{\link[=write_json]{write_json()}}, \code{\link[=write_ndjso
 \itemize{
 \item \code{"error"} \code{(default)} — abort with \code{artoo_error_codec}, naming the
 offenders.
-\item \code{"replace"} — substitute one \verb{?} per unrepresentable character and
-warn with \code{artoo_warning_encoding}.
-\item \code{"ignore"} — drop the unrepresentable characters silently.
 \item \code{"translit"} — fold smart punctuation (curly quotes, en/em dashes,
 ellipsis, bullet) to its exact ASCII form per the SAS NLS punctuation
 table and warn; a character with no fold (a diacritic) still aborts.
+\item \code{"fold"} — \code{"translit"} plus the ICU Latin-ASCII accent strip
+(\code{Ö} to \code{O}, \code{ß} to \code{ss}, \code{Æ} to \code{AE}), and warn. Lossy on names —
+the original characters are not recoverable; a character neither
+table maps (the Euro sign) still aborts.
+\item \code{"replace"} — substitute one \verb{?} per unrepresentable character and
+warn with \code{artoo_warning_encoding}.
+\item \code{"ignore"} — drop the unrepresentable characters silently.
 }
 
 \strong{Tip:} for a US-ASCII submission write, \code{"translit"} fixes the
 word-processor punctuation that dominates real findings while keeping
-genuine data corruption loud.}
+genuine data corruption loud; reach for \code{"fold"} only when accent
+stripping is an accepted, documented step of the migration.}
 
 \item{created}{\emph{Header timestamp.} \verb{<POSIXct(1)> | NULL}. \code{NULL} (default)
 stamps the current time; freeze it for byte-stable output.}

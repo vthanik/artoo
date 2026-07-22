@@ -234,8 +234,8 @@
 #'   `<character(1)>: default "error"`. One of `"error"` (abort with
 #'   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
 #'   `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
-#'   `"translit"` (accepted for pipeline symmetry; behaves as `"error"`
-#'   here, since a byte-level invalidity has no punctuation fold).
+#'   `"translit"` / `"fold"` (accepted for pipeline symmetry; behave as
+#'   `"error"` here, since a byte-level invalidity has no character fold).
 #'   See [write_json()] for when this fires.
 #' @param created *Creation timestamp.* `<POSIXct(1)> | NULL`. `NULL`
 #'   (default) stamps the current time into `datasetJSONCreationDateTime`;
@@ -271,7 +271,7 @@
 write_ndjson <- function(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore", "translit"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 ) {
