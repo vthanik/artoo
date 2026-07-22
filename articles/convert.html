@@ -122,11 +122,65 @@
 3 Western European Windows; the usual US/EU SAS session (WLATIN1)</code></pre>
 </div>
 </div>
-</section><section class="level2"><h2 id="on_invalid-one-policy-all-four-writers">3. <code>on_invalid</code>: one policy, all four writers<a class="anchor" aria-label="anchor" href="#on_invalid-one-policy-all-four-writers"></a>
+<section class="level3"><h3 id="reading-a-file-whose-bytes-are-not-utf-8">Reading a file whose bytes are not UTF-8<a class="anchor" aria-label="anchor" href="#reading-a-file-whose-bytes-are-not-utf-8"></a>
+</h3>
+<p><code>encoding=</code> on a reader is a <em>transcode</em>, not a label. Say a Parquet file was written by a system whose text is Windows-1252 (SAS <code>WLATIN1</code>) rather than the UTF-8 the Parquet spec assumes:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">latin1</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/iconv.html" class="external-link">iconv</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"UTF-8"</span>, <span class="st">"windows-1252"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Encoding.html" class="external-link">Encoding</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"unknown"</span></span>
+<span>  <span class="va">out</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">foreign</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  SITEID <span class="op">=</span> <span class="fu">latin1</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"PARIS"</span>, <span class="st">"MÜNCHEN"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  INVNAM <span class="op">=</span> <span class="fu">latin1</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Curie"</span>, <span class="st">"Öztürk"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">pq</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".parquet"</span><span class="op">)</span></span>
+<span><span class="fu">nanoparquet</span><span class="fu">::</span><span class="fu"><a href="https://nanoparquet.r-lib.org/reference/write_parquet.html" class="external-link">write_parquet</a></span><span class="op">(</span><span class="va">foreign</span>, <span class="va">pq</span><span class="op">)</span></span></code></pre></div>
+</div>
+<p>Naming the source charset converts the bytes to UTF-8 and normalises them to NFC, so what lands in R is ordinary text — printing, <code><a href="https://rdrr.io/r/utils/View.html" class="external-link">View()</a></code>, <code><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar()</a></code>, regex, and collation all behave, and every writer downstream re-encodes from there:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">site</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_parquet.html">read_parquet</a></span><span class="op">(</span><span class="va">pq</span>, encoding <span class="op">=</span> <span class="st">"wlatin1"</span><span class="op">)</span></span>
+<span><span class="va">site</span></span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   SITEID INVNAM
+1   PARIS  Curie
+2 MÜNCHEN Öztürk</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">site</span><span class="op">$</span><span class="va">SITEID</span><span class="op">)</span> <span class="co"># characters, not bytes</span></span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 5 7</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"Ü"</span>, <span class="va">site</span><span class="op">$</span><span class="va">SITEID</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] FALSE  TRUE</code></pre>
+</div>
+</div>
+<p>Two ways it can look wrong, both diagnostic rather than silent:</p>
+<p><em>Mojibake</em> (<code>MÃœNCHEN</code>) means you declared an <code>encoding=</code> for a file that was already UTF-8 — drop the argument. A hex escape (<code>caf&lt;e9&gt;</code>) means a byte that is not valid in the charset you named; artoo escapes it rather than dropping it, so the corruption stays visible.</p>
+<p>And omitting <code>encoding=</code> on a genuinely non-UTF-8 file is not a silent mis-read either — the reader refuses it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/read_parquet.html">read_parquet</a></span><span class="op">(</span><span class="va">pq</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error in `read_parquet()`:
+! Could not read '/tmp/RtmpIPLGFv/file1ed539d9086a.parquet' as
+  "parquet".
+✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
+  by invalid continuation byte (0x4E) at position 3</code></pre>
+</div>
+</div>
+</section></section><section class="level2"><h2 id="on_invalid-one-policy-all-four-writers">3. <code>on_invalid</code>: one policy, all four writers<a class="anchor" aria-label="anchor" href="#on_invalid-one-policy-all-four-writers"></a>
 </h2>
 <p>A value that cannot be represented in the target — an unencodable character for xpt’s target charset, or bytes that are not valid UTF-8 for Dataset-JSON / NDJSON / Parquet — hits the same three-way policy everywhere: <code>"error"</code> (default), <code>"replace"</code>, or <code>"ignore"</code>. The default names the offenders hex-escaped:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="va">dm</span></span>
 <span><span class="va">bad</span><span class="op">$</span><span class="va">USUBJID</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0x63</span>, <span class="fl">0xE9</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="co"># a stray latin1 byte</span></span>
 <span><span class="fu"><a href="../reference/write_json.html">write_json</a></span><span class="op">(</span><span class="va">bad</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -139,14 +193,14 @@
 </div>
 <p><code>"replace"</code> substitutes <code>?</code> and warns, so the write completes and the file is valid:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/write_json.html">write_json</a></span><span class="op">(</span><span class="va">bad</span>, <span class="va">fixed</span>, on_invalid <span class="op">=</span> <span class="st">"replace"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Warning in write_json(bad, fixed, on_invalid = "replace"): Replaced invalid UTF-8 bytes with "?" in 1 value.
 ℹ Use `on_invalid = "error"` to fail loudly instead.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/read_json.html">read_json</a></span><span class="op">(</span><span class="va">fixed</span><span class="op">)</span><span class="op">$</span><span class="va">USUBJID</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] "c?"</code></pre>
@@ -158,7 +212,7 @@
 <p>The first question a pharma organization asks of any package in a submission pipeline is “can we qualify this?”. None of the below is a regulatory claim — qualification is your process — but every property is machine-checkable in your own environment.</p>
 <p><strong>Lossless or loud.</strong> Read-write-read returns the same values and the same metadata; a lossy coercion or an unencodable byte aborts rather than damaging data; even the explicit <code>extra = "drop"</code> trim announces itself and leaves a finding. The data-protection conditions carry their evidence as data, so a harness asserts on it programmatically:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">vars</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spec_variables.html">spec_variables</a></span><span class="op">(</span><span class="va">adam_spec</span><span class="op">)</span></span>
 <span><span class="va">vars</span><span class="op">$</span><span class="va">data_type</span><span class="op">[</span><span class="va">vars</span><span class="op">$</span><span class="va">variable</span> <span class="op">==</span> <span class="st">"AGE"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"integer"</span></span>
 <span><span class="va">strict</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/artoo_spec.html">artoo_spec</a></span><span class="op">(</span></span>
@@ -283,7 +337,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
