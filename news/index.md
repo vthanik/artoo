@@ -4,6 +4,52 @@
 
 CRAN release: 2026-07-02
 
+- [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
+  gained an `invalid_encoding` dimension (on by default):
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  flags character values whose bytes are not valid UTF-8, the signature
+  of a source read under a mis-declared encoding, before a writer aborts
+  on them.
+
+- [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  name resolution now accepts the SAS OEM/DOS encoding names
+  (`pcoem437`, `pcoem850`, `pcoem852`, `pcoem858`, `pcoem862`,
+  `pcoem866`, `msdos737`).
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md),
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  and
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)
+  accept `on_invalid = "translit"`, folding smart punctuation (curly
+  quotes, en/em dashes, ellipsis, bullet) to its exact ASCII form per
+  the SAS NLS punctuation table; characters with no fold still abort
+  loudly.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md),
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  and
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)
+  also accept `on_invalid = "fold"`: the punctuation fold plus the ICU
+  Latin-ASCII accent strip (`Ö` to `O`, `ß` to `ss`, `Æ` to `AE`),
+  pinned as data so the result is identical on every platform;
+  characters neither table maps (the Euro sign) still abort.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  now warns (`artoo_warning_encoding`) when a value forces a column
+  wider than its spec-declared length, instead of widening silently;
+  data is still never truncated.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  and the other writers’ `on_invalid = "replace"` now substitutes one
+  `?` per unrepresentable character instead of one per byte (a curly
+  quote previously became `???`).
+
+- New article: *Migrating clinical data from WLATIN1 to UTF-8*,
+  including the smart-punctuation fold table and the byte-length
+  migration recipe.
+
 - Guarded the decimal full-precision JSON round-trip test on
   `capabilities("long.double")` so it skips on noLD builds, where
   bit-exact double-to-string round-trips are not guaranteed by the

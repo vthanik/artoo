@@ -22,6 +22,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
     <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -41,7 +42,14 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="artoo-012">artoo 0.1.2<a class="anchor" aria-label="anchor" href="#artoo-012"></a></h2><p class="text-muted">CRAN release: 2026-07-02</p>
-<ul><li>Guarded the decimal full-precision JSON round-trip test on <code>capabilities("long.double")</code> so it skips on noLD builds, where bit-exact double-to-string round-trips are not guaranteed by the platform C library.</li>
+<ul><li><p><code><a href="../reference/artoo_checks.html">artoo_checks()</a></code> gained an <code>invalid_encoding</code> dimension (on by default): <code><a href="../reference/check_spec.html">check_spec()</a></code> flags character values whose bytes are not valid UTF-8, the signature of a source read under a mis-declared encoding, before a writer aborts on them.</p></li>
+<li><p><code><a href="../reference/artoo_encodings.html">artoo_encodings()</a></code> name resolution now accepts the SAS OEM/DOS encoding names (<code>pcoem437</code>, <code>pcoem850</code>, <code>pcoem852</code>, <code>pcoem858</code>, <code>pcoem862</code>, <code>pcoem866</code>, <code>msdos737</code>).</p></li>
+<li><p><code><a href="../reference/write_xpt.html">write_xpt()</a></code>, <code><a href="../reference/write_json.html">write_json()</a></code>, <code><a href="../reference/write_ndjson.html">write_ndjson()</a></code>, and <code><a href="../reference/write_parquet.html">write_parquet()</a></code> accept <code>on_invalid = "translit"</code>, folding smart punctuation (curly quotes, en/em dashes, ellipsis, bullet) to its exact ASCII form per the SAS NLS punctuation table; characters with no fold still abort loudly.</p></li>
+<li><p><code><a href="../reference/write_xpt.html">write_xpt()</a></code>, <code><a href="../reference/write_json.html">write_json()</a></code>, <code><a href="../reference/write_ndjson.html">write_ndjson()</a></code>, and <code><a href="../reference/write_parquet.html">write_parquet()</a></code> also accept <code>on_invalid = "fold"</code>: the punctuation fold plus the ICU Latin-ASCII accent strip (<code>Ö</code> to <code>O</code>, <code>ß</code> to <code>ss</code>, <code>Æ</code> to <code>AE</code>), pinned as data so the result is identical on every platform; characters neither table maps (the Euro sign) still abort.</p></li>
+<li><p><code><a href="../reference/write_xpt.html">write_xpt()</a></code> now warns (<code>artoo_warning_encoding</code>) when a value forces a column wider than its spec-declared length, instead of widening silently; data is still never truncated.</p></li>
+<li><p><code><a href="../reference/write_xpt.html">write_xpt()</a></code> and the other writers’ <code>on_invalid = "replace"</code> now substitutes one <code>?</code> per unrepresentable character instead of one per byte (a curly quote previously became <code>???</code>).</p></li>
+<li><p>New article: <em>Migrating clinical data from WLATIN1 to UTF-8</em>, including the smart-punctuation fold table and the byte-length migration recipe.</p></li>
+<li><p>Guarded the decimal full-precision JSON round-trip test on <code>capabilities("long.double")</code> so it skips on noLD builds, where bit-exact double-to-string round-trips are not guaranteed by the platform C library.</p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="artoo-011">artoo 0.1.1<a class="anchor" aria-label="anchor" href="#artoo-011"></a></h2><p class="text-muted">CRAN release: 2026-06-24</p>

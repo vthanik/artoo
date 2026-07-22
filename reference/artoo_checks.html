@@ -28,6 +28,7 @@ mistyped name or value aborts early rather than being silently ignored."><meta p
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
     <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -60,6 +61,7 @@ mistyped name or value aborts early rather than being silently ignored.</p>
 <span>  missing_permissible <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  extra_variable <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  type_mismatch <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  invalid_encoding <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  length_overflow <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  char_length_limit <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  codelist_membership <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -98,6 +100,13 @@ absent from the data.</em> <code>&lt;logical(1)&gt;: default TRUE</code>.</p></d
 <dt id="arg-type-mismatch">type_mismatch<a class="anchor" aria-label="anchor" href="#arg-type-mismatch"></a></dt>
 <dd><p><em>Flag columns whose storage differs from the spec
 dataType.</em> <code>&lt;logical(1)&gt;: default TRUE</code>.</p></dd>
+
+
+<dt id="arg-invalid-encoding">invalid_encoding<a class="anchor" aria-label="anchor" href="#arg-invalid-encoding"></a></dt>
+<dd><p><em>Flag character values whose bytes are not valid
+UTF-8.</em> <code>&lt;logical(1)&gt;: default TRUE</code>. Invalid bytes mean the source was
+read under a mis-declared encoding; re-read it with the true <code>encoding=</code>
+before the corruption reaches a writer.</p></dd>
 
 
 <dt id="arg-length-overflow">length_overflow<a class="anchor" aria-label="anchor" href="#arg-length-overflow"></a></dt>
@@ -208,6 +217,7 @@ findings disposition.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] missing_permissible</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] extra_variable</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] type_mismatch</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [x] invalid_encoding</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] length_overflow</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] char_length_limit</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [x] codelist_membership</span>

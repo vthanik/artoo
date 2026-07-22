@@ -30,6 +30,7 @@ with format = "xpt".'><meta property="og:image" content="https://vthanik.github.
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
     <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -63,7 +64,7 @@ with <code>format = "xpt"</code>.</p>
 <span>  <span class="va">path</span>,</span>
 <span>  version <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  encoding <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
+<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"translit"</span>, <span class="st">"fold"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
 <span>  created <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -97,11 +98,23 @@ accepted.</p></dd>
 
 <dt id="arg-on-invalid">on_invalid<a class="anchor" aria-label="anchor" href="#arg-on-invalid"></a></dt>
 <dd><p><em>Policy for values not representable in <code>encoding</code>.</em>
-<code>&lt;character(1)&gt;: default "error"</code>. One of <code>"error"</code> (abort with
-<code>artoo_error_codec</code>, naming the offenders), <code>"replace"</code> (substitute
-<code>?</code> and warn with <code>artoo_warning_encoding</code>), or <code>"ignore"</code> (drop
-them). The same policy vocabulary as the UTF-8 writers
-(<code><a href="write_json.html">write_json()</a></code>, <code><a href="write_ndjson.html">write_ndjson()</a></code>, <code><a href="write_parquet.html">write_parquet()</a></code>).</p></dd>
+<code>&lt;character(1)&gt;: default "error"</code>. The same policy vocabulary as the
+UTF-8 writers (<code><a href="write_json.html">write_json()</a></code>, <code><a href="write_ndjson.html">write_ndjson()</a></code>, <code><a href="write_parquet.html">write_parquet()</a></code>):</p><ul><li><p><code>"error"</code> <code>(default)</code> — abort with <code>artoo_error_codec</code>, naming the
+offenders.</p></li>
+<li><p><code>"translit"</code> — fold smart punctuation (curly quotes, en/em dashes,
+ellipsis, bullet) to its exact ASCII form per the SAS NLS punctuation
+table and warn; a character with no fold (a diacritic) still aborts.</p></li>
+<li><p><code>"fold"</code> — <code>"translit"</code> plus the ICU Latin-ASCII accent strip
+(<code>Ö</code> to <code>O</code>, <code>ß</code> to <code>ss</code>, <code>Æ</code> to <code>AE</code>), and warn. Lossy on names —
+the original characters are not recoverable; a character neither
+table maps (the Euro sign) still aborts.</p></li>
+<li><p><code>"replace"</code> — substitute one <code>?</code> per unrepresentable character and
+warn with <code>artoo_warning_encoding</code>.</p></li>
+<li><p><code>"ignore"</code> — drop the unrepresentable characters silently.</p></li>
+</ul><p><strong>Tip:</strong> for a US-ASCII submission write, <code>"translit"</code> fixes the
+word-processor punctuation that dominates real findings while keeping
+genuine data corruption loud; reach for <code>"fold"</code> only when accent
+stripping is an accepted, documented step of the migration.</p></dd>
 
 
 <dt id="arg-created">created<a class="anchor" aria-label="anchor" href="#arg-created"></a></dt>
@@ -164,6 +177,10 @@ dispatcher.</p></div>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
 <span class="r-in"><span><span class="va">path8</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".xpt"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">write_xpt</span><span class="op">(</span><span class="va">dm</span>, <span class="va">path8</span>, version <span class="op">=</span> <span class="fl">8</span>, created <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2020-01-01"</span>, tz <span class="op">=</span> <span class="st">"UTC"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Widened 1 column past the declared spec length: <span style="color: #0000BB;">"STUDYID (7 -&gt; 12)"</span>.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Values need more bytes than the spec length; data was kept whole.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Update the spec length, or shorten the data, so the file matches its</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>   declared metadata.</span>
 <span class="r-in"><span><span class="fu"><a href="get_meta.html">get_meta</a></span><span class="op">(</span><span class="fu"><a href="read_xpt.html">read_xpt</a></span><span class="op">(</span><span class="va">path8</span><span class="op">)</span><span class="op">)</span><span class="op">@</span><span class="va">dataset</span><span class="op">$</span><span class="va">records</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 60</span>
 <span class="r-in"><span></span></span>

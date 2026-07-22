@@ -32,6 +32,7 @@ nanoparquet package."><meta property="og:image" content="https://vthanik.github.
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
     <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -65,7 +66,7 @@ workflow (spec -&gt; apply_spec -&gt; write_parquet); a thin wrapper over
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">path</span>,</span>
 <span>  encoding <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
+<span>  on_invalid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"translit"</span>, <span class="st">"fold"</span>, <span class="st">"replace"</span>, <span class="st">"ignore"</span><span class="op">)</span>,</span>
 <span>  compression <span class="op">=</span> <span class="st">"snappy"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -97,7 +98,9 @@ accepted.</p></dd>
 <dd><p><em>Policy for values that are not valid UTF-8.</em>
 <code>&lt;character(1)&gt;: default "error"</code>. One of <code>"error"</code> (abort with
 <code>artoo_error_codec</code>), <code>"replace"</code> (substitute <code>?</code> and warn with
-<code>artoo_warning_encoding</code>), or <code>"ignore"</code> (drop the invalid bytes).
+<code>artoo_warning_encoding</code>), <code>"ignore"</code> (drop the invalid bytes), or
+<code>"translit"</code> / <code>"fold"</code> (accepted for pipeline symmetry; behave as
+<code>"error"</code> here, since a byte-level invalidity has no character fold).
 See <code><a href="write_json.html">write_json()</a></code> for when this fires; parquet STRING bytes are
 UTF-8 by spec, exactly like Dataset-JSON.</p></dd>
 

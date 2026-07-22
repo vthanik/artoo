@@ -617,6 +617,11 @@ dm |>
   write_parquet(parquet)
 ```
 
+    Warning in write_xpt(dm, xpt): Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+    ℹ Values need more bytes than the spec length; data was kept whole.
+    ℹ Update the spec length, or shorten the data, so the file matches its declared
+      metadata.
+
 Conversion is read one, write the other — and the metadata survives the
 hop:
 
@@ -719,7 +724,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpIPLGFv/file1ed539d9086a.parquet' as
+    ! Could not read '/tmp/RtmpgmGLZI/file1e1221063039.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -728,9 +733,12 @@ read_parquet(pq)
 
 A value that cannot be represented in the target — an unencodable
 character for xpt’s target charset, or bytes that are not valid UTF-8
-for Dataset-JSON / NDJSON / Parquet — hits the same three-way policy
-everywhere: `"error"` (default), `"replace"`, or `"ignore"`. The default
-names the offenders hex-escaped:
+for Dataset-JSON / NDJSON / Parquet — hits the same policy everywhere:
+`"error"` (default), `"replace"`, `"ignore"`, or `"translit"` (fold
+smart punctuation to its exact ASCII form; see the [WLATIN1 → UTF-8
+migration
+article](https://vthanik.github.io/artoo/articles/migrate-encoding.md)).
+The default names the offenders hex-escaped:
 
 ``` r
 
@@ -835,7 +843,276 @@ Unicode NFC (UAX \#15).
   validate](https://vthanik.github.io/artoo/articles/conform.md):
 - [Formats & lossless
   conversion](https://vthanik.github.io/artoo/articles/convert.md):
+- [Migrating clinical data from WLATIN1 to
+  UTF-8](https://vthanik.github.io/artoo/articles/migrate-encoding.md):
 - [Recipes](https://vthanik.github.io/artoo/articles/recipes.md):
+# Migrating clinical data from WLATIN1 to UTF-8
+
+Most legacy clinical data was produced by SAS sessions running WLATIN1
+(Windows-1252); modern pipelines — Dataset-JSON, Parquet, R itself — are
+UTF-8. The two agree on every ASCII character and disagree everywhere
+else, so a migration has exactly three failure modes: mojibake (bytes
+interpreted as the wrong charset), truncation (byte-counted lengths that
+multibyte UTF-8 overflows), and unrepresentable characters (an ASCII
+target that cannot carry what UTF-8 can). This article shows how artoo
+handles each one.
+
+## 1. Reading WLATIN1 data
+
+[`read_xpt()`](https://vthanik.github.io/artoo/reference/read_xpt.md)
+detects the encoding: if every byte in the file validates as UTF-8 it
+reads as UTF-8, otherwise it assumes Windows-1252 — the right default
+for legacy clinical files. Formats whose spec pins UTF-8 (Dataset-JSON,
+Parquet) are read as UTF-8 and *refuse loudly* when the bytes disagree,
+rather than guessing:
+
+``` r
+
+latin1 <- function(x) {
+  out <- iconv(x, "UTF-8", "windows-1252")
+  Encoding(out) <- "unknown"
+  out
+}
+foreign <- data.frame(SITEID = latin1(c("PARIS", "MÜNCHEN")))
+pq <- tempfile(fileext = ".parquet")
+nanoparquet::write_parquet(foreign, pq)
+read_parquet(pq)
+```
+
+    Error in `read_parquet()`:
+    ! Could not read '/tmp/Rtmpza7EBN/file1e2f2ee9a66.parquet' as "parquet".
+    ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
+      by invalid continuation byte (0x4E) at position 3
+
+That refusal is the prompt to name the true source charset. `encoding=`
+is a *transcode*, not a label — the bytes are converted to UTF-8 and
+normalised (NFC), so what lands in R is ordinary text:
+
+``` r
+
+site <- read_parquet(pq, encoding = "wlatin1")
+site$SITEID
+```
+
+    [1] "PARIS"   "MÜNCHEN"
+
+Any SAS or IANA spelling works — `"wlatin1"`, `"cp1252"`,
+`"windows-1252"` are the same charset; so are the OEM/DOS names
+(`"pcoem850"`) a very old archive might declare. The rosetta is
+[`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md).
+Note that `"latin1"` (ISO-8859-1) is **not** WLATIN1: the two differ
+across the 0x80–0x9F range that holds the Euro sign and every smart
+quote.
+
+## 2. Catching a mis-declared read
+
+The classic silent corruption is reading WLATIN1 bytes *as if* they were
+UTF-8 (in SAS terms: a data set whose encoding attribute lies). Those
+bytes do not validate as UTF-8, and the `invalid_encoding` conformance
+dimension flags them before any writer runs:
+
+``` r
+
+bad <- cdisc_dm
+bad$ETHNIC <- rawToChar(as.raw(c(0x4D, 0xDC, 0x4E))) # WLATIN1 bytes, raw
+f <- check_spec(bad, sdtm_spec, "DM")
+f[f$check == "invalid_encoding", c("variable", "severity", "message")]
+```
+
+       variable severity
+    14   ETHNIC    error
+                                                                                                    message
+    14 'ETHNIC' has 60 value(s) whose bytes are not valid UTF-8; re-read the source with its true encoding.
+
+The fix is always upstream — re-read the source with its true
+`encoding=` — never a re-label.
+
+## 3. Lengths are bytes, and UTF-8 needs more of them
+
+A WLATIN1 character is always one byte; in UTF-8 the same character can
+take up to four. A spec length calibrated on WLATIN1 data (`Ö` = 1 byte)
+under-declares the UTF-8 form (`Ö` = 2 bytes). SAS handles this with the
+CVP engine and a guessed multiplier; artoo measures the actual bytes,
+never truncates, and tells you when the declared length had to give:
+
+``` r
+
+sp <- artoo_spec(
+  data.frame(dataset = "DM"),
+  data.frame(
+    dataset = "DM", variable = "INVNAM",
+    data_type = "string", length = 6L
+  )
+)
+x <- apply_spec(
+  data.frame(INVNAM = "Öztürk"), sp, "DM",
+  conformance = "off"
+)
+xpt <- tempfile(fileext = ".xpt")
+write_xpt(x, xpt)
+```
+
+    Warning in write_xpt(x, xpt): Widened 1 column past the declared spec length: "INVNAM (6 -> 8)".
+    ℹ Values need more bytes than the spec length; data was kept whole.
+    ℹ Update the spec length, or shorten the data, so the file matches its declared
+      metadata.
+
+The `length_overflow` check reports the same fact at conformance time,
+so a migration can fix the spec (the durable answer) instead of relying
+on the writer’s defence.
+
+## 4. Smart punctuation: the WLATIN1 characters ASCII can fold
+
+Text that passed through a word processor carries typographic
+punctuation — curly quotes, en/em dashes, ellipses. In WLATIN1 these
+live in rows 8–9 of the code page (one byte each); in UTF-8 they are
+three bytes each; in US-ASCII they do not exist at all. They are also
+the one class of character with an *exact* ASCII equivalent, published
+by SAS as the NLS punctuation fold:
+
+| WLATIN1 (hex) | Unicode | Character | Description                       | ASCII fold |
+|---------------|---------|:---------:|-----------------------------------|:----------:|
+| `82`          | U+201A  |     ‚     | single low-9 quotation mark       |    `,`     |
+| `84`          | U+201E  |     „     | double low-9 quotation mark       |    `"`     |
+| `85`          | U+2026  |     …     | horizontal ellipsis               |   `...`    |
+| `8B`          | U+2039  |     ‹     | single left-pointing angle quote  |    `<`     |
+| `91`          | U+2018  |     ‘     | left single quotation mark        |    `'`     |
+| `92`          | U+2019  |     ’     | right single quotation mark       |    `'`     |
+| `93`          | U+201C  |     “     | left double quotation mark        |    `"`     |
+| `94`          | U+201D  |     ”     | right double quotation mark       |    `"`     |
+| `95`          | U+2022  |     •     | bullet                            |    `*`     |
+| `96`          | U+2013  |     –     | en dash                           |    `-`     |
+| `97`          | U+2014  |     —     | em dash                           |    `-`     |
+| `9B`          | U+203A  |     ›     | single right-pointing angle quote |    `>`     |
+
+Every writer accepts `on_invalid = "translit"`, which applies exactly
+this table and nothing else:
+
+``` r
+
+note <- data.frame(
+  USUBJID = "01-701-1015",
+  COMMENT = "Patient’s dose – “held”…"
+)
+ascii_xpt <- tempfile(fileext = ".xpt")
+write_xpt(note, ascii_xpt, encoding = "US-ASCII", on_invalid = "translit")
+```
+
+    Warning in write_xpt(note, ascii_xpt, encoding = "US-ASCII", on_invalid = "translit"): Transliterated smart punctuation to ASCII in 1 value for "US-ASCII".
+    ℹ The fold follows the SAS NLS punctuation table (quotes, dashes, ellipsis,
+      bullet).
+
+``` r
+
+read_xpt(ascii_xpt)$COMMENT
+```
+
+    [1] "Patient's dose - \"held\"..."
+
+`"translit"` is deliberately narrower than `"replace"`: punctuation
+folds because the ASCII form carries the same meaning; a character with
+no equivalent — a diacritic in a name — still aborts, because `"Öztürk"`
+silently becoming `"Ozturk"` (or worse, `"?zt?rk"`) is data corruption,
+not conversion:
+
+``` r
+
+name <- data.frame(INVNAM = "Öztürk")
+write_xpt(name, tempfile(fileext = ".xpt"),
+  encoding = "US-ASCII", on_invalid = "translit"
+)
+```
+
+    Error in `write_xpt()`:
+    ! Cannot encode 1 value to "US-ASCII" even after punctuation folding.
+    ✖ Offending value: "Öztürk".
+    ℹ Only smart punctuation has an ASCII fold; use `on_invalid = "fold"` to also
+      strip accents, or write to Dataset-JSON (UTF-8).
+
+## 5. Accent stripping: the full fold, opted into
+
+Sometimes stripping accents *is* the documented migration decision —
+SAS’s `BASECHAR()` exists for exactly this. artoo’s equivalent is
+`on_invalid = "fold"`: the punctuation table above **plus** the ICU
+Latin-ASCII transliteration for the rest of the WLATIN1 range (`À–ÿ` to
+their base letters, `Æ` → `AE`, `ß` → `ss`, `Þ` → `TH`, `×` → `*`, `«»`
+→ `<<` `>>`, `½` → `1/2`). The table is pinned inside artoo, so — unlike
+`iconv //TRANSLIT`, whose output differs between Linux and macOS — the
+fold is byte-identical on every platform:
+
+``` r
+
+names_df <- data.frame(INVNAM = c("Öztürk", "Straße", "Ærø"))
+folded_xpt <- tempfile(fileext = ".xpt")
+write_xpt(names_df, folded_xpt, encoding = "US-ASCII", on_invalid = "fold")
+```
+
+    Warning in write_xpt(names_df, folded_xpt, encoding = "US-ASCII", on_invalid = "fold"): Folded 3 values to ASCII for "US-ASCII" (accents stripped).
+    ℹ The fold follows the SAS NLS punctuation table plus ICU Latin-ASCII; the
+      original characters are not recoverable from the output.
+
+``` r
+
+read_xpt(folded_xpt)$INVNAM
+```
+
+    [1] "Ozturk"  "Strasse" "AEro"   
+
+The warning is the audit trail: the fold is one-way, and the original
+characters are not recoverable from the output. A character neither
+authority maps to ASCII — the Euro sign, the trademark sign, `µ`, `°` —
+still aborts, because artoo invents no mappings:
+
+``` r
+
+cost <- data.frame(COMMENT = "total €100")
+write_xpt(cost, tempfile(fileext = ".xpt"),
+  encoding = "US-ASCII", on_invalid = "fold"
+)
+```
+
+    Error in `write_xpt()`:
+    ! Cannot encode 1 value to "US-ASCII" even after ASCII folding.
+    ✖ Offending value: "total €100".
+    ℹ The character has no standards-backed ASCII fold (ICU Latin-ASCII leaves it
+      unmapped); write to Dataset-JSON (UTF-8), or set `on_invalid`.
+
+The escalation ladder, least to most lossy: `"error"` (refuse) →
+`"translit"` (fold punctuation only) → `"fold"` (also strip accents) →
+`"replace"` (`?` per character) → `"ignore"` (drop). Pick the earliest
+rung your migration plan allows.
+
+## 6. The migration recipe
+
+1.  **Read with the true source encoding.** Let
+    [`read_xpt()`](https://vthanik.github.io/artoo/reference/read_xpt.md)
+    detect, or pass `encoding = "wlatin1"` explicitly for formats that
+    cannot carry the answer. Verify with
+    [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+    — zero `invalid_encoding` findings means the bytes arrived as
+    characters.
+2.  **Re-measure lengths in bytes.** Run the `length_overflow` dimension
+    against the UTF-8 form and update the spec where multibyte
+    characters grew.
+3.  **Write UTF-8 by default** (Dataset-JSON, Parquet, xpt v8 all carry
+    it losslessly). For a US-ASCII submission XPT, write with
+    `encoding = "US-ASCII", on_invalid = "translit"` — punctuation
+    folds, genuine data problems stay loud. Escalate to
+    `on_invalid = "fold"` only when accent stripping is a documented
+    step of the migration plan.
+
+## References
+
+- SAS 9.4 NLS Reference Guide, *Migrating Data from WLATIN1 to UTF-8*
+  (the WLATIN1 code-page figures and the smart-punctuation table):
+  <https://documentation.sas.com/doc/en/pgmmvacdc/9.4/nlsref/n15e31tqdv020en1fok7tp4l9zd5.htm>
+- Bouedo, M. (2020), *The SAS Encoding Journey: A Byte at a Time*, SAS
+  Global Forum paper 4561-2020:
+  <https://www.sas.com/content/dam/SAS/support/en/sas-global-forum-proceedings/2020/4561-2020.pdf>
+- FDA Study Data Technical Conformance Guide (the ASCII expectation for
+  submission XPORT): <https://www.fda.gov/media/153632/download>
+- Unicode Standard Annex \#15, *Unicode Normalization Forms* (the NFC
+  form artoo canonicalises to): <https://unicode.org/reports/tr15/>
 # Recipes
 
 These are the everyday programming loops a clinical programmer runs — an
@@ -947,7 +1224,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1ef225ee0961.json  DM      Demographics  60       15         json
+    file1e4c2e0e7194.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -1457,6 +1734,52 @@ MIT © Vignesh Thanikachalam
 
 CRAN release: 2026-07-02
 
+- [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
+  gained an `invalid_encoding` dimension (on by default):
+  [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  flags character values whose bytes are not valid UTF-8, the signature
+  of a source read under a mis-declared encoding, before a writer aborts
+  on them.
+
+- [`artoo_encodings()`](https://vthanik.github.io/artoo/reference/artoo_encodings.md)
+  name resolution now accepts the SAS OEM/DOS encoding names
+  (`pcoem437`, `pcoem850`, `pcoem852`, `pcoem858`, `pcoem862`,
+  `pcoem866`, `msdos737`).
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md),
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  and
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)
+  accept `on_invalid = "translit"`, folding smart punctuation (curly
+  quotes, en/em dashes, ellipsis, bullet) to its exact ASCII form per
+  the SAS NLS punctuation table; characters with no fold still abort
+  loudly.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md),
+  [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
+  and
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)
+  also accept `on_invalid = "fold"`: the punctuation fold plus the ICU
+  Latin-ASCII accent strip (`Ö` to `O`, `ß` to `ss`, `Æ` to `AE`),
+  pinned as data so the result is identical on every platform;
+  characters neither table maps (the Euro sign) still abort.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  now warns (`artoo_warning_encoding`) when a value forces a column
+  wider than its spec-declared length, instead of widening silently;
+  data is still never truncated.
+
+- [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md)
+  and the other writers’ `on_invalid = "replace"` now substitutes one
+  `?` per unrepresentable character instead of one per byte (a curly
+  quote previously became `???`).
+
+- New article: *Migrating clinical data from WLATIN1 to UTF-8*,
+  including the smart-punctuation fold table and the byte-length
+  migration recipe.
+
 - Guarded the decimal full-precision JSON round-trip test on
   `capabilities("long.double")` so it skips on noLD builds, where
   bit-exact double-to-string round-trips are not guaranteed by the
@@ -1893,6 +2216,7 @@ artoo_checks(
   missing_permissible = TRUE,
   extra_variable = TRUE,
   type_mismatch = TRUE,
+  invalid_encoding = TRUE,
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
@@ -1930,6 +2254,13 @@ artoo_checks(
 
   *Flag columns whose storage differs from the spec dataType.*
   `<logical(1)>: default TRUE`.
+
+- invalid_encoding:
+
+  *Flag character values whose bytes are not valid UTF-8.*
+  `<logical(1)>: default TRUE`. Invalid bytes mean the source was read
+  under a mis-declared encoding; re-read it with the true `encoding=`
+  before the corruption reaches a writer.
 
 - length_overflow:
 
@@ -2041,6 +2372,7 @@ artoo_checks()
 #>   [x] missing_permissible
 #>   [x] extra_variable
 #>   [x] type_mismatch
+#>   [x] invalid_encoding
 #>   [x] length_overflow
 #>   [x] char_length_limit
 #>   [x] codelist_membership
@@ -3838,7 +4170,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file1a8f3e68c0e4.json  DM      Demographics  60       25         json
+#> file19af7f0ff03e.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
@@ -4535,6 +4867,10 @@ dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> `BRTHDTC`.
 p_dm <- tempfile(fileext = ".xpt")
 write_xpt(dm, p_dm)
+#> Warning: Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+#> ℹ Values need more bytes than the spec length; data was kept whole.
+#> ℹ Update the spec length, or shorten the data, so the file matches its
+#>   declared metadata.
 multi <- tempfile(fileext = ".xpt")
 writeBin(
   c(
@@ -5710,7 +6046,7 @@ with `format = "json"`.
 write_json(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 )
@@ -5735,8 +6071,10 @@ write_json(
   `<character(1)>: default "error"`. One of `"error"` (abort with
   `artoo_error_codec`, naming the offenders with their invalid bytes
   hex-escaped), `"replace"` (substitute `?` and warn with
-  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). The
-  same policy vocabulary as
+  `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
+  `"translit"` / `"fold"` (like `"error"`; a byte-level invalidity has
+  no character fold, the options exist so one policy value can thread a
+  whole multi-format pipeline). The same policy vocabulary as
   [`write_xpt()`](https://vthanik.github.io/artoo/reference/write_xpt.md);
   text correctly read through artoo is always valid UTF-8, so this only
   fires on bytes that entered the frame through a mis-declared source
@@ -5862,7 +6200,7 @@ with `format = "ndjson"`.
 write_ndjson(
   x,
   path,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL,
   strict = FALSE
 )
@@ -5887,7 +6225,10 @@ write_ndjson(
   *Policy for values that are not valid UTF-8.*
   `<character(1)>: default "error"`. One of `"error"` (abort with
   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
-  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). See
+  `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
+  `"translit"` / `"fold"` (accepted for pipeline symmetry; behave as
+  `"error"` here, since a byte-level invalidity has no character fold).
+  See
   [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
   for when this fires.
 
@@ -5967,7 +6308,7 @@ write_parquet(
   x,
   path,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   compression = "snappy"
 )
 ```
@@ -6004,7 +6345,10 @@ write_parquet(
   *Policy for values that are not valid UTF-8.*
   `<character(1)>: default "error"`. One of `"error"` (abort with
   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
-  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). See
+  `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
+  `"translit"` / `"fold"` (accepted for pipeline symmetry; behave as
+  `"error"` here, since a byte-level invalidity has no character fold).
+  See
   [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
   for when this fires; parquet STRING bytes are UTF-8 by spec, exactly
   like Dataset-JSON.
@@ -6267,7 +6611,7 @@ write_xpt(
   path,
   version = 5,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL
 )
 ```
@@ -6304,13 +6648,34 @@ write_xpt(
 - on_invalid:
 
   *Policy for values not representable in `encoding`.*
-  `<character(1)>: default "error"`. One of `"error"` (abort with
-  `artoo_error_codec`, naming the offenders), `"replace"` (substitute
-  `?` and warn with `artoo_warning_encoding`), or `"ignore"` (drop
-  them). The same policy vocabulary as the UTF-8 writers
+  `<character(1)>: default "error"`. The same policy vocabulary as the
+  UTF-8 writers
   ([`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
   [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
-  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)).
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)):
+
+  - `"error"` `(default)` — abort with `artoo_error_codec`, naming the
+    offenders.
+
+  - `"translit"` — fold smart punctuation (curly quotes, en/em dashes,
+    ellipsis, bullet) to its exact ASCII form per the SAS NLS
+    punctuation table and warn; a character with no fold (a diacritic)
+    still aborts.
+
+  - `"fold"` — `"translit"` plus the ICU Latin-ASCII accent strip (`Ö`
+    to `O`, `ß` to `ss`, `Æ` to `AE`), and warn. Lossy on names — the
+    original characters are not recoverable; a character neither table
+    maps (the Euro sign) still aborts.
+
+  - `"replace"` — substitute one `?` per unrepresentable character and
+    warn with `artoo_warning_encoding`.
+
+  - `"ignore"` — drop the unrepresentable characters silently.
+
+  **Tip:** for a US-ASCII submission write, `"translit"` fixes the
+  word-processor punctuation that dominates real findings while keeping
+  genuine data corruption loud; reach for `"fold"` only when accent
+  stripping is an accepted, documented step of the migration.
 
 - created:
 
@@ -6376,6 +6741,10 @@ dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> `BRTHDTC`.
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
+#> Warning: Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+#> ℹ Values need more bytes than the spec length; data was kept whole.
+#> ℹ Update the spec length, or shorten the data, so the file matches its
+#>   declared metadata.
 get_meta(read_xpt(path8))@dataset$records
 #> [1] 60
 ```
@@ -6436,6 +6805,10 @@ dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> `BRTHDTC`.
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
+#> Warning: Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+#> ℹ Values need more bytes than the spec length; data was kept whole.
+#> ℹ Update the spec length, or shorten the data, so the file matches its
+#>   declared metadata.
 xpt_members(p)
 #>   member name        label nvars nobs
 #> 1      1   DM Demographics    25   60

@@ -16,7 +16,7 @@ write_parquet(
   x,
   path,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   compression = "snappy"
 )
 ```
@@ -53,7 +53,10 @@ write_parquet(
   *Policy for values that are not valid UTF-8.*
   `<character(1)>: default "error"`. One of `"error"` (abort with
   `artoo_error_codec`), `"replace"` (substitute `?` and warn with
-  `artoo_warning_encoding`), or `"ignore"` (drop the invalid bytes). See
+  `artoo_warning_encoding`), `"ignore"` (drop the invalid bytes), or
+  `"translit"` / `"fold"` (accepted for pipeline symmetry; behave as
+  `"error"` here, since a byte-level invalidity has no character fold).
+  See
   [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
   for when this fires; parquet STRING bytes are UTF-8 by spec, exactly
   like Dataset-JSON.

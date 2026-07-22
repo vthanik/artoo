@@ -15,7 +15,7 @@ write_xpt(
   path,
   version = 5,
   encoding = NULL,
-  on_invalid = c("error", "replace", "ignore"),
+  on_invalid = c("error", "translit", "fold", "replace", "ignore"),
   created = NULL
 )
 ```
@@ -52,13 +52,34 @@ write_xpt(
 - on_invalid:
 
   *Policy for values not representable in `encoding`.*
-  `<character(1)>: default "error"`. One of `"error"` (abort with
-  `artoo_error_codec`, naming the offenders), `"replace"` (substitute
-  `?` and warn with `artoo_warning_encoding`), or `"ignore"` (drop
-  them). The same policy vocabulary as the UTF-8 writers
+  `<character(1)>: default "error"`. The same policy vocabulary as the
+  UTF-8 writers
   ([`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md),
   [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md),
-  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)).
+  [`write_parquet()`](https://vthanik.github.io/artoo/reference/write_parquet.md)):
+
+  - `"error"` `(default)` — abort with `artoo_error_codec`, naming the
+    offenders.
+
+  - `"translit"` — fold smart punctuation (curly quotes, en/em dashes,
+    ellipsis, bullet) to its exact ASCII form per the SAS NLS
+    punctuation table and warn; a character with no fold (a diacritic)
+    still aborts.
+
+  - `"fold"` — `"translit"` plus the ICU Latin-ASCII accent strip (`Ö`
+    to `O`, `ß` to `ss`, `Æ` to `AE`), and warn. Lossy on names — the
+    original characters are not recoverable; a character neither table
+    maps (the Euro sign) still aborts.
+
+  - `"replace"` — substitute one `?` per unrepresentable character and
+    warn with `artoo_warning_encoding`.
+
+  - `"ignore"` — drop the unrepresentable characters silently.
+
+  **Tip:** for a US-ASCII submission write, `"translit"` fixes the
+  word-processor punctuation that dominates real findings while keeping
+  genuine data corruption loud; reach for `"fold"` only when accent
+  stripping is an accepted, documented step of the migration.
 
 - created:
 
@@ -124,6 +145,10 @@ dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> `BRTHDTC`.
 path8 <- tempfile(fileext = ".xpt")
 write_xpt(dm, path8, version = 8, created = as.POSIXct("2020-01-01", tz = "UTC"))
+#> Warning: Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+#> ℹ Values need more bytes than the spec length; data was kept whole.
+#> ℹ Update the spec length, or shorten the data, so the file matches its
+#>   declared metadata.
 get_meta(read_xpt(path8))@dataset$records
 #> [1] 60
 ```

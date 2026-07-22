@@ -30,6 +30,7 @@ format = "xpt".'><meta property="og:image" content="https://vthanik.github.io/ar
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
+    <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
     <li><a class="dropdown-item" href="../articles/recipes.html">Recipes</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -144,6 +145,10 @@ inverse; <code><a href="read_dataset.html">read_dataset()</a></code> for the gen
 <span class="r-msg co"><span class="r-pr">#&gt;</span> `BRTHDTC`.</span>
 <span class="r-in"><span><span class="va">p_dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".xpt"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="write_xpt.html">write_xpt</a></span><span class="op">(</span><span class="va">dm</span>, <span class="va">p_dm</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Widened 1 column past the declared spec length: <span style="color: #0000BB;">"STUDYID (7 -&gt; 12)"</span>.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Values need more bytes than the spec length; data was kept whole.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Update the spec length, or shorten the data, so the file matches its</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>   declared metadata.</span>
 <span class="r-in"><span><span class="va">multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".xpt"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span></span>

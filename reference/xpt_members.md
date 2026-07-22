@@ -55,6 +55,10 @@ dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
 #> `BRTHDTC`.
 p <- tempfile(fileext = ".xpt")
 write_xpt(dm, p)
+#> Warning: Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+#> ℹ Values need more bytes than the spec length; data was kept whole.
+#> ℹ Update the spec length, or shorten the data, so the file matches its
+#>   declared metadata.
 xpt_members(p)
 #>   member name        label nvars nobs
 #> 1      1   DM Demographics    25   60

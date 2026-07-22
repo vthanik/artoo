@@ -15,6 +15,7 @@ artoo_checks(
   missing_permissible = TRUE,
   extra_variable = TRUE,
   type_mismatch = TRUE,
+  invalid_encoding = TRUE,
   length_overflow = TRUE,
   char_length_limit = TRUE,
   codelist_membership = TRUE,
@@ -52,6 +53,13 @@ artoo_checks(
 
   *Flag columns whose storage differs from the spec dataType.*
   `<logical(1)>: default TRUE`.
+
+- invalid_encoding:
+
+  *Flag character values whose bytes are not valid UTF-8.*
+  `<logical(1)>: default TRUE`. Invalid bytes mean the source was read
+  under a mis-declared encoding; re-read it with the true `encoding=`
+  before the corruption reaches a writer.
 
 - length_overflow:
 
@@ -163,6 +171,7 @@ artoo_checks()
 #>   [x] missing_permissible
 #>   [x] extra_variable
 #>   [x] type_mismatch
+#>   [x] invalid_encoding
 #>   [x] length_overflow
 #>   [x] char_length_limit
 #>   [x] codelist_membership

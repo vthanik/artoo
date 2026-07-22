@@ -31,6 +31,11 @@ dm |>
   write_parquet(parquet)
 ```
 
+    Warning in write_xpt(dm, xpt): Widened 1 column past the declared spec length: "STUDYID (7 -> 12)".
+    ℹ Values need more bytes than the spec length; data was kept whole.
+    ℹ Update the spec length, or shorten the data, so the file matches its declared
+      metadata.
+
 Conversion is read one, write the other — and the metadata survives the
 hop:
 
@@ -133,7 +138,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpIPLGFv/file1ed539d9086a.parquet' as
+    ! Could not read '/tmp/RtmpgmGLZI/file1e1221063039.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -142,9 +147,12 @@ read_parquet(pq)
 
 A value that cannot be represented in the target — an unencodable
 character for xpt’s target charset, or bytes that are not valid UTF-8
-for Dataset-JSON / NDJSON / Parquet — hits the same three-way policy
-everywhere: `"error"` (default), `"replace"`, or `"ignore"`. The default
-names the offenders hex-escaped:
+for Dataset-JSON / NDJSON / Parquet — hits the same policy everywhere:
+`"error"` (default), `"replace"`, `"ignore"`, or `"translit"` (fold
+smart punctuation to its exact ASCII form; see the [WLATIN1 → UTF-8
+migration
+article](https://vthanik.github.io/artoo/articles/migrate-encoding.md)).
+The default names the offenders hex-escaped:
 
 ``` r
 
