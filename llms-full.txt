@@ -724,7 +724,8 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpW9OKSo/file1e63c7748b5.parquet' as "parquet".
+    ! Could not read '/tmp/RtmporQfIn/file1e5d31b27de3.parquet' as
+      "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -879,7 +880,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/Rtmpv5ttC2/file1e8169d629ff.parquet' as
+    ! Could not read '/tmp/RtmpBd5CI3/file1e7a69ece3a0.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -1224,7 +1225,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1e9e631b6933.json  DM      Demographics  60       15         json
+    file1ea864cec07c.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -1528,7 +1529,7 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/v0.1.3/DESCRIPTION)
 
 Thanikachalam V (2026). *artoo: Lossless CDISC-Native Input and Output
 for Clinical Datasets*. R package version 0.1.3,
@@ -4177,7 +4178,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file1a0141c54564.json  DM      Demographics  60       25         json
+#> file19ef11853350.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
