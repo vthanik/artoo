@@ -155,7 +155,7 @@ write_xpt(name, tempfile(fileext = ".xpt"),
 ## 5. Accent stripping: the full fold, opted into
 
 Sometimes stripping accents *is* the documented migration decision —
-SAS's `BASECHAR()` exists for exactly this. artoo's equivalent is
+the SAS `BASECHAR()` function exists for exactly this. artoo's equivalent is
 `on_invalid = "fold"`: the punctuation table above **plus** the ICU
 Latin-ASCII transliteration for the rest of the WLATIN1 range (`À–ÿ` to
 their base letters, `Æ` → `AE`, `ß` → `ss`, `Þ` → `TH`, `×` → `*`,
