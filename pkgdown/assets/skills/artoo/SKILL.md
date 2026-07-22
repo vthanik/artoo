@@ -43,7 +43,12 @@ write_xpt(dm, tempfile(fileext = ".xpt"))
 
 Every reader takes `encoding =` (`read_xpt()` auto-detects `windows-1252`
 when bytes are not valid UTF-8); every writer takes
-`on_invalid = c("error", "replace", "ignore")`.
+`on_invalid = c("error", "translit", "fold", "replace", "ignore")`, ordered
+least to most lossy: refuse (default), fold smart punctuation to exact
+ASCII per the SAS NLS table, also strip accents per ICU Latin-ASCII
+(`Ö` to `O`, `ß` to `ss`; the BASECHAR analogue), one `?` per
+unrepresentable character, or drop. `translit`/`fold` still abort on a
+character with no standards-backed ASCII form (the Euro sign).
 
 ## API overview
 
@@ -83,7 +88,7 @@ spec's own structural integrity, with the control object that scopes both.
 - `check_study`: Conformance findings across a whole study in one pass; prints a dataset-by-check count matrix; feeds `repair_spec()`
 - `validate_spec`: Structural integrity of the spec itself (no data)
 - `conformance`: Read the findings `apply_spec()` attached to a frame
-- `artoo_checks`: Toggle which conformance dimensions run (only `integer_fraction` / `integer_overflow` are fatal coercion checks; `type_mismatch` is informational)
+- `artoo_checks`: Toggle which conformance dimensions run (only `integer_fraction` / `integer_overflow` are fatal coercion checks; `type_mismatch` is informational; `invalid_encoding` flags character bytes that are not valid UTF-8, the signature of a mis-declared source encoding)
 
 ### Read and write (lossless any-to-any)
 
