@@ -71,15 +71,40 @@ jobs:
           writeLines(unlist(lapply(mds, readLines, warn = FALSE)), file.path(dst, "llms-full.txt"))
         shell: Rscript {0}
 
-      - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
+      - name: Detect development mode
+        # A 4-part .9000 version builds into docs/dev/ (pkgdown development
+        # mode auto); a 3-part release version builds the site root. The
+        # deploy step must match, or a full-replace dev deploy wipes the
+        # release site off gh-pages (root 404, only /dev/ left — happened
+        # 2026-07-22 on the 0.1.3.9000 bump).
+        id: mode
+        run: |
+          dst <- basename(pkgdown::as_pkgdown(".")$dst_path)
+          cat(sprintf("dev=%s\n", tolower(identical(dst, "dev"))),
+              file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
+        shell: Rscript {0}
+
+      - name: Deploy release site 🚀
+        if: github.event_name != 'pull_request' && steps.mode.outputs.dev == 'false'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          # Full replace: the site is regenerated in docs/ on every build, so
-          # nothing on gh-pages should persist across builds. clean: false left
-          # renamed or removed pages orphaned (e.g. a renamed vignette's stale
-          # HTML lingering, unlinked). build_site_github_pages() writes its own
-          # .nojekyll into docs/, and there is no CNAME to preserve.
+          # Full replace of the release root so renamed or removed pages do
+          # not linger as orphans, but keep the /dev/ subtree — it is owned
+          # by the dev deploys below. build_site_github_pages() writes its
+          # own .nojekyll into docs/, and there is no CNAME to preserve.
           clean: true
+          clean-exclude: dev
           branch: gh-pages
           folder: docs
+
+      - name: Deploy dev site 🚀
+        if: github.event_name != 'pull_request' && steps.mode.outputs.dev == 'true'
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        with:
+          # A dev build produces only docs/dev/; deploy it into the dev/
+          # subtree and clean just that subtree, leaving the release root
+          # untouched.
+          clean: true
+          branch: gh-pages
+          folder: docs/dev
+          target-folder: dev
