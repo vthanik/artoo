@@ -35,12 +35,15 @@ that entered the frame through a mis-declared source encoding.}
 freeze it for byte-stable output.}
 
 \item{strict}{\emph{Suppress the \verb{_artoo} extension block.} \verb{<logical(1)>: default FALSE}. By default the file carries a single namespaced \verb{_artoo}
-object when (and only when) there is content strict CDISC cannot
-express: SAS special-missing tags (\code{.A}-\code{.Z}, \code{._}), the recorded source
-encoding, and informats. Data values stay plain \code{null}s either way, so a
-foreign reader degrades gracefully.
+object when (and only when) there is content the closed Dataset-JSON
+vocabulary cannot express: SAS special-missing tags (\code{.A}-\code{.Z}, \code{._}),
+the recorded source encoding, and the per-variable informats, origins,
+codelist references, and significant digits. The \code{columns} array itself
+always uses only schema-legal keys. Data values stay plain \code{null}s
+either way, so a foreign reader degrades gracefully.
 
-\strong{Note:} \code{strict = TRUE} writes a pure closed-vocabulary file and warns
+\strong{Note:} \code{strict = TRUE} writes a pure closed-vocabulary file that
+validates against the official CDISC schema, and warns
 (\code{artoo_warning_codec}) naming exactly what was dropped; those
 attributes will not survive a read-back.}
 }

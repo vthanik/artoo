@@ -120,6 +120,44 @@ test_that("write_ndjson(strict = TRUE) suppresses _artoo with a warning", {
   expect_false("_artoo" %in% names(meta_line))
 })
 
+test_that("strict = TRUE loss warning names dropped column extension fields", {
+  # Meta carrying informats and origins: the strict warning must name each
+  # extension family it drops, and the emitted header stays extension-free.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "BRTHDT",
+      label = "Birth Date",
+      data_type = "date",
+      display_format = "DATE9.",
+      informat = "YYMMDD10.",
+      origin = "Collected",
+      stringsAsFactors = FALSE
+    )
+  )
+  df <- suppressMessages(apply_spec(
+    data.frame(BRTHDT = as.Date("2000-01-15")),
+    spec,
+    dataset = "DM",
+    conformance = "off"
+  ))
+  p <- withr::local_tempfile(fileext = ".ndjson")
+  w <- NULL
+  withCallingHandlers(
+    write_ndjson(df, p, strict = TRUE),
+    warning = function(cnd) {
+      w <<- cnd
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_s3_class(w, "artoo_warning_codec")
+  expect_match(conditionMessage(w), "informats")
+  expect_match(conditionMessage(w), "origins")
+  meta_line <- jsonlite::fromJSON(readLines(p, warn = FALSE)[1])
+  expect_false("_artoo" %in% names(meta_line))
+})
+
 # ---- gz transparency (json + ndjson) ----------------------------------------
 
 test_that("a .ndjson.gz round-trips transparently", {

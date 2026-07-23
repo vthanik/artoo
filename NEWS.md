@@ -1,5 +1,15 @@
 # artoo 0.1.3.9000
 
+* `write_json()` and `write_ndjson()` now emit columns that conform to the
+  Dataset-JSON v1.1 schema's closed Column vocabulary: `origin`, `codelist`,
+  and `significantDigits` moved out of the `columns` array into the
+  namespaced `_artoo` extension block (joining `informats`), and `label` is
+  always emitted, as `""` when a variable or dataset has none, instead of
+  being omitted. `strict = TRUE` output now validates against the official
+  CDISC schema, and third-party Dataset-JSON readers that require the
+  per-column `label` key can read artoo's files. Reads map an empty label
+  back to absent, so round-trips remain lossless.
+
 # artoo 0.1.3
 
 * `artoo_checks()` gained an `invalid_encoding` dimension (on by default):
