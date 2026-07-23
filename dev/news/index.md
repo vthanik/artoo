@@ -4,6 +4,8 @@
 
 ## artoo 0.1.3
 
+CRAN release: 2026-07-22
+
 - [`artoo_checks()`](https://vthanik.github.io/artoo/dev/reference/artoo_checks.md)
   gained an `invalid_encoding` dimension (on by default):
   [`check_spec()`](https://vthanik.github.io/artoo/dev/reference/check_spec.md)
