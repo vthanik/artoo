@@ -283,20 +283,46 @@
 # codec is what keeps the formats from drifting (plan F4/4.0).
 #
 # Dataset-JSON v1.1 has closed vocabularies at the top level AND inside the
-# `columns` array, so everything artoo-specific rides a single namespaced
-# `_artoo` object instead of the standard block: `sourceEncoding` (the on-disk
-# source-charset record), `informats` (a {variable: "DATE9."} map — the
-# column entries carry `informat` in-memory but it is stripped from the
-# emitted array), and `specialMissings` (row-aligned .A-.Z/._ tags, passed by
-# codecs as `special=`; see sas_missing.R for why they never enter the
-# set_meta() sidecar). Whenever `_artoo` is emitted it is stamped with
-# `artooMetaVersion` for forward compatibility.
+# `columns` array (the schema's Column object allows exactly itemOID, name,
+# label, dataType, targetDataType, length, displayFormat, keySequence, with
+# additionalProperties: false), so everything artoo-specific rides a single
+# namespaced `_artoo` object instead of the standard block: `sourceEncoding`
+# (the on-disk source-charset record), per-variable maps `informats`,
+# `origins`, `codelists`, and `significantDigits` (the column entries carry
+# these in-memory but they are stripped from the emitted array), and
+# `specialMissings` (row-aligned .A-.Z/._ tags, passed by codecs as
+# `special=`; see sas_missing.R for why they never enter the set_meta()
+# sidecar). `label` is required per Column and per Dataset in the schema, so
+# an absent label is emitted as "" (and "" parses back to absent — see
+# .col_from_parsed / .meta_from_parsed — keeping the round-trip an identity).
+# Whenever `_artoo` is emitted it is stamped with `artooMetaVersion` for
+# forward compatibility.
+.meta_ext_col_fields <- c(
+  informat = "informats",
+  origin = "origins",
+  codelist = "codelists",
+  significantDigits = "significantDigits"
+)
 #' @noRd
 .meta_payload <- function(meta, extensions = FALSE, special = NULL) {
   ds <- meta@dataset
   cols <- meta@columns
-  informats <- .drop_null(lapply(cols, function(c) c$informat))
-  cols <- lapply(cols, function(c) c[setdiff(names(c), "informat")])
+  ext_maps <- lapply(names(.meta_ext_col_fields), function(f) {
+    .drop_null(lapply(cols, function(c) c[[f]]))
+  })
+  names(ext_maps) <- .meta_ext_col_fields
+  cols <- lapply(cols, function(c) {
+    c <- c[setdiff(names(c), names(.meta_ext_col_fields))]
+    if (is.null(c$label)) {
+      c$label <- ""
+      c <- c[intersect(.meta_col_fields, names(c))]
+    }
+    c
+  })
+  if (is.null(ds$label)) {
+    ds$label <- ""
+    ds <- ds[intersect(.meta_dataset_fields, names(ds))]
+  }
   payload <- c(
     list(datasetJSONVersion = "1.1.0"),
     # keys derivable from keySequence; encoding is a artoo extension. Neither
@@ -309,8 +335,10 @@
     if (!is.null(ds$encoding)) {
       ext$sourceEncoding <- ds$encoding
     }
-    if (length(informats)) {
-      ext$informats <- informats
+    for (nm in .meta_ext_col_fields) {
+      if (length(ext_maps[[nm]])) {
+        ext[[nm]] <- ext_maps[[nm]]
+      }
     }
     if (length(special)) {
       ext$specialMissings <- special
@@ -353,7 +381,9 @@
 }
 
 # Coerce a parsed JSON scalar list back to a typed column entry in canonical
-# field order, with integer attributes re-integerised.
+# field order, with integer attributes re-integerised. An empty label is the
+# emitted form of "no label" (the schema requires the key), so it parses back
+# to absent.
 #' @noRd
 .col_from_parsed <- function(p) {
   col <- p[intersect(.meta_col_fields, names(p))]
@@ -362,6 +392,9 @@
   }
   for (f in setdiff(names(col), .meta_col_int_fields)) {
     col[[f]] <- as.character(col[[f]])
+  }
+  if (identical(col$label, "")) {
+    col$label <- NULL
   }
   col
 }
@@ -375,13 +408,18 @@
   cols <- lapply(p$columns, .col_from_parsed)
   names(cols) <- vapply(cols, function(c) c$name, character(1))
 
-  # Informats ride _artoo (the CDISC columns vocabulary is closed); merge them
-  # back into the column entries, re-ordered to the canonical field order so
-  # the round-trip stays an identity.
-  informats <- p[["_artoo"]]$informats
-  if (!is.null(informats) && length(informats)) {
-    for (nm in intersect(names(informats), names(cols))) {
-      cols[[nm]]$informat <- as.character(informats[[nm]])
+  # Informats, origins, codelists, and significantDigits ride _artoo (the
+  # CDISC columns vocabulary is closed); merge them back into the column
+  # entries, re-ordered to the canonical field order so the round-trip stays
+  # an identity.
+  for (f in names(.meta_ext_col_fields)) {
+    map <- p[["_artoo"]][[.meta_ext_col_fields[[f]]]]
+    if (is.null(map) || !length(map)) {
+      next
+    }
+    cast <- if (f %in% .meta_col_int_fields) as.integer else as.character
+    for (nm in intersect(names(map), names(cols))) {
+      cols[[nm]][[f]] <- cast(map[[nm]])
       cols[[nm]] <- cols[[nm]][intersect(.meta_col_fields, names(cols[[nm]]))]
     }
   }
@@ -394,10 +432,16 @@
   } else {
     NULL
   }
+  # "" is the emitted form of "no dataset label" (the schema requires the
+  # key); parse it back to absent.
+  ds_label <- .na_to_null(p$label %||% NA)
+  if (identical(ds_label, "")) {
+    ds_label <- NULL
+  }
   ds_meta <- .assemble_dataset_meta(
     itemGroupOID = as.character(p$itemGroupOID),
     name = as.character(p$name),
-    label = .na_to_null(p$label %||% NA),
+    label = ds_label,
     records = records,
     studyOID = .na_to_null(p$studyOID %||% NA),
     metaDataVersionOID = .na_to_null(p$metaDataVersionOID %||% NA),

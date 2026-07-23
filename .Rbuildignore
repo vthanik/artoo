@@ -24,3 +24,4 @@
 ^vignettes/.*_files$
 ^bench$
 ^cran-comments\.md$
+^artoo-ecosystem-comparison\.md$

@@ -75,10 +75,16 @@ test_that(".meta_to_datasetjson produces parseable Dataset-JSON metadata", {
 })
 
 test_that("meta round-trips losslessly through Dataset-JSON", {
+  # extensions = TRUE is how every production caller serializes (set_meta,
+  # the parquet sidecar, the json/ndjson codecs under the default
+  # strict = FALSE); the extension-less payload is the deliberately-lossy
+  # strict mode, covered by its own tests.
   spec <- demo_spec()
   for (ds in spec_datasets(spec)) {
     meta <- artoo:::.meta_from_spec(spec, ds)
-    back <- artoo:::.meta_from_datasetjson(artoo:::.meta_to_datasetjson(meta))
+    back <- artoo:::.meta_from_datasetjson(
+      artoo:::.meta_to_datasetjson(meta, extensions = TRUE)
+    )
     expect_identical(back@columns, meta@columns, info = ds)
     expect_identical(back@dataset, meta@dataset, info = ds)
   }
@@ -87,7 +93,9 @@ test_that("meta round-trips losslessly through Dataset-JSON", {
 test_that("integer column attributes survive the round-trip as integers", {
   spec <- demo_spec()
   meta <- artoo:::.meta_from_spec(spec, "ADSL")
-  back <- artoo:::.meta_from_datasetjson(artoo:::.meta_to_datasetjson(meta))
+  back <- artoo:::.meta_from_datasetjson(
+    artoo:::.meta_to_datasetjson(meta, extensions = TRUE)
+  )
   expect_type(back@columns$STUDYID$length, "integer")
 })
 
@@ -248,6 +256,124 @@ test_that("informat is stripped from emitted columns and rides _artoo", {
     artoo:::.meta_to_datasetjson(meta, extensions = TRUE)
   )
   expect_identical(back@columns, meta@columns)
+})
+
+test_that("origin, codelist, significantDigits are stripped from emitted columns and ride _artoo", {
+  # Dataset-JSON v1.1's Column vocabulary is closed (additionalProperties:
+  # false); these three must never appear inside the emitted `columns` array.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = "Demographics"),
+    data.frame(
+      dataset = "DM",
+      variable = "AGE",
+      label = "Age",
+      data_type = "decimal",
+      origin = "Collected",
+      codelist_id = "CL.AGEU",
+      significant_digits = 2L,
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.AGEU",
+      term = "YEARS",
+      stringsAsFactors = FALSE
+    )
+  )
+  meta <- artoo:::.meta_from_spec(spec, "DM")
+  expect_identical(meta@columns$AGE$origin, "Collected")
+  expect_identical(meta@columns$AGE$codelist, "CL.AGEU")
+  expect_identical(meta@columns$AGE$significantDigits, 2L)
+
+  payload <- artoo:::.meta_payload(meta, extensions = TRUE)
+  emitted <- payload$columns[[1]]
+  expect_false(any(
+    c("origin", "codelist", "significantDigits") %in% names(emitted)
+  ))
+  expect_identical(payload[["_artoo"]]$origins$AGE, "Collected")
+  expect_identical(payload[["_artoo"]]$codelists$AGE, "CL.AGEU")
+  expect_identical(payload[["_artoo"]]$significantDigits$AGE, 2L)
+
+  # The strict payload drops the block entirely, columns stay schema-shaped.
+  strict <- artoo:::.meta_payload(meta, extensions = FALSE)
+  expect_false("_artoo" %in% names(strict))
+  expect_false(any(
+    c("origin", "codelist", "significantDigits") %in%
+      names(strict$columns[[1]])
+  ))
+
+  # Round-trip identity through the serializer, all three back in canonical
+  # position.
+  back <- artoo:::.meta_from_datasetjson(
+    artoo:::.meta_to_datasetjson(meta, extensions = TRUE)
+  )
+  expect_identical(back@columns, meta@columns)
+})
+
+test_that("every emitted column and the dataset carry a label key, empty when absent", {
+  # `label` is required per Column and per Dataset in the v1.1 schema; an
+  # unlabelled variable must serialise as label "", never an omitted key.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", label = NA_character_),
+    data.frame(
+      dataset = "DM",
+      variable = "DTHFL",
+      label = NA_character_,
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  meta <- artoo:::.meta_from_spec(spec, "DM")
+  expect_false("label" %in% names(meta@columns$DTHFL))
+
+  payload <- artoo:::.meta_payload(meta)
+  expect_identical(payload$columns[[1]]$label, "")
+  expect_identical(payload$label, "")
+  # Canonical field order is preserved (label sits after name).
+  expect_identical(
+    names(payload$columns[[1]]),
+    c("itemOID", "name", "label", "dataType")
+  )
+
+  # An empty label parses back to absent, so the round-trip stays an
+  # identity.
+  back <- artoo:::.meta_from_datasetjson(
+    artoo:::.meta_to_datasetjson(meta, extensions = TRUE)
+  )
+  expect_identical(back@columns, meta@columns)
+  expect_identical(back@dataset, meta@dataset)
+})
+
+test_that("write_json output uses only schema-legal Column keys with label always present", {
+  # End-to-end pin of the two schema defects: apply a bundled spec (which
+  # supplies origins, codelists, and unlabelled variables), write the file,
+  # and inspect the raw JSON.
+  dm <- suppressMessages(apply_spec(cdisc_dm, sdtm_spec, dataset = "DM"))
+  path <- withr::local_tempfile(fileext = ".json")
+  suppressWarnings(write_json(dm, path))
+  j <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+
+  legal <- c(
+    "itemOID",
+    "name",
+    "label",
+    "dataType",
+    "targetDataType",
+    "length",
+    "displayFormat",
+    "keySequence"
+  )
+  keys <- unique(unlist(lapply(j$columns, names)))
+  expect_in(keys, legal)
+  expect_true(all(vapply(
+    j$columns,
+    function(c) is.character(c$label),
+    logical(1)
+  )))
+  expect_true(is.character(j$label))
+
+  # And the file still reads back losslessly.
+  back <- read_json(path)
+  expect_identical(get_meta(back)@columns, get_meta(dm)@columns)
 })
 
 test_that("set_meta projects informat.sas like format.sas", {

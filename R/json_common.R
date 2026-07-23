@@ -170,8 +170,10 @@
   if (!is.null(meta@dataset$encoding)) {
     dropped <- c(dropped, "the recorded source encoding")
   }
-  if (any(vapply(meta@columns, function(c) !is.null(c$informat), logical(1)))) {
-    dropped <- c(dropped, "informats")
+  for (f in names(.meta_ext_col_fields)) {
+    if (any(vapply(meta@columns, function(c) !is.null(c[[f]]), logical(1)))) {
+      dropped <- c(dropped, .meta_ext_col_fields[[f]])
+    }
   }
   if (length(dropped)) {
     .artoo_warn(
