@@ -721,8 +721,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpxoQ3JH/file1e5056c565de.parquet' as
-      "parquet".
+    ! Could not read '/tmp/Rtmp3EJZUE/file1e4a2a73aca.parquet' as "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -877,7 +876,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/Rtmp05DLnz/file1e6e403f3a56.parquet' as
+    ! Could not read '/tmp/RtmpAhI9OK/file1e6732b40d9f.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -1222,7 +1221,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1e8c5ae2f329.json  DM      Demographics  60       15         json
+    file1e855b9a8f47.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -1729,6 +1728,19 @@ MIT © Vignesh Thanikachalam
 # Changelog
 
 ## artoo 0.1.3.9000
+
+- [`write_json()`](https://vthanik.github.io/artoo/dev/reference/write_json.md)
+  and
+  [`write_ndjson()`](https://vthanik.github.io/artoo/dev/reference/write_ndjson.md)
+  now emit columns that conform to the Dataset-JSON v1.1 schema’s closed
+  Column vocabulary: `origin`, `codelist`, and `significantDigits` moved
+  out of the `columns` array into the namespaced `_artoo` extension
+  block (joining `informats`), and `label` is always emitted, as `""`
+  when a variable or dataset has none, instead of being omitted.
+  `strict = TRUE` output now validates against the official CDISC
+  schema, and third-party Dataset-JSON readers that require the
+  per-column `label` key can read artoo’s files. Reads map an empty
+  label back to absent, so round-trips remain lossless.
 
 ## artoo 0.1.3
 
@@ -4180,7 +4192,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file19f915ae815d.json  DM      Demographics  60       25         json
+#> file19f05107a3f3.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
@@ -6100,13 +6112,17 @@ write_json(
 
   *Suppress the `_artoo` extension block.*
   `<logical(1)>: default FALSE`. By default the file carries a single
-  namespaced `_artoo` object when (and only when) there is content
-  strict CDISC cannot express: SAS special-missing tags (`.A`-`.Z`,
-  `._`), the recorded source encoding, and informats. Data values stay
-  plain `null`s either way, so a foreign reader degrades gracefully.
+  namespaced `_artoo` object when (and only when) there is content the
+  closed Dataset-JSON vocabulary cannot express: SAS special-missing
+  tags (`.A`-`.Z`, `._`), the recorded source encoding, and the
+  per-variable informats, origins, codelist references, and significant
+  digits. The `columns` array itself always uses only schema-legal keys.
+  Data values stay plain `null`s either way, so a foreign reader
+  degrades gracefully.
 
-  **Note:** `strict = TRUE` writes a pure closed-vocabulary file and
-  warns (`artoo_warning_codec`) naming exactly what was dropped; those
+  **Note:** `strict = TRUE` writes a pure closed-vocabulary file that
+  validates against the official CDISC schema, and warns
+  (`artoo_warning_codec`) naming exactly what was dropped; those
   attributes will not survive a read-back.
 
 ## Value

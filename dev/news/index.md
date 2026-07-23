@@ -2,6 +2,19 @@
 
 ## artoo 0.1.3.9000
 
+- [`write_json()`](https://vthanik.github.io/artoo/dev/reference/write_json.md)
+  and
+  [`write_ndjson()`](https://vthanik.github.io/artoo/dev/reference/write_ndjson.md)
+  now emit columns that conform to the Dataset-JSON v1.1 schema’s closed
+  Column vocabulary: `origin`, `codelist`, and `significantDigits` moved
+  out of the `columns` array into the namespaced `_artoo` extension
+  block (joining `informats`), and `label` is always emitted, as `""`
+  when a variable or dataset has none, instead of being omitted.
+  `strict = TRUE` output now validates against the official CDISC
+  schema, and third-party Dataset-JSON readers that require the
+  per-column `label` key can read artoo’s files. Reads map an empty
+  label back to absent, so round-trips remain lossless.
+
 ## artoo 0.1.3
 
 CRAN release: 2026-07-22

@@ -42,7 +42,9 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.3.9000" id="artoo-0139000">artoo 0.1.3.9000<a class="anchor" aria-label="anchor" href="#artoo-0139000"></a></h2>
-</div>
+<ul><li>
+<code><a href="../reference/write_json.html">write_json()</a></code> and <code><a href="../reference/write_ndjson.html">write_ndjson()</a></code> now emit columns that conform to the Dataset-JSON v1.1 schema’s closed Column vocabulary: <code>origin</code>, <code>codelist</code>, and <code>significantDigits</code> moved out of the <code>columns</code> array into the namespaced <code>_artoo</code> extension block (joining <code>informats</code>), and <code>label</code> is always emitted, as <code>""</code> when a variable or dataset has none, instead of being omitted. <code>strict = TRUE</code> output now validates against the official CDISC schema, and third-party Dataset-JSON readers that require the per-column <code>label</code> key can read artoo’s files. Reads map an empty label back to absent, so round-trips remain lossless.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.3" id="artoo-013">artoo 0.1.3<a class="anchor" aria-label="anchor" href="#artoo-013"></a></h2><p class="text-muted">CRAN release: 2026-07-22</p>
 <ul><li><p><code><a href="../reference/artoo_checks.html">artoo_checks()</a></code> gained an <code>invalid_encoding</code> dimension (on by default): <code><a href="../reference/check_spec.html">check_spec()</a></code> flags character values whose bytes are not valid UTF-8, the signature of a source read under a mis-declared encoding, before a writer aborts on them.</p></li>

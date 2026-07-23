@@ -57,13 +57,17 @@ write_json(
 
   *Suppress the `_artoo` extension block.*
   `<logical(1)>: default FALSE`. By default the file carries a single
-  namespaced `_artoo` object when (and only when) there is content
-  strict CDISC cannot express: SAS special-missing tags (`.A`-`.Z`,
-  `._`), the recorded source encoding, and informats. Data values stay
-  plain `null`s either way, so a foreign reader degrades gracefully.
+  namespaced `_artoo` object when (and only when) there is content the
+  closed Dataset-JSON vocabulary cannot express: SAS special-missing
+  tags (`.A`-`.Z`, `._`), the recorded source encoding, and the
+  per-variable informats, origins, codelist references, and significant
+  digits. The `columns` array itself always uses only schema-legal keys.
+  Data values stay plain `null`s either way, so a foreign reader
+  degrades gracefully.
 
-  **Note:** `strict = TRUE` writes a pure closed-vocabulary file and
-  warns (`artoo_warning_codec`) naming exactly what was dropped; those
+  **Note:** `strict = TRUE` writes a pure closed-vocabulary file that
+  validates against the official CDISC schema, and warns
+  (`artoo_warning_codec`) naming exactly what was dropped; those
   attributes will not survive a read-back.
 
 ## Value

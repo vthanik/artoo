@@ -103,11 +103,14 @@ freeze it for byte-stable output.</p></dd>
 
 <dt id="arg-strict">strict<a class="anchor" aria-label="anchor" href="#arg-strict"></a></dt>
 <dd><p><em>Suppress the <code>_artoo</code> extension block.</em> <code>&lt;logical(1)&gt;: default FALSE</code>. By default the file carries a single namespaced <code>_artoo</code>
-object when (and only when) there is content strict CDISC cannot
-express: SAS special-missing tags (<code>.A</code>-<code>.Z</code>, <code>._</code>), the recorded source
-encoding, and informats. Data values stay plain <code>null</code>s either way, so a
-foreign reader degrades gracefully.</p>
-<p><strong>Note:</strong> <code>strict = TRUE</code> writes a pure closed-vocabulary file and warns
+object when (and only when) there is content the closed Dataset-JSON
+vocabulary cannot express: SAS special-missing tags (<code>.A</code>-<code>.Z</code>, <code>._</code>),
+the recorded source encoding, and the per-variable informats, origins,
+codelist references, and significant digits. The <code>columns</code> array itself
+always uses only schema-legal keys. Data values stay plain <code>null</code>s
+either way, so a foreign reader degrades gracefully.</p>
+<p><strong>Note:</strong> <code>strict = TRUE</code> writes a pure closed-vocabulary file that
+validates against the official CDISC schema, and warns
 (<code>artoo_warning_codec</code>) naming exactly what was dropped; those
 attributes will not survive a read-back.</p></dd>
 
