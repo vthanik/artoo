@@ -146,3 +146,21 @@ test_that("a 0-row frame writes rows as an empty array", {
   back <- read_json(p)
   expect_identical(nrow(back), 0L)
 })
+
+test_that(".json_array_literals handles empty and trailing-empty vectors", {
+  # 0-length column: the literal builder short-circuits to character(0).
+  expect_identical(
+    artoo:::.json_array_literals(character(0), quoted = TRUE),
+    character(0)
+  )
+  expect_identical(
+    artoo:::.json_array_literals(numeric(0), quoted = FALSE),
+    character(0)
+  )
+  # A trailing empty string: strsplit drops the trailing piece, the pad
+  # branch must restore it so the literal count matches the row count.
+  expect_identical(
+    artoo:::.json_array_literals(c("a", ""), quoted = TRUE),
+    c("\"a\"", "\"\"")
+  )
+})
