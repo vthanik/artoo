@@ -49,7 +49,10 @@
     inner <- substr(s, 2L, nchar(s) - 1L) # strip [ and ]
     parts <- strsplit(inner, ",", fixed = TRUE)[[1L]]
     if (length(parts) < n) {
-      parts <- c(parts, rep("", n - length(parts)))
+      # Defensive only: unquoted literals (numbers, null, booleans) never end
+      # in a separator, so strsplit cannot drop a trailing piece here (unlike
+      # the quoted path above, where a trailing "" does get dropped).
+      parts <- c(parts, rep("", n - length(parts))) # nocov
     }
     parts
   }

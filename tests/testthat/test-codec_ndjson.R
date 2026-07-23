@@ -158,6 +158,28 @@ test_that("strict = TRUE loss warning names dropped column extension fields", {
   expect_false("_artoo" %in% names(meta_line))
 })
 
+test_that("strict = TRUE loss warning names the recorded source encoding", {
+  # An xpt read records the source charset in the meta; a strict json write
+  # cannot carry it, and the loss warning must say so.
+  df <- data.frame(NAME = "MUELLER")
+  xp <- withr::local_tempfile(fileext = ".xpt")
+  write_xpt(df, xp, encoding = "windows-1252")
+  back <- read_xpt(xp, encoding = "windows-1252")
+  expect_identical(get_meta(back)@dataset$encoding, "windows-1252")
+
+  p <- withr::local_tempfile(fileext = ".ndjson")
+  w <- NULL
+  withCallingHandlers(
+    write_ndjson(back, p, strict = TRUE),
+    warning = function(cnd) {
+      w <<- cnd
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_s3_class(w, "artoo_warning_codec")
+  expect_match(conditionMessage(w), "source encoding")
+})
+
 # ---- gz transparency (json + ndjson) ----------------------------------------
 
 test_that("a .ndjson.gz round-trips transparently", {
