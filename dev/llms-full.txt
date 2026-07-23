@@ -721,7 +721,8 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/Rtmp3EJZUE/file1e4a2a73aca.parquet' as "parquet".
+    ! Could not read '/tmp/RtmpYaVZWz/file1e38580f9a46.parquet' as
+      "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -876,7 +877,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpAhI9OK/file1e6732b40d9f.parquet' as
+    ! Could not read '/tmp/RtmpN2LVyY/file1e555a05b109.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -1221,7 +1222,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1e855b9a8f47.json  DM      Demographics  60       15         json
+    file1e736c8b64a8.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -4192,7 +4193,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                   member  label         records  variables  format
-#> file19f05107a3f3.json  DM      Demographics  60       25         json
+#> file19e024542419.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
