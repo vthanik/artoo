@@ -30,8 +30,7 @@
   "Purpose" = "purpose",
   "Repeating" = "repeating",
   "Reference Data" = "reference_data",
-  "Has No Data" = "has_no_data",
-  "Description" = "label"
+  "Has No Data" = "has_no_data"
 )
 
 #' @noRd
@@ -55,9 +54,14 @@
   "Role" = "role",
   "Comment" = "comment_id",
   # ---- Define-XML ItemDef / ItemRef additions ----
+  # NOTE: "Description" is deliberately NOT mapped here. Newer Pinnacle 21
+  # workbooks carry both a "Label" and a "Description" column, and mapping
+  # both to `label` yields two columns of the same name -- the second is then
+  # silently dropped on write, with which one survives decided by an
+  # undocumented first-name-wins rule. "Label" is the Define-XML
+  # Description/TranslatedText, so it is the one artoo reads.
   "SAS Field Name" = "sas_field_name",
-  "Has No Data" = "has_no_data",
-  "Description" = "label"
+  "Has No Data" = "has_no_data"
 )
 
 #' @noRd

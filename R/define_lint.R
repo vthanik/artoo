@@ -48,9 +48,6 @@
 # Several sites resolve against the same kind but get their own finding id,
 # because "an analysis dataset names a missing dataset" and "an ItemRef names
 # a missing variable" are different problems to the person fixing them.
-#
-# `counts` is FALSE where a site should NOT mark its target as referenced --
-# see .define_ref_sites below for the one case that matters.
 .define_ref_sites <- list(
   list(
     element = "ItemRef",
@@ -207,7 +204,12 @@
   }
 
   # Attribute-driven references, which appear on many element types.
-  all_nodes <- xml2::xml_find_all(mdv, ".//*")
+  # descendant-or-self, not .//* : def:CommentOID is legal on MetaDataVersion
+  # ITSELF, and `.//*` excludes the context node. Missing it produced both a
+  # false positive (a CommentDef referenced only from MetaDataVersion looked
+  # orphaned) and a false negative (a dangling reference there went unreported
+  # despite being error severity).
+  all_nodes <- xml2::xml_find_all(mdv, "descendant-or-self::*")
   for (site in .define_loose_refs) {
     vals <- vapply(all_nodes, .dx_attr, character(1), name = site$attr)
     keep <- !is.na(vals) & nzchar(vals)
@@ -483,8 +485,15 @@ define_lint <- function(path) {
       # A parent: exempt when every value-level item supplies an Origin.
       kids <- vl_items[[xml2::xml_attr(vlref, "ValueListOID")]] %||%
         character(0)
+      # Single-bracket, not [[. `kids` are unvalidated ItemOIDs read straight
+      # from the document, so one may name no ItemDef at all -- which is
+      # precisely the dangling-reference defect this lint exists to report.
+      # `[[` throws on an absent name, killing the whole run with a bare
+      # subscript error instead of reporting the finding. `[` yields NA, and
+      # isTRUE(NA) is FALSE, which is also the right answer: a parent whose
+      # value list points at a variable that does not exist is not covered.
       covered <- length(kids) > 0 &&
-        all(vapply(kids, function(k) isTRUE(has_origin[[k]]), logical(1)))
+        all(vapply(kids, function(k) isTRUE(unname(has_origin[k])), logical(1)))
       if (covered) {
         next
       }
@@ -503,7 +512,8 @@ define_lint <- function(path) {
         for (pr in pref) {
           if (identical(xml2::xml_attr(pr, "ValueListOID"), o)) {
             pid <- .dx_attr(xml2::xml_parent(pr), "OID")
-            if (!is.na(pid) && isTRUE(has_origin[[pid]])) {
+            # Same trap as above: the parent OID may name nothing.
+            if (!is.na(pid) && isTRUE(unname(has_origin[pid]))) {
               parent_has <- TRUE
             }
           }

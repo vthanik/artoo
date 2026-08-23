@@ -369,3 +369,77 @@ test_that("the lint report shows the external-codelist exemption count", {
   writeLines(injected, out)
   expect_output(print(define_lint(out)), "External codelists")
 })
+
+test_that("a dangling ItemOID inside a value list does not crash the lint (#blocker)", {
+  # Regression. `has_origin[[k]]` threw a bare `subscript out of bounds` when a
+  # value list referenced an ItemOID no ItemDef defines -- which is herald bug
+  # (b), the exact defect this lint exists to report. The gate crashed
+  # precisely on the failure it was built to catch, and later phases lean on
+  # define_lint() as the gate over writer output.
+  txt <- readLines(minimal(), warn = FALSE)
+  anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
+  expect_length(anchor, 1L)
+
+  injected <- append(
+    txt,
+    c(
+      '      <def:ValueListDef OID="VL.DM.USUBJID">',
+      '        <ItemRef ItemOID="IT.DOES.NOT.EXIST" OrderNumber="1" Mandatory="No"/>',
+      "      </def:ValueListDef>"
+    ),
+    after = anchor - 1L
+  )
+  # Give the parent a value list AND remove its own Origin, so the inheritance
+  # walk has to resolve the dangling child.
+  injected <- sub(
+    '<def:Origin Type="Derived"/>',
+    '<def:ValueListRef ValueListOID="VL.DM.USUBJID"/>',
+    injected,
+    fixed = TRUE
+  )
+  out <- file.path(withr::local_tempdir(), "dangling-vl.xml")
+  writeLines(injected, out)
+
+  report <- expect_no_error(define_lint(out))
+  found <- checks_of(report)
+  expect_true("define_dangling_item" %in% found)
+  expect_true("define_missing_origin" %in% found)
+})
+
+test_that("a comment referenced only from MetaDataVersion is not an orphan", {
+  # def:CommentOID is legal on MetaDataVersion itself, and an XPath of ".//*"
+  # excludes the context node. Missing it produced a false orphan here, and a
+  # false negative for the dangling direction below.
+  txt <- readLines(minimal(), warn = FALSE)
+  hit <- grep('def:DefineVersion="2.1.0">', txt, fixed = TRUE)
+  expect_length(hit, 1L)
+  # Drop the existing reference FIRST, then add the MetaDataVersion one --
+  # doing it the other way round strips the reference straight back off.
+  txt <- sub(' def:CommentOID="COM.SEX"', "", txt, fixed = TRUE)
+  txt[hit] <- sub(
+    'def:DefineVersion="2.1.0">',
+    'def:DefineVersion="2.1.0" def:CommentOID="COM.SEX">',
+    txt[hit],
+    fixed = TRUE
+  )
+  expect_true(any(grepl('def:CommentOID="COM.SEX"', txt, fixed = TRUE)))
+  out <- file.path(withr::local_tempdir(), "mdv-comment.xml")
+  writeLines(txt, out)
+
+  expect_false("define_orphan_comment" %in% checks_of(define_lint(out)))
+})
+
+test_that("a dangling comment reference on MetaDataVersion is caught", {
+  txt <- readLines(minimal(), warn = FALSE)
+  hit <- grep('def:DefineVersion="2.1.0">', txt, fixed = TRUE)
+  txt[hit] <- sub(
+    'def:DefineVersion="2.1.0">',
+    'def:DefineVersion="2.1.0" def:CommentOID="COM.NOPE">',
+    txt[hit],
+    fixed = TRUE
+  )
+  out <- file.path(withr::local_tempdir(), "mdv-dangling.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_comment" %in% checks_of(define_lint(out)))
+})

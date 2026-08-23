@@ -58,11 +58,7 @@
 # where the attribute's presence IS the assertion).
 #' @noRd
 .dx_yn <- function(x) {
-  ifelse(is.na(x), NA, identical_yes(x))
-}
-#' @noRd
-identical_yes <- function(x) {
-  toupper(x) == "YES"
+  ifelse(is.na(x), NA, toupper(x) == "YES")
 }
 
 # The first Alias with the given Context under `node`, as c(context, name).

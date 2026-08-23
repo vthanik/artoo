@@ -211,7 +211,57 @@
     }
   }
 
+  # Codelist list-level attributes are DENORMALISED: `codelists` is one row
+  # per term, so @Name, @DataType and the rest repeat on every term row of the
+  # same codelist. That matches the source workbook's own shape, but nothing
+  # about a rectangle stops two rows of one codelist disagreeing, and the
+  # writer takes the first. Check they agree, so the duplication cannot drift.
+  issues <- c(issues, .validate_codelist_headers(clists))
+
   if (length(issues)) issues else NULL
+}
+
+# The list-level columns of `codelists`, which must be constant within a
+# codelist_id.
+.spec_codelist_header_cols <- c(
+  "name",
+  "data_type",
+  "sas_format_name",
+  "nci_code",
+  "standard_id",
+  "is_non_standard"
+)
+
+#' @noRd
+.validate_codelist_headers <- function(clists) {
+  if (!nrow(clists) || !"codelist_id" %in% names(clists)) {
+    return(character(0))
+  }
+  cols <- intersect(.spec_codelist_header_cols, names(clists))
+  if (!length(cols)) {
+    return(character(0))
+  }
+  bad <- character(0)
+  for (col in cols) {
+    split_vals <- split(clists[[col]], clists$codelist_id)
+    inconsistent <- names(split_vals)[vapply(
+      split_vals,
+      function(v) length(unique(v[!is.na(v)])) > 1L,
+      logical(1)
+    )]
+    if (length(inconsistent)) {
+      bad <- c(
+        bad,
+        sprintf(
+          "codelists$%s disagrees within codelist%s %s.",
+          col,
+          if (length(inconsistent) > 1L) "s" else "",
+          paste(inconsistent, collapse = ", ")
+        )
+      )
+    }
+  }
+  bad
 }
 
 #' Validate a artoo_meta
