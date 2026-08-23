@@ -86,7 +86,7 @@ test_that("read_spec() warns on an unrecognised version but still reads (H10)", 
   p <- withr::local_tempfile(fileext = ".json")
   write_spec(spec, p)
   txt <- gsub(
-    '("artoo_spec_version":\\s*)"1"',
+    '("artoo_spec_version":\\s*)"[^"]*"',
     '\\1"99"',
     readLines(p)
   )

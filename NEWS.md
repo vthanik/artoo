@@ -1,5 +1,20 @@
 # artoo 0.1.3.9000
 
+* `artoo_spec()` gains six tables: `standards`, `where_clauses`,
+  `method_expressions`, `arm_displays`, `arm_results`, and a reserved
+  `dictionaries`. `read_spec()` on a Define-XML document now fills the first
+  three, so the `def:Standards` block, the structured `RangeCheck`s behind every
+  value-level condition, and each method's formal expressions survive a read
+  instead of being discarded.
+
+* A specification saved by an earlier version of artoo is upgraded
+  automatically the first time any artoo function touches it, and says so once.
+  Previously such an object passed every type check and then failed on the first
+  new field. Save it again with `write_spec()` to make the upgrade permanent.
+
+* The native spec JSON format is now version 2, carrying the six new tables.
+  Reading a version 1 file still works.
+
 * `read_spec()` on a Define-XML document now reads the metadata it previously
   discarded: `SASFieldName`, `def:Origin/@Source`, the Origin document and page
   reference, NCI controlled-terminology codes at both codelist and term level,

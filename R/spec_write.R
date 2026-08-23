@@ -12,13 +12,24 @@
   "values",
   "methods",
   "comments",
-  "documents"
+  "documents",
+  "standards",
+  "where_clauses",
+  "method_expressions",
+  "arm_displays",
+  "arm_results",
+  "dictionaries"
 )
 
 # Current native-spec JSON schema version, stamped into every file and
 # checked (leniently) on read.
+# Bumped to "2" when the five structural slots plus the reserved
+# dictionaries table were added. The bump matters in one direction: an OLDER
+# artoo reading a v2 file asks only for the keys it knows, so it would drop
+# the new slots SILENTLY. .check_spec_json_version() warns on a mismatch,
+# which only fires if this number actually moves.
 #' @noRd
-.spec_json_version <- "1"
+.spec_json_version <- "2"
 
 #' Write a specification to native JSON or a P21 Excel workbook
 #'
@@ -103,17 +114,10 @@
 write_spec <- function(spec, path) {
   call <- rlang::caller_env()
   .check_path(path, call = call)
-  if (!is_artoo_spec(spec)) {
-    .artoo_abort(
-      c(
-        "{.arg spec} must be a {.cls artoo_spec}.",
-        "x" = "You supplied {.obj_type_friendly {spec}}.",
-        "i" = "Build one with {.fn artoo_spec}."
-      ),
-      kind = "input",
-      call = call
-    )
-  }
+  # Route through the shared guard rather than a bare predicate: is_artoo_spec()
+  # returns TRUE for a spec saved by an older artoo, so a bare check here would
+  # let a stale object straight into the writer -- past the whole migration.
+  spec <- .check_spec_arg(spec, call = call)
   ext <- tolower(tools::file_ext(path))
   switch(
     ext,

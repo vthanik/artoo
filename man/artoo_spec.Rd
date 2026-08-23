@@ -13,7 +13,13 @@ artoo_spec(
   methods = NULL,
   comments = NULL,
   documents = NULL,
-  standard = NULL
+  standard = NULL,
+  standards = NULL,
+  where_clauses = NULL,
+  method_expressions = NULL,
+  arm_displays = NULL,
+  arm_results = NULL,
+  dictionaries = NULL
 )
 }
 \arguments{
@@ -63,6 +69,35 @@ by \code{document_id}; must carry \code{document_id} when supplied.}
 
 \strong{Restriction:} all sources must agree on one value; conflicting
 standards abort with \code{artoo_error_spec}.}
+
+\item{standards}{\emph{CDISC standards this spec claims.} \verb{<data.frame> | NULL}.
+Must carry \code{standard_id}, \code{name} and \code{version}. Define-XML 2.1 emits these
+as a \code{def:Standards} block that datasets and codelists reference by id;
+2.0 has room for only one, taken from the row flagged \code{is_primary}.}
+
+\item{where_clauses}{\emph{Structured value-level conditions.}
+\verb{<data.frame> | NULL}. Must carry \code{where_clause_id} and \code{comparator}. One
+row per check value, because a check value is free text and may itself
+contain a comma, so any collapsed form would be lossy.}
+
+\item{method_expressions}{\emph{Formal expressions for derivation methods.}
+\verb{<data.frame> | NULL}. Must carry \code{method_id}. A separate table because a
+method may carry several expressions in different languages, which extra
+rows on \code{methods} could not express without changing what the published
+one-row-per-method rule means.}
+
+\item{arm_displays}{\emph{Analysis result displays.} \verb{<data.frame> | NULL}.
+Must carry \code{display_id}. Analysis Results Metadata is version-neutral:
+the vocabulary is identical for Define-XML 2.0 and 2.1.}
+
+\item{arm_results}{\emph{Analysis results.} \verb{<data.frame> | NULL}. Must carry
+\code{display_id} and \code{result_id}. One row per result and analysis dataset,
+since each analysis dataset carries its own where-clause reference.}
+
+\item{dictionaries}{\emph{External codelists.} \verb{<data.frame> | NULL}. Must carry
+\code{dictionary_id}. \strong{Note:} reserved and not yet populated by any reader.
+It exists now because adding an S7 property later strands every spec
+saved in the meantime.}
 }
 \value{
 \emph{A validated \code{artoo_spec} object.} Inspect it with

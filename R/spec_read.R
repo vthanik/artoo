@@ -449,7 +449,13 @@ read_spec <- function(
     methods = pick("methods"),
     comments = pick("comments"),
     documents = pick("documents"),
-    standard = raw[["standard"]]
+    standard = raw[["standard"]],
+    standards = pick("standards"),
+    where_clauses = pick("where_clauses"),
+    method_expressions = pick("method_expressions"),
+    arm_displays = pick("arm_displays"),
+    arm_results = pick("arm_results"),
+    dictionaries = pick("dictionaries")
   )
 }
 

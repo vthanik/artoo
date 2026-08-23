@@ -319,3 +319,53 @@ test_that("a document with no MetaDataVersion is refused", {
 test_that("a bad path argument is refused", {
   expect_error(define_lint(123), class = "artoo_error_input")
 })
+
+test_that("a missing file says so, rather than reporting unparseable XML", {
+  expect_error(
+    define_lint(file.path(withr::local_tempdir(), "absent.xml")),
+    class = "artoo_error_input"
+  )
+})
+
+test_that("a MetaDataVersion with no definitions or references is handled", {
+  # The degenerate document: structurally a define, semantically empty. Every
+  # collector must return its typed empty shape rather than failing.
+  bare <- file.path(withr::local_tempdir(), "bare.xml")
+  writeLines(
+    paste0(
+      '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" ',
+      'xmlns:def="http://www.cdisc.org/ns/def/v2.1">',
+      "<Study><MetaDataVersion/></Study></ODM>"
+    ),
+    bare
+  )
+  report <- define_lint(bare)
+  expect_identical(nrow(report@findings), 0L)
+  expect_identical(report@summary$n_definitions, 0L)
+  expect_identical(report@summary$n_references, 0L)
+  expect_identical(report@summary$n_external_codelists, 0L)
+})
+
+test_that("the printed reports name what they actually checked", {
+  # A Define-XML report must not render the spec-check header: "Datasets: 0
+  # Variables: 0" is false for a define document, and the fields that matter
+  # (version, verdict, reference counts) would never be shown.
+  expect_snapshot(print(validate_define(minimal())))
+  expect_snapshot(print(define_lint(minimal())))
+})
+
+test_that("the lint report shows the external-codelist exemption count", {
+  txt <- readLines(minimal(), warn = FALSE)
+  anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
+  injected <- append(
+    txt,
+    paste0(
+      '      <CodeList OID="CL.MEDDRA" Name="MedDRA" DataType="text">',
+      '<ExternalCodeList Dictionary="MedDRA" Version="25.0"/></CodeList>'
+    ),
+    after = anchor - 1L
+  )
+  out <- file.path(withr::local_tempdir(), "external-report.xml")
+  writeLines(injected, out)
+  expect_output(print(define_lint(out)), "External codelists")
+})

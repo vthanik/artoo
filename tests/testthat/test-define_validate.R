@@ -329,3 +329,10 @@ test_that("a missing manifest skips the pre-flight without failing", {
   report <- validate_define(minimal())
   expect_true(report@summary$valid)
 })
+
+test_that("a missing file says so, rather than reporting unparseable XML", {
+  expect_error(
+    validate_define(file.path(withr::local_tempdir(), "absent.xml")),
+    class = "artoo_error_input"
+  )
+})

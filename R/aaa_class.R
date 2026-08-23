@@ -161,6 +161,140 @@
 )
 .spec_req_documents <- c("document_id")
 
+# ---- Slots that need their own table -------------------------------------
+# These carry structure a rectangle on an existing slot cannot hold, so each
+# is its own S7 property. They all land in ONE release deliberately: an S7
+# object embeds a copy of its class, so every property addition strands every
+# previously-saved spec, and one migration covers N properties exactly as
+# cheaply as it covers one.
+
+# def:Standards (2.1). Define-XML 2.0 instead carries a single
+# def:StandardName + def:StandardVersion pair on MetaDataVersion, which is
+# derived from the row flagged `is_primary` when writing 2.0.
+.spec_cols_standards <- c(
+  standard_id = "character", # def:Standard/@OID
+  name = "character", # @Name
+  type = "character", # @Type: IG or CT
+  version = "character", # @Version
+  status = "character", # @Status
+  publishing_set = "character", # @PublishingSet (Type = "CT" only)
+  comment_id = "character", # @def:CommentOID
+  is_primary = "logical", # artoo: which IG becomes 2.0's single pair
+  order = "integer"
+)
+.spec_req_standards <- c("standard_id", "name", "version")
+
+# def:WhereClauseDef, fully normalised: one row per CheckValue.
+# A CheckValue is free text and CAN contain a comma or a space (the CDISC
+# example carries "LOCAL LAB"), so any collapsed encoding is lossy.
+.spec_cols_where_clauses <- c(
+  where_clause_id = "character", # def:WhereClauseDef/@OID
+  check_order = "integer", # RangeCheck index within the clause
+  dataset = "character", # human-writable target
+  variable = "character", # human-writable target
+  itemoid = "character", # RangeCheck/@def:ItemOID (authoritative)
+  comparator = "character", # @Comparator
+  soft_hard = "character", # @SoftHard
+  value = "character", # CheckValue text
+  value_order = "integer", # CheckValue index within the RangeCheck
+  comment_id = "character" # @def:CommentOID (2.1)
+)
+.spec_req_where_clauses <- c("where_clause_id", "comparator")
+
+# MethodDef/FormalExpression, 0..n per method. A separate table rather than
+# extra rows on `methods`, because validate_spec() already publishes a
+# method_id_unique rule and repeating the id would silently change what that
+# rule means.
+.spec_cols_method_expressions <- c(
+  method_id = "character",
+  order = "integer",
+  context = "character", # FormalExpression/@Context
+  code = "character" # the expression body
+)
+.spec_req_method_expressions <- c("method_id")
+
+# Analysis Results Metadata (ARM v1.0). Version-neutral: the arm: vocabulary
+# is identical for Define-XML 2.0 and 2.1, only the namespace binding differs.
+.spec_cols_arm_displays <- c(
+  display_id = "character", # arm:ResultDisplay/@OID
+  name = "character", # @Name
+  description = "character",
+  document_id = "character",
+  pages = "character",
+  page_type = "character",
+  order = "integer"
+)
+.spec_req_arm_displays <- c("display_id")
+
+# Grain is one row per (result x analysis dataset), because an
+# arm:AnalysisDataset carries its own def:WhereClauseRef and a delimited
+# string cannot express that.
+.spec_cols_arm_results <- c(
+  display_id = "character",
+  result_id = "character", # arm:AnalysisResult/@OID
+  name = "character",
+  description = "character",
+  parameter_id = "character", # @ParameterOID
+  reason = "character", # @AnalysisReason
+  purpose = "character", # @AnalysisPurpose
+  dataset = "character", # arm:AnalysisDataset/@ItemGroupOID
+  variables = "character", # space-separated arm:AnalysisVariable names
+  where_clause_id = "character",
+  datasets_comment_id = "character",
+  documentation = "character",
+  documentation_document_id = "character",
+  documentation_pages = "character",
+  programming_context = "character",
+  programming_code = "character",
+  programming_document_id = "character",
+  order = "integer"
+)
+.spec_req_arm_results <- c("display_id", "result_id")
+
+# External codelists (MedDRA, WHODrug, ISO 3166). RESERVED, not yet
+# populated: dictionaries are out of scope for this release, but the property
+# is added now because the expensive half of the feature is the property, not
+# the code. Adding it later would strand every spec saved in between.
+.spec_cols_dictionaries <- c(
+  dictionary_id = "character", # CodeList/@OID
+  name = "character", # @Name
+  data_type = "character", # @DataType
+  dictionary = "character", # ExternalCodeList/@Dictionary
+  version = "character", # @Version
+  href = "character",
+  ref = "character"
+)
+.spec_req_dictionaries <- c("dictionary_id")
+
+# Value-level metadata finally gets a column schema. It stays class_any on
+# the S7 property so is.null(x@values) keeps meaning "no VLM", but when
+# present it is coerced to this shape.
+.spec_cols_values <- c(
+  dataset = "character",
+  variable = "character",
+  where_clause_id = "character", # def:WhereClauseRef/@WhereClauseOID
+  where_clause = "character", # rendered display text (derived)
+  value_list_id = "character", # def:ValueListDef/@OID
+  itemoid = "character",
+  label = "character",
+  data_type = "character",
+  length = "integer",
+  significant_digits = "integer",
+  display_format = "character",
+  codelist_id = "character",
+  method_id = "character",
+  comment_id = "character",
+  order = "integer",
+  mandatory = "logical",
+  origin = "character",
+  source = "character",
+  predecessor = "character",
+  assigned_value = "character",
+  pages = "character",
+  sas_field_name = "character"
+)
+.spec_req_values <- c("dataset", "variable")
+
 # ---- S7 classes ----------------------------------------------------------
 
 # The S7 artoo_spec class. Internal: the public face is artoo_spec()
@@ -185,7 +319,13 @@ artoo_spec_class <- S7::new_class(
     methods = S7::class_data.frame,
     comments = S7::class_data.frame,
     documents = S7::class_data.frame,
-    values = S7::new_property(S7::class_any, default = NULL)
+    values = S7::new_property(S7::class_any, default = NULL),
+    standards = S7::class_data.frame,
+    where_clauses = S7::class_data.frame,
+    method_expressions = S7::class_data.frame,
+    arm_displays = S7::class_data.frame,
+    arm_results = S7::class_data.frame,
+    dictionaries = S7::class_data.frame
   ),
   validator = function(self) {
     .spec_validate(self)

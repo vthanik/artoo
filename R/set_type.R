@@ -71,7 +71,7 @@
 #' @export
 set_type <- function(spec, dataset, ...) {
   call <- rlang::caller_env()
-  .check_spec_arg(spec, call = call)
+  spec <- .check_spec_arg(spec, call = call)
   .check_dataset_arg(spec, dataset, call = call)
 
   dots <- list(...)

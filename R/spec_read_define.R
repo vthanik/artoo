@@ -522,6 +522,48 @@ identical_yes <- function(x) {
     NULL
   }
 
+  # ---- def:Standards (2.1) -----------------------------------------------
+  # 2.0 carries a single def:StandardName + def:StandardVersion pair on
+  # MetaDataVersion; 2.1 replaces it with this table plus def:StandardOID
+  # back-references. Collapsing it to one scalar, as the reader used to, loses
+  # which standard each dataset and codelist actually claims.
+  std_nodes <- .dx_find_all(mdv, "Standard")
+  standards <- if (length(std_nodes)) {
+    ig <- vapply(std_nodes, .dx_attr, character(1), name = "Type") == "IG"
+    data.frame(
+      standard_id = vapply(std_nodes, .dx_attr, character(1), name = "OID"),
+      name = vapply(std_nodes, .dx_attr, character(1), name = "Name"),
+      type = vapply(std_nodes, .dx_attr, character(1), name = "Type"),
+      version = vapply(std_nodes, .dx_attr, character(1), name = "Version"),
+      status = vapply(std_nodes, .dx_attr, character(1), name = "Status"),
+      publishing_set = vapply(
+        std_nodes,
+        .dx_attr,
+        character(1),
+        name = "PublishingSet"
+      ),
+      comment_id = vapply(
+        std_nodes,
+        .dx_attr,
+        character(1),
+        name = "CommentOID"
+      ),
+      # The first IG standard is the one a 2.0 document could express; mark
+      # it so a downgrade has an unambiguous choice rather than guessing.
+      is_primary = ig & !duplicated(ig & TRUE) & cumsum(ig) == 1L,
+      order = seq_along(std_nodes),
+      stringsAsFactors = FALSE
+    )
+  } else {
+    NULL
+  }
+
+  # ---- def:WhereClauseDef, structured ------------------------------------
+  where_clauses <- .dx_where_clauses(mdv, items)
+
+  # ---- MethodDef/FormalExpression ----------------------------------------
+  method_expressions <- .dx_method_expressions(md_nodes)
+
   # ---- value-level metadata ----------------------------------------------
   values <- .dx_values(mdv, items, vl_owner)
 
@@ -547,8 +589,77 @@ identical_yes <- function(x) {
     values = scoped$values,
     methods = methods,
     comments = comments,
-    documents = documents
+    documents = documents,
+    standards = standards,
+    where_clauses = where_clauses,
+    method_expressions = method_expressions
   )
+}
+
+# def:WhereClauseDef -> one row per CheckValue. Fully normalised because a
+# CheckValue is free text and can contain a comma or a space, so any
+# collapsed encoding would be lossy. The rendered display string on
+# `values$where_clause` stays, but this is now the authoritative form.
+#' @noRd
+.dx_where_clauses <- function(mdv, items) {
+  wc_nodes <- .dx_find_all(mdv, "WhereClauseDef")
+  if (!length(wc_nodes)) {
+    return(NULL)
+  }
+  rows <- list()
+  for (w in wc_nodes) {
+    wc_id <- .dx_attr(w, "OID")
+    checks <- xml2::xml_find_all(w, "./*[local-name()=\'RangeCheck\']")
+    for (ci in seq_along(checks)) {
+      rc <- checks[[ci]]
+      target <- .dx_attr(rc, "ItemOID")
+      it <- items[[target]]
+      vals <- xml2::xml_text(
+        xml2::xml_find_all(rc, "./*[local-name()=\'CheckValue\']")
+      )
+      if (!length(vals)) {
+        vals <- NA_character_
+      }
+      rows[[length(rows) + 1L]] <- data.frame(
+        where_clause_id = wc_id,
+        check_order = ci,
+        dataset = NA_character_,
+        variable = if (is.null(it)) NA_character_ else it$name,
+        itemoid = target,
+        comparator = .dx_attr(rc, "Comparator"),
+        soft_hard = .dx_attr(rc, "SoftHard"),
+        value = vals,
+        value_order = seq_along(vals),
+        comment_id = .dx_attr(w, "CommentOID"),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (!length(rows)) NULL else do.call(rbind, rows)
+}
+
+# MethodDef/FormalExpression, 0..n per method. The reader previously dropped
+# these entirely even though the slot columns existed.
+#' @noRd
+.dx_method_expressions <- function(md_nodes) {
+  if (!length(md_nodes)) {
+    return(NULL)
+  }
+  rows <- list()
+  for (m in md_nodes) {
+    mid <- .dx_attr(m, "OID")
+    fes <- xml2::xml_find_all(m, "./*[local-name()=\'FormalExpression\']")
+    for (i in seq_along(fes)) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        method_id = mid,
+        order = i,
+        context = .dx_attr(fes[[i]], "Context"),
+        code = trimws(xml2::xml_text(fes[[i]])),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (!length(rows)) NULL else do.call(rbind, rows)
 }
 
 # ValueListDefs -> one row per value-level ItemRef, with the owning

@@ -23,10 +23,19 @@ test_that("write_spec() writes the canonical key order with a null values slot",
       "values",
       "methods",
       "comments",
-      "documents"
+      "documents",
+      "standards",
+      "where_clauses",
+      "method_expressions",
+      "arm_displays",
+      "arm_results",
+      "dictionaries"
     )
   )
-  expect_identical(raw$artoo_spec_version, "1")
+  # Assert the version against the package constant, not a literal: the point
+  # of the constant is that the writer and the reader cannot drift, and a
+  # literal here just means one more place to edit on every bump.
+  expect_identical(raw$artoo_spec_version, artoo:::.spec_json_version)
   expect_null(raw$values)
 })
 

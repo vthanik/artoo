@@ -112,6 +112,29 @@
 #'   by `comment_id`; must carry `comment_id` when supplied.
 #' @param documents *Document references.* `<data.frame> | NULL`. Referenced
 #'   by `document_id`; must carry `document_id` when supplied.
+#' @param standards *CDISC standards this spec claims.* `<data.frame> | NULL`.
+#'   Must carry `standard_id`, `name` and `version`. Define-XML 2.1 emits these
+#'   as a `def:Standards` block that datasets and codelists reference by id;
+#'   2.0 has room for only one, taken from the row flagged `is_primary`.
+#' @param where_clauses *Structured value-level conditions.*
+#'   `<data.frame> | NULL`. Must carry `where_clause_id` and `comparator`. One
+#'   row per check value, because a check value is free text and may itself
+#'   contain a comma, so any collapsed form would be lossy.
+#' @param method_expressions *Formal expressions for derivation methods.*
+#'   `<data.frame> | NULL`. Must carry `method_id`. A separate table because a
+#'   method may carry several expressions in different languages, which extra
+#'   rows on `methods` could not express without changing what the published
+#'   one-row-per-method rule means.
+#' @param arm_displays *Analysis result displays.* `<data.frame> | NULL`.
+#'   Must carry `display_id`. Analysis Results Metadata is version-neutral:
+#'   the vocabulary is identical for Define-XML 2.0 and 2.1.
+#' @param arm_results *Analysis results.* `<data.frame> | NULL`. Must carry
+#'   `display_id` and `result_id`. One row per result and analysis dataset,
+#'   since each analysis dataset carries its own where-clause reference.
+#' @param dictionaries *External codelists.* `<data.frame> | NULL`. Must carry
+#'   `dictionary_id`. **Note:** reserved and not yet populated by any reader.
+#'   It exists now because adding an S7 property later strands every spec
+#'   saved in the meantime.
 #'
 #' @return *A validated `artoo_spec` object.* Inspect it with
 #'   [spec_datasets()] / [spec_variables()], or check it with
@@ -149,7 +172,13 @@ artoo_spec <- function(
   methods = NULL,
   comments = NULL,
   documents = NULL,
-  standard = NULL
+  standard = NULL,
+  standards = NULL,
+  where_clauses = NULL,
+  method_expressions = NULL,
+  arm_displays = NULL,
+  arm_results = NULL,
+  dictionaries = NULL
 ) {
   call <- rlang::caller_env()
   if (is.null(datasets) || is.null(variables)) {
@@ -202,6 +231,48 @@ artoo_spec <- function(
     .spec_cols_documents,
     .spec_req_documents,
     "documents",
+    call
+  )
+  standards <- .coerce_slot(
+    standards,
+    .spec_cols_standards,
+    .spec_req_standards,
+    "standards",
+    call
+  )
+  where_clauses <- .coerce_slot(
+    where_clauses,
+    .spec_cols_where_clauses,
+    .spec_req_where_clauses,
+    "where_clauses",
+    call
+  )
+  method_expressions <- .coerce_slot(
+    method_expressions,
+    .spec_cols_method_expressions,
+    .spec_req_method_expressions,
+    "method_expressions",
+    call
+  )
+  arm_displays <- .coerce_slot(
+    arm_displays,
+    .spec_cols_arm_displays,
+    .spec_req_arm_displays,
+    "arm_displays",
+    call
+  )
+  arm_results <- .coerce_slot(
+    arm_results,
+    .spec_cols_arm_results,
+    .spec_req_arm_results,
+    "arm_results",
+    call
+  )
+  dictionaries <- .coerce_slot(
+    dictionaries,
+    .spec_cols_dictionaries,
+    .spec_req_dictionaries,
+    "dictionaries",
     call
   )
   study <- if (is.null(study)) {
@@ -270,7 +341,13 @@ artoo_spec <- function(
     methods = methods,
     comments = comments,
     documents = documents,
-    values = values
+    values = values,
+    standards = standards,
+    where_clauses = where_clauses,
+    method_expressions = method_expressions,
+    arm_displays = arm_displays,
+    arm_results = arm_results,
+    dictionaries = dictionaries
   )
 }
 
