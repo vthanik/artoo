@@ -1,5 +1,16 @@
 # artoo 0.1.3.9000
 
+* `read_spec()` on a Pinnacle 21 workbook now reads the `WhereClauses`,
+  `Dictionaries`, `Standards`, and analysis-results sheets. A workbook with no
+  `WhereClauses` sheet has its value-level conditions parsed from the free-text
+  column instead, so both workbook generations are read.
+
+* Where-clause values are now parsed correctly for every comparator. A value
+  list is split only outside quotes, so a value containing a comma survives,
+  and parentheses are stripped from scalar comparisons as well as list ones.
+  An unknown comparator, or a disjunction that Define-XML cannot express, is
+  refused with an explanation rather than silently reinterpreted.
+
 * `artoo_spec()` gains six tables: `standards`, `where_clauses`,
   `method_expressions`, `arm_displays`, `arm_results`, and a reserved
   `dictionaries`. `read_spec()` on a Define-XML document now fills the first

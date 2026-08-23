@@ -149,7 +149,76 @@
   methods = c("methods", "method", "computational methods"),
   comments = c("comments", "comment"),
   documents = c("documents", "document", "leaf", "supplemental documents"),
-  study = c("define", "study", "metadata")
+  study = c("define", "study", "metadata"),
+  # Newer workbook generations split these out. Their absence is not an
+  # error: an older workbook simply carries the where clause as free text in
+  # the ValueLevel sheet, and has no ARM at all.
+  whereclauses = c("whereclauses", "where clauses", "where clause"),
+  dictionaries = c("dictionaries", "dictionary", "external codelists"),
+  standards = c("standards", "standard"),
+  arm_displays = c("analysis displays", "analysisdisplays", "displays"),
+  arm_results = c("analysis results", "analysisresults", "results"),
+  arm_criteria = c("analysis criteria", "analysiscriteria", "criteria")
+)
+
+#' @noRd
+.p21_where_map <- c(
+  "ID" = "where_clause_id",
+  "Dataset" = "dataset",
+  "Variable" = "variable",
+  "Comparator" = "comparator",
+  "Value" = "value",
+  "Comment" = "comment_id"
+)
+
+#' @noRd
+.p21_dictionary_map <- c(
+  "ID" = "dictionary_id",
+  "Name" = "name",
+  "Data Type" = "data_type",
+  "Dictionary" = "dictionary",
+  "Version" = "version",
+  "Href" = "href",
+  "Ref" = "ref"
+)
+
+#' @noRd
+.p21_standard_map <- c(
+  "ID" = "standard_id",
+  "Name" = "name",
+  "Type" = "type",
+  "Version" = "version",
+  "Status" = "status",
+  "Publishing Set" = "publishing_set",
+  "Comment" = "comment_id"
+)
+
+#' @noRd
+.p21_arm_display_map <- c(
+  "ID" = "display_id",
+  "Name" = "name",
+  "Title" = "description",
+  "Description" = "description",
+  "Document" = "document_id",
+  "Pages" = "pages"
+)
+
+#' @noRd
+.p21_arm_result_map <- c(
+  "Display" = "display_id",
+  "ID" = "result_id",
+  "Description" = "description",
+  "Reason" = "reason",
+  "Purpose" = "purpose",
+  "Dataset" = "dataset",
+  "Variables" = "variables",
+  "Where Clause" = "where_clause_id",
+  "Join Comment" = "datasets_comment_id",
+  "Documentation" = "documentation",
+  "Documentation Refs" = "documentation_document_id",
+  "Programming Context" = "programming_context",
+  "Programming Code" = "programming_code",
+  "Programming Document" = "programming_document_id"
 )
 
 #' Read a specification from JSON, Excel, or Define-XML
@@ -503,6 +572,11 @@ read_spec <- function(
   cm_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$comments)
   doc_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$documents)
   st_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$study)
+  wc_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$whereclauses)
+  dict_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$dictionaries)
+  std_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$standards)
+  ad_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$arm_displays)
+  ar_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$arm_results)
 
   scope <- datasets # the user's dataset filter; `datasets` becomes the table
   datasets <- .read_p21_tab(path, ds_sheet)
@@ -513,6 +587,11 @@ read_spec <- function(
   comments <- .read_p21_tab(path, cm_sheet)
   documents <- .read_p21_tab(path, doc_sheet)
   study_raw <- .read_p21_tab(path, st_sheet)
+  where_raw <- .read_p21_tab(path, wc_sheet)
+  dict_raw <- .read_p21_tab(path, dict_sheet)
+  std_raw <- .read_p21_tab(path, std_sheet)
+  ad_raw <- .read_p21_tab(path, ad_sheet)
+  ar_raw <- .read_p21_tab(path, ar_sheet)
 
   # Required sheets must be present AND carry rows (H7).
   .require_p21_sheet(datasets, ds_sheet, "Datasets", sheets, call)
@@ -572,6 +651,41 @@ read_spec <- function(
   comments <- .drop_blank_key(comments, "comment_id")
   documents <- .drop_blank_key(documents, "document_id")
 
+  # ---- where clauses, from whichever shape the workbook uses -------------
+  # A WhereClauses sheet is authoritative; without one, the ValueLevel
+  # "Where Clause" column holds free text and is parsed. The two generations
+  # are distinguished by the sheet's presence, not by inspecting the column.
+  where_clauses <- if (!is.null(where_raw) && nrow(where_raw)) {
+    .wc_from_sheet(.normalise_p21_cols(where_raw, .p21_where_map), call)
+  } else {
+    .wc_from_values(values, call)
+  }
+
+  dictionaries <- .nullify_empty(
+    .drop_blank_key(
+      .normalise_p21_cols(dict_raw, .p21_dictionary_map),
+      "dictionary_id"
+    )
+  )
+  standards <- .nullify_empty(
+    .drop_blank_key(
+      .normalise_p21_cols(std_raw, .p21_standard_map),
+      "standard_id"
+    )
+  )
+  arm_displays <- .nullify_empty(
+    .drop_blank_key(
+      .normalise_p21_cols(ad_raw, .p21_arm_display_map),
+      "display_id"
+    )
+  )
+  arm_results <- .nullify_empty(
+    .drop_blank_key(
+      .normalise_p21_cols(ar_raw, .p21_arm_result_map),
+      "result_id"
+    )
+  )
+
   artoo_spec(
     datasets = datasets,
     variables = variables,
@@ -580,8 +694,45 @@ read_spec <- function(
     values = .nullify_empty(values),
     methods = .nullify_empty(methods),
     comments = .nullify_empty(comments),
-    documents = .nullify_empty(documents)
+    documents = .nullify_empty(documents),
+    where_clauses = where_clauses,
+    dictionaries = dictionaries,
+    standards = standards,
+    arm_displays = arm_displays,
+    arm_results = arm_results
   )
+}
+
+# Derive structured where clauses from the free-text ValueLevel column, for
+# workbook generations that carry no WhereClauses sheet. The clause id is
+# minted deterministically from the dataset and variable it qualifies, so the
+# same workbook always yields the same ids.
+#' @noRd
+.wc_from_values <- function(values, call = rlang::caller_env()) {
+  if (
+    is.null(values) ||
+      !nrow(values) ||
+      !"where_clause" %in% names(values)
+  ) {
+    return(NULL)
+  }
+  txt <- values$where_clause
+  keep <- !is.na(txt) & nzchar(trimws(txt))
+  if (!any(keep)) {
+    return(NULL)
+  }
+  ds <- if ("dataset" %in% names(values)) values$dataset else NA_character_
+  vr <- if ("variable" %in% names(values)) values$variable else NA_character_
+  parts <- list()
+  for (i in which(keep)) {
+    id <- sprintf("WC.%s.%s.%d", ds[[i]], vr[[i]], i)
+    rows <- .wc_parse_text(txt[[i]], id, call)
+    if (!is.null(rows)) {
+      rows$dataset <- ds[[i]]
+      parts[[length(parts) + 1L]] <- rows
+    }
+  }
+  if (!length(parts)) NULL else do.call(rbind, parts)
 }
 
 # Match the first sheet whose normalised name is in the alias set. NULL
