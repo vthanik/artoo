@@ -4,7 +4,7 @@
       validate_define(minimal(), version = "3.0")
     Condition
       Error in `validate_define()`:
-      ! `version` must be one of "2.0" and "2.1".
+      ! `version` must be "2.0" or "2.1".
       x You supplied "3.0".
 
 # a document with no CDISC def namespace is refused with guidance

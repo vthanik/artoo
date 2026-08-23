@@ -147,10 +147,27 @@ test_that("schema validation is BLIND to a removed def:ValueListRef", {
   src <- fixture("define21-sdtm.xml")
   txt <- readLines(src, warn = FALSE)
   hit <- grep("<def:ValueListRef ", txt, fixed = TRUE)
-  skip_if(length(hit) == 0L, "fixture carries no def:ValueListRef")
+  # Assert the anchor EXISTS rather than skipping: a fixture re-vendor that
+  # renamed the element would otherwise turn this into a silent skip, and a
+  # test that quietly stops running is worse than one that fails.
+  expect_gt(length(hit), 0L)
 
+  target <- sub('.*ValueListOID="([^"]*)".*', "\\1", txt[hit[1]])
   out <- tempfile(fileext = ".xml")
   writeLines(txt[-hit[1]], out)
+
+  # Assert the edit LANDED: the value list is now referenced by nothing.
+  after <- readLines(out, warn = FALSE)
+  expect_false(any(grepl(
+    paste0('ValueListOID="', target, '"'),
+    after,
+    fixed = TRUE
+  )))
+  expect_true(any(grepl(
+    paste0('ValueListDef OID="', target, '"'),
+    after,
+    fixed = TRUE
+  )))
 
   report <- validate_define(out)
   expect_true(report@summary$valid)
@@ -164,9 +181,21 @@ test_that("schema validation is BLIND to a dangling ItemRef/@ItemOID", {
   src <- fixture("define21-sdtm.xml")
   txt <- readLines(src, warn = FALSE)
   hit <- grep('<ItemRef ItemOID="', txt, fixed = TRUE)[1]
-  skip_if(is.na(hit), "fixture carries no ItemRef")
+  expect_false(is.na(hit))
 
+  before <- txt[hit]
   txt[hit] <- sub('ItemOID="[^"]*"', 'ItemOID="IT.NOT.A.REAL.ITEM"', txt[hit])
+  # Assert the substitution actually changed the line, and that the OID it
+  # now names is defined nowhere. Without this a no-op sub() would leave the
+  # test asserting that an UNMODIFIED document validates, which proves
+  # nothing about the blindness it claims to pin.
+  expect_false(identical(before, txt[hit]))
+  expect_false(any(grepl(
+    'ItemDef OID="IT.NOT.A.REAL.ITEM"',
+    txt,
+    fixed = TRUE
+  )))
+
   out <- tempfile(fileext = ".xml")
   writeLines(txt, out)
 

@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="define2-1.xsl"?>
 <!--
   A minimal but conforming Define-XML 2.1 document, shipped so that artoo's
   examples and vignettes have something real to validate and read without a
   network round trip. It carries one dataset, three variables, one codelist
   and one comment: enough to exercise every required element, small enough to
   read end to end. Not a submission artefact.
+
+  It deliberately carries NO xml-stylesheet processing instruction. A real
+  submission does, naming a define2-1.xsl that sits beside it, but nothing
+  sits beside this file in inst/extdata/, and a PI naming an absent
+  stylesheet is the defect Pinnacle 21 reports as DD0085. artoo's writer
+  emits the PI and copies the stylesheet alongside its output.
 -->
 <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
      xmlns:def="http://www.cdisc.org/ns/def/v2.1"

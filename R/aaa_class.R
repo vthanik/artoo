@@ -38,7 +38,24 @@
   subclass = "character",
   structure = "character",
   keys = "character",
-  comment_id = "character"
+  comment_id = "character",
+  # ---- Define-XML ItemGroupDef attributes ----
+  # Carried so a written define.xml can be submission-grade rather than
+  # merely schema-valid: Pinnacle 21 treats most of these as required even
+  # though the XSD marks them optional.
+  itemgroupoid = "character", # ItemGroupDef/@OID            both
+  domain = "character", # @Domain                      both
+  sas_dataset_name = "character", # @SASDatasetName              both
+  repeating = "logical", # @Repeating (schema-required) both
+  reference_data = "logical", # @IsReferenceData             both
+  purpose = "character", # @Purpose                     both
+  archive_location_id = "character", # @def:ArchiveLocationID       both
+  standard_id = "character", # @def:StandardOID             2.1
+  is_non_standard = "logical", # @def:IsNonStandard           2.1
+  has_no_data = "logical", # @def:HasNoData               2.1
+  alias_context = "character", # Alias/@Context               both
+  alias_name = "character", # Alias/@Name                  both
+  order = "integer" # emission order            artoo
 )
 .spec_req_datasets <- c("dataset")
 
@@ -64,17 +81,44 @@
   predecessor = "character",
   assigned_value = "character",
   pages = "character",
-  role = "character"
+  role = "character",
+  # ---- Define-XML ItemDef / ItemRef additions ----
+  sas_field_name = "character", # ItemDef/@SASFieldName             both
+  value_list_id = "character", # def:ValueListRef/@ValueListOID    both
+  origin_description = "character", # def:Origin/Description            both
+  origin_document_id = "character", # def:Origin//def:DocumentRef@leafID both
+  page_type = "character", # def:PDFPageRef/@Type              both
+  role_codelist_id = "character", # ItemRef/@RoleCodeListOID          both
+  is_non_standard = "logical", # ItemRef/@def:IsNonStandard        2.1
+  has_no_data = "logical", # ItemRef/@def:HasNoData            2.1
+  alias_context = "character", # ItemDef/Alias/@Context            both
+  alias_name = "character" # ItemDef/Alias/@Name               both
 )
 .spec_req_variables <- c("dataset", "variable", "data_type")
 
+# Codelists are one row per TERM, so the list-level attributes below repeat
+# on every term row of the same codelist. That matches the shape of the source
+# workbook, which also repeats them, and it keeps the slot a plain rectangle;
+# .spec_validate() checks they agree within a codelist so the duplication
+# cannot drift.
 .spec_cols_codelists <- c(
   codelist_id = "character",
   term = "character",
   decode = "character",
   order = "integer",
   extended = "logical",
-  comment_id = "character"
+  comment_id = "character",
+  # ---- list-level, repeated on each term row ----
+  name = "character", # CodeList/@Name (required)     both
+  data_type = "character", # CodeList/@DataType (required) both
+  sas_format_name = "character", # @SASFormatName                both
+  nci_code = "character", # Alias[nci:ExtCodeID]/@Name    both
+  standard_id = "character", # @def:StandardOID              2.1
+  is_non_standard = "logical", # @def:IsNonStandard            2.1
+  # ---- term-level ----
+  term_nci_code = "character", # CodeListItem Alias/@Name      both
+  rank = "integer", # CodeListItem/@Rank            both
+  term_description = "character" # CodeListItem/Description      2.1
 )
 .spec_req_codelists <- c("codelist_id", "term")
 
@@ -90,7 +134,8 @@
   expression_context = "character",
   expression_code = "character",
   document_id = "character",
-  pages = "character"
+  pages = "character",
+  page_type = "character" # def:PDFPageRef/@Type
 )
 .spec_req_methods <- c("method_id")
 
@@ -98,14 +143,21 @@
   comment_id = "character",
   description = "character",
   document_id = "character",
-  pages = "character"
+  pages = "character",
+  page_type = "character" # def:PDFPageRef/@Type
 )
 .spec_req_comments <- c("comment_id")
 
 .spec_cols_documents <- c(
   document_id = "character",
   title = "character",
-  href = "character"
+  href = "character",
+  # Which MetaDataVersion container owns this leaf: annotated_crf,
+  # supplemental, archive, or other. Read off the container rather than
+  # guessed from the filename -- a title-regex heuristic writes a different
+  # document than it read, because a leaf referenced only from def:Origin
+  # sits in no container at all.
+  role = "character"
 )
 .spec_req_documents <- c("document_id")
 

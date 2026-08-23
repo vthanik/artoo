@@ -1,5 +1,17 @@
 # artoo 0.1.3.9000
 
+* `read_spec()` on a Define-XML document now reads the metadata it previously
+  discarded: `SASFieldName`, `def:Origin/@Source`, the Origin document and page
+  reference, NCI controlled-terminology codes at both codelist and term level,
+  codelist `Name`/`DataType`/`SASFormatName`, and the `ItemGroupDef` attributes
+  a submission needs (`Domain`, `SASDatasetName`, `Purpose`, `Repeating`,
+  `IsReferenceData`, `ArchiveLocationID`). Each document leaf now records which
+  container owns it.
+
+* `read_spec()` no longer loses `class` on Define-XML 2.0 documents. `def:Class`
+  is a child element in 2.1 but an attribute in 2.0, and only the element was
+  read, so every 2.0 document came back with an empty `class` column.
+
 * `define_lint()` reports the reference-integrity defects XML Schema cannot
   express: an OID reference that resolves to nothing, and a definition nothing
   references. Findings are directional, and an orphaned `def:ValueListDef` is an

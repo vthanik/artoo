@@ -10,7 +10,7 @@ define_lint(path)
 \item{path}{\emph{Define-XML document to check.} \verb{<character(1)>: required}.}
 }
 \value{
-\emph{A \code{artoo_check} object.} Its \verb{@findings} data frame has columns
+\emph{An \code{artoo_check} object.} Its \verb{@findings} data frame has columns
 \code{check}, \code{dimension}, \code{severity}, \code{dataset}, \code{variable}, \code{message}, and is
 empty when every reference resolves and every definition is used.
 }

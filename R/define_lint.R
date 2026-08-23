@@ -272,7 +272,7 @@
 #'
 #' @param path *Define-XML document to check.* `<character(1)>: required`.
 #'
-#' @return *A `artoo_check` object.* Its `@findings` data frame has columns
+#' @return *An `artoo_check` object.* Its `@findings` data frame has columns
 #'   `check`, `dimension`, `severity`, `dataset`, `variable`, `message`, and is
 #'   empty when every reference resolves and every definition is used.
 #'
@@ -311,6 +311,16 @@ define_lint <- function(path) {
   rlang::check_installed("xml2", reason = "to lint Define-XML documents.")
   .check_path(path, call = call)
 
+  if (!file.exists(path)) {
+    .artoo_abort(
+      c(
+        "{.path {path}} does not exist.",
+        "i" = "Check the path, or pass the file artoo should lint."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
   doc <- tryCatch(
     xml2::read_xml(path),
     error = function(e) {

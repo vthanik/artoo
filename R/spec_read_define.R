@@ -53,6 +53,34 @@
   suppressWarnings(as.integer(x))
 }
 
+# A Define-XML Yes/No attribute as a logical. NA when the attribute is absent,
+# which is meaningfully different from "No" for def:HasNoData (odm:YesOnly,
+# where the attribute's presence IS the assertion).
+#' @noRd
+.dx_yn <- function(x) {
+  ifelse(is.na(x), NA, identical_yes(x))
+}
+#' @noRd
+identical_yes <- function(x) {
+  toupper(x) == "YES"
+}
+
+# The first Alias with the given Context under `node`, as c(context, name).
+#' @noRd
+.dx_alias <- function(node, context = NULL) {
+  al <- xml2::xml_find_all(node, "./*[local-name()='Alias']")
+  if (!length(al)) {
+    return(c(NA_character_, NA_character_))
+  }
+  ctx <- vapply(al, .dx_attr, character(1), name = "Context")
+  nm <- vapply(al, .dx_attr, character(1), name = "Name")
+  hit <- if (is.null(context)) 1L else which(ctx == context)[1]
+  if (is.na(hit)) {
+    return(c(NA_character_, NA_character_))
+  }
+  c(ctx[hit], nm[hit])
+}
+
 #' @noRd
 .read_spec_define <- function(
   path,
@@ -154,6 +182,28 @@
     }
     origin <- .dx_child(n, "Origin")
     vlref <- .dx_child(n, "ValueListRef")
+    alias <- .dx_alias(n)
+    # def:Origin carries more than a Type: 2.1 adds @Source, and both
+    # versions allow a Description and a DocumentRef naming the annotated CRF
+    # page. Dropping those loses the CRF page annotation entirely, which is an
+    # FDA expectation.
+    o_doc <- c(NA_character_, NA_character_)
+    o_desc <- NA_character_
+    o_page_type <- NA_character_
+    if (!is.na(origin)) {
+      o_desc <- .dx_text(origin)
+      dref <- .dx_child(origin, "DocumentRef")
+      if (!is.na(dref)) {
+        pg <- .dx_child(dref, "PDFPageRef")
+        o_doc <- c(
+          .dx_attr(dref, "leafID"),
+          if (is.na(pg)) NA_character_ else .dx_attr(pg, "PageRefs")
+        )
+        if (!is.na(pg)) {
+          o_page_type <- .dx_attr(pg, "Type")
+        }
+      }
+    }
     list(
       oid = xml2::xml_attr(n, "OID"),
       name = xml2::xml_attr(n, "Name"),
@@ -161,6 +211,7 @@
       length = .dx_int(xml2::xml_attr(n, "Length")),
       significant_digits = .dx_int(xml2::xml_attr(n, "SignificantDigits")),
       display_format = .dx_attr(n, "DisplayFormat"),
+      sas_field_name = .dx_attr(n, "SASFieldName"),
       label = .dx_text(n),
       codelist_id = clid,
       comment_id = .dx_attr(n, "CommentOID"),
@@ -169,6 +220,13 @@
       } else {
         xml2::xml_attr(origin, "Type")
       },
+      source = if (is.na(origin)) NA_character_ else .dx_attr(origin, "Source"),
+      origin_description = o_desc,
+      origin_document_id = o_doc[1],
+      pages = o_doc[2],
+      page_type = o_page_type,
+      alias_context = alias[1],
+      alias_name = alias[2],
       value_list = if (is.na(vlref)) {
         NA_character_
       } else {
@@ -206,10 +264,26 @@
       function(o) items[[o]]$name %||% NA_character_,
       character(1)
     )
+    # def:Class is a CHILD ELEMENT in 2.1 but an ATTRIBUTE in 2.0. Reading
+    # only the element loses `class` on every 2.0 document -- which it did,
+    # silently, until this fallback was added.
+    cls_name <- if (is.na(cls)) {
+      .dx_attr(ig, "Class")
+    } else {
+      .dx_attr(cls, "Name")
+    }
+    sub_cls <- if (is.na(cls)) {
+      NA_character_
+    } else {
+      sc <- .dx_child(cls, "SubClass")
+      if (is.na(sc)) NA_character_ else .dx_attr(sc, "Name")
+    }
+    ig_alias <- .dx_alias(ig)
     ds_rows[[length(ds_rows) + 1L]] <- data.frame(
       dataset = ds_name,
       label = .dx_text(ig),
-      class = if (is.na(cls)) NA_character_ else xml2::xml_attr(cls, "Name"),
+      class = cls_name,
+      subclass = sub_cls,
       structure = .dx_attr(ig, "Structure"),
       keys = if (length(key_names)) {
         paste(key_names, collapse = " ")
@@ -217,6 +291,18 @@
         NA_character_
       },
       comment_id = .dx_attr(ig, "CommentOID"),
+      itemgroupoid = .dx_attr(ig, "OID"),
+      domain = .dx_attr(ig, "Domain"),
+      sas_dataset_name = .dx_attr(ig, "SASDatasetName"),
+      repeating = .dx_yn(.dx_attr(ig, "Repeating")),
+      reference_data = .dx_yn(.dx_attr(ig, "IsReferenceData")),
+      purpose = .dx_attr(ig, "Purpose"),
+      archive_location_id = .dx_attr(ig, "ArchiveLocationID"),
+      standard_id = .dx_attr(ig, "StandardOID"),
+      is_non_standard = .dx_yn(.dx_attr(ig, "IsNonStandard")),
+      has_no_data = .dx_yn(.dx_attr(ig, "HasNoData")),
+      alias_context = ig_alias[1],
+      alias_name = ig_alias[2],
       stringsAsFactors = FALSE
     )
     for (j in seq_along(refs)) {
@@ -250,6 +336,21 @@
         mandatory = identical(xml2::xml_attr(refs[[j]], "Mandatory"), "Yes"),
         significant_digits = it$significant_digits,
         origin = it$origin,
+        source = it$source,
+        origin_description = it$origin_description,
+        origin_document_id = it$origin_document_id,
+        pages = it$pages,
+        page_type = it$page_type,
+        sas_field_name = it$sas_field_name,
+        value_list_id = it$value_list,
+        alias_context = it$alias_context,
+        alias_name = it$alias_name,
+        # ItemRef-level attributes: these belong to the reference, not the
+        # definition, so two datasets may reference one ItemDef differently.
+        role = .dx_attr(refs[[j]], "Role"),
+        role_codelist_id = .dx_attr(refs[[j]], "RoleCodeListOID"),
+        is_non_standard = .dx_yn(.dx_attr(refs[[j]], "IsNonStandard")),
+        has_no_data = .dx_yn(.dx_attr(refs[[j]], "HasNoData")),
         stringsAsFactors = FALSE
       )
     }
@@ -271,6 +372,11 @@
     if (!length(terms)) {
       next
     }
+    # The NCI C-code lives on an Alias with Context "nci:ExtCodeID", at both
+    # list and term level. It is a Pinnacle 21 conformance check and an FDA
+    # expectation for CDISC controlled terminology, so dropping it makes the
+    # output non-submission-grade.
+    cl_alias <- .dx_alias(n, "nci:ExtCodeID")
     cl_rows[[length(cl_rows) + 1L]] <- data.frame(
       codelist_id = cl_oids[k],
       term = xml2::xml_attr(terms, "CodedValue"),
@@ -281,6 +387,20 @@
         function(t) identical(.dx_attr(t, "ExtendedValue"), "Yes"),
         logical(1)
       ),
+      name = .dx_attr(n, "Name"),
+      data_type = .dx_attr(n, "DataType"),
+      sas_format_name = .dx_attr(n, "SASFormatName"),
+      nci_code = cl_alias[2],
+      standard_id = .dx_attr(n, "StandardOID"),
+      is_non_standard = .dx_yn(.dx_attr(n, "IsNonStandard")),
+      comment_id = .dx_attr(n, "CommentOID"),
+      term_nci_code = vapply(
+        terms,
+        function(t) .dx_alias(t, "nci:ExtCodeID")[2],
+        character(1)
+      ),
+      rank = .dx_int(xml2::xml_attr(terms, "Rank")),
+      term_description = vapply(terms, .dx_text, character(1)),
       stringsAsFactors = FALSE
     )
   }
@@ -304,7 +424,10 @@
     pg <- .dx_child(r, "PDFPageRef")
     c(
       xml2::xml_attr(r, "leafID"),
-      if (is.na(pg)) NA_character_ else xml2::xml_attr(pg, "PageRefs")
+      if (is.na(pg)) NA_character_ else xml2::xml_attr(pg, "PageRefs"),
+      # @Type is REQUIRED on def:PDFPageRef in 2.1, so a writer that never
+      # read it cannot round-trip one.
+      if (is.na(pg)) NA_character_ else .dx_attr(pg, "Type")
     )
   }
   md_nodes <- .dx_find_all(mdv, "MethodDef")
@@ -317,6 +440,7 @@
       description = vapply(md_nodes, .dx_text, character(1)),
       document_id = vapply(refs, `[`, character(1), 1L),
       pages = vapply(refs, `[`, character(1), 2L),
+      page_type = vapply(refs, `[`, character(1), 3L),
       stringsAsFactors = FALSE
     )
   } else {
@@ -335,6 +459,44 @@
   } else {
     NULL
   }
+  # A leaf's ROLE is which MetaDataVersion container owns it. Read it off the
+  # container rather than guessing from the filename: a leaf referenced only
+  # from def:Origin sits in no container at all, so a title regex would
+  # fabricate a def:AnnotatedCRF the source does not have, and write a
+  # different document than it read.
+  role_of <- function(id) {
+    if (id %in% acrf_ids) {
+      "annotated_crf"
+    } else if (id %in% supp_ids) {
+      "supplemental"
+    } else if (id %in% archive_ids) {
+      "archive"
+    } else {
+      "other"
+    }
+  }
+  container_ids <- function(container) {
+    node <- .dx_child(mdv, container)
+    if (is.na(node)) {
+      return(character(0))
+    }
+    refs <- xml2::xml_find_all(node, "./*[local-name()='DocumentRef']")
+    if (!length(refs)) {
+      character(0)
+    } else {
+      vapply(refs, .dx_attr, character(1), name = "leafID")
+    }
+  }
+  acrf_ids <- container_ids("AnnotatedCRF")
+  supp_ids <- container_ids("SupplementalDoc")
+  archive_ids <- vapply(
+    .dx_find_all(mdv, "ItemGroupDef"),
+    .dx_attr,
+    character(1),
+    name = "ArchiveLocationID"
+  )
+  archive_ids <- archive_ids[!is.na(archive_ids)]
+
   leaf_nodes <- .dx_find_all(mdv, "leaf")
   documents <- if (length(leaf_nodes)) {
     d <- data.frame(
@@ -348,6 +510,11 @@
         character(1)
       ),
       href = vapply(leaf_nodes, .dx_attr, character(1), name = "href"),
+      role = vapply(
+        leaf_nodes,
+        function(n) role_of(.dx_attr(n, "ID")),
+        character(1)
+      ),
       stringsAsFactors = FALSE
     )
     d[!duplicated(d$document_id), , drop = FALSE]

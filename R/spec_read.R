@@ -20,7 +20,18 @@
   "Structure" = "structure",
   "Key Variables" = "keys",
   "Standard" = "standard",
-  "Comment" = "comment_id"
+  "Comment" = "comment_id",
+  # ---- Define-XML ItemGroupDef attributes ----
+  # Pinnacle 21 treats most of these as required for a regulatory submission
+  # even though the XSD marks them optional, so a workbook that carries them
+  # must not have them dropped on the floor.
+  "Domain" = "domain",
+  "SAS Dataset Name" = "sas_dataset_name",
+  "Purpose" = "purpose",
+  "Repeating" = "repeating",
+  "Reference Data" = "reference_data",
+  "Has No Data" = "has_no_data",
+  "Description" = "label"
 )
 
 #' @noRd
@@ -42,7 +53,11 @@
   "Method" = "method_id",
   "Predecessor" = "predecessor",
   "Role" = "role",
-  "Comment" = "comment_id"
+  "Comment" = "comment_id",
+  # ---- Define-XML ItemDef / ItemRef additions ----
+  "SAS Field Name" = "sas_field_name",
+  "Has No Data" = "has_no_data",
+  "Description" = "label"
 )
 
 #' @noRd
@@ -54,7 +69,18 @@
   "ID" = "codelist_id",
   "Order" = "order",
   "Term" = "term",
-  "Decoded Value" = "decode"
+  "Decoded Value" = "decode",
+  # ---- list-level attributes, repeated on every term row ----
+  # CodeList/@Name and @DataType are schema-REQUIRED, so a workbook that
+  # supplies them and an artoo_spec that drops them cannot produce a valid
+  # define.xml. The NCI codes are a Pinnacle 21 conformance check.
+  "Name" = "name",
+  "Data Type" = "data_type",
+  "NCI Codelist Code" = "nci_code",
+  "SAS Format Name" = "sas_format_name",
+  # ---- term-level ----
+  "NCI Term Code" = "term_nci_code",
+  "Rank" = "rank"
 )
 
 #' @noRd

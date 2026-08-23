@@ -59,6 +59,39 @@
   c(title, .check_rule(nchar(title)), lines, "")
 }
 
+# Header for a report over a Define-XML document rather than a spec object.
+#' @noRd
+.format_define_header <- function(x, s, num) {
+  title <- if (is.null(s$n_definitions)) {
+    "artoo Define-XML Schema Check"
+  } else {
+    "artoo Define-XML Reference Check"
+  }
+  body <- c(
+    sprintf("Document: %s", x@study),
+    if (!is.null(s$define_version)) {
+      sprintf("Define-XML version: %s", s$define_version)
+    },
+    if (!is.null(s$valid)) {
+      sprintf("Schema valid: %s", if (isTRUE(s$valid)) "yes" else "no")
+    },
+    if (!is.null(s$n_definitions)) {
+      sprintf(
+        "Definitions: %d    References: %d",
+        num("n_definitions"),
+        num("n_references")
+      )
+    },
+    if (!is.null(s$n_external_codelists) && num("n_external_codelists") > 0L) {
+      sprintf(
+        "External codelists (exempt from the orphan check): %d",
+        num("n_external_codelists")
+      )
+    }
+  )
+  c(title, strrep("=", nchar(title)), "", "Summary", .check_rule(7L), body, "")
+}
+
 #' @noRd
 .format_check <- function(x) {
   f <- x@findings
@@ -70,26 +103,35 @@
   scope <- if (length(x@scope)) paste(x@scope, collapse = ", ") else "(none)"
   num <- function(nm) if (is.null(s[[nm]])) 0L else s[[nm]]
 
-  header <- c(
-    "artoo Spec Check",
-    strrep("=", 16L),
-    "",
-    "Spec Summary",
-    .check_rule(12L),
-    sprintf("Study: %s", x@study),
-    sprintf("Scope: %s", scope),
-    sprintf(
-      "Datasets: %d    Variables: %d",
-      num("n_datasets"),
-      num("n_variables")
-    ),
-    sprintf(
-      "Methods referenced: %d    Comments referenced: %d",
-      num("n_methods_ref"),
-      num("n_comments_ref")
-    ),
-    ""
-  )
+  # A report over a Define-XML DOCUMENT summarises different things from one
+  # over a spec object: "Datasets: 0 / Variables: 0" is simply false for a
+  # define, and the fields that matter (which version, whether it validated,
+  # how many references resolved) would never be shown. Pick the header from
+  # what the summary actually carries.
+  header <- if (!is.null(s$define_version) || !is.null(s$n_definitions)) {
+    .format_define_header(x, s, num)
+  } else {
+    c(
+      "artoo Spec Check",
+      strrep("=", 16L),
+      "",
+      "Spec Summary",
+      .check_rule(12L),
+      sprintf("Study: %s", x@study),
+      sprintf("Scope: %s", scope),
+      sprintf(
+        "Datasets: %d    Variables: %d",
+        num("n_datasets"),
+        num("n_variables")
+      ),
+      sprintf(
+        "Methods referenced: %d    Comments referenced: %d",
+        num("n_methods_ref"),
+        num("n_comments_ref")
+      ),
+      ""
+    )
+  }
 
   if (!nrow(f)) {
     return(c(header, "No findings.", ""))

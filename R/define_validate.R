@@ -161,7 +161,7 @@
 #'   `def` namespace. Supply `"2.0"` or `"2.1"` to assert a version instead,
 #'   which turns a version mismatch into findings rather than silent success.
 #'
-#' @return *A `artoo_check` object.* Its `@findings` data frame has columns
+#' @return *An `artoo_check` object.* Its `@findings` data frame has columns
 #'   `check`, `dimension`, `severity`, `dataset`, `variable`, `message`, and is
 #'   empty when the document is valid. Print it for the sectioned report.
 #'
@@ -194,8 +194,8 @@
 #' **Check further:** [define_lint()] for reference integrity, which schema
 #' validation cannot see.
 #'
-#' **Specs:** [read_spec()] to read a Define-XML document into an
-#' [artoo_spec()], [write_spec()] to write one back out.
+#' **Specs:** [read_spec()] reads a Define-XML document into an
+#' [artoo_spec()].
 #'
 #' @export
 validate_define <- function(path, version = NULL) {
@@ -203,6 +203,16 @@ validate_define <- function(path, version = NULL) {
   rlang::check_installed("xml2", reason = "to validate Define-XML documents.")
   .check_path(path, call = call)
 
+  if (!file.exists(path)) {
+    .artoo_abort(
+      c(
+        "{.path {path}} does not exist.",
+        "i" = "Check the path, or pass the file artoo should validate."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
   doc <- tryCatch(
     xml2::read_xml(path),
     error = function(e) {
@@ -269,7 +279,7 @@ validate_define <- function(path, version = NULL) {
       known <- .define_versions
       .artoo_abort(
         c(
-          "{.arg version} must be one of {.val {known}}.",
+          "{.arg version} must be {.val {known[1]}} or {.val {known[2]}}.",
           "x" = "You supplied {.val {version}}."
         ),
         kind = "input",

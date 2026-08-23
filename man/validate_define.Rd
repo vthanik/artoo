@@ -15,7 +15,7 @@ validate_define(path, version = NULL)
 which turns a version mismatch into findings rather than silent success.}
 }
 \value{
-\emph{A \code{artoo_check} object.} Its \verb{@findings} data frame has columns
+\emph{An \code{artoo_check} object.} Its \verb{@findings} data frame has columns
 \code{check}, \code{dimension}, \code{severity}, \code{dataset}, \code{variable}, \code{message}, and is
 empty when the document is valid. Print it for the sectioned report.
 }
@@ -67,6 +67,6 @@ substr(bad@findings$message[1], 1, 60)
 \strong{Check further:} \code{\link[=define_lint]{define_lint()}} for reference integrity, which schema
 validation cannot see.
 
-\strong{Specs:} \code{\link[=read_spec]{read_spec()}} to read a Define-XML document into an
-\code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=write_spec]{write_spec()}} to write one back out.
+\strong{Specs:} \code{\link[=read_spec]{read_spec()}} reads a Define-XML document into an
+\code{\link[=artoo_spec]{artoo_spec()}}.
 }
