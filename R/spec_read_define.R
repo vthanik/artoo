@@ -135,9 +135,19 @@
   )
   standards <- .dx_find_all(mdv, "Standard")
   standard <- if (length(standards)) {
+    # Take the first IMPLEMENTATION GUIDE standard, not merely the first node.
+    # The schema imposes no order on def:Standard, so a document may list a
+    # controlled-terminology standard first -- and then the scalar would read
+    # as a CT publication date while standards$is_primary pointed at the
+    # actual IG. One object must not carry two answers to "which standard".
+    types <- vapply(standards, .dx_attr, character(1), name = "Type")
+    pick <- which(!is.na(types) & types == "IG")[1]
+    if (is.na(pick)) {
+      pick <- 1L
+    }
     paste(
-      xml2::xml_attr(standards[[1]], "Name"),
-      xml2::xml_attr(standards[[1]], "Version")
+      xml2::xml_attr(standards[[pick]], "Name"),
+      xml2::xml_attr(standards[[pick]], "Version")
     )
   } else {
     # Define 2.0 records the standard on the MetaDataVersion itself.
@@ -525,7 +535,11 @@
   # which standard each dataset and codelist actually claims.
   std_nodes <- .dx_find_all(mdv, "Standard")
   standards <- if (length(std_nodes)) {
+    # A def:Standard missing @Type is invalid but readable, and a read never
+    # schema-validates. Left as NA it poisons the cumsum below and every
+    # subsequent row, so the primary flag silently becomes NA.
     ig <- vapply(std_nodes, .dx_attr, character(1), name = "Type") == "IG"
+    ig <- !is.na(ig) & ig
     data.frame(
       standard_id = vapply(std_nodes, .dx_attr, character(1), name = "OID"),
       name = vapply(std_nodes, .dx_attr, character(1), name = "Name"),
@@ -546,7 +560,9 @@
       ),
       # The first IG standard is the one a 2.0 document could express; mark
       # it so a downgrade has an unambiguous choice rather than guessing.
-      is_primary = ig & !duplicated(ig & TRUE) & cumsum(ig) == 1L,
+      # The first IG standard: the one a 2.0 document can express, since 2.0
+      # carries a single name/version pair rather than a table.
+      is_primary = ig & cumsum(ig) == 1L,
       order = seq_along(std_nodes),
       stringsAsFactors = FALSE
     )

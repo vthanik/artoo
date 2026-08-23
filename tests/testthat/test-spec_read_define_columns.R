@@ -36,12 +36,12 @@ test_that("ItemGroupDef submission attributes are carried", {
   expect_type(spec@datasets$has_no_data, "logical")
 
   # def:ArchiveLocationID is absent exactly where def:HasNoData is set: a
-  # dataset with no data legitimately has no file to point at.
-  no_data <- isTRUE(spec@datasets$has_no_data)
-  expect_lt(
-    sum(!is.na(spec@datasets$archive_location_id)),
-    n + 1L
-  )
+  # dataset with no data legitimately has no file to point at, and the 2.1
+  # spec makes the attribute conditional on precisely that.
+  no_data <- !is.na(spec@datasets$has_no_data) & spec@datasets$has_no_data
+  expect_gt(sum(no_data), 0L)
+  expect_true(all(is.na(spec@datasets$archive_location_id[no_data])))
+  expect_true(all(!is.na(spec@datasets$archive_location_id[!no_data])))
 })
 
 test_that("ItemDef and Origin detail are carried", {

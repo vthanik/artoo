@@ -27,6 +27,16 @@
 # (e.g. an ADaM numeric date is dataType "date", targetDataType "integer").
 .cdisc_targettypes <- c("integer", "decimal")
 
+# The ODM RangeCheck comparator vocabulary, closed in the schema. artoo
+# validates against it at read time rather than letting the schema gate report
+# it much later with a less actionable message. Lives here, with the other
+# closed vocabularies, because R sources this file first and both the
+# where-clause reader and the Define-XML version profiles need it.
+.wc_comparators <- c("LT", "LE", "GT", "GE", "EQ", "NE", "IN", "NOTIN")
+
+# Comparators whose value cell holds a LIST rather than one atomic value.
+.wc_set_comparators <- c("IN", "NOTIN")
+
 # ---- Per-slot column schemas: name -> required storage mode --------------
 # `req` lists the columns a slot MUST carry; the rest are optional and are
 # filled with a typed NA at construction.
@@ -100,7 +110,10 @@
 # on every term row of the same codelist. That matches the shape of the source
 # workbook, which also repeats them, and it keeps the slot a plain rectangle;
 # .spec_validate() checks they agree within a codelist so the duplication
-# cannot drift.
+# cannot drift. NA is tolerated: a workbook that fills the header only on a
+# codelist's first term row is the normal shape. The companion rule every
+# consumer must follow is therefore "the unique non-NA value", never "the
+# first row" -- taking row 1 loses the value whenever row 1 is blank.
 .spec_cols_codelists <- c(
   codelist_id = "character",
   term = "character",

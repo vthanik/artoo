@@ -19,14 +19,6 @@
 # clause silently changes which rows a definition applies to, which is worse
 # than a failed read.
 
-# The ODM RangeCheck comparator vocabulary. Closed in the schema, so artoo
-# validates at spec time rather than letting the schema gate report it later
-# with a less useful message. Pinnacle 21 does not validate this at all.
-.wc_comparators <- c("LT", "LE", "GT", "GE", "EQ", "NE", "IN", "NOTIN")
-
-# Comparators whose value cell holds a LIST rather than one atomic value.
-.wc_set_comparators <- c("IN", "NOTIN")
-
 # Split a value cell for a set comparator.
 #
 # Rules, in order: strip one balanced outer paren pair; split on commas that

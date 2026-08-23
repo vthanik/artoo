@@ -14,7 +14,7 @@
   if (length(missing)) {
     .artoo_abort(
       c(
-        "{.arg {slot}} is missing a required column{cli::qty(missing)}{?s}: {.val {missing}}.",
+        "{.arg {slot}} is missing {cli::qty(length(missing))}a required column{?s}: {.val {missing}}.",
         "i" = "Required: {.val {req}}."
       ),
       kind = "spec",
@@ -290,6 +290,25 @@ artoo_spec <- function(
       values,
       stringsAsFactors = FALSE,
       check.names = FALSE
+    )
+    # Coerce to the value-level schema so every consumer sees one shape.
+    # NULL still means "no value-level metadata"; a present table is
+    # rectangular and typed, which is what lets the writer read
+    # where_clause_id / value_list_id / itemoid without guarding each one.
+    # No required columns here, deliberately. The goal is a UNIFORM SHAPE --
+    # every schema column present and typed, so the writer can read
+    # where_clause_id / value_list_id / itemoid without guarding each one --
+    # not a new admissibility rule. `values` has always accepted whatever a
+    # source carried, and rejecting a spec that was valid yesterday is a
+    # different decision from making the shape predictable. A value-level row
+    # that names no dataset or variable is reported by validate_spec()
+    # instead, where it is a finding rather than a fatal error.
+    values <- .coerce_slot(
+      values,
+      .spec_cols_values,
+      character(0),
+      "values",
+      call
     )
     # An all-NA column has no type signal on a JSON round-trip: jsonlite writes
     # [null, ...] and reads it back as logical, so write_spec()/read_spec()

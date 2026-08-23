@@ -49,8 +49,15 @@ Columns the P21 vocabulary does not model are not lost: a foreign column
 carried on a slot is re-emitted verbatim under its own header, so an xlsx
 round-trip keeps user columns.
 
-\strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
-per-variable \code{key_sequence}) do not survive an xlsx round-trip;
+\strong{Note:} the xlsx writer emits the eight classic P21 sheets, so the
+\code{standards}, \code{where_clauses}, \code{method_expressions}, \code{arm_displays},
+\code{arm_results} and \code{dictionaries} tables are dropped on that path. Reading a
+Define-XML document and writing it to xlsx therefore loses its
+\code{def:Standards} block, its structured where clauses and its formal
+expressions. Write JSON when you need the spec back whole.
+
+Fields with no P21 column (\code{itemoid}, \code{target_data_type},
+per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;
 persist to JSON when you need the spec back exactly. The \verb{Data Type}
 re-encoding is also non-injective: \code{decimal}, \code{double}, \code{boolean}, and
 \code{URI} fold to \code{float} or \code{text} on a read-back. A Define-XML

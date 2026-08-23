@@ -63,8 +63,15 @@
 #' carried on a slot is re-emitted verbatim under its own header, so an xlsx
 #' round-trip keeps user columns.
 #'
-#' **Note:** fields with no P21 column (`itemoid`, `target_data_type`,
-#' per-variable `key_sequence`) do not survive an xlsx round-trip;
+#' **Note:** the xlsx writer emits the eight classic P21 sheets, so the
+#' `standards`, `where_clauses`, `method_expressions`, `arm_displays`,
+#' `arm_results` and `dictionaries` tables are dropped on that path. Reading a
+#' Define-XML document and writing it to xlsx therefore loses its
+#' `def:Standards` block, its structured where clauses and its formal
+#' expressions. Write JSON when you need the spec back whole.
+#'
+#' Fields with no P21 column (`itemoid`, `target_data_type`,
+#' per-variable `key_sequence`) likewise do not survive an xlsx round-trip;
 #' persist to JSON when you need the spec back exactly. The `Data Type`
 #' re-encoding is also non-injective: `decimal`, `double`, `boolean`, and
 #' `URI` fold to `float` or `text` on a read-back. A Define-XML

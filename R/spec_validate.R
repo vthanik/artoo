@@ -211,6 +211,28 @@
     }
   }
 
+  # The structural slots. Without these the "last line of defence" does not
+  # actually defend them: S7::set_props(spec, standards = <garbage>) would
+  # pass.
+  for (nm in c(
+    "standards",
+    "where_clauses",
+    "method_expressions",
+    "arm_displays",
+    "arm_results",
+    "dictionaries"
+  )) {
+    issues <- c(
+      issues,
+      .validate_slot(
+        S7::prop(self, nm),
+        get(paste0(".spec_cols_", nm)),
+        get(paste0(".spec_req_", nm)),
+        nm
+      )
+    )
+  }
+
   # Codelist list-level attributes are DENORMALISED: `codelists` is one row
   # per term, so @Name, @DataType and the rest repeat on every term row of the
   # same codelist. That matches the source workbook's own shape, but nothing

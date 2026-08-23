@@ -533,17 +533,22 @@ read_spec <- function(
 }
 
 #' @noRd
+# Warn only when a file was written by a NEWER artoo than this one. An older
+# file is read correctly -- every v1 field is still recognised -- so warning
+# about it was false, and a warning that cries wolf gets filtered out.
+#' @noRd
 .check_spec_json_version <- function(v, call) {
   if (is.null(v)) {
     return(invisible())
   }
   v <- as.character(v)[1L]
   supported <- .spec_json_version
-  if (!identical(v, supported)) {
+  newer <- suppressWarnings(as.numeric(v) > as.numeric(supported))
+  if (isTRUE(newer) || is.na(newer) && !identical(v, supported)) {
     .artoo_warn(
       c(
-        "Spec JSON version {.val {v}} is not the supported version {.val {supported}}.",
-        "i" = "Reading anyway; some fields may not be recognised."
+        "Spec JSON version {.val {v}} is newer than the supported version {.val {supported}}.",
+        "i" = "Reading anyway; fields added after {.val {supported}} are ignored."
       ),
       kind = "spec",
       call = call
@@ -592,6 +597,13 @@ read_spec <- function(
   std_raw <- .read_p21_tab(path, std_sheet)
   ad_raw <- .read_p21_tab(path, ad_sheet)
   ar_raw <- .read_p21_tab(path, ar_sheet)
+
+  # A newer workbook generation carries BOTH "Label" and "Description".
+  # Mapping both onto `label` yields two columns of the same name, so only
+  # Label is mapped -- but a workbook that carries Description ALONE would
+  # then read no label at all. Fall back only when Label mapped nothing.
+  datasets <- .p21_description_fallback(datasets)
+  variables <- .p21_description_fallback(variables)
 
   # Required sheets must be present AND carry rows (H7).
   .require_p21_sheet(datasets, ds_sheet, "Datasets", sheets, call)
@@ -919,6 +931,18 @@ read_spec <- function(
 
 # Pivot a P21 Define (Attribute / Value) sheet into a one-row wide study
 # table whose columns are the attribute names.
+# Use a "Description" column as the label when no "Label" column supplied one.
+#' @noRd
+.p21_description_fallback <- function(df) {
+  if (is.null(df) || !nrow(df) || !"Description" %in% names(df)) {
+    return(df)
+  }
+  if (!"label" %in% names(df) || all(is.na(df$label))) {
+    df$label <- df[["Description"]]
+  }
+  df
+}
+
 #' @noRd
 .p21_study <- function(df) {
   if (is.null(df) || nrow(df) < 1L || ncol(df) < 2L) {

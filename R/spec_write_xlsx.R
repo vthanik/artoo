@@ -32,8 +32,11 @@
 # columns that have no P21 header (`itemoid`, `target_data_type`,
 # `key_sequence`, ...) are listed in `canonical` and stay unemitted -- they
 # survive only through the lossless native JSON. Logical columns become the P21
-# "Yes"/"No" convention. Returns NULL when no MAPPED column is present, so a
-# slot carrying only foreign columns does not conjure a sheet.
+# "Yes"/"No" convention. Returns NULL when no MAPPED column carries a value,
+# so a slot holding only foreign columns does not conjure a sheet. The test is
+# on CONTENT, not presence: every slot is coerced to its full schema now, so
+# the mapped columns are always there and an all-NA set means the slot has
+# nothing this workbook can express.
 #' @noRd
 .p21_sheet_frame <- function(df, map, canonical = unname(map)) {
   if (is.null(df) || !is.data.frame(df) || !nrow(df)) {
@@ -42,6 +45,9 @@
   rev_map <- .p21_rev(map)
   mapped <- intersect(names(rev_map), names(df))
   if (!length(mapped)) {
+    return(NULL)
+  }
+  if (all(vapply(df[mapped], function(col) all(is.na(col)), logical(1)))) {
     return(NULL)
   }
   foreign <- setdiff(names(df), c(canonical, names(rev_map), ".artoo_row"))

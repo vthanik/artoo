@@ -53,6 +53,7 @@
 #' @noRd
 .spec_migrate <- function(x, call = rlang::caller_env()) {
   if (!.spec_stale(x)) {
+    .spec_note_future(x)
     return(x)
   }
   have <- names(S7::prop(attr(x, "S7_class", exact = TRUE), "properties"))
@@ -88,6 +89,38 @@
     arm_results = old("arm_results"),
     dictionaries = old("dictionaries")
   )
+}
+
+# A spec saved by a NEWER artoo carries properties this one does not know.
+# It is deliberately NOT rebuilt: passing it through today's constructor would
+# silently DROP whatever the newer version added. Say so once and leave it
+# alone -- everything this version understands still works.
+#' @noRd
+.spec_note_future <- function(x) {
+  cls <- attr(x, "S7_class", exact = TRUE)
+  if (is.null(cls)) {
+    return(invisible(NULL))
+  }
+  have <- tryCatch(
+    names(S7::prop(cls, "properties")),
+    error = function(e) NULL
+  )
+  if (is.null(have)) {
+    return(invisible(NULL))
+  }
+  extra <- setdiff(have, names(S7::prop(artoo_spec_class, "properties")))
+  if (length(extra) && is.null(.spec_migrate_env$told_future)) {
+    .artoo_inform(
+      c(
+        "This spec was saved by a newer version of artoo.",
+        "i" = "{cli::qty(length(extra))}Field{?s} {.val {extra}} {?is/are} not understood here, and {?is/are} left untouched.",
+        "i" = "Upgrade artoo to use {cli::qty(length(extra))}{?it/them}."
+      ),
+      kind = "spec"
+    )
+    .spec_migrate_env$told_future <- TRUE
+  }
+  invisible(NULL)
 }
 
 # `standard` is a scalar that may legitimately be NA; the constructor treats

@@ -174,3 +174,37 @@ test_that("a spec with no standard migrates without inventing one", {
   expect_null(artoo:::.spec_migrate_standard(character(0)))
   expect_identical(artoo:::.spec_migrate_standard("SDTMIG 3.4"), "SDTMIG 3.4")
 })
+
+test_that("the migration handles every constructor slot", {
+  # .spec_migrate() names each property explicitly, so a seventh property
+  # added later would be silently dropped on migration. Pin the two lists
+  # together rather than trusting a future edit to touch both.
+  handled <- names(formals(artoo_spec))
+  live <- names(S7::prop(artoo:::artoo_spec_class, "properties"))
+  expect_setequal(setdiff(live, handled), character(0))
+})
+
+test_that("a spec from a NEWER artoo is left alone, with a note", {
+  # Rebuilding it through today's constructor would silently DROP whatever
+  # the newer version added, so it is deliberately not migrated.
+  env <- artoo:::.spec_migrate_env
+  withr::defer(assign("told_future", env$told_future, envir = env))
+  assign("told_future", NULL, envir = env)
+
+  # Build a class that has everything the current one has PLUS a property
+  # this version has never heard of, and stamp it onto a copy.
+  future_class <- S7::new_class(
+    "artoo_spec",
+    package = "artoo",
+    properties = c(
+      S7::prop(artoo:::artoo_spec_class, "properties"),
+      list(invented_later = S7::new_property(S7::class_character))
+    )
+  )
+  future <- sdtm_spec
+  attr(future, "S7_class") <- future_class
+
+  expect_false(artoo:::.spec_stale(future))
+  expect_message(artoo:::.spec_migrate(future), class = "artoo_message_spec")
+  expect_identical(artoo:::.spec_migrate(future), future)
+})
