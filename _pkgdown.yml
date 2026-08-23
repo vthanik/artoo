@@ -91,7 +91,8 @@ reference:
     decode single variables through its codelists, and read or replace the
     artoo_meta the result carries. Then surface every conformance finding
     for one dataset or a whole study, plus the spec's own integrity, with
-    the control object that scopes both.
+    the control object that scopes both. Schema-validate a Define-XML
+    document offline against the bundled CDISC schemas.
   contents:
   - apply_spec
   - decode_column
@@ -102,6 +103,7 @@ reference:
   - check_spec
   - check_study
   - validate_spec
+  - validate_define
   - conformance
   - artoo_checks
   - is_artoo_checks

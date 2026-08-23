@@ -1,5 +1,12 @@
 # artoo 0.1.3.9000
 
+* `validate_define()` schema-validates a Define-XML 2.0 or 2.1 document against
+  the CDISC schemas, which artoo now bundles, so validation runs offline with no
+  network round trip. The version is detected from the document's namespace
+  unless you assert one. Note that schema validity is a floor: a reference that
+  points at nothing, and a definition nothing points at, are both invisible to
+  XML Schema.
+
 * `write_json()` and `write_ndjson()` now emit columns that conform to the
   Dataset-JSON v1.1 schema's closed Column vocabulary: `origin`, `codelist`,
   and `significantDigits` moved out of the `columns` array into the

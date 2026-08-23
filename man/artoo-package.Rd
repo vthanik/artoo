@@ -27,5 +27,11 @@ Authors:
   \item Vignesh Thanikachalam \email{about.vignesh@gmail.com} [copyright holder]
 }
 
+Other contributors:
+\itemize{
+  \item Lex Jansen (Author of the bundled CDISC Define-XML stylesheets) [copyright holder]
+  \item  CDISC (Author of the bundled Define-XML, ODM and ARM schemas) [copyright holder]
+}
+
 }
 \keyword{internal}

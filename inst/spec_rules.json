@@ -669,5 +669,16 @@
     "description": "A character date/datetime/time variable holds values that are not valid ISO 8601 text (complete, right-truncated partial, or SDTMIG hyphen-placeholder form).",
     "reason": null,
     "engine": "data"
+  },
+  {
+    "id": "define_schema_invalid",
+    "dimension": "schema",
+    "severity": "error",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "The Define-XML document does not conform to its CDISC XML Schema.",
+    "reason": null,
+    "engine": "define"
   }
 ]

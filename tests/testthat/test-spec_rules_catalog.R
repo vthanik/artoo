@@ -15,8 +15,13 @@ test_that("the rule catalog parses and has the required shape", {
     ) %in%
       names(r)
   ))
-  expect_true(all(r$severity %in% c("error", "warning", "note")))
-  expect_true(all(r$engine %in% c("spec", "data")))
+  # Assert against the package's own vocabularies rather than a second copy
+  # of them: a hardcoded list here silently blocks any new dimension or
+  # engine, which is exactly how this test broke when the define engine
+  # was added.
+  expect_true(all(r$severity %in% artoo:::.spec_severities))
+  expect_true(all(r$engine %in% artoo:::.spec_engines))
+  expect_true(all(r$dimension %in% artoo:::.spec_dimensions))
   # A data-engine rule cannot run without data.
   expect_false(any(r$engine == "data" & !r$requires_data))
   expect_false(any(duplicated(r$id)))
