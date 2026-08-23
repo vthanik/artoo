@@ -27,3 +27,13 @@
       x "SEX" is not `VARIABLE COMPARATOR value`.
       i Supply a WhereClauses sheet instead, which needs no parsing.
 
+# a clause mixing AND with OR is refused as ambiguous
+
+    Code
+      artoo:::.wc_parse_text("SEX EQ (F) AND SEX EQ (M) OR SEX EQ (U)", "WC.E")
+    Condition
+      Error:
+      ! Where clause "WC.E" mixes AND with OR.
+      x Define-XML defines no precedence between them, so the intended grouping is ambiguous.
+      i Split it into separate value-level rows, one per condition.
+

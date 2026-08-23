@@ -106,6 +106,12 @@
     reason = "to write a Pinnacle 21 Excel spec."
   )
 
+  # The workbook has no sheet for the structural slots, so writing xlsx DROPS
+  # them. Silence would be exactly the silent truncation this project
+  # forbids: a Define-XML document read and written to xlsx would lose its
+  # standards, where clauses and formal expressions without a word.
+  .p21_warn_dropped(spec, call)
+
   datasets <- spec@datasets
   # The spec's one standard is interchange-encoded as the P21 Datasets
   # sheet's repeated Standard column (the shape the reader's resolver
@@ -190,4 +196,38 @@
   .move_into_place(tmp, path, call = call)
 
   invisible(path)
+}
+
+# Name the populated slots a Pinnacle 21 workbook cannot carry.
+#' @noRd
+.p21_warn_dropped <- function(spec, call = rlang::caller_env()) {
+  slots <- c(
+    standards = "standards",
+    where_clauses = "where clauses",
+    method_expressions = "formal expressions",
+    arm_displays = "analysis displays",
+    arm_results = "analysis results",
+    dictionaries = "dictionaries"
+  )
+  filled <- vapply(
+    names(slots),
+    function(nm) {
+      x <- S7::prop(spec, nm)
+      !is.null(x) && is.data.frame(x) && nrow(x) > 0L
+    },
+    logical(1)
+  )
+  if (!any(filled)) {
+    return(invisible(NULL))
+  }
+  lost <- unname(slots[filled])
+  .artoo_warn(
+    c(
+      "A Pinnacle 21 workbook has no sheet for {.val {lost}}.",
+      "i" = "{cli::qty(length(lost))}{?It is/They are} dropped here; write {.val .json} to keep the spec whole."
+    ),
+    kind = "spec",
+    call = call
+  )
+  invisible(NULL)
 }

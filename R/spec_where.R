@@ -32,21 +32,42 @@
 # parenthesises EVERY value including a scalar -- "VSTESTCD EQ (HEIGHT)". A
 # parser that strips parens only for IN, as the prior art did, emits
 # "(HEIGHT)" as the check value and corrupts every scalar comparison in the
-# document. On the tabular path parens are left alone, because a value there
-# may legitimately contain them.
+# document. On the tabular path a SCALAR value keeps its parentheses, since a
+# value there may legitimately contain them; a set value is still unwrapped,
+# because "(A, B)" is how workbooks write a list.
 #' @noRd
-.wc_split_values <- function(value, comparator, strip_parens = FALSE) {
+.wc_split_values <- function(
+  value,
+  comparator,
+  strip_parens = FALSE,
+  id = NA_character_,
+  call = rlang::caller_env()
+) {
   value <- if (is.na(value)) "" else as.character(value)
   is_set <- toupper(comparator) %in% .wc_set_comparators
   if (!is_set && !strip_parens) {
     return(value)
   }
   v <- trimws(value)
-  if (startsWith(v, "(") && endsWith(v, ")")) {
-    v <- substr(v, 2L, nchar(v) - 1L)
+  # Strip only a BALANCED outer pair. "(1), (2)" opens and closes without the
+  # first paren matching the last, and blindly trimming both ends yields the
+  # values "1)" and "(2" -- a silent corruption rather than a refusal.
+  if (.wc_balanced_parens(v)) {
+    v <- trimws(substr(v, 2L, nchar(v) - 1L))
   }
   if (!is_set) {
-    return(trimws(v))
+    return(v)
+  }
+  if (.wc_unbalanced_quotes(v)) {
+    .artoo_abort(
+      c(
+        "Where clause {.val {id}} has an unbalanced quote in its value list.",
+        "x" = "{.val {value}}",
+        "i" = "Quote a value only to protect a comma inside it."
+      ),
+      kind = "p21_sheet",
+      call = call
+    )
   }
   parts <- .wc_split_outside_quotes(v)
   parts <- trimws(parts)
@@ -62,7 +83,60 @@
     character(1),
     USE.NAMES = FALSE
   )
-  parts[nzchar(parts) | length(parts) == 1L]
+  kept <- parts[nzchar(parts)]
+  if (anyDuplicated(kept)) {
+    dup <- unique(kept[duplicated(kept)])
+    .artoo_warn(
+      c(
+        "Where clause {.val {id}} lists {.val {dup}} more than once.",
+        "i" = "Repeated values are kept once; check the source for a typo."
+      ),
+      kind = "spec",
+      call = call
+    )
+    kept <- unique(kept)
+  }
+  if (!length(kept)) {
+    # An empty list is not "matches nothing" in Define-XML, it is a malformed
+    # RangeCheck. Every comparator in the closed enumeration takes an operand.
+    .artoo_abort(
+      c(
+        "Where clause {.val {id}} has an empty value list.",
+        "x" = "{.val {value}}",
+        "i" = "Every Define-XML comparator takes at least one value."
+      ),
+      kind = "p21_sheet",
+      call = call
+    )
+  }
+  kept
+}
+
+# TRUE when the string opens with "(" and that very paren is closed by the
+# final character, rather than merely starting and ending with parens.
+#' @noRd
+.wc_balanced_parens <- function(x) {
+  if (nchar(x) < 2L || !startsWith(x, "(") || !endsWith(x, ")")) {
+    return(FALSE)
+  }
+  chars <- strsplit(x, "", fixed = TRUE)[[1]]
+  depth <- 0L
+  for (i in seq_along(chars)) {
+    if (chars[[i]] == "(") {
+      depth <- depth + 1L
+    } else if (chars[[i]] == ")") {
+      depth <- depth - 1L
+      if (depth == 0L) {
+        return(i == length(chars))
+      }
+    }
+  }
+  FALSE
+}
+
+#' @noRd
+.wc_unbalanced_quotes <- function(x) {
+  sum(strsplit(x, "", fixed = TRUE)[[1]] == "\"") %% 2L != 0L
 }
 
 # Split on commas not inside a double-quoted run.
@@ -124,10 +198,22 @@
   seen <- new.env(parent = emptyenv())
   for (i in seq_len(nrow(df))) {
     id <- as.character(df$where_clause_id[[i]])
+    if (is.na(id) || !nzchar(trimws(id))) {
+      # Rows with no id would all group under one key and weld unrelated
+      # conditions into a single AND clause.
+      .artoo_abort(
+        c(
+          "The WhereClauses sheet has a row with no ID (row {i}).",
+          "i" = "Every range check must name the where clause it belongs to."
+        ),
+        kind = "p21_sheet",
+        call = call
+      )
+    }
     cmp <- .wc_check_comparator(df$comparator[[i]], id, call)
     n <- (seen[[id]] %||% 0L) + 1L
     assign(id, n, envir = seen)
-    vals <- .wc_split_values(df$value[[i]], cmp)
+    vals <- .wc_split_values(df$value[[i]], cmp, id = id, call = call)
     rows[[length(rows) + 1L]] <- data.frame(
       where_clause_id = id,
       check_order = n,
@@ -212,7 +298,7 @@
     return(NULL)
   }
   if (parts$has_or) {
-    conditions <- .wc_fold_or(conditions, id, call)
+    conditions <- .wc_fold_or(conditions, id, parts$has_and, call)
   }
   rows <- list()
   for (k in seq_along(conditions)) {
@@ -234,12 +320,17 @@
   do.call(rbind, rows)
 }
 
-# Split on AND / OR at the top level, reporting whether any OR was present.
+# Split on AND / OR at the top level, reporting which conjunctions appeared.
+# Both are needed: a clause mixing them is ambiguous without precedence rules
+# Define-XML does not define, so it is refused rather than guessed at.
 #' @noRd
 .wc_split_conjunctions <- function(text) {
   pieces <- strsplit(text, "\\s+(?i:AND|OR)\\s+", perl = TRUE)[[1]]
-  has_or <- grepl("\\s+(?i:OR)\\s+", text, perl = TRUE)
-  list(conditions = trimws(pieces), has_or = has_or)
+  list(
+    conditions = trimws(pieces),
+    has_or = grepl("\\s+(?i:OR)\\s+", text, perl = TRUE),
+    has_and = grepl("\\s+(?i:AND)\\s+", text, perl = TRUE)
+  )
 }
 
 #' @noRd
@@ -267,14 +358,52 @@
   list(
     variable = m[[2]],
     comparator = cmp,
-    values = .wc_split_values(m[[4]], cmp, strip_parens = TRUE)
+    values = .wc_split_values(
+      m[[4]],
+      cmp,
+      strip_parens = TRUE,
+      id = id,
+      call = call
+    )
   )
 }
 
 # Rewrite a disjunction, or refuse it.
+#
+# Only ONE rewrite is sound: several equality tests on the same variable are
+# exactly what IN means. Everything else changes the meaning, so it is
+# refused:
+#
+#   SEX EQ (F) OR SEX NE (M)        would become SEX IN (F, M) -- wrong, the
+#                                   second leg admits every value but M.
+#   AGE LT (5) OR AGE GT (10)       would become AGE IN (5, 10) -- wrong, an
+#                                   interval complement is not a membership.
+#   SEX NOTIN (F) OR SEX NOTIN (M)  would become SEX IN (F, M) -- close to
+#                                   the negation of what was written.
+#
+# A clause mixing AND and OR is refused outright: Define-XML gives no
+# precedence rules, so "A AND B OR C" has no single defensible reading.
 #' @noRd
-.wc_fold_or <- function(conditions, id, call = rlang::caller_env()) {
+.wc_fold_or <- function(
+  conditions,
+  id,
+  has_and = FALSE,
+  call = rlang::caller_env()
+) {
+  if (has_and) {
+    .artoo_abort(
+      c(
+        "Where clause {.val {id}} mixes AND with OR.",
+        "x" = "Define-XML defines no precedence between them, so the intended grouping is ambiguous.",
+        "i" = "Split it into separate value-level rows, one per condition."
+      ),
+      kind = "p21_sheet",
+      call = call
+    )
+  }
   vars <- vapply(conditions, function(c) c$variable, character(1))
+  cmps <- vapply(conditions, function(c) c$comparator, character(1))
+
   if (length(unique(vars)) > 1L) {
     .artoo_abort(
       c(
@@ -286,10 +415,35 @@
       call = call
     )
   }
-  # One variable on both sides: that is what IN means.
+  # Only equality-shaped operands survive the rewrite. Anything else means
+  # something IN cannot say.
+  if (!all(cmps %in% c("EQ", "IN"))) {
+    bad <- setdiff(cmps, c("EQ", "IN"))
+    .artoo_abort(
+      c(
+        "Where clause {.val {id}} joins {.val {bad}} with OR.",
+        "x" = "Only EQ and IN can be combined into a single IN; rewriting {.val {bad}} would change which rows the clause selects.",
+        "i" = "Split it into separate value-level rows, one per condition."
+      ),
+      kind = "p21_sheet",
+      call = call
+    )
+  }
+  values <- unlist(lapply(conditions, function(c) c$values))
+  if (anyDuplicated(values)) {
+    dup <- unique(values[duplicated(values)])
+    .artoo_warn(
+      c(
+        "Where clause {.val {id}} repeats {.val {dup}}.",
+        "i" = "Duplicates are kept once."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
   list(list(
     variable = vars[[1]],
     comparator = "IN",
-    values = unique(unlist(lapply(conditions, function(c) c$values)))
+    values = unique(values)
   ))
 }

@@ -193,12 +193,16 @@
   "Comment" = "comment_id"
 )
 
+# NOTE: "Description" is deliberately NOT mapped, for the same reason as on
+# the Variables sheet: mapping it and "Title" both onto `description` yields
+# two columns of the same name, and which one survives is decided by an
+# undocumented first-name-wins rule. "Title" is the display's heading, which
+# is what arm:ResultDisplay carries.
 #' @noRd
 .p21_arm_display_map <- c(
   "ID" = "display_id",
   "Name" = "name",
   "Title" = "description",
-  "Description" = "description",
   "Document" = "document_id",
   "Pages" = "pages"
 )
@@ -668,9 +672,16 @@ read_spec <- function(
   # "Where Clause" column holds free text and is parsed. The two generations
   # are distinguished by the sheet's presence, not by inspecting the column.
   where_clauses <- if (!is.null(where_raw) && nrow(where_raw)) {
-    .wc_from_sheet(.normalise_p21_cols(where_raw, .p21_where_map), call)
+    parsed <- .wc_from_sheet(
+      .normalise_p21_cols(where_raw, .p21_where_map),
+      call
+    )
+    .wc_check_value_refs(values, parsed, call)
+    parsed
   } else {
-    .wc_from_values(values, call)
+    derived <- .wc_from_values(values, call)
+    values <- derived$values
+    derived$where_clauses
   }
 
   dictionaries <- .nullify_empty(
@@ -716,36 +727,130 @@ read_spec <- function(
 }
 
 # Derive structured where clauses from the free-text ValueLevel column, for
-# workbook generations that carry no WhereClauses sheet. The clause id is
-# minted deterministically from the dataset and variable it qualifies, so the
-# same workbook always yields the same ids.
+# workbook generations that carry no WhereClauses sheet.
+#
+# Ids are CONTENT-ADDRESSED, not positional. Two properties matter:
+#
+#   * STABLE. A positional id shifts the moment the caller scopes the read to
+#     a subset of datasets, so the same condition in the same workbook would
+#     get a different id depending on how it was read.
+#   * SHARED. Define-XML's model is one def:WhereClauseDef referenced by many
+#     ItemRefs. Minting a fresh id per row emits a pile of identical
+#     definitions instead.
+#
+# The id stays readable -- WC.<dataset>.<variable>, suffixed only on a genuine
+# content collision -- rather than a hash of the values. Hashing is what the
+# prior art does, and its own source calls that scheme legacy "warts and all".
+#
+# The minted id is written BACK into values$where_clause, converging both
+# workbook generations on the foreign-key form. Otherwise the only link
+# between a value-level row and its condition is the free text, and a writer
+# could re-join them only by position -- which breaks silently the moment
+# `values` is filtered or reordered.
 #' @noRd
 .wc_from_values <- function(values, call = rlang::caller_env()) {
+  none <- list(where_clauses = NULL, values = values)
   if (
     is.null(values) ||
       !nrow(values) ||
       !"where_clause" %in% names(values)
   ) {
-    return(NULL)
+    return(none)
   }
   txt <- values$where_clause
   keep <- !is.na(txt) & nzchar(trimws(txt))
   if (!any(keep)) {
-    return(NULL)
+    return(none)
   }
-  ds <- if ("dataset" %in% names(values)) values$dataset else NA_character_
-  vr <- if ("variable" %in% names(values)) values$variable else NA_character_
-  parts <- list()
-  for (i in which(keep)) {
-    id <- sprintf("WC.%s.%s.%d", ds[[i]], vr[[i]], i)
-    rows <- .wc_parse_text(txt[[i]], id, call)
-    if (!is.null(rows)) {
-      rows$dataset <- ds[[i]]
-      parts[[length(parts) + 1L]] <- rows
+  col <- function(nm) {
+    if (nm %in% names(values)) {
+      as.character(values[[nm]])
+    } else {
+      rep(NA_character_, nrow(values))
     }
   }
-  if (!length(parts)) NULL else do.call(rbind, parts)
+  ds <- col("dataset")
+  vr <- col("variable")
+
+  by_content <- new.env(parent = emptyenv())
+  taken <- new.env(parent = emptyenv())
+  parts <- list()
+  ids <- rep(NA_character_, nrow(values))
+
+  for (i in which(keep)) {
+    if (is.na(ds[[i]]) || is.na(vr[[i]])) {
+      .artoo_abort(
+        c(
+          "A value-level row carries a where clause but names no dataset or variable.",
+          "x" = "Row {i}: {.val {txt[[i]]}}.",
+          "i" = "A where clause qualifies a specific variable, so both are needed."
+        ),
+        kind = "p21_sheet",
+        call = call
+      )
+    }
+    key <- paste(ds[[i]], vr[[i]], trimws(txt[[i]]), sep = "\r")
+    known <- by_content[[key]]
+    if (!is.null(known)) {
+      ids[[i]] <- known
+      next
+    }
+    base <- sprintf("WC.%s.%s", ds[[i]], vr[[i]])
+    id <- base
+    n <- 1L
+    while (!is.null(taken[[id]])) {
+      n <- n + 1L
+      id <- sprintf("%s.%d", base, n)
+    }
+    rows <- .wc_parse_text(txt[[i]], id, call)
+    if (is.null(rows)) {
+      next
+    }
+    rows$dataset <- ds[[i]]
+    assign(id, TRUE, envir = taken)
+    assign(key, id, envir = by_content)
+    ids[[i]] <- id
+    parts[[length(parts) + 1L]] <- rows
+  }
+
+  # Converge on the foreign-key form: the value-level row now names its
+  # clause, exactly as a tabular workbook would.
+  written <- !is.na(ids)
+  values$where_clause[written] <- ids[written]
+
+  list(
+    where_clauses = if (length(parts)) do.call(rbind, parts) else NULL,
+    values = values
+  )
 }
+
+# Warn when a ValueLevel row names a where clause the sheet does not define.
+# Matching is exact, so a case-only near-miss would otherwise be a silent
+# dangling reference.
+#' @noRd
+.wc_check_value_refs <- function(values, parsed, call = rlang::caller_env()) {
+  if (is.null(values) || !nrow(values) || !"where_clause" %in% names(values)) {
+    return(invisible(NULL))
+  }
+  used <- unique(values$where_clause[!is.na(values$where_clause)])
+  used <- used[nzchar(used)]
+  known <- unique(parsed$where_clause_id)
+  missing <- setdiff(used, known)
+  if (!length(missing)) {
+    return(invisible(NULL))
+  }
+  near <- missing[toupper(missing) %in% toupper(known)]
+  msg <- "{length(missing)} value-level row{?s} name{?s/} a where clause the WhereClauses sheet does not define: {.val {missing}}."
+  if (length(near)) {
+    msg <- c(
+      msg,
+      "i" = "{.val {near}} differ{?s/} from a defined id only by case, and matching is exact."
+    )
+  }
+  .artoo_warn(msg, kind = "spec", call = call)
+  invisible(NULL)
+}
+
 
 # Match the first sheet whose normalised name is in the alias set. NULL
 # when no sheet matches. When several sheets match the same role, inform

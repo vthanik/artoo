@@ -257,7 +257,10 @@ test_that("Define-XML to P21 is one read_spec |> write_spec composition", {
   skip_if_not(file.exists(define))
   spec <- read_spec(define)
   p <- withr::local_tempfile(fileext = ".xlsx")
-  write_spec(spec, p)
+  # The workbook has no sheet for the structural slots, so this composition
+  # legitimately drops them -- and must say so rather than truncating in
+  # silence.
+  expect_warning(write_spec(spec, p), class = "artoo_warning_spec")
   back <- read_spec(p)
   expect_identical(spec_standard(back), spec_standard(spec))
   expect_setequal(spec_datasets(back), spec_datasets(spec))
