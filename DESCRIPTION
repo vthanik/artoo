@@ -1,9 +1,14 @@
 Package: artoo
 Title: Lossless CDISC-Native Input and Output for Clinical Datasets
 Version: 0.1.3.9000
-Authors@R:
+Authors@R: c(
     person("Vignesh", "Thanikachalam", , "about.vignesh@gmail.com",
-           role = c("aut", "cre", "cph"))
+           role = c("aut", "cre", "cph")),
+    person("Lex", "Jansen", role = "cph",
+           comment = "Author of the bundled CDISC Define-XML stylesheets"),
+    person(family = "CDISC", role = "cph",
+           comment = "Author of the bundled Define-XML, ODM and ARM schemas")
+  )
 Description: Reads and writes clinical-trial datasets losslessly across
     'SAS' XPORT (XPT), Clinical Data Interchange Standards Consortium
     (CDISC) Dataset-JSON, and 'Apache Parquet', applying a specification to
@@ -35,6 +40,7 @@ Imports:
     S7,
     utf8
 Suggests:
+    digest,
     quarto,
     readxl,
     testthat (>= 3.0.0),

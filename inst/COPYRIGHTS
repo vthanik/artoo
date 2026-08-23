@@ -1,0 +1,72 @@
+Third-party material bundled with artoo
+=======================================
+
+artoo itself is MIT licensed (see LICENSE). The files below are bundled
+third-party material, redistributed under their own terms.
+
+
+1. CDISC Define-XML stylesheets
+-------------------------------
+
+  inst/extdata/2.0.0/cdisc-xsl/define2-0-0.xsl
+  inst/extdata/2.1.0/cdisc-xsl/define2-1.xsl
+
+Copyright (c) 2013 Lex Jansen (define2-0-0.xsl)
+Copyright (c) 2013-2018 Lex Jansen (define2-1.xsl)
+
+Licensed under the MIT License. The full permission notice is retained
+verbatim inside each .xsl file and in the sibling *.LICENSE.TXT files:
+
+  inst/extdata/2.0.0/cdisc-xsl/define2-0-0.xsl.LICENSE.TXT
+  inst/extdata/2.1.0/cdisc-xsl/define2-1.xsl.LICENSE.TXT
+
+These stylesheets render a define.xml for human review. artoo emits an
+<?xml-stylesheet?> processing instruction referencing one of them and copies
+it alongside the generated document, which is how a regulatory reviewer's
+toolchain expects to receive it.
+
+
+2. CDISC Define-XML, ODM, and Analysis Results Metadata schemas
+---------------------------------------------------------------
+
+  inst/extdata/2.0.0/cdisc-define-2.0/*.xsd
+  inst/extdata/2.0.0/cdisc-odm-1.3.2/*.xsd
+  inst/extdata/2.0.0/cdisc-arm-1.0/*.xsd
+  inst/extdata/2.1.0/cdisc-define-2.1/*.xsd
+  inst/extdata/2.1.0/cdisc-odm-1.3.2/*.xsd
+  inst/extdata/2.1.0/cdisc-arm-1.0/*.xsd
+  inst/extdata/2.1.0/core/*.xsd
+
+Copyright (c) CDISC (Clinical Data Interchange Standards Consortium).
+
+Published as part of the Define-XML v2.0 and v2.1 release packages and the
+Analysis Results Metadata v1.0 package. Redistributed unmodified so that
+schema validation works offline, without a network round trip, on a
+submission-critical path.
+
+The 2.0 and 2.1 trees have different internal layouts and are deliberately
+not merged: every xs:import and xs:redefine in them is a relative path.
+
+xml.xsd, xlink.xsd and xmldsig-core-schema.xsd are W3C schemas included in
+those CDISC packages, published under the W3C Software and Document Notice
+and License.
+
+
+3. Example Define-XML documents (not installed)
+-----------------------------------------------
+
+  tests/testthat/fixtures/define20-sdtm.xml
+  tests/testthat/fixtures/define20-adam.xml
+  tests/testthat/fixtures/define21-sdtm.xml
+  tests/testthat/fixtures/define21-adam.xml
+
+Copyright (c) CDISC. The official example documents from the same release
+packages, used as test oracles. Not shipped in the installed package.
+
+
+Provenance and integrity
+------------------------
+
+Every file above is pinned by sha256 in data-raw/vendor-define-assets.R,
+which also documents where each tree came from and re-verifies the bytes on
+every run.
