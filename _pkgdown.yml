@@ -104,6 +104,7 @@ reference:
   - check_study
   - validate_spec
   - validate_define
+  - define_lint
   - conformance
   - artoo_checks
   - is_artoo_checks

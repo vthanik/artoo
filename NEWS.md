@@ -1,5 +1,12 @@
 # artoo 0.1.3.9000
 
+* `define_lint()` reports the reference-integrity defects XML Schema cannot
+  express: an OID reference that resolves to nothing, and a definition nothing
+  references. Findings are directional, and an orphaned `def:ValueListDef` is an
+  error rather than a warning because every value-level definition it holds then
+  renders nowhere. Codelists backed by an external dictionary, and those reached
+  through `RoleCodeListOID`, are exempt from the orphan check.
+
 * `validate_define()` schema-validates a Define-XML 2.0 or 2.1 document against
   the CDISC schemas, which artoo now bundles, so validation runs offline with no
   network round trip. The version is detected from the document's namespace

@@ -152,8 +152,8 @@
 #' **Schema validity is a floor, not a ceiling.** A document can satisfy the
 #' schema and still be unfit to submit. Two whole classes of defect are
 #' invisible here: a reference that points at nothing, and a definition that
-#' nothing points at. Neither is expressible in XML Schema, and neither is
-#' caught here.
+#' nothing points at. Neither is expressible in XML Schema. Use
+#' [define_lint()] for those.
 #'
 #' @param path *Define-XML document to validate.* `<character(1)>: required`.
 #' @param version *Define-XML version to validate against.*
@@ -191,6 +191,9 @@
 #' substr(bad@findings$message[1], 1, 60)
 #'
 #' @seealso
+#' **Check further:** [define_lint()] for reference integrity, which schema
+#' validation cannot see.
+#'
 #' **Specs:** [read_spec()] to read a Define-XML document into an
 #' [artoo_spec()], [write_spec()] to write one back out.
 #'

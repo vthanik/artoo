@@ -34,8 +34,8 @@ the version it claims.
 \strong{Schema validity is a floor, not a ceiling.} A document can satisfy the
 schema and still be unfit to submit. Two whole classes of defect are
 invisible here: a reference that points at nothing, and a definition that
-nothing points at. Neither is expressible in XML Schema, and neither is
-caught here.
+nothing points at. Neither is expressible in XML Schema. Use
+\code{\link[=define_lint]{define_lint()}} for those.
 }
 \examples{
 # ---- Example 1: a conforming document ----
@@ -64,6 +64,9 @@ substr(bad@findings$message[1], 1, 60)
 
 }
 \seealso{
+\strong{Check further:} \code{\link[=define_lint]{define_lint()}} for reference integrity, which schema
+validation cannot see.
+
 \strong{Specs:} \code{\link[=read_spec]{read_spec()}} to read a Define-XML document into an
 \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=write_spec]{write_spec()}} to write one back out.
 }
