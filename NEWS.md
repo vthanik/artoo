@@ -10,6 +10,13 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `write_template()` writes a blank Pinnacle 21 workbook with the sheets and
+  headers `read_spec()` recognises, so a specification can be authored from the
+  shape the reader wants rather than guessed at. Every header comes from the
+  reader's own maps, so the template cannot offer a column that would be
+  silently ignored. A `version = "2.0"` template omits the four columns
+  Define-XML 2.1 introduced.
+
 * `write_spec()` gains `html`, which renders the define.xml through its own
   CDISC stylesheet into real HTML. Browsers are dropping XSLT support, so a
   document that renders only by being opened in one is on its way to being
