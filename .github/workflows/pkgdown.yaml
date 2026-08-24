@@ -55,6 +55,11 @@ jobs:
         # and NEWS are intentionally kept.
         run: rm -f CLAUDE.md build.md debugging.md design.md
 
+      - name: TEMP diagnose quarto
+        run: |
+          quarto --version
+          quarto render vignettes/articles --to html --output-dir /tmp/qout || true
+
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
