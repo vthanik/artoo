@@ -10,6 +10,20 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* Analysis Results Metadata (ARM v1.0) is read and written, in both
+  Define-XML versions. `read_spec()` fills `arm_displays` and `arm_results`
+  from `arm:AnalysisResultDisplays`, and `write_spec()` emits them back. One
+  analysis result over several analysis datasets keeps each dataset's own
+  where clause and analysis variables, which is why `arm_results` is one row
+  per result and dataset. Before this, reading an ADaM define and writing it
+  back orphaned every leaf, where clause and comment that only its analysis
+  results referenced.
+
+* `read_spec()` on a Define-XML document now reads `def:PDFPageRef/@Title`,
+  which names the table or listing a page holds. Every analysis-results page
+  reference in the CDISC ADaM example carries one. It is 2.1-only, and is
+  withheld when writing 2.0.
+
 * `write_spec()` writes Define-XML 2.0 as well as 2.1, and converts between
   them. The version follows the spec's own `define_version` unless `version`
   says otherwise. The switch is exactly what the two standards renamed:

@@ -131,9 +131,23 @@ test_that("only two LOCAL attributes differ between the versions", {
     setdiff(local_21[["def:Origin"]], local_20[["def:Origin"]]),
     "Source"
   )
-  # def:PDFPageRef/@Title is 2.1-only and artoo emits neither.
+  # def:PDFPageRef/@Title is 2.1-only; artoo emits it on ARM page references.
   expect_identical(
     setdiff(local_21[["def:PDFPageRef"]], local_20[["def:PDFPageRef"]]),
     "Title"
   )
+  # The profiles carry exactly those two elements, with the derived values,
+  # because that table is what the builders gate on.
+  for (version in c("2.0", "2.1")) {
+    declared <- artoo:::.define_profile(version)$local_attrs
+    derived <- .dx_schema_local_attrs(version)
+    expect_setequal(names(declared), differ)
+    for (element in names(declared)) {
+      expect_identical(
+        sort(declared[[element]]),
+        sort(derived[[element]]),
+        info = paste(version, element)
+      )
+    }
+  }
 })

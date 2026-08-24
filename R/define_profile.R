@@ -49,7 +49,26 @@
   `def:leaf` = c("def:title"),
   Description = c("TranslatedText"),
   Decode = c("TranslatedText"),
-  `def:PDFPageRef` = character(0)
+  `def:PDFPageRef` = character(0),
+  # Analysis Results Metadata. The 2.0 and 2.1 ARM schemas are identical
+  # except for the def: namespace they import, so the whole vocabulary lives
+  # here rather than in either profile.
+  `arm:AnalysisResultDisplays` = c("arm:ResultDisplay"),
+  `arm:ResultDisplay` = c(
+    "Description",
+    "def:DocumentRef",
+    "arm:AnalysisResult"
+  ),
+  `arm:AnalysisResult` = c(
+    "Description",
+    "arm:AnalysisDatasets",
+    "arm:Documentation",
+    "arm:ProgrammingCode"
+  ),
+  `arm:AnalysisDatasets` = c("arm:AnalysisDataset"),
+  `arm:AnalysisDataset` = c("def:WhereClauseRef", "arm:AnalysisVariable"),
+  `arm:Documentation` = c("Description", "def:DocumentRef"),
+  `arm:ProgrammingCode` = c("arm:Code", "def:DocumentRef")
 )
 
 .define_profiles <- list(
@@ -81,6 +100,14 @@
     # A test re-derives this from the bundled XSDs with comments stripped --
     # def:Label, def:DomainKeys and def:Rank are DECLARED in 2.0 but their
     # references are commented out as deprecated, so they are not usable.
+    # LOCAL attributes -- written unprefixed, so the emitter's def: guard
+    # cannot see them -- on the def: elements where the two versions differ.
+    # Only those two elements are listed; a test asserts that is still the
+    # whole difference. Builders gate by hand off this table.
+    local_attrs = list(
+      `def:Origin` = c("Source", "Type"),
+      `def:PDFPageRef` = c("FirstPage", "LastPage", "PageRefs", "Title", "Type")
+    ),
     def_attrs = list(
       CodeList = c("def:CommentOID", "def:IsNonStandard", "def:StandardOID"),
       CodeListItem = "def:ExtendedValue",
@@ -99,7 +126,8 @@
       ODM = "def:Context",
       RangeCheck = "def:ItemOID",
       `def:Standard` = "def:CommentOID",
-      `def:WhereClauseDef` = "def:CommentOID"
+      `def:WhereClauseDef` = "def:CommentOID",
+      `arm:AnalysisDatasets` = "def:CommentOID"
     ),
     order = c(
       .dx_order_common,
@@ -204,6 +232,10 @@
     # xs:redefine, so artoo asserts it rather than emitting whatever the spec
     # happens to carry.
     define_version_fixed = TRUE,
+    local_attrs = list(
+      `def:Origin` = "Type",
+      `def:PDFPageRef` = c("FirstPage", "LastPage", "PageRefs", "Type")
+    ),
     def_attrs = list(
       CodeListItem = "def:ExtendedValue",
       EnumeratedItem = "def:ExtendedValue",
@@ -220,7 +252,8 @@
         "def:StandardVersion"
       ),
       RangeCheck = "def:ItemOID",
-      `def:WhereClauseDef` = "def:CommentOID"
+      `def:WhereClauseDef` = "def:CommentOID",
+      `arm:AnalysisDatasets` = "def:CommentOID"
     ),
     order = c(
       .dx_order_common,

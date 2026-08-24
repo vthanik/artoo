@@ -98,6 +98,7 @@
   origin_description = "character", # def:Origin/Description            both
   origin_document_id = "character", # def:Origin//def:DocumentRef@leafID both
   page_type = "character", # def:PDFPageRef/@Type              both
+  page_title = "character", # def:PDFPageRef/@Title             2.1
   role_codelist_id = "character", # ItemRef/@RoleCodeListOID          both
   is_non_standard = "logical", # ItemRef/@def:IsNonStandard        2.1
   has_no_data = "logical", # ItemRef/@def:HasNoData            2.1
@@ -148,7 +149,8 @@
   expression_code = "character",
   document_id = "character",
   pages = "character",
-  page_type = "character" # def:PDFPageRef/@Type
+  page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character" # def:PDFPageRef/@Title
 )
 .spec_req_methods <- c("method_id")
 
@@ -157,7 +159,8 @@
   description = "character",
   document_id = "character",
   pages = "character",
-  page_type = "character" # def:PDFPageRef/@Type
+  page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character" # def:PDFPageRef/@Title
 )
 .spec_req_comments <- c("comment_id")
 
@@ -235,6 +238,7 @@
   document_id = "character",
   pages = "character",
   page_type = "character",
+  page_title = "character", # def:PDFPageRef/@Title            2.1
   order = "integer"
 )
 .spec_req_arm_displays <- c("display_id")
@@ -257,9 +261,14 @@
   documentation = "character",
   documentation_document_id = "character",
   documentation_pages = "character",
+  documentation_page_type = "character",
+  documentation_page_title = "character",
   programming_context = "character",
   programming_code = "character",
   programming_document_id = "character",
+  programming_pages = "character",
+  programming_page_type = "character",
+  programming_page_title = "character",
   order = "integer"
 )
 .spec_req_arm_results <- c("display_id", "result_id")
@@ -307,6 +316,7 @@
   origin_description = "character", # def:Origin/Description
   origin_document_id = "character", # def:Origin//def:DocumentRef@leafID
   page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character", # def:PDFPageRef/@Title
   predecessor = "character",
   assigned_value = "character",
   pages = "character",

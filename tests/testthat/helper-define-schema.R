@@ -82,6 +82,13 @@
     '(?s)<xs:complexType name="DEFINEcomplexTypeDefinition-([A-Za-z]+)">.*?</xs:complexType>',
     "def:"
   )
+  # ARM declares its elements inline rather than as named complexTypes, and
+  # arm:AnalysisDatasets is the one that borrows a def: attribute.
+  pull(
+    .xsd_text(file.path(dir, "cdisc-arm-1.0", "arm-ns.xsd")),
+    '(?s)<xs:element name = "([A-Za-z]+)">.*?</xs:element>',
+    "arm:"
+  )
   out
 }
 

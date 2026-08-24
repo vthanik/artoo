@@ -37,6 +37,7 @@
   "origin_document_id",
   "pages",
   "page_type",
+  "page_title",
   "alias_context",
   "alias_name",
   "value_list_id"
@@ -67,6 +68,7 @@
     origin_document_id = .dx_chr(var, "origin_document_id"),
     pages = .dx_chr(var, "pages"),
     page_type = .dx_chr(var, "page_type"),
+    page_title = .dx_chr(var, "page_title"),
     alias_context = .dx_chr(var, "alias_context"),
     alias_name = .dx_chr(var, "alias_name"),
     # The variable's OWN def:ValueListRef wins; the derived map fills in for
@@ -108,6 +110,7 @@
       origin_document_id = .dx_chr(val, "origin_document_id"),
       pages = .dx_chr(val, "pages"),
       page_type = .dx_chr(val, "page_type"),
+      page_title = .dx_chr(val, "page_title"),
       alias_context = rep(NA_character_, nrow(val)),
       alias_name = rep(NA_character_, nrow(val)),
       value_list_id = rep(NA_character_, nrow(val)),

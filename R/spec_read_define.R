@@ -283,6 +283,7 @@
     o_doc <- c(NA_character_, NA_character_)
     o_desc <- NA_character_
     o_page_type <- NA_character_
+    o_page_title <- NA_character_
     if (!is.na(origin)) {
       o_desc <- .dx_text(origin)
       dref <- .dx_child(origin, "DocumentRef")
@@ -294,6 +295,7 @@
         )
         if (!is.na(pg)) {
           o_page_type <- .dx_attr(pg, "Type")
+          o_page_title <- .dx_attr(pg, "Title")
         }
       }
     }
@@ -318,6 +320,7 @@
       origin_document_id = o_doc[1],
       pages = o_doc[2],
       page_type = o_page_type,
+      page_title = o_page_title,
       alias_context = alias[1],
       alias_name = alias[2],
       value_list = if (is.na(vlref)) {
@@ -434,6 +437,7 @@
         origin_document_id = it$origin_document_id,
         pages = it$pages,
         page_type = it$page_type,
+        page_title = it$page_title,
         sas_field_name = it$sas_field_name,
         value_list_id = it$value_list,
         alias_context = it$alias_context,
@@ -519,8 +523,11 @@
       xml2::xml_attr(r, "leafID"),
       if (is.na(pg)) NA_character_ else .dx_page_refs(pg),
       # @Type is REQUIRED on def:PDFPageRef in 2.1, so a writer that never
-      # read it cannot round-trip one.
-      if (is.na(pg)) NA_character_ else .dx_attr(pg, "Type")
+      # read it cannot round-trip one. @Title is 2.1-only and names the
+      # table or listing the page holds -- the analysis-results displays use
+      # it on every reference.
+      if (is.na(pg)) NA_character_ else .dx_attr(pg, "Type"),
+      if (is.na(pg)) NA_character_ else .dx_attr(pg, "Title")
     )
   }
   md_nodes <- .dx_find_all(mdv, "MethodDef")
@@ -534,6 +541,7 @@
       document_id = vapply(refs, `[`, character(1), 1L),
       pages = vapply(refs, `[`, character(1), 2L),
       page_type = vapply(refs, `[`, character(1), 3L),
+      page_title = vapply(refs, `[`, character(1), 4L),
       stringsAsFactors = FALSE
     )
   } else {
@@ -551,6 +559,7 @@
       # comment pointing at a named destination came back asserting that
       # destination was a page number.
       page_type = vapply(refs, `[`, character(1), 3L),
+      page_title = vapply(refs, `[`, character(1), 4L),
       stringsAsFactors = FALSE
     )
   } else {
@@ -667,6 +676,9 @@
   # ---- MethodDef/FormalExpression ----------------------------------------
   method_expressions <- .dx_method_expressions(md_nodes)
 
+  # ---- analysis results metadata -----------------------------------------
+  arm <- .dx_read_arm(mdv, items, ig_nodes)
+
   # ---- value-level metadata ----------------------------------------------
   values <- .dx_values(mdv, items, vl_owner, path, call)
 
@@ -695,8 +707,173 @@
     documents = documents,
     standards = standards,
     where_clauses = where_clauses,
-    method_expressions = method_expressions
+    method_expressions = method_expressions,
+    arm_displays = arm$displays,
+    arm_results = arm$results
   )
+}
+
+# arm:AnalysisResultDisplays -> arm_displays + arm_results.
+#
+# The two tables have different grains, and both are forced by the schema:
+# one row per arm:ResultDisplay (which carries at most one display-level
+# def:DocumentRef), and one row per arm:AnalysisResult x arm:AnalysisDataset,
+# because each analysis dataset carries its own def:WhereClauseRef and its own
+# list of analysis variables. A delimited string cannot express that.
+#
+# Identifiers are resolved to NAMES where a name exists -- an ItemGroupOID to
+# its dataset, an analysis variable's ItemOID to its variable -- because that
+# is the form a workbook carries and the form the rest of the spec uses.
+# An OID that resolves to nothing is kept verbatim, so nothing is lost.
+#' @noRd
+.dx_read_arm <- function(mdv, items, ig_nodes) {
+  none <- list(displays = NULL, results = NULL)
+  root <- .dx_child(mdv, "AnalysisResultDisplays")
+  if (is.na(root)) {
+    return(none)
+  }
+  displays <- xml2::xml_find_all(root, "./*[local-name()='ResultDisplay']")
+  if (!length(displays)) {
+    return(none)
+  }
+  group_name <- vapply(ig_nodes, .dx_attr, character(1), name = "Name")
+  names(group_name) <- vapply(ig_nodes, .dx_attr, character(1), name = "OID")
+
+  disp_rows <- list()
+  res_rows <- list()
+  for (di in seq_along(displays)) {
+    d <- displays[[di]]
+    did <- .dx_attr(d, "OID")
+    ref <- .dx_read_arm_docref(d)
+    disp_rows[[length(disp_rows) + 1L]] <- data.frame(
+      display_id = did,
+      name = .dx_attr(d, "Name"),
+      description = .dx_text(d),
+      document_id = ref[[1]],
+      pages = ref[[2]],
+      page_type = ref[[3]],
+      page_title = ref[[4]],
+      order = di,
+      stringsAsFactors = FALSE
+    )
+    results <- xml2::xml_find_all(d, "./*[local-name()='AnalysisResult']")
+    for (ri in seq_along(results)) {
+      res_rows[[length(res_rows) + 1L]] <- .dx_read_arm_result(
+        results[[ri]],
+        did,
+        ri,
+        items,
+        group_name
+      )
+    }
+  }
+  list(
+    displays = do.call(rbind, disp_rows),
+    results = if (length(res_rows)) do.call(rbind, res_rows) else NULL
+  )
+}
+
+# leafID, pages, page type, page title off a node's first def:DocumentRef.
+#' @noRd
+.dx_read_arm_docref <- function(node) {
+  r <- .dx_child(node, "DocumentRef")
+  if (is.na(r)) {
+    return(rep(NA_character_, 4L))
+  }
+  pg <- .dx_child(r, "PDFPageRef")
+  c(
+    .dx_attr(r, "leafID"),
+    if (is.na(pg)) NA_character_ else .dx_page_refs(pg),
+    if (is.na(pg)) NA_character_ else .dx_attr(pg, "Type"),
+    if (is.na(pg)) NA_character_ else .dx_attr(pg, "Title")
+  )
+}
+
+#' @noRd
+.dx_read_arm_result <- function(node, display_id, order, items, group_name) {
+  sets <- .dx_child(node, "AnalysisDatasets")
+  comment <- if (is.na(sets)) NA_character_ else .dx_attr(sets, "CommentOID")
+  each <- if (is.na(sets)) {
+    list()
+  } else {
+    xml2::xml_find_all(sets, "./*[local-name()='AnalysisDataset']")
+  }
+  doc <- .dx_child(node, "Documentation")
+  doc_ref <- if (is.na(doc)) {
+    rep(NA_character_, 4L)
+  } else {
+    .dx_read_arm_docref(doc)
+  }
+  code <- .dx_child(node, "ProgrammingCode")
+  code_ref <- if (is.na(code)) {
+    rep(NA_character_, 4L)
+  } else {
+    .dx_read_arm_docref(code)
+  }
+  code_text <- NA_character_
+  if (!is.na(code)) {
+    body <- .dx_child(code, "Code")
+    if (!is.na(body)) {
+      code_text <- trimws(xml2::xml_text(body))
+    }
+  }
+
+  row <- function(dataset, variables, where_clause_id) {
+    data.frame(
+      display_id = display_id,
+      result_id = .dx_attr(node, "OID"),
+      description = .dx_text(node),
+      parameter_id = .dx_attr(node, "ParameterOID"),
+      reason = .dx_attr(node, "AnalysisReason"),
+      purpose = .dx_attr(node, "AnalysisPurpose"),
+      dataset = dataset,
+      variables = variables,
+      where_clause_id = where_clause_id,
+      datasets_comment_id = comment,
+      documentation = if (is.na(doc)) NA_character_ else .dx_text(doc),
+      documentation_document_id = doc_ref[[1]],
+      documentation_pages = doc_ref[[2]],
+      documentation_page_type = doc_ref[[3]],
+      documentation_page_title = doc_ref[[4]],
+      programming_context = if (is.na(code)) {
+        NA_character_
+      } else {
+        .dx_attr(code, "Context")
+      },
+      programming_code = code_text,
+      programming_document_id = code_ref[[1]],
+      programming_pages = code_ref[[2]],
+      programming_page_type = code_ref[[3]],
+      programming_page_title = code_ref[[4]],
+      order = order,
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!length(each)) {
+    return(row(NA_character_, NA_character_, NA_character_))
+  }
+  parts <- lapply(each, function(ds) {
+    oid <- .dx_attr(ds, "ItemGroupOID")
+    named <- unname(group_name[oid])
+    vars <- xml2::xml_find_all(ds, "./*[local-name()='AnalysisVariable']")
+    var_oids <- vapply(vars, .dx_attr, character(1), name = "ItemOID")
+    var_names <- vapply(
+      var_oids,
+      function(o) items[[o]]$name %||% o,
+      character(1)
+    )
+    wcr <- .dx_child(ds, "WhereClauseRef")
+    row(
+      if (is.na(named)) oid else named,
+      if (length(var_names)) {
+        paste(var_names, collapse = " ")
+      } else {
+        NA_character_
+      },
+      if (is.na(wcr)) NA_character_ else .dx_attr(wcr, "WhereClauseOID")
+    )
+  })
+  do.call(rbind, parts)
 }
 
 # def:WhereClauseDef -> one row per CheckValue. Fully normalised because a
@@ -880,6 +1057,7 @@
         },
         pages = if (is.null(it)) NA_character_ else it$pages,
         page_type = if (is.null(it)) NA_character_ else it$page_type,
+        page_title = if (is.null(it)) NA_character_ else it$page_title,
         method_id = xml2::xml_attr(r, "MethodOID"),
         order = .dx_int(xml2::xml_attr(r, "OrderNumber")),
         mandatory = identical(xml2::xml_attr(r, "Mandatory"), "Yes"),

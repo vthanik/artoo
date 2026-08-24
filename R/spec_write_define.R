@@ -129,6 +129,14 @@
       "xmlns:def" = unname(p$ns[["def"]]),
       "xmlns:xlink" = unname(p$ns[["xlink"]])
     ),
+    # The arm: namespace is declared only when the document carries analysis
+    # results. An unused declaration on every define.xml is noise a reviewer
+    # reads as a promise the file does not keep.
+    if (nrow(spec@arm_displays)) {
+      list("xmlns:arm" = unname(p$ns[["arm"]]))
+    } else {
+      list()
+    },
     .dx_attrs(
       ODMVersion = p$odm_version,
       FileType = "Snapshot",
@@ -282,7 +290,8 @@
       CodeList = codelists,
       MethodDef = methods,
       `def:CommentDef` = comments,
-      `def:leaf` = mdv_leaves
+      `def:leaf` = mdv_leaves,
+      `arm:AnalysisResultDisplays` = .dx_arm_displays(spec, oids, p, call)
     )
   )
 }

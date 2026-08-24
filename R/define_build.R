@@ -148,7 +148,8 @@
   pages,
   page_type,
   p,
-  call = rlang::caller_env()
+  call = rlang::caller_env(),
+  title = NA_character_
 ) {
   if (.dx_blank(document_id)) {
     return(NULL)
@@ -159,13 +160,22 @@
     # @Type is required on def:PDFPageRef, and a page list without a type is
     # the commonest source of a page reference no reader can follow.
     type <- if (.dx_blank(page_type)) "PhysicalRef" else trimws(page_type)
+    # @Title is 2.1-only, and LOCAL to def:PDFPageRef -- unprefixed, so the
+    # emitter's def: guard cannot see it. The profile's local table is how a
+    # builder learns whether the version has it.
+    title_attr <- if ("Title" %in% p$local_attrs[["def:PDFPageRef"]]) {
+      .dx_attrs(Title = title)
+    } else {
+      list()
+    }
     .dx_node(
       "def:PDFPageRef",
       attrs = c(
         .dx_page_attrs(pages, type),
         .dx_attrs(
           Type = .dx_enum(type, p$enum$page_type, "def:PDFPageRef Type", call)
-        )
+        ),
+        title_attr
       )
     )
   }
@@ -511,7 +521,14 @@
 #' @noRd
 .dx_origin <- function(row, p, label, call = rlang::caller_env()) {
   desc <- .dx_desc(row$origin_description)
-  ref <- .dx_docref(row$origin_document_id, row$pages, row$page_type, p, call)
+  ref <- .dx_docref(
+    row$origin_document_id,
+    row$pages,
+    row$page_type,
+    p,
+    call,
+    title = row$page_title
+  )
   if (.dx_blank(row$origin)) {
     if (is.null(desc) && is.null(ref)) {
       return(NULL)
@@ -534,7 +551,7 @@
   # def:PDFPageRef/@Title, which artoo does not emit. A test re-derives that
   # pair from the bundled XSDs, so a third would fail there rather than at a
   # schema gate.
-  source_attr <- if (is.null(p$enum$origin_source)) {
+  source_attr <- if (!("Source" %in% p$local_attrs[["def:Origin"]])) {
     list()
   } else {
     .dx_attrs(
@@ -743,7 +760,8 @@
         .dx_chr(md, "pages")[[i]],
         .dx_chr(md, "page_type")[[i]],
         p,
-        call
+        call,
+        title = .dx_chr(md, "page_title")[[i]]
       )
     )
   )
@@ -761,7 +779,8 @@
         .dx_chr(cm, "pages")[[i]],
         .dx_chr(cm, "page_type")[[i]],
         p,
-        call
+        call,
+        title = .dx_chr(cm, "page_title")[[i]]
       )
     )
   )
