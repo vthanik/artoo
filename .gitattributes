@@ -9,3 +9,11 @@ inst/extdata/2.1.0/**            -text
 
 # The official Define-XML example documents are pinned the same way.
 tests/testthat/fixtures/define2*.xml  -text
+
+# The byte-goldens. These are compared to what the writer produces, and the
+# writer emits LF on every platform (it opens the connection "wb" and writes
+# with useBytes). A contributor or CI runner with core.autocrlf=true checks
+# them out as CRLF, and the comparison then fails on Windows alone with 160
+# changed lines and identical content -- which is exactly how this was
+# found.
+tests/testthat/_snaps/**/*.xml   -text
