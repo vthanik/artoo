@@ -1,5 +1,28 @@
 # artoo 0.2.0.9000
 
+* `read_spec()` on a workbook reads the `Analysis Criteria` sheet, which is
+  where the older workbook generation keeps an analysis result's datasets.
+  artoo recognised the sheet name and never read the sheet, so a result
+  authored that way reached the writer naming no analysis dataset and the
+  write refused it.
+
+* `write_spec()` to `.xlsx` no longer re-homes a where-clause check that
+  names a variable in another dataset. Which dataset an unqualified name
+  belongs to is decided by the row the condition sits on, and the writer was
+  deciding it from the condition's first check instead -- so a VS value
+  conditioned on `DM.COUNTRY` came back conditioned on `VS.COUNTRY`,
+  selecting different records, with nothing said.
+
+* `read_spec()` and `write_spec()` handle a where-clause value containing
+  the word `and` or `or`. `"Nausea and vomiting"` is a real preferred term,
+  and the condition splitter was blind to quotes, so reading artoo's own
+  workbook turned one check into two whose values were `"Nausea` and
+  `vomiting"`.
+
+* `write_spec()` to `.xml` writes a page list separated by spaces. A page
+  cell written `4, 5` shipped its comma into `PageRefs`, which is a
+  space-separated list.
+
 * `write_spec()` to `.xlsx` writes the study sheet in the format's own
   vocabulary. A spec read from a define.xml carries the document's
   identifiers, and none of them had a workbook spelling, so the sheet went

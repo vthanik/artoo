@@ -166,7 +166,14 @@
       has_rows(clauses) &&
       "where_clause_id" %in% names(values)
   ) {
-    rendered <- .wc_render(clauses)
+    # Render each clause as the ROW that references it would read it back:
+    # an unqualified name in the cell belongs to that row's dataset.
+    owner <- stats::setNames(
+      as.character(values$dataset),
+      as.character(values$where_clause_id)
+    )
+    owner <- owner[!duplicated(names(owner))]
+    rendered <- .wc_render(clauses, owner)
     at <- match(values$where_clause_id, names(rendered))
     values$where_clause[!is.na(at)] <- unname(rendered[at[!is.na(at)]])
   }
@@ -352,7 +359,11 @@
   if (is.null(ar) || !nrow(ar)) {
     return(NULL)
   }
-  rendered <- .wc_render(clauses)
+  owner <- stats::setNames(
+    as.character(ar$dataset),
+    as.character(ar$where_clause_id)
+  )
+  rendered <- .wc_render(clauses, owner[!duplicated(names(owner))])
   key <- paste(ar$display_id, ar$result_id, sep = "\r")
   first <- ar[!duplicated(key), , drop = FALSE]
   parts <- split(seq_len(nrow(ar)), factor(key, levels = unique(key)))

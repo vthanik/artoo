@@ -341,6 +341,11 @@
 #' @noRd
 .dx_namespace_spec <- function(spec) {
   slots <- c(
+    # `study` too: the MetaDataVersion's own comment is a reference like any
+    # other, and leaving the slot out of the sweep moved the definition to
+    # `COM.` while the reference stayed bare -- dangling on one side,
+    # orphaned on the other.
+    "study",
     "datasets",
     "variables",
     "values",

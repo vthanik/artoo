@@ -223,3 +223,54 @@ test_that(".dx_map de-duplicates repeated keys, first occurrence winning", {
     c(a = "1", b = "3")
   )
 })
+
+test_that("the MetaDataVersion's own comment is namespaced too (#p12-review-M3)", {
+  skip_if_not_installed("xml2")
+  # The study slot holds a reference like any other. Leaving it out of the
+  # namespacing sweep moved the definition to COM. and left the reference
+  # bare: dangling on one side, orphaned on the other.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", structure = "one", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "MDVNOTE",
+      description = "A note on this version.",
+      stringsAsFactors = FALSE
+    ),
+    study = data.frame(
+      study_name = "S",
+      metadata_version_comment_id = "MDVNOTE",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  reference <- xml2::xml_attr(
+    xml2::xml_find_first(
+      doc,
+      "//*[local-name()='MetaDataVersion']",
+      ns = character()
+    ),
+    "CommentOID"
+  )
+  definition <- xml2::xml_attr(
+    xml2::xml_find_first(
+      doc,
+      "//*[local-name()='CommentDef']",
+      ns = character()
+    ),
+    "OID"
+  )
+  expect_identical(reference, definition)
+  expect_identical(definition, "COM.MDVNOTE")
+  findings <- lint_define(path)@findings$check
+  expect_false(any(grepl("comment", findings)))
+})

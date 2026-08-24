@@ -907,3 +907,93 @@ test_that("a clause with ten range checks keeps its order (#p11-review-B)", {
   expect_identical(back@where_clauses$variable, paste0("Q", seq_len(n)))
   expect_identical(back@where_clauses$check_order, seq_len(n))
 })
+
+test_that("the older shape's Analysis Criteria sheet is read (#p12-P3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # The older workbook generation keeps an analysis result's datasets on
+  # their own sheet instead of packing them into one cell, at exactly
+  # artoo's grain. artoo had the sheet alias and never read the sheet, so a
+  # result authored this way reached the writer naming no analysis dataset
+  # and the write refused it -- telling the author to fill a slot their
+  # workbook shape has no column for.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "old.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Description = c("Adverse Events", "Subject Level"),
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADAE", "ADAE", "ADSL"),
+        Variable = c("AESER", "AEBODSYS", "SAFFL"),
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.1",
+        Title = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.1",
+        ID = "AR.1",
+        Description = "Adverse events by system organ class",
+        Reason = "SPECIFIED IN PROTOCOL",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Criteria` = data.frame(
+        Display = "RD.1",
+        Result = "AR.1",
+        Dataset = c("ADAE", "ADSL"),
+        Variables = c("AEBODSYS", ""),
+        `Where Clause` = c("AESER EQ Y", "SAFFL EQ Y"),
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  # One result, two analysis datasets, each with its own condition.
+  expect_identical(nrow(spec@arm_results), 2L)
+  expect_identical(spec@arm_results$dataset, c("ADAE", "ADSL"))
+  expect_identical(spec@arm_results$variables[[1]], "AEBODSYS")
+  # The cell holds a condition, not an id; it is parsed into a real clause
+  # by the same parser the ValueLevel column goes through.
+  expect_true(all(
+    spec@arm_results$where_clause_id %in% spec@where_clauses$where_clause_id
+  ))
+  expect_setequal(spec@where_clauses$variable, c("AESER", "SAFFL"))
+
+  path <- file.path(dir, "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN_P21, stylesheet = FALSE)
+  ))
+  expect_true(validate_define(path)@summary$valid)
+  doc <- xml2::read_xml(path)
+  expect_length(
+    xml2::xml_find_all(
+      doc,
+      "//*[local-name()='AnalysisDataset']",
+      ns = character()
+    ),
+    2L
+  )
+  # ...and every clause the result names is defined in the same document.
+  expect_false(any(grepl(
+    "^define_dangling",
+    lint_define(path)@findings$check
+  )))
+})

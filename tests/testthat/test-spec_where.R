@@ -486,9 +486,11 @@ test_that("a rendered clause is what the reader parses back (#p12-p21)", {
     stringsAsFactors = FALSE
   )
   rendered <- artoo:::.wc_render(clauses)
+  # A space needs no quotes: a value runs to the end of its condition, so
+  # `AVISIT EQ Week 24` already means the seven characters.
   expect_identical(
     unname(rendered[["WC.1"]]),
-    'PARAMCD EQ ACTOT and AVISIT EQ "Week 24"'
+    "PARAMCD EQ ACTOT and AVISIT EQ Week 24"
   )
   expect_identical(
     unname(rendered[["WC.2"]]),
@@ -540,4 +542,61 @@ test_that("an analysis variable keeps its own dataset's qualifier (#p12-p21)", {
     "IT.SOMEWHERE.ELSE"
   )
   expect_identical(artoo:::.arm_variable_names("AVAL CNSR"), c("AVAL", "CNSR"))
+})
+
+test_that("a foreign check keeps its dataset whichever position it is in (#p12-review-B1)", {
+  # The parser's rule is that an unqualified name belongs to the dataset of
+  # the row the cell sits on. The renderer used to guess the owner from the
+  # clause's FIRST check instead, so a clause whose foreign check came
+  # first rendered the qualifier away and read back re-homed -- silently,
+  # in exactly the case the qualifier exists for.
+  clauses <- data.frame(
+    where_clause_id = "WC.1",
+    check_order = 1:2,
+    dataset = c("DM", "VS"),
+    variable = c("COUNTRY", "VSTESTCD"),
+    comparator = "EQ",
+    value = c("USA", "HEIGHT"),
+    value_order = 1L,
+    stringsAsFactors = FALSE
+  )
+  # Rendered for a VS row, the DM check is qualified and the VS one is not.
+  cell <- artoo:::.wc_render(clauses, c(WC.1 = "VS"))
+  expect_identical(
+    unname(cell[["WC.1"]]),
+    "DM.COUNTRY EQ USA and VSTESTCD EQ HEIGHT"
+  )
+  back <- artoo:::.wc_from_values(data.frame(
+    dataset = "VS",
+    variable = "VSORRES",
+    where_clause = unname(cell[["WC.1"]]),
+    stringsAsFactors = FALSE
+  ))$where_clauses
+  expect_identical(back$dataset, c("DM", "VS"))
+  expect_identical(back$variable, c("COUNTRY", "VSTESTCD"))
+  # Rendered for a DM row, the other way round.
+  expect_identical(
+    unname(artoo:::.wc_render(clauses, c(WC.1 = "DM"))[["WC.1"]]),
+    "COUNTRY EQ USA and VS.VSTESTCD EQ HEIGHT"
+  )
+})
+
+test_that("a value containing 'and' survives its own round trip (#p12-review-M1)", {
+  # "Nausea and vomiting" is a real preferred term. The conjunction split
+  # was quote-blind, so reading artoo's own workbook back turned one check
+  # into two whose values were `"Nausea` and `vomiting"`.
+  values <- data.frame(
+    dataset = "AE",
+    variable = "AESEV",
+    where_clause = 'AEDECOD EQ "Nausea and vomiting" and AESER EQ Y',
+    stringsAsFactors = FALSE
+  )
+  parsed <- artoo:::.wc_from_values(values)$where_clauses
+  expect_identical(parsed$value, c("Nausea and vomiting", "Y"))
+  # ...and the renderer quotes it back, so the cell it writes is the cell
+  # it can read.
+  expect_identical(
+    unname(artoo:::.wc_render(parsed)[[1]]),
+    'AEDECOD EQ "Nausea and vomiting" and AESER EQ Y'
+  )
 })

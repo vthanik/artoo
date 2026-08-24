@@ -240,6 +240,24 @@
 # spec and re-emitted to xlsx, but invisible to the Define-XML writer, which
 # reads canonical names. Verify against a real workbook before relying on the
 # analysis-results path.
+# The Analysis Criteria sheet: one row per analysis dataset of a result.
+#
+# The older workbook generation puts an analysis result's datasets on their
+# own sheet rather than packing them into one Selection Criteria cell, and
+# its grain is exactly artoo's -- one row per (display, result, dataset)
+# with that dataset's own variables and condition. artoo has had the sheet
+# alias since the analysis-results work landed and never read the sheet, so
+# a result authored this way arrived with no dataset at all and the define
+# write refused it.
+#' @noRd
+.p21_arm_criteria_map <- c(
+  "Display" = "display_id",
+  "Result" = "result_id",
+  "Dataset" = "dataset",
+  "Variables" = "variables",
+  "Where Clause" = "where_clause_id"
+)
+
 #' @noRd
 .p21_arm_result_map <- c(
   "Display" = "display_id",
@@ -764,6 +782,7 @@ read_spec <- function(
   std_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$standards)
   ad_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$arm_displays)
   ar_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$arm_results)
+  crit_sheet <- .match_p21_sheet(sheets, .p21_sheet_aliases$arm_criteria)
 
   scope <- datasets # the user's dataset filter; `datasets` becomes the table
   datasets <- .read_p21_tab(path, ds_sheet)
@@ -779,6 +798,7 @@ read_spec <- function(
   std_raw <- .read_p21_tab(path, std_sheet)
   ad_raw <- .read_p21_tab(path, ad_sheet)
   ar_raw <- .read_p21_tab(path, ar_sheet)
+  crit_raw <- .read_p21_tab(path, crit_sheet)
 
   # A newer workbook generation carries BOTH "Label" and "Description".
   # Mapping both onto `label` yields two columns of the same name, so only
@@ -910,6 +930,19 @@ read_spec <- function(
       .normalise_p21_cols(ar_raw, .p21_arm_result_map)
     )
   )
+
+  # The older generation keeps an analysis result's datasets on their own
+  # sheet, at exactly artoo's grain. Joining it in is what gives a result
+  # its `arm:AnalysisDataset` children; without it the result reached the
+  # writer naming no dataset and the write refused it.
+  arm_results <- .arm_join_criteria(
+    arm_results,
+    .nullify_empty(.normalise_p21_cols(crit_raw, .p21_arm_criteria_map)),
+    call
+  )
+  resolved <- .arm_resolve_conditions(arm_results, where_clauses, call)
+  arm_results <- resolved$arm_results
+  where_clauses <- resolved$where_clauses
 
   # A Study sheet that states a standard name and version has said enough to
   # be a standards row, which is what Define-XML 2.1 needs and a bare name
@@ -1581,4 +1614,107 @@ read_spec <- function(
     (!qualified & n_groups == 1L)
   kept <- sub("^[^.]+[.]", "", tokens[mine])
   if (!length(kept)) NA_character_ else paste(kept, collapse = " ")
+}
+
+# Join the Analysis Criteria sheet onto the analysis results.
+#
+# The sheet is one row per (display, result, dataset); `arm_results` is one
+# row per result x dataset. So the join expands a result into as many rows
+# as it has analysis datasets, carrying each one's variables and condition,
+# and a result with no criteria row keeps its single row unchanged.
+#
+# The condition is the same free-text grammar the ValueLevel cell uses, and
+# it goes through the same parser -- one grammar, one implementation, so
+# the two surfaces cannot drift.
+#' @noRd
+.arm_join_criteria <- function(arm_results, criteria, call) {
+  if (
+    is.null(criteria) ||
+      !nrow(criteria) ||
+      is.null(arm_results) ||
+      !nrow(arm_results)
+  ) {
+    return(arm_results)
+  }
+  criteria <- .fill_down(.fill_down(criteria, "display_id"), "result_id")
+  # The older Analysis Results sheet has none of these columns, so make
+  # them before filling any in: adding a column to one row and not the
+  # others gives rbind() frames of different widths.
+  for (column in c("dataset", "variables", "where_clause_id")) {
+    if (!(column %in% names(arm_results))) {
+      arm_results[[column]] <- NA_character_
+    }
+  }
+  key <- function(df) {
+    paste(
+      trimws(as.character(df$display_id)),
+      trimws(as.character(df$result_id)),
+      sep = "\r"
+    )
+  }
+  ck <- key(criteria)
+  rows <- list()
+  for (i in seq_len(nrow(arm_results))) {
+    mine <- which(ck == key(arm_results[i, , drop = FALSE]))
+    if (!length(mine)) {
+      rows[[length(rows) + 1L]] <- arm_results[i, , drop = FALSE]
+      next
+    }
+    for (j in mine) {
+      row <- arm_results[i, , drop = FALSE]
+      for (column in c("dataset", "variables", "where_clause_id")) {
+        value <- as.character(criteria[[column]][[j]])
+        if (!is.na(value) && nzchar(trimws(value))) {
+          row[[column]] <- value
+        }
+      }
+      rows[[length(rows) + 1L]] <- row
+    }
+  }
+  do.call(rbind, rows)
+}
+
+# An analysis result's where-clause cell may hold the CONDITION rather than
+# the id of one, exactly as a value-level cell may. Parse those and put the
+# minted id in their place, leaving alone any cell that already names a
+# clause the workbook defines.
+#
+# The same parser the ValueLevel column goes through, so one grammar has one
+# implementation and the two surfaces cannot drift.
+#' @noRd
+.arm_resolve_conditions <- function(arm_results, where_clauses, call) {
+  out <- list(arm_results = arm_results, where_clauses = where_clauses)
+  if (
+    is.null(arm_results) ||
+      !nrow(arm_results) ||
+      !("where_clause_id" %in% names(arm_results))
+  ) {
+    return(out)
+  }
+  known <- if (is.null(where_clauses)) {
+    character(0)
+  } else {
+    unique(as.character(where_clauses$where_clause_id))
+  }
+  cell <- as.character(arm_results$where_clause_id)
+  todo <- !is.na(cell) & nzchar(trimws(cell)) & !(cell %in% known)
+  if (!any(todo)) {
+    return(out)
+  }
+  pseudo <- data.frame(
+    dataset = as.character(arm_results$dataset)[todo],
+    variable = as.character(arm_results$result_id)[todo],
+    where_clause = cell[todo],
+    stringsAsFactors = FALSE
+  )
+  derived <- .wc_from_values(pseudo, call)
+  out$arm_results$where_clause_id[todo] <- as.character(
+    derived$values$where_clause
+  )
+  out$where_clauses <- if (is.null(where_clauses)) {
+    derived$where_clauses
+  } else {
+    .dx_stack(where_clauses, derived$where_clauses)
+  }
+  out
 }

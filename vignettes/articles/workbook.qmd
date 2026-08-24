@@ -33,6 +33,11 @@ readxl::excel_sheets(book)
 Only **Datasets** and **Variables** are required. Every other sheet may be
 left empty and artoo omits what it finds nothing in.
 
+Two things to know before you start. A **column** artoo does not recognise
+is kept and written back out, so a sponsor column of your own survives. A
+**sheet** artoo does not recognise is not — add rows to the sheets above
+rather than a sheet of your own.
+
 ## Two shapes, and how to tell them apart
 
 Workbooks come in two generations, and artoo reads both. You will recognise
@@ -63,9 +68,10 @@ These five are the ones to fill in:
 | `StandardVersion` | `3.4`, `1.1`, and so on. |
 
 **`StandardName` and `StandardVersion` are the two that bite.** Define-XML
-2.0 refuses to be written without them, and until artoo learned to read the
-pair, a workbook that named its standard perfectly clearly still could not
-produce a define.xml. Fill them in.
+2.0 refuses to be written without them; 2.1, which artoo writes by default,
+warns and carries on. Fill them in either way — everything downstream reads
+better for it. Write the older version with
+`write_spec(spec, path, version = "2.0")`.
 
 A workbook artoo wrote from an existing define.xml carries more, because
 that document had identifiers this sheet is where to keep:
@@ -95,6 +101,11 @@ sponsor field of your own survives a round trip.
 | `Key Variables` | Space- or comma-separated. This is where a variable's key sequence comes from, so you do not fill that in twice. |
 | `Purpose` | `Tabulation` or `Analysis`. Derived from the standard when blank. |
 | `Repeating`, `Reference Data` | `Yes` / `No`. |
+| `Domain` | The two-letter domain, for SDTM. Named in the not-submission-grade warning when blank. |
+| `SubClass` | A subclass of `Class`, where the standard defines one. |
+| `SAS Dataset Name` | When it differs from `Dataset`. Defaults to it. |
+| `Has No Data` | `Yes` when the dataset is empty. Needs a `Comment` explaining why. |
+| `Standard` | Which standard this dataset follows, when a study mixes versions. |
 | `Comment` | A **Comment ID**, matching a row on the Comments sheet — not free text. |
 
 ## Variables — one row per variable per dataset
@@ -105,22 +116,27 @@ sponsor field of your own survives a round trip.
 | `Dataset`, `Variable` | Together they identify the row. |
 | `Label` | The variable label. |
 | `Data Type` | `text`, `integer`, `float`, `date`, `datetime`, `time`. |
-| `Length` | Expected on text, integer and float; **leave it blank on dates and times**, where it is a conformance finding. |
+| `Length` | Expected on text, integer and float. **Leave it blank on dates and times** — a validator flags one there. |
 | `Significant Digits` | Only with `float`. |
 | `Format` | The display format. |
 | `Mandatory` | `Yes` / `No`. |
 | `Codelist` | A Codelist ID **or a Dictionary ID** — one column serves both. |
-| `Origin` | `Collected`, `Derived`, `Assigned`, `Protocol`, `Predecessor`. |
+| `Origin` | `Collected`, `Derived`, `Assigned`, `Protocol`, `Predecessor`, `Not Available`, `Other`. **The capitals matter.** |
 | `Pages` | CRF page numbers. See *Pages* below. |
 | `Method` | A Method ID, for a derived variable. |
 | `Predecessor` | Where an ADaM variable came from, e.g. `DM.AGE`. |
 | `Role` | `Identifier`, `Topic`, `Timing`, ... |
+| `Origin Document` | Which document `Pages` refers to. Defaults to the annotated CRF. |
+| `Source` | Who provided a collected value: `Investigator`, `Sponsor`, `Subject`, `Vendor`. |
+| `Assigned Value` | The value, for an `Assigned` origin. |
+| `SAS Field Name` | When it differs from `Variable`. |
+| `Has No Data` | `Yes` when the variable is always empty. |
 | `Comment` | A Comment ID. |
 
 **Origin decides what else you must fill.** `Derived` wants a `Method`;
 `Predecessor` wants a `Predecessor`; `Collected` wants `Pages`. artoo writes
-what you give it, and a reviewer opening the define.html sees a blank where
-you left one.
+what you give it, and a reviewer reading the rendered document sees a blank where you
+left one.
 
 ## ValueLevel — when one variable means several things
 
@@ -143,16 +159,33 @@ LBCAT EQ "CHEMISTRY, LOCAL"                   or with a comma
 DM.COUNTRY EQ USA                             a variable in another dataset
 ```
 
-Three rules worth knowing, because each has bitten someone:
+Four rules worth knowing:
 
-- **Quotes are delimiters, not part of the value.** `AVISIT EQ "Week 24"`
-  selects records whose AVISIT is the seven characters `Week 24`. You only
-  need them when the value contains a space or a comma.
-- **`IN` takes parentheses; `EQ` does not.** A comma inside an `EQ` value is
-  part of the value.
+- **A value runs to the end of the condition.** `AVISIT EQ Week 24` already
+  means the seven characters `Week 24`, and `LBCAT EQ CHEMISTRY, LOCAL`
+  already means the sixteen. You do not need quotes for a space or a comma
+  after `EQ`.
+- **Double quotes are stripped when you use them**, so writing
+  `AVISIT EQ "Week 24"` gets the same answer. Single quotes are not: they
+  stay in the value.
+- **The one place quotes are load-bearing is inside a set.** `IN` splits on
+  commas, so a member that contains one has to be quoted:
+  `PARAMCD IN ("A, B", C)` is two members, not three. Parentheses round a
+  set are optional.
 - **Qualify a variable from another dataset**, as `DM.COUNTRY`. Without the
   prefix, the condition is read as naming a variable in the row's own
   dataset — a different question with a different answer.
+
+**`or` is not a general operator.** Conditions are ANDed. artoo folds an
+`or` between values of the *same* variable into a set — `SEX EQ M or SEX EQ
+F` becomes `SEX IN (M, F)` — and refuses one across different variables,
+because Define-XML has no way to say it. Split those into separate
+value-level rows.
+
+**One thing cannot be written inline at all:** a value containing the word
+`and` or `or`, because that is what separates conditions. `ATPT EQ 4 hours
+and 30 minutes` cannot be parsed. Use a WhereClauses sheet, which needs no
+parsing.
 
 ## WhereClauses — the older shape only
 
@@ -164,6 +197,7 @@ One row per comparison; several rows sharing an `ID` are ANDed together.
 | `Dataset`, `Variable` | What is being tested. |
 | `Comparator` | `EQ`, `NE`, `IN`, `NOTIN`, `LT`, `LE`, `GT`, `GE`. |
 | `Value` | One value, or a comma-separated list for `IN` / `NOTIN`. |
+| `Comment` | A Comment ID, when the condition needs explaining. |
 
 If your workbook has no such sheet, write the condition in the ValueLevel
 cell instead; artoo works out which shape you used from whether the sheet
@@ -177,13 +211,15 @@ how the format works.
 | Column | Notes |
 |---|---|
 | `ID` | The codelist identifier, referenced from `Variables.Codelist`. |
-| `Name` | The codelist name. **Required** by the schema. |
-| `Data Type` | `text`, `integer`, `float`. Must match the variables that use it. |
+| `Name` | The codelist name. Fill it in — artoo falls back to the ID, which is not a name. |
+| `Data Type` | `text`, `integer`, `float`. Should match the variables that use it. |
 | `NCI Codelist Code` | The C-code for the list, e.g. `C66731`. |
 | `Order` | Position of the term. |
 | `Term` | The submitted value. |
 | `Decoded Value` | What it means. |
 | `NCI Term Code` | The C-code for the term. |
+| `Rank` | The term's rank, where the terminology defines one. |
+| `SAS Format Name` | The format name, `$SEX`. |
 | `Comment` | A **Comment ID**. |
 
 ## Dictionaries — MedDRA, WHODrug, ISO 3166
@@ -193,16 +229,31 @@ An external dictionary has no terms to list, so it gets its own sheet: `ID`,
 its **`Codelist`** column, exactly as it would an enumerated codelist —
 there is one column for both, and artoo resolves against both.
 
+## Standards
+
+Define-XML 2.1 records every standard the study uses, not just the one the
+study sheet names: the implementation guide, the controlled terminology
+releases, any prior versions still in play. One row each — `ID`, `Name`,
+`Type` (`IG`, `CT`, `MODEL`), `Version`, `Status`, `Publishing Set` — and
+the Datasets sheet's `Standard` column points at them.
+
+Leave it empty and artoo writes one row from the study sheet's
+`StandardName` and `StandardVersion`, which is enough for a document that
+follows a single standard.
+
 ## Methods, Comments, Documents
 
-**Methods** — `ID`, `Name`, `Type` (`Computation`, `Imputation`), and
-`Description`, the prose a reviewer reads. `Expression Context` and
-`Expression Code` carry one formal expression: the language, and the code.
+**Methods** — `ID`, `Name`, `Type` (`Computation`, `Imputation`,
+`Transpose`, `Other`), and `Description`, the prose a reviewer reads.
+`Expression Context` and `Expression Code` carry one formal expression: the
+language, and the code. `Document` and `Pages` point at where the method is
+written up.
 
-**Comments** — `ID` and `Description`. Every `Comment` cell elsewhere in the
-workbook is an ID matching a row here. This is the single most common
-workbook mistake: writing the comment text into the `Comment` cell of the
-Variables sheet, where an ID belongs.
+**Comments** — `ID`, `Description`, and a `Document` and `Pages` of their
+own. Every `Comment` cell elsewhere in the workbook is an ID matching a row
+here. This is the single most common workbook mistake: writing the comment
+text into the `Comment` cell of the Variables sheet, where an ID belongs.
+artoo reports it as an unresolved reference rather than guessing.
 
 **Documents** — `ID`, `Title`, `Href`. The `Href` is a filename, and it is
 also how artoo knows which document is the annotated CRF: **a filename
@@ -212,10 +263,17 @@ is called something else, say so with a `Role` column of `Annotated CRF`.
 
 ## Pages
 
-A page reference means nothing without a document, so `Pages` is read
-together with the annotated CRF above. Write them as `4 5`, `4, 5`, or a
-range `4-5` — all three are understood, and a range is written out as a
-first and last page rather than a list.
+A page reference means nothing without a document. Write pages as `4 5`,
+`4, 5`, or a range `4-5`: all three are understood, commas are normalised
+to the spaces Define-XML wants, and a range is written out as a first and
+last page rather than a list.
+
+**Which document the pages belong to** comes from one of two places. Set
+`Origin Document` on the row to name a specific one; leave it blank and a
+`Collected` origin's pages default to the annotated CRF. Methods and
+Comments have their own `Document` column for the same reason. If a row has
+pages and there is no document to attach them to, artoo refuses rather than
+attaching them to a document nobody named.
 
 ## Analysis Displays and Analysis Results
 
@@ -235,7 +293,9 @@ selection is:
   with its own `Variables` and `Where Clause`.
 
 `Variables` names the analysis variables, qualified by dataset when the
-result spans more than one: `ADAE.AEBODSYS, ADAE.AEDECOD`.
+result spans more than one: `ADAE.AEBODSYS, ADAE.AEDECOD`. `Documentation
+Refs` and `Programming Document` name a Document ID each. `Join Comment` is
+a Comment ID explaining how several analysis datasets relate.
 
 ## Fill it in, then check it
 
@@ -247,8 +307,9 @@ spec <- read_spec(system.file("extdata", "adam-spec.xlsx", package = "artoo"))
 spec
 ```
 
-`validate_spec()` checks the spec against itself — every reference resolving,
-every key sequence contiguous — without needing the data:
+`validate_spec()` checks the spec against itself — every reference
+resolving, every key sequence contiguous — without needing the data. It
+reports notes as well as errors, so expect to see some on a real spec:
 
 ```{r}
 validate_spec(spec)
@@ -271,6 +332,13 @@ reference pointing at nothing is schema-valid:
 ```{r}
 lint_define(define)
 ```
+
+Read the severities, not the count. An **error** is a reference pointing at
+nothing, and it means the document is wrong. A **warning** is usually an
+orphan — something defined that nothing uses — which a valid document may
+well have, and this bundled spec does: it is scoped to two datasets and
+still names documents and standards the others used. Nothing here is
+dangling, which is the line that matters.
 
 ## What a workbook cannot carry
 

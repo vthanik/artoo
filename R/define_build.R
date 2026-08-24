@@ -212,7 +212,11 @@
     bounds <- strsplit(v, "-", fixed = TRUE)[[1]]
     return(.dx_attrs(FirstPage = bounds[[1]], LastPage = bounds[[2]]))
   }
-  .dx_attrs(PageRefs = v)
+  # A page LIST is space-separated. Authors write commas -- more than one
+  # workbook convention says to -- and passing the cell through verbatim
+  # shipped `PageRefs="4, 5"`, which is schema-valid and is not a list of
+  # two pages.
+  .dx_attrs(PageRefs = gsub("[[:space:]]*,[[:space:]]*", " ", v))
 }
 
 #' @noRd

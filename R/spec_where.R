@@ -336,13 +336,34 @@
 # Split on AND / OR at the top level, reporting which conjunctions appeared.
 # Both are needed: a clause mixing them is ambiguous without precedence rules
 # Define-XML does not define, so it is refused rather than guessed at.
+#
+# QUOTE-AWARE, because a value can contain the word. "Nausea and vomiting"
+# is a real MedDRA preferred term, and splitting inside it turned one check
+# into two whose values were `"Nausea` and `vomiting"` -- a different
+# selection, with no error, on artoo's own written workbook.
 #' @noRd
 .wc_split_conjunctions <- function(text) {
-  pieces <- strsplit(text, "\\s+(?i:AND|OR)\\s+", perl = TRUE)[[1]]
+  chars <- strsplit(text, "", fixed = TRUE)[[1L]]
+  # Blank out everything inside a quote pair, so the split positions are
+  # found on a string whose quoted spans cannot match.
+  inside <- cumsum(chars == "\"") %% 2L == 1L | chars == "\""
+  masked <- paste(ifelse(inside, "\u0001", chars), collapse = "")
+  breaks <- gregexpr("\\s+(?i:AND|OR)\\s+", masked, perl = TRUE)[[1L]]
+  if (identical(as.integer(breaks), -1L)) {
+    return(list(
+      conditions = trimws(text),
+      has_or = FALSE,
+      has_and = FALSE
+    ))
+  }
+  lengths <- attr(breaks, "match.length")
+  starts <- c(1L, breaks + lengths)
+  stops <- c(breaks - 1L, nchar(text))
+  words <- substring(masked, breaks, breaks + lengths - 1L)
   list(
-    conditions = trimws(pieces),
-    has_or = grepl("\\s+(?i:OR)\\s+", text, perl = TRUE),
-    has_and = grepl("\\s+(?i:AND)\\s+", text, perl = TRUE)
+    conditions = trimws(substring(text, starts, stops)),
+    has_or = any(grepl("or", words, ignore.case = TRUE)),
+    has_and = any(grepl("and", words, ignore.case = TRUE))
   )
 }
 
@@ -474,25 +495,49 @@
 # whose ValueLevel sheet named its label column differently; pairing it with
 # current-generation headers produced a workbook of no generation at all.
 #' @noRd
-.wc_render <- function(wc) {
+.wc_render <- function(wc, owner = NULL) {
   if (is.null(wc) || !nrow(wc)) {
     return(character(0))
   }
+  # A value needs quoting when it contains a comma (which separates set
+  # members) or the word that separates conditions. A bare space needs
+  # none, since a value runs to the end of its condition.
   quote_if_needed <- function(x) {
-    ifelse(grepl("[ ,]", x), paste0('"', x, '"'), x)
+    needs <- grepl(",", x, fixed = TRUE) |
+      grepl("\\s(?i:AND|OR)\\s", x, perl = TRUE)
+    ifelse(needs, paste0('"', x, '"'), x)
   }
-  # Which dataset owns each clause: the one its first check names. A check
-  # on any other dataset is qualified below, because the cell has no other
-  # way to say so and dropping the qualifier changes what the clause
-  # selects.
-  owners <- vapply(
-    split(as.character(wc$dataset), factor(wc$where_clause_id)),
-    function(x) {
-      x <- x[!is.na(x)]
-      if (length(x)) x[[1L]] else NA_character_
-    },
-    character(1)
-  )
+  # Which dataset owns each clause. The parser's rule is that an
+  # UNQUALIFIED name belongs to the dataset of the row the cell sits on, so
+  # the renderer has to use that same dataset -- and the caller is the only
+  # one who knows it.
+  #
+  # Guessing it from the clause's first check, as an earlier version did,
+  # disagreed with the parser whenever the first check was the foreign one:
+  # a VS value conditioned on `DM.COUNTRY EQ USA and VSTESTCD EQ HEIGHT`
+  # rendered the qualifier away and read back as VS.COUNTRY. Silently, and
+  # in exactly the case the qualifier exists for.
+  ids <- unique(as.character(wc$where_clause_id))
+  if (is.null(owner)) {
+    owner <- stats::setNames(rep(NA_character_, length(ids)), ids)
+  }
+  owners <- owner[ids]
+  names(owners) <- ids
+  # With no owner named, fall back to the first check's dataset: a clause
+  # nothing references has no row to take one from, and every check then
+  # renders qualified, which is lossless if wordy.
+  blank <- is.na(owners)
+  if (any(blank)) {
+    first <- vapply(
+      split(as.character(wc$dataset), factor(wc$where_clause_id, ids)),
+      function(x) {
+        x <- x[!is.na(x)]
+        if (length(x)) x[[1L]] else NA_character_
+      },
+      character(1)
+    )
+    owners[blank] <- first[names(owners)[blank]]
+  }
   check <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
   by_check <- vapply(
     split(seq_len(nrow(wc)), factor(check, levels = unique(check))),
