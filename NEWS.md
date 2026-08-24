@@ -10,6 +10,21 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `write_spec()` writes Define-XML 2.0 as well as 2.1, and converts between
+  them. The version follows the spec's own `define_version` unless `version`
+  says otherwise. The switch is exactly what the two standards renamed:
+  `def:Standards` against `def:StandardName`/`def:StandardVersion`,
+  `def:Class` as an element against an attribute, `def:Context` and
+  `def:Origin/@Source` in 2.1 only, and the origin vocabulary (2.0's `CRF` and
+  `eDT` are 2.1's `Collected`). A downgrade warns once, naming everything 2.0
+  cannot carry; a 2.1 origin with no 2.0 spelling is refused rather than
+  approximated.
+
+* `read_spec()` on a Define-XML document now reads a PDF page RANGE. A
+  `def:PDFPageRef` states its pages as either a `PageRefs` list or a
+  `FirstPage`/`LastPage` range, and only the list was read, so every range was
+  dropped silently. Both now land in `pages`, a range written as `"4-5"`.
+
 * `write_spec()` gains `...`, which the Define-XML path reads for `version`,
   `created`, `stylesheet`, and `validate`. Freeze `created` for a
   byte-reproducible submission build.

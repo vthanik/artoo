@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="define2-0-0.xsl"?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" xmlns:def="http://www.cdisc.org/ns/def/v2.0" xmlns:xlink="http://www.w3.org/1999/xlink" ODMVersion="1.3.2" FileType="Snapshot" FileOID="STDY.ARTOO-01.Define-XML_2.0.0" CreationDateTime="2020-01-01T00:00:00">
+  <Study OID="STDY.ARTOO-01">
+    <GlobalVariables>
+      <StudyName>ARTOO-01</StudyName>
+      <StudyDescription>artoo writer example</StudyDescription>
+      <ProtocolName>ARTOO-01</ProtocolName>
+    </GlobalVariables>
+    <MetaDataVersion OID="MDV.ARTOO-01" Name="SDTMIG 3.4 Data Definitions" def:DefineVersion="2.0.0" def:StandardName="SDTMIG" def:StandardVersion="3.4">
+      <def:ValueListDef OID="VL.VS.VSORRES">
+        <ItemRef ItemOID="IT.VS.VSORRES.WC.VS.HEIGHT.CM" OrderNumber="1" Mandatory="Yes">
+          <def:WhereClauseRef WhereClauseOID="WC.VS.HEIGHT.CM"/>
+        </ItemRef>
+      </def:ValueListDef>
+      <def:WhereClauseDef OID="WC.VS.HEIGHT.CM">
+        <RangeCheck Comparator="EQ" SoftHard="Soft" def:ItemOID="IT.VS.VSTESTCD">
+          <CheckValue>HEIGHT</CheckValue>
+        </RangeCheck>
+        <RangeCheck Comparator="IN" SoftHard="Soft" def:ItemOID="IT.VS.VSORRESU">
+          <CheckValue>cm</CheckValue>
+        </RangeCheck>
+      </def:WhereClauseDef>
+      <ItemGroupDef OID="IG.DM" Name="DM" Domain="DM" Repeating="No" SASDatasetName="DM" Purpose="Tabulation" def:Structure="One record per subject" def:Class="SPECIAL PURPOSE" def:ArchiveLocationID="LF.dm">
+        <Description>
+          <TranslatedText xml:lang="en">Demographics</TranslatedText>
+        </Description>
+        <ItemRef ItemOID="IT.DM.STUDYID" OrderNumber="1" Mandatory="Yes" KeySequence="1"/>
+        <ItemRef ItemOID="IT.DM.USUBJID" OrderNumber="2" Mandatory="Yes" KeySequence="2" MethodOID="MT.USUBJID"/>
+        <ItemRef ItemOID="IT.DM.SEX" OrderNumber="3" Mandatory="No"/>
+        <ItemRef ItemOID="IT.DM.AGE" OrderNumber="4" Mandatory="No"/>
+        <ItemRef ItemOID="IT.DM.COUNTRY" OrderNumber="5" Mandatory="No"/>
+        <def:leaf ID="LF.dm" xlink:href="dm.xpt">
+          <def:title>dm.xpt</def:title>
+        </def:leaf>
+      </ItemGroupDef>
+      <ItemGroupDef OID="IG.VS" Name="VS" Domain="VS" Repeating="Yes" SASDatasetName="VS" Purpose="Tabulation" def:Structure="One record per STUDYID, USUBJID, VSTESTCD, VSSEQ" def:Class="FINDINGS">
+        <Description>
+          <TranslatedText xml:lang="en">Vital Signs</TranslatedText>
+        </Description>
+        <ItemRef ItemOID="IT.VS.STUDYID" OrderNumber="1" Mandatory="Yes" KeySequence="1"/>
+        <ItemRef ItemOID="IT.VS.USUBJID" OrderNumber="2" Mandatory="Yes" KeySequence="2" MethodOID="MT.USUBJID"/>
+        <ItemRef ItemOID="IT.VS.VSSEQ" OrderNumber="3" Mandatory="Yes" KeySequence="4"/>
+        <ItemRef ItemOID="IT.VS.VSTESTCD" OrderNumber="4" Mandatory="Yes" KeySequence="3"/>
+        <ItemRef ItemOID="IT.VS.VSORRES" OrderNumber="5" Mandatory="No"/>
+        <ItemRef ItemOID="IT.VS.VSORRESU" OrderNumber="6" Mandatory="No"/>
+        <ItemRef ItemOID="IT.VS.VSDTC" OrderNumber="7" Mandatory="No"/>
+      </ItemGroupDef>
+      <ItemDef OID="IT.DM.STUDYID" Name="STUDYID" DataType="text" Length="20">
+        <Description>
+          <TranslatedText xml:lang="en">Study Identifier</TranslatedText>
+        </Description>
+        <def:Origin Type="Protocol"/>
+      </ItemDef>
+      <ItemDef OID="IT.DM.USUBJID" Name="USUBJID" DataType="text" Length="30">
+        <Description>
+          <TranslatedText xml:lang="en">Unique Subject Identifier</TranslatedText>
+        </Description>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.DM.SEX" Name="SEX" DataType="text" Length="1" def:CommentOID="COM.SEX">
+        <Description>
+          <TranslatedText xml:lang="en">Sex</TranslatedText>
+        </Description>
+        <CodeListRef CodeListOID="CL.SEX"/>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.DM.AGE" Name="AGE" DataType="integer" Length="8">
+        <Description>
+          <TranslatedText xml:lang="en">Age</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.DM.COUNTRY" Name="COUNTRY" DataType="text" Length="3">
+        <Description>
+          <TranslatedText xml:lang="en">Country</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.STUDYID" Name="STUDYID" DataType="text" Length="20">
+        <Description>
+          <TranslatedText xml:lang="en">Study Identifier</TranslatedText>
+        </Description>
+        <def:Origin Type="Protocol"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.USUBJID" Name="USUBJID" DataType="text" Length="30">
+        <Description>
+          <TranslatedText xml:lang="en">Unique Subject Identifier</TranslatedText>
+        </Description>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSSEQ" Name="VSSEQ" DataType="integer" Length="8">
+        <Description>
+          <TranslatedText xml:lang="en">Sequence Number</TranslatedText>
+        </Description>
+        <def:Origin Type="Derived"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSTESTCD" Name="VSTESTCD" DataType="text" Length="8">
+        <Description>
+          <TranslatedText xml:lang="en">Vital Signs Test Short Name</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSORRES" Name="VSORRES" DataType="text" Length="20">
+        <Description>
+          <TranslatedText xml:lang="en">Result or Finding in Original Units</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+        <def:ValueListRef ValueListOID="VL.VS.VSORRES"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSORRESU" Name="VSORRESU" DataType="text" Length="5">
+        <Description>
+          <TranslatedText xml:lang="en">Original Units</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSDTC" Name="VSDTC" DataType="datetime" Length="19">
+        <Description>
+          <TranslatedText xml:lang="en">Date/Time of Measurements</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <ItemDef OID="IT.VS.VSORRES.WC.VS.HEIGHT.CM" Name="VSORRES" DataType="float" Length="5" SignificantDigits="1">
+        <Description>
+          <TranslatedText xml:lang="en">Height in centimetres</TranslatedText>
+        </Description>
+        <def:Origin Type="CRF"/>
+      </ItemDef>
+      <CodeList OID="CL.SEX" Name="Sex" DataType="text">
+        <CodeListItem CodedValue="F" OrderNumber="1">
+          <Decode>
+            <TranslatedText xml:lang="en">Female</TranslatedText>
+          </Decode>
+          <Alias Context="nci:ExtCodeID" Name="C16576"/>
+        </CodeListItem>
+        <CodeListItem CodedValue="M" OrderNumber="2">
+          <Decode>
+            <TranslatedText xml:lang="en">Male</TranslatedText>
+          </Decode>
+          <Alias Context="nci:ExtCodeID" Name="C20197"/>
+        </CodeListItem>
+        <Alias Context="nci:ExtCodeID" Name="C66731"/>
+      </CodeList>
+      <MethodDef OID="MT.USUBJID" Name="Derive USUBJID" Type="Computation">
+        <Description>
+          <TranslatedText xml:lang="en">Concatenate STUDYID and SUBJID.</TranslatedText>
+        </Description>
+        <FormalExpression Context="SAS">usubjid = catx('-', studyid, subjid);</FormalExpression>
+      </MethodDef>
+      <def:CommentDef OID="COM.SEX">
+        <Description>
+          <TranslatedText xml:lang="en">Sex is collected once at screening.</TranslatedText>
+        </Description>
+      </def:CommentDef>
+    </MetaDataVersion>
+  </Study>
+</ODM>

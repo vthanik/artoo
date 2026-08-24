@@ -87,3 +87,36 @@ test_that("serialising without an XML declaration is refused", {
   # NULL href short-circuits before the check.
   expect_false(grepl("xml-stylesheet", artoo:::.dx_serialise(node, NULL)))
 })
+
+test_that("a def: attribute the version does not have is refused", {
+  skip_if_not_installed("xml2")
+  node <- artoo:::.dx_node(
+    "CodeList",
+    attrs = list(OID = "CL.1", "def:StandardOID" = "STD.1")
+  )
+  # Legal in 2.1...
+  expect_silent(emit_to_text(node))
+  # ...and not in 2.0, where CodeList carries no def: attribute at all.
+  doc <- xml2::xml_new_root(
+    "ODM",
+    "xmlns" = "http://www.cdisc.org/ns/odm/v1.3",
+    "xmlns:def" = "http://www.cdisc.org/ns/def/v2.0"
+  )
+  expect_error(
+    artoo:::.dx_emit(doc, node, artoo:::.define_profile("2.0")),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    artoo:::.dx_emit(doc, node, artoo:::.define_profile("2.0")),
+    error = TRUE
+  )
+})
+
+test_that("def:CommentOID is legal in 2.0 everywhere except CodeList", {
+  skip_if_not_installed("xml2")
+  # The reason the guard is per element rather than one global set.
+  p20 <- artoo:::.define_profile("2.0")
+  expect_true("def:CommentOID" %in% p20$def_attrs$ItemGroupDef)
+  expect_true("def:CommentOID" %in% p20$def_attrs$ItemDef)
+  expect_false("def:CommentOID" %in% p20$def_attrs$CodeList)
+})

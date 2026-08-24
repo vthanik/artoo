@@ -191,6 +191,116 @@ test_that("a where clause the spec does not define is refused, never dropped", {
   )
 })
 
+test_that("a def:ValueListRef naming no value list is refused (#p4-review-2)", {
+  skip_if_not_installed("xml2")
+  # OIDs are odm:oidref, not xs:IDREF, so libxml2 never resolves them: a
+  # dangling def:ValueListRef passes the schema gate and reaches a reviewer
+  # as a conformance finding instead.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      value_list_id = "VL.DM.SEX",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = "2020-01-01 00:00:00"),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    write_spec(spec, path, created = "2020-01-01 00:00:00"),
+    error = TRUE
+  )
+})
+
+test_that("a value-level OID collision drops the whole parent to ordinals", {
+  # Substituting an ordinal row by row is not a fixed point: the ordinal put
+  # in to break one clash can land on a content mint that survived, and the
+  # second collision surfaces as an ItemDef-pool refusal naming identifiers
+  # the user never supplied.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "LB",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "LB",
+      variable = "LBORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = c("3", "Y"),
+      check_order = 1L,
+      dataset = "LB",
+      variable = "LBORRES",
+      comparator = "EQ",
+      value = c("a", "b"),
+      value_order = 1L,
+      stringsAsFactors = FALSE
+    ),
+    # Row 1's content mint is "...3"; rows 2 and 3 share a clause, so their
+    # ordinals are 2 and 3 -- and "...3" is already taken.
+    values = data.frame(
+      dataset = "LB",
+      variable = "LBORRES",
+      where_clause_id = c("3", "Y", "Y"),
+      data_type = "float",
+      label = c("p", "q", "r"),
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_identical(
+    artoo:::.dx_oids(spec)$value_item,
+    c("IT.LB.LBORRES.1", "IT.LB.LBORRES.2", "IT.LB.LBORRES.3")
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_no_error(write_spec(spec, path, created = "2020-01-01 00:00:00"))
+})
+
+test_that("a value-level OID survives its rows being filtered", {
+  # The property content-addressing exists for: an ordinal renumbers the
+  # moment rows are dropped, so a reviewer's reference stops resolving.
+  build <- function(keep) {
+    artoo_spec(
+      datasets = data.frame(
+        dataset = "VS",
+        structure = "One record per test",
+        stringsAsFactors = FALSE
+      ),
+      variables = data.frame(
+        dataset = "VS",
+        variable = "VSORRES",
+        data_type = "string",
+        stringsAsFactors = FALSE
+      ),
+      values = data.frame(
+        dataset = "VS",
+        variable = "VSORRES",
+        where_clause_id = c("WC.HEIGHT", "WC.WEIGHT")[keep],
+        data_type = "float",
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+  both <- artoo:::.dx_oids(build(1:2))$value_item
+  second_only <- artoo:::.dx_oids(build(2L))$value_item
+  expect_identical(
+    both,
+    c("IT.VS.VSORRES.WC.HEIGHT", "IT.VS.VSORRES.WC.WEIGHT")
+  )
+  expect_identical(second_only, "IT.VS.VSORRES.WC.WEIGHT")
+})
+
 test_that("a pooled ItemDef keeps its def:ValueListRef (#p4-review)", {
   skip_if_not_installed("xml2")
   # Two ItemGroupDefs referencing one ItemDef that carries a def:ValueListRef.

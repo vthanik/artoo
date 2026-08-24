@@ -161,11 +161,19 @@
       fallback,
       sprintf("%s.%s", value_parent, .dx_slug(wc))
     )
-    # Two rows of one variable behind the same clause would collide, so
-    # anything not unique drops back to the ordinal.
-    clash <- duplicated(minted) | duplicated(minted, fromLast = TRUE)
-    minted[clash] <- fallback[clash]
+    # A collision drops the WHOLE parent back to ordinals, not just the
+    # colliding rows. Substituting row by row is not a fixed point: an
+    # ordinal put in to break one clash can land on a content mint that
+    # survived, and the second collision goes unnoticed until the ItemDef
+    # pool refuses the document with a message about identifiers the user
+    # never supplied.
     value_item <- .dx_fill(val$itemoid, minted)
+    for (k in unique(value_parent)) {
+      hit <- which(value_parent == k)
+      if (anyDuplicated(value_item[hit])) {
+        value_item[hit] <- .dx_fill(val$itemoid[hit], fallback[hit])
+      }
+    }
   }
 
   list(

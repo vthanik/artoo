@@ -26,3 +26,12 @@
       x The serialised document does not begin with an XML declaration.
       i Pass `stylesheet = NULL` to write the file without one.
 
+# a def: attribute the version does not have is refused
+
+    Code
+      artoo:::.dx_emit(doc, node, artoo:::.define_profile("2.0"))
+    Condition
+      Error:
+      ! "CodeList" cannot carry "def:StandardOID" in Define-XML 2.0.
+      i That attribute does not exist in this version of the standard.
+

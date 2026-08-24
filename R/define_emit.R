@@ -19,11 +19,11 @@
 #     document as if a sponsor had asserted them.
 # Both fire while emitting, naming the element, rather than surfacing later as
 # a schema error against a line number.
-#
-# There is NO equivalent guard on ATTRIBUTES: the profile carries no legal
-# attribute set, so a 2.1-only attribute on a 2.0 document would only be
-# caught by the schema gate at the end. Closing that is part of the 2.0
-# writer, which is the first thing that can exercise it.
+#   * a def:-namespaced attribute the version does not have ABORTS, so
+#     def:HasNoData cannot reach a 2.0 document. Only the def: namespace is
+#     checked: the ODM half is identical across both versions and the schema
+#     gate covers it, while the def: half is exactly what the two versions
+#     disagree about.
 
 # One node in the tree. `kids` is a NAMED list; a name may hold one node or a
 # list of nodes (repeated elements).
@@ -69,6 +69,20 @@
 # Recursively write a node spec into an xml2 parent.
 #' @noRd
 .dx_emit <- function(parent, node, p, call = rlang::caller_env()) {
+  illegal <- setdiff(
+    grep("^def:", names(node$attrs), value = TRUE),
+    p$def_attrs[[node$name]]
+  )
+  if (length(illegal)) {
+    .artoo_abort(
+      c(
+        "{.val {node$name}} cannot carry {.val {illegal}} in Define-XML {p$version}.",
+        "i" = "That attribute does not exist in this version of the standard."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
   args <- c(list(parent, node$name), node$attrs)
   el <- do.call(xml2::xml_add_child, args)
   if (!is.null(node$text)) {

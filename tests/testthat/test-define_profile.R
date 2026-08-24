@@ -92,3 +92,48 @@ test_that("the two profiles differ where the standards differ, and nowhere else"
   expect_identical(p20$order$ItemDef, p21$order$ItemDef)
   expect_identical(p20$ns[["odm"]], p21$ns[["odm"]])
 })
+
+test_that("the profile's legal def: attributes match the bundled schemas", {
+  skip_if_not_installed("xml2")
+  # PER ELEMENT, not one global set: def:CommentOID is legal in 2.0 but not on
+  # CodeList, and a global set would pass exactly that document.
+  for (version in c("2.0", "2.1")) {
+    derived <- .dx_schema_def_attrs(version)
+    declared <- artoo:::.define_profile(version)$def_attrs
+    expect_setequal(names(declared), names(derived))
+    for (element in names(derived)) {
+      expect_identical(
+        sort(declared[[element]]),
+        sort(derived[[element]]),
+        info = paste(version, element)
+      )
+    }
+  }
+})
+
+test_that("only two LOCAL attributes differ between the versions", {
+  skip_if_not_installed("xml2")
+  # The emitter guards def:-prefixed attributes; a local (unprefixed) one on
+  # a def: element is invisible to it, so each has to be gated by hand. Pin
+  # which ones those are, so a third fails here rather than at a schema gate.
+  local_20 <- .dx_schema_local_attrs("2.0")
+  local_21 <- .dx_schema_local_attrs("2.1")
+  shared <- intersect(names(local_20), names(local_21))
+  differ <- shared[
+    !vapply(
+      shared,
+      function(k) identical(local_20[[k]], local_21[[k]]),
+      logical(1)
+    )
+  ]
+  expect_setequal(differ, c("def:Origin", "def:PDFPageRef"))
+  expect_identical(
+    setdiff(local_21[["def:Origin"]], local_20[["def:Origin"]]),
+    "Source"
+  )
+  # def:PDFPageRef/@Title is 2.1-only and artoo emits neither.
+  expect_identical(
+    setdiff(local_21[["def:PDFPageRef"]], local_20[["def:PDFPageRef"]]),
+    "Title"
+  )
+})

@@ -29,17 +29,7 @@
   target <- .dx_target_version(version, spec, call)
   p <- .define_profile(target, call)
 
-  if (identical(target, "2.0")) {
-    .artoo_abort(
-      c(
-        "artoo cannot write Define-XML 2.0 yet.",
-        "x" = "This release writes Define-XML 2.1.",
-        "i" = "Pass {.code version = \"2.1\"} to write the spec as 2.1."
-      ),
-      kind = "define",
-      call = call
-    )
-  }
+  .dx_downgrade_notice(spec, p, call)
 
   doc <- .dx_document(spec, p, created, call)
   href <- .dx_stylesheet_href(stylesheet, p)
@@ -65,6 +55,65 @@
     .dx_copy_stylesheet(path, p, call)
   }
   invisible(path)
+}
+
+# Say once, before a single node exists, what a downgrade will not carry.
+#
+# Per-attribute warnings would be one per row; a silent filter would hand the
+# user a document quietly weaker than their spec. This reads the spec against
+# the target profile and names the whole loss in one message.
+#' @noRd
+.dx_downgrade_notice <- function(spec, p, call = rlang::caller_env()) {
+  lost <- character(0)
+  available <- unlist(p$def_attrs, use.names = FALSE)
+  has <- function(name) name %in% available
+  any_set <- function(df, col) .dx_any(.dx_lgl(df, col))
+  any_value <- function(df, col) any(!.dx_blank(.dx_chr(df, col)))
+
+  if (!has("def:StandardOID")) {
+    if (nrow(spec@standards) > 1L) {
+      lost <- c(lost, "def:Standards (only the primary standard survives)")
+    }
+    if (
+      any_value(spec@datasets, "standard_id") ||
+        any_value(spec@codelists, "standard_id")
+    ) {
+      lost <- c(lost, "def:StandardOID")
+    }
+  }
+  if (!has("def:IsNonStandard")) {
+    for (tbl in list(spec@datasets, spec@variables, spec@codelists)) {
+      if (any_set(tbl, "is_non_standard")) {
+        lost <- c(lost, "def:IsNonStandard")
+        break
+      }
+    }
+  }
+  if (!has("def:HasNoData")) {
+    for (tbl in list(spec@datasets, spec@variables)) {
+      if (any_set(tbl, "has_no_data")) {
+        lost <- c(lost, "def:HasNoData")
+        break
+      }
+    }
+  }
+  if (is.null(p$enum$origin_source) && any_value(spec@variables, "source")) {
+    lost <- c(lost, "def:Origin/@Source")
+  }
+  if (!nrow(spec@datasets) || !length(lost)) {
+    return(invisible(character(0)))
+  }
+  version <- p$version
+  .artoo_warn(
+    c(
+      "Define-XML {version} cannot carry everything this spec holds.",
+      "x" = "Dropped: {.val {lost}}.",
+      "i" = "Write the spec as {.val 2.1}, or to native JSON, to keep it whole."
+    ),
+    kind = "define",
+    call = call
+  )
+  invisible(lost)
 }
 
 # Build the whole document. The root is created directly rather than emitted,
@@ -146,7 +195,8 @@
         var,
         j,
         .dx_get(oids$variable, .dx_key(var$dataset[[j]], var$variable[[j]])),
-        .dx_chr(var, "order")[[j]]
+        .dx_chr(var, "order")[[j]],
+        p
       )
     })
     .dx_itemgroup(
@@ -197,11 +247,14 @@
 
   .dx_node(
     "MetaDataVersion",
-    attrs = .dx_attrs(
-      OID = oids$mdv,
-      Name = .dx_mdv_name(spec),
-      Description = .dx_study_field(spec, "metadata_version_description"),
-      "def:DefineVersion" = .dx_define_version(spec, p)
+    attrs = c(
+      .dx_attrs(
+        OID = oids$mdv,
+        Name = .dx_mdv_name(spec),
+        Description = .dx_study_field(spec, "metadata_version_description"),
+        "def:DefineVersion" = .dx_define_version(spec, p)
+      ),
+      .dx_standard_attrs(spec, p)
     ),
     kids = list(
       `def:Standards` = .dx_standards(spec, p, call),
@@ -234,14 +287,58 @@
   )
 }
 
-# The spec's own def:DefineVersion wins when it is a revision of the target
-# version, so reading 2.1.10 and writing it back does not silently restate it
-# as 2.1.0. Anything else falls back to the profile's version.
+# The spec's own def:DefineVersion wins when the version admits revisions, so
+# reading 2.1.10 and writing it back does not silently restate it as 2.1.0.
+# 2.0 fixes the value at 2.0.0, and libxml2 drops `fixed` through xs:redefine,
+# so there the standard's value is asserted rather than the spec's.
 #' @noRd
 .dx_define_version <- function(spec, p) {
+  if (isTRUE(p$define_version_fixed)) {
+    return(p$define_version)
+  }
   dv <- .dx_study_field(spec, "define_version")
   prefix <- sub("[.][^.]*$", ".", p$define_version)
   if (!is.na(dv) && startsWith(dv, prefix)) dv else p$define_version
+}
+
+# Define-XML 2.0 has no def:Standards element: it carries ONE name/version
+# pair on MetaDataVersion, both required. The pair comes from the standards
+# row flagged is_primary, which the reader sets to the first implementation
+# guide -- 2.0 cannot express the rest, and picking a controlled-terminology
+# publication date as "the standard" would be worse than picking nothing.
+#' @noRd
+.dx_standard_attrs <- function(spec, p, call = rlang::caller_env()) {
+  if (!("def:StandardName" %in% p$def_attrs$MetaDataVersion)) {
+    return(list())
+  }
+  std <- spec@standards
+  pick <- if (nrow(std)) which(.dx_lgl(std, "is_primary")) else integer(0)
+  if (!length(pick)) {
+    # Fall back to the scalar @standard, which is where a spec built from a
+    # workbook carries it: "SDTMIG 3.4" splits into a name and a version.
+    scalar <- spec@standard
+    if (is.na(scalar)) {
+      .artoo_abort(
+        c(
+          "Define-XML 2.0 needs a standard name and version.",
+          "x" = "{.code def:StandardName} and {.code def:StandardVersion} are required on MetaDataVersion.",
+          "i" = "Set {.arg standard} on the spec, or flag a {.code standards} row {.code is_primary}."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
+    parts <- strsplit(trimws(scalar), "[[:space:]]+")[[1]]
+    return(.dx_attrs(
+      "def:StandardName" = paste(utils::head(parts, -1L), collapse = " "),
+      "def:StandardVersion" = utils::tail(parts, 1L)
+    ))
+  }
+  i <- pick[[1]]
+  .dx_attrs(
+    "def:StandardName" = std$name[[i]],
+    "def:StandardVersion" = .dx_chr(std, "version")[[i]]
+  )
 }
 
 # The document's own FileOID wins: it is how a prior submission, a reviewer's

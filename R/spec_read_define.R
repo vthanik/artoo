@@ -56,6 +56,28 @@
 # A Define-XML Yes/No attribute as a logical. NA when the attribute is absent,
 # which is meaningfully different from "No" for def:HasNoData (odm:YesOnly,
 # where the attribute's presence IS the assertion).
+# A def:PDFPageRef states its pages as EITHER a @PageRefs list or a
+# @FirstPage/@LastPage range. Reading only the list dropped every range
+# silently -- the CDISC 2.0 SDTM example annotates most of its CRF that way.
+#
+# Both collapse into the one `pages` column, a range as "4-5". That is
+# unambiguous where it matters: a range is only legal for Type="PhysicalRef",
+# whose @PageRefs is a space-separated list of integers and so can never
+# contain a hyphen. A lone @FirstPage with no @LastPage is read as that page.
+#' @noRd
+.dx_page_refs <- function(pg) {
+  refs <- .dx_attr(pg, "PageRefs")
+  if (!is.na(refs)) {
+    return(refs)
+  }
+  first <- .dx_attr(pg, "FirstPage")
+  if (is.na(first)) {
+    return(NA_character_)
+  }
+  last <- .dx_attr(pg, "LastPage")
+  if (is.na(last)) first else paste0(first, "-", last)
+}
+
 #' @noRd
 .dx_yn <- function(x) {
   ifelse(is.na(x), NA, toupper(x) == "YES")
@@ -212,11 +234,35 @@
   }
 
   item_nodes <- .dx_find_all(mdv, "ItemDef")
-  # Define-XML 2.1 allows several def:Origin per ItemDef; artoo carries one.
-  # The extra provenance is dropped, so the read says so -- a symmetric drop
-  # in the reader and the writer is invisible to a round-trip test, and a
-  # loss nothing reports is worse than one that fails.
-  dropped <- list()
+  # Define-XML allows several def:Origin per ItemDef; artoo carries one. The
+  # extra provenance is dropped, so the read says so -- a symmetric drop in
+  # the reader and the writer is invisible to a round-trip test, and a loss
+  # nothing reports is worse than one that fails.
+  #
+  # Counted in its OWN pass. Accumulating into a list from inside the lapply
+  # below binds a local copy, and the warning then never fires -- which is
+  # exactly how the first version of this shipped.
+  multi_origin <- xml2::xml_attr(
+    item_nodes[vapply(
+      item_nodes,
+      function(n) {
+        length(xml2::xml_find_all(n, "./*[local-name()='Origin']")) > 1L
+      },
+      logical(1)
+    )],
+    "OID"
+  )
+  if (length(multi_origin)) {
+    .artoo_warn(
+      c(
+        "{length(multi_origin)} ItemDef{?s} in {.path {path}} carr{?ies/y} more than one {.code def:Origin}.",
+        "x" = "Only the first is read: {.val {multi_origin}}.",
+        "i" = "Writing this spec back will not reproduce the others."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
   items <- lapply(item_nodes, function(n) {
     clref <- .dx_child(n, "CodeListRef")
     clid <- if (is.na(clref)) {
@@ -227,11 +273,7 @@
     if (!is.na(clid) && clid %in% external_oids) {
       clid <- NA_character_ # dictionaries are not membership lists
     }
-    origins <- xml2::xml_find_all(n, "./*[local-name()='Origin']")
-    if (length(origins) > 1L) {
-      dropped[[length(dropped) + 1L]] <- xml2::xml_attr(n, "OID")
-    }
-    origin <- if (length(origins)) origins[[1]] else .dx_child(n, "Origin")
+    origin <- .dx_child(n, "Origin")
     vlref <- .dx_child(n, "ValueListRef")
     alias <- .dx_alias(n)
     # def:Origin carries more than a Type: 2.1 adds @Source, and both
@@ -248,7 +290,7 @@
         pg <- .dx_child(dref, "PDFPageRef")
         o_doc <- c(
           .dx_attr(dref, "leafID"),
-          if (is.na(pg)) NA_character_ else .dx_attr(pg, "PageRefs")
+          if (is.na(pg)) NA_character_ else .dx_page_refs(pg)
         )
         if (!is.na(pg)) {
           o_page_type <- .dx_attr(pg, "Type")
@@ -286,18 +328,6 @@
     )
   })
   names(items) <- vapply(items, function(i) i$oid, character(1))
-  if (length(dropped)) {
-    many <- unlist(dropped)
-    .artoo_warn(
-      c(
-        "{length(many)} ItemDef{?s} in {.path {path}} carr{?ies/y} more than one {.code def:Origin}.",
-        "x" = "Only the first is read: {.val {many}}.",
-        "i" = "Writing this spec back will not reproduce the others."
-      ),
-      kind = "spec",
-      call = call
-    )
-  }
 
   # ---- ItemGroupDefs -> datasets + variables -----------------------------
   ig_nodes <- .dx_find_all(mdv, "ItemGroupDef")
@@ -487,7 +517,7 @@
     pg <- .dx_child(r, "PDFPageRef")
     c(
       xml2::xml_attr(r, "leafID"),
-      if (is.na(pg)) NA_character_ else xml2::xml_attr(pg, "PageRefs"),
+      if (is.na(pg)) NA_character_ else .dx_page_refs(pg),
       # @Type is REQUIRED on def:PDFPageRef in 2.1, so a writer that never
       # read it cannot round-trip one.
       if (is.na(pg)) NA_character_ else .dx_attr(pg, "Type")

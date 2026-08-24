@@ -43,6 +43,72 @@
   )
 }
 
+# XSD text with comments stripped. Deprecated attribute references are
+# COMMENTED OUT rather than removed (def:Label, def:DomainKeys, def:Rank in
+# 2.0), so a derivation that reads the raw text would report attributes no
+# document may use.
+.xsd_text <- function(path) {
+  gsub("<!--.*?-->", "", paste(readLines(path, warn = FALSE), collapse = "\n"))
+}
+
+# The def:-namespaced attributes each element may carry, per version. Mirrors
+# the `def_attrs` table in R/define_profile.R.
+.dx_schema_def_attrs <- function(version) {
+  dir <- .schema_dir(version)
+  defdir <- file.path(dir, paste0("cdisc-define-", version))
+  out <- list()
+  pull <- function(txt, pattern, prefix) {
+    for (m in regmatches(txt, gregexpr(pattern, txt, perl = TRUE))[[1]]) {
+      el <- sub(pattern, "\\1", m, perl = TRUE)
+      # ATTRIBUTE references only. A bare ref="def:..." also matches the
+      # element and group references these blocks are full of.
+      refs <- regmatches(
+        m,
+        gregexpr('<xs:attribute ref="def:[^"]+"', m)
+      )[[1]]
+      refs <- sort(unique(sub('<xs:attribute ref="', "", sub('"$', "", refs))))
+      if (length(refs)) {
+        out[[paste0(prefix, el)]] <<- refs
+      }
+    }
+  }
+  pull(
+    .xsd_text(file.path(defdir, "define-extension.xsd")),
+    '(?s)<xs:attributeGroup name="([A-Za-z]+)AttributeExtension">.*?</xs:attributeGroup>',
+    ""
+  )
+  pull(
+    .xsd_text(file.path(defdir, "define-ns.xsd")),
+    '(?s)<xs:complexType name="DEFINEcomplexTypeDefinition-([A-Za-z]+)">.*?</xs:complexType>',
+    "def:"
+  )
+  out
+}
+
+# The LOCAL (unprefixed) attributes each def: element declares. Used to pin
+# the claim that def:Origin/@Source is the only local attribute the two
+# versions disagree about -- the emitter's def: guard cannot see local ones.
+.dx_schema_local_attrs <- function(version) {
+  dir <- .schema_dir(version)
+  txt <- .xsd_text(file.path(
+    dir,
+    paste0("cdisc-define-", version),
+    "define-ns.xsd"
+  ))
+  out <- list()
+  pattern <- '(?s)<xs:complexType name="DEFINEcomplexTypeDefinition-([A-Za-z]+)">.*?</xs:complexType>'
+  for (m in regmatches(txt, gregexpr(pattern, txt, perl = TRUE))[[1]]) {
+    el <- sub(pattern, "\\1", m, perl = TRUE)
+    nm <- regmatches(m, gregexpr('<xs:attribute name="[^"]+"', m))[[1]]
+    out[[paste0("def:", el)]] <- sort(unique(sub(
+      '<xs:attribute name="',
+      "",
+      sub('"$', "", nm)
+    )))
+  }
+  out
+}
+
 .xsd_type <- function(doc, name) {
   xml2::xml_find_first(
     doc,

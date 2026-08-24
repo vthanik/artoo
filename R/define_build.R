@@ -77,6 +77,19 @@
 
 # ---- version-branching helpers -------------------------------------------
 
+# Attributes that exist only in some versions. Naming them here, at the call
+# site, is what makes the version dependency readable: the alternative is a
+# silent filter somewhere downstream, and then a reader of .dx_itemgroup()
+# cannot tell which of its attributes are conditional.
+#
+# What a downgrade DROPS is reported once, up front, by .dx_downgrade_notice()
+# -- not per attribute, which would be one warning per row.
+#' @noRd
+.dx_only <- function(p, element, ...) {
+  a <- .dx_attrs(...)
+  a[names(a) %in% p$def_attrs[[element]]]
+}
+
 # def:Context on ODM. 2.1 only; the profile carries NULL for 2.0, which is
 # how a builder learns the attribute does not exist without naming a version.
 #' @noRd
@@ -148,9 +161,11 @@
     type <- if (.dx_blank(page_type)) "PhysicalRef" else trimws(page_type)
     .dx_node(
       "def:PDFPageRef",
-      attrs = .dx_attrs(
-        PageRefs = trimws(pages),
-        Type = .dx_enum(type, p$enum$page_type, "def:PDFPageRef Type", call)
+      attrs = c(
+        .dx_page_attrs(pages, type),
+        .dx_attrs(
+          Type = .dx_enum(type, p$enum$page_type, "def:PDFPageRef Type", call)
+        )
       )
     )
   }
@@ -159,6 +174,19 @@
     attrs = .dx_attrs(leafID = trimws(document_id)),
     kids = list(`def:PDFPageRef` = pg)
   )
+}
+
+# The inverse of .dx_page_refs(): "4-5" on a physical page reference is the
+# @FirstPage/@LastPage range it was read from, and anything else is a
+# @PageRefs list.
+#' @noRd
+.dx_page_attrs <- function(pages, type) {
+  v <- trimws(pages)
+  if (identical(type, "PhysicalRef") && grepl("^[0-9]+-[0-9]+$", v)) {
+    bounds <- strsplit(v, "-", fixed = TRUE)[[1]]
+    return(.dx_attrs(FirstPage = bounds[[1]], LastPage = bounds[[2]]))
+  }
+  .dx_attrs(PageRefs = v)
 }
 
 #' @noRd
@@ -361,38 +389,44 @@
   cls_kid <- if (is.character(cls)) NULL else cls
   .dx_node(
     "ItemGroupDef",
-    attrs = .dx_attrs(
-      OID = .dx_get(oids$dataset, name),
-      Name = name,
-      Domain = .dx_chr(ds, "domain")[[i]],
-      Repeating = .dx_yesno(.dx_lgl(ds, "repeating")[[i]], default = FALSE),
-      # Repeating is schema-required, so an unset one takes a default;
-      # IsReferenceData is optional, so silence stays silent rather than
-      # becoming an assertion the spec never made.
-      IsReferenceData = .dx_yesno(.dx_lgl(ds, "reference_data")[[i]]),
-      SASDatasetName = if (.dx_blank(.dx_chr(ds, "sas_dataset_name")[[i]])) {
-        name
-      } else {
-        .dx_chr(ds, "sas_dataset_name")[[i]]
-      },
-      Purpose = .dx_purpose(
-        .dx_chr(ds, "purpose")[[i]],
-        spec@standard,
+    attrs = c(
+      .dx_attrs(
+        OID = .dx_get(oids$dataset, name),
+        Name = name,
+        Domain = .dx_chr(ds, "domain")[[i]],
+        Repeating = .dx_yesno(.dx_lgl(ds, "repeating")[[i]], default = FALSE),
+        # Repeating is schema-required, so an unset one takes a default;
+        # IsReferenceData is optional, so silence stays silent rather than
+        # becoming an assertion the spec never made.
+        IsReferenceData = .dx_yesno(.dx_lgl(ds, "reference_data")[[i]]),
+        SASDatasetName = if (.dx_blank(.dx_chr(ds, "sas_dataset_name")[[i]])) {
+          name
+        } else {
+          .dx_chr(ds, "sas_dataset_name")[[i]]
+        },
+        Purpose = .dx_purpose(
+          .dx_chr(ds, "purpose")[[i]],
+          spec@standard,
+          p,
+          call
+        ),
+        "def:Structure" = .dx_structure(
+          .dx_chr(ds, "structure")[[i]],
+          .dx_chr(ds, "keys")[[i]],
+          name,
+          call
+        ),
+        "def:Class" = cls_attr,
+        "def:ArchiveLocationID" = .dx_chr(ds, "archive_location_id")[[i]],
+        "def:CommentOID" = .dx_chr(ds, "comment_id")[[i]]
+      ),
+      .dx_only(
         p,
-        call
-      ),
-      "def:Structure" = .dx_structure(
-        .dx_chr(ds, "structure")[[i]],
-        .dx_chr(ds, "keys")[[i]],
-        name,
-        call
-      ),
-      "def:Class" = cls_attr,
-      "def:ArchiveLocationID" = .dx_chr(ds, "archive_location_id")[[i]],
-      "def:StandardOID" = .dx_chr(ds, "standard_id")[[i]],
-      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(ds, "is_non_standard")[[i]]),
-      "def:HasNoData" = .dx_yesonly(.dx_lgl(ds, "has_no_data")[[i]]),
-      "def:CommentOID" = .dx_chr(ds, "comment_id")[[i]]
+        "ItemGroupDef",
+        "def:StandardOID" = .dx_chr(ds, "standard_id")[[i]],
+        "def:IsNonStandard" = .dx_yesonly(.dx_lgl(ds, "is_non_standard")[[i]]),
+        "def:HasNoData" = .dx_yesonly(.dx_lgl(ds, "has_no_data")[[i]])
+      )
     ),
     kids = list(
       Description = .dx_desc(.dx_chr(ds, "label")[[i]]),
@@ -421,43 +455,54 @@
 # REFERENCE, not the definition, which is why two datasets may reference one
 # ItemDef with different roles and key positions.
 #' @noRd
-.dx_itemref <- function(var, i, oid, order_number) {
+.dx_itemref <- function(var, i, oid, order_number, p) {
   .dx_node(
     "ItemRef",
-    attrs = .dx_attrs(
-      ItemOID = oid,
-      OrderNumber = order_number,
-      Mandatory = .dx_yesno(.dx_lgl(var, "mandatory")[[i]], default = FALSE),
-      KeySequence = .dx_chr(var, "key_sequence")[[i]],
-      MethodOID = .dx_chr(var, "method_id")[[i]],
-      Role = .dx_chr(var, "role")[[i]],
-      RoleCodeListOID = .dx_chr(var, "role_codelist_id")[[i]],
-      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(var, "is_non_standard")[[i]]),
-      "def:HasNoData" = .dx_yesonly(.dx_lgl(var, "has_no_data")[[i]])
+    attrs = c(
+      .dx_attrs(
+        ItemOID = oid,
+        OrderNumber = order_number,
+        Mandatory = .dx_yesno(.dx_lgl(var, "mandatory")[[i]], default = FALSE),
+        KeySequence = .dx_chr(var, "key_sequence")[[i]],
+        MethodOID = .dx_chr(var, "method_id")[[i]],
+        Role = .dx_chr(var, "role")[[i]],
+        RoleCodeListOID = .dx_chr(var, "role_codelist_id")[[i]]
+      ),
+      .dx_only(
+        p,
+        "ItemRef",
+        "def:IsNonStandard" = .dx_yesonly(.dx_lgl(var, "is_non_standard")[[i]]),
+        "def:HasNoData" = .dx_yesonly(.dx_lgl(var, "has_no_data")[[i]])
+      )
     )
   )
 }
 
-# Define-XML 2.0's origin vocabulary, mapped to 2.1's. CDISC renamed the two
-# collection origins between the versions; everything else is spelled the
-# same. Without this an upgrade -- read a 2.0 define, write it as 2.1 -- dies
-# on the first CRF-collected variable, which is most of a study.
+# The two origin vocabularies, translated. CDISC renamed the collection
+# origins between the versions, so a spec read from one and written as the
+# other dies on the first collected variable -- which is most of a study --
+# unless the rename is applied.
 #
-# Only this direction is implemented. The reverse (2.1 -> 2.0) has to decide
-# what a 2.0 document should say for "Not Available" and "Other", which have
-# no 2.0 spelling at all, and that belongs with the rest of the 2.0 writer.
+# The two directions are not symmetric. 2.0's CRF and eDT both mean
+# "collected", so an upgrade folds them together and loses which; a downgrade
+# can only pick one back, and CRF is the overwhelmingly common source. 2.1's
+# "Not Available" and "Other" have NO 2.0 spelling at all, so those refuse
+# rather than being silently recorded as something the sponsor did not say.
 .dx_origin_upgrade <- c(CRF = "Collected", eDT = "Collected")
+.dx_origin_downgrade <- c(Collected = "CRF")
 
 #' @noRd
 .dx_origin_type <- function(value, p, call = rlang::caller_env()) {
   v <- trimws(value)
-  if (!is.null(p$enum$origin_type) && !(v %in% p$enum$origin_type)) {
-    hit <- .dx_origin_upgrade[v]
-    if (!is.na(hit)) {
-      v <- unname(hit)
-    }
+  allowed <- p$enum$origin_type
+  if (is.null(allowed) || v %in% allowed) {
+    return(.dx_enum(v, allowed, "def:Origin Type", call))
   }
-  .dx_enum(v, p$enum$origin_type, "def:Origin Type", call)
+  hit <- c(.dx_origin_upgrade, .dx_origin_downgrade)[v]
+  if (!is.na(hit) && unname(hit) %in% allowed) {
+    return(unname(hit))
+  }
+  .dx_enum(v, allowed, "def:Origin Type", call)
 }
 
 # def:Origin. Type is required in 2.1, so an origin description or CRF page
@@ -481,16 +526,31 @@
       call = call
     )
   }
-  .dx_node(
-    "def:Origin",
-    attrs = .dx_attrs(
-      Type = .dx_origin_type(row$origin, p, call),
+  # @Source is 2.1-only, and it is a LOCAL attribute on def:Origin -- written
+  # unprefixed -- so the emitter's def: guard cannot see it. A NULL vocabulary
+  # in the profile is how a builder learns the attribute does not exist.
+  #
+  # Exactly two local attributes differ between the versions: this one and
+  # def:PDFPageRef/@Title, which artoo does not emit. A test re-derives that
+  # pair from the bundled XSDs, so a third would fail there rather than at a
+  # schema gate.
+  source_attr <- if (is.null(p$enum$origin_source)) {
+    list()
+  } else {
+    .dx_attrs(
       Source = .dx_enum(
         row$source,
         p$enum$origin_source,
         "def:Origin Source",
         call
       )
+    )
+  }
+  .dx_node(
+    "def:Origin",
+    attrs = c(
+      .dx_attrs(Type = .dx_origin_type(row$origin, p, call)),
+      source_attr
     ),
     kids = list(Description = desc, `def:DocumentRef` = ref)
   )
@@ -546,9 +606,13 @@
   # A term with a decode is a CodeListItem; one without is an EnumeratedItem.
   # The schema offers a choice between the two, not a mixture, so the whole
   # list follows whichever its terms need.
-  decoded <- any(!.dx_blank(.dx_chr(cl, "decode")))
+  # An empty decode is not an absent one: a document may carry
+  # <Decode><TranslatedText/></Decode>, and that is a decoded term with
+  # nothing to say. Only NA means the source gave no decode at all.
+  decodes <- .dx_chr(cl, "decode")
+  decoded <- any(!is.na(decodes))
   if (decoded) {
-    undecoded <- .dx_blank(.dx_chr(cl, "decode"))
+    undecoded <- is.na(decodes)
     if (any(undecoded)) {
       terms <- as.character(cl$term)[undecoded]
       .artoo_abort(
@@ -571,19 +635,28 @@
   kids[[if (decoded) "CodeListItem" else "EnumeratedItem"]] <- terms
   .dx_node(
     "CodeList",
-    attrs = .dx_attrs(
-      OID = id,
-      Name = if (.dx_blank(name)) id else name,
-      DataType = .dx_enum(
-        dtype,
-        p$enum$cl_data_type,
-        "CodeList DataType",
-        call
+    attrs = c(
+      .dx_attrs(
+        OID = id,
+        Name = if (.dx_blank(name)) id else name,
+        DataType = .dx_enum(
+          dtype,
+          p$enum$cl_data_type,
+          "CodeList DataType",
+          call
+        ),
+        SASFormatName = .dx_one(.dx_chr(cl, "sas_format_name"))
       ),
-      SASFormatName = .dx_one(.dx_chr(cl, "sas_format_name")),
-      "def:StandardOID" = .dx_one(.dx_chr(cl, "standard_id")),
-      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(cl, "is_non_standard")),
-      "def:CommentOID" = .dx_one(.dx_chr(cl, "comment_id"))
+      # CodeList carries NO def: attribute in 2.0 -- not even def:CommentOID,
+      # which is legal there on every other element. One global set of legal
+      # attributes would pass exactly this document.
+      .dx_only(
+        p,
+        "CodeList",
+        "def:StandardOID" = .dx_one(.dx_chr(cl, "standard_id")),
+        "def:IsNonStandard" = .dx_yesonly(.dx_lgl(cl, "is_non_standard")),
+        "def:CommentOID" = .dx_one(.dx_chr(cl, "comment_id"))
+      )
     ),
     kids = kids
   )

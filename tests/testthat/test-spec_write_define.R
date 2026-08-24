@@ -459,19 +459,6 @@ test_that("a value-level row with no data type inherits the parent's", {
   expect_identical(unique(types), "float")
 })
 
-test_that("Define-XML 2.0 output is refused, for now, by name", {
-  skip_if_not_installed("xml2")
-  path <- file.path(withr::local_tempdir(), "d.xml")
-  expect_error(
-    write_spec(small_spec(), path, version = "2.0", created = FROZEN),
-    class = "artoo_error_define"
-  )
-  expect_snapshot(
-    write_spec(small_spec(), path, version = "2.0", created = FROZEN),
-    error = TRUE
-  )
-})
-
 test_that("an unknown version is refused as input", {
   skip_if_not_installed("xml2")
   path <- file.path(withr::local_tempdir(), "d.xml")
@@ -666,17 +653,34 @@ test_that("an invalid document never replaces the target file", {
   expect_identical(readLines(path), "PRIOR GOOD FILE")
 })
 
-test_that("a spec read as 2.0 resolves to 2.0 and is refused without asking", {
+test_that("a spec read as 2.0 is written as 2.0 without being asked", {
   skip_if_not_installed("xml2")
   spec <- read_define("define20-sdtm.xml")
   path <- file.path(withr::local_tempdir(), "d.xml")
-  expect_error(
-    write_spec(spec, path, created = FROZEN),
-    class = "artoo_error_define"
-  )
-  # ...and writes as 2.1 when asked to.
+  write_spec(spec, path, created = FROZEN)
+  expect_identical(validate_define(path)@summary$define_version, "2.0")
+  # ...and as 2.1 when asked to.
   write_spec(spec, path, version = "2.1", created = FROZEN)
-  expect_true(validate_define(path)@summary$valid)
+  expect_identical(validate_define(path)@summary$define_version, "2.1")
+})
+
+test_that("a PDF page RANGE survives a round trip (#p5)", {
+  skip_if_not_installed("xml2")
+  # def:PDFPageRef states its pages as EITHER a @PageRefs list or a
+  # @FirstPage/@LastPage range, and reading only the list dropped every range
+  # silently. The CDISC 2.0 SDTM example annotates most of its CRF that way.
+  spec <- read_define("define20-sdtm.xml")
+  ranges <- spec@variables$pages[grepl("^[0-9]+-[0-9]+$", spec@variables$pages)]
+  expect_gt(length(ranges), 0L)
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  write_spec(spec, path, created = FROZEN)
+  pg <- xml2::xml_find_first(
+    xml2::read_xml(path),
+    "//*[local-name()='PDFPageRef'][@FirstPage]"
+  )
+  expect_false(is.na(pg))
+  expect_true(is.na(xml2::xml_attr(pg, "PageRefs")))
+  expect_identical(read_define_path(path)@variables$pages, spec@variables$pages)
 })
 
 test_that("variables emit in the order column's order (#p4-review)", {
@@ -793,26 +797,13 @@ test_that("NA text is refused rather than written as the string NA (#p4-review)"
 
 test_that("a comment's page type is not rewritten as a physical page (#p4-review)", {
   skip_if_not_installed("xml2")
-  src <- file.path(withr::local_tempdir(), "src.xml")
-  base <- readLines(
-    system.file("extdata", "define-minimal.xml", package = "artoo"),
-    warn = FALSE
+  spec <- read_spec(
+    system.file("extdata", "define-minimal.xml", package = "artoo")
   )
-  writeLines(
-    sub(
-      "<def:CommentDef OID=\"COM.SEX\">",
-      paste0(
-        "<def:CommentDef OID=\"COM.SEX\">"
-      ),
-      base
-    ),
-    src
-  )
-  spec <- read_spec(src)
   spec@comments$document_id <- "LF.dm"
   spec@comments$pages <- "Section_9_1"
   spec@comments$page_type <- "NamedDestination"
-  out <- file.path(dirname(src), "out.xml")
+  out <- file.path(withr::local_tempdir(), "out.xml")
   write_spec(spec, out, created = FROZEN)
   pg <- xml2::xml_find_first(
     xml2::read_xml(out),
@@ -859,4 +850,217 @@ test_that("a spec declaring a version artoo cannot write is refused", {
     class = "artoo_error_input"
   )
   expect_snapshot(artoo:::.dx_target_version(NULL, spec), error = TRUE)
+})
+
+# ---- Define-XML 2.0 -------------------------------------------------------
+
+test_that("the 2.0 golden is stable", {
+  skip_if_not_installed("xml2")
+  skip_on_cran()
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "define.xml")
+  suppressWarnings(
+    write_spec(small_spec(), path, version = "2.0", created = FROZEN)
+  )
+  expect_snapshot_file(path, "define20-small.xml")
+})
+
+test_that("both official CDISC 2.0 examples reach a fixed point", {
+  skip_if_not_installed("xml2")
+  # Identity is the wrong invariant here, and deliberately so: the writer
+  # emits in OrderNumber order, and define20-sdtm.xml carries codelist terms
+  # whose physical order disagrees with their OrderNumber. The round trip
+  # therefore returns a CANONICALISED spec, not the source's row order. What
+  # must hold is that writing it again changes nothing.
+  for (f in c("define20-sdtm.xml", "define20-adam.xml")) {
+    dir <- withr::local_tempdir()
+    first <- file.path(dir, "first.xml")
+    second <- file.path(dir, "second.xml")
+    suppressWarnings(write_spec(read_define(f), first, created = FROZEN))
+    suppressWarnings(
+      write_spec(read_define_path(first), second, created = FROZEN)
+    )
+    expect_identical(
+      readLines(first, warn = FALSE),
+      readLines(second, warn = FALSE),
+      info = f
+    )
+    expect_equal(read_define_path(second), read_define_path(first), info = f)
+    expect_true(validate_define(first)@summary$valid, info = f)
+  }
+})
+
+test_that("a source already in OrderNumber order round-trips to an identical spec", {
+  skip_if_not_installed("xml2")
+  # The stronger claim, where the source admits it: nothing is normalised
+  # away, so read -> write -> read reconstructs the spec exactly.
+  for (f in c("define20-adam.xml", "define21-sdtm.xml", "define21-adam.xml")) {
+    spec <- read_define(f)
+    out <- file.path(withr::local_tempdir(), f)
+    suppressWarnings(write_spec(spec, out, created = FROZEN))
+    expect_equal(read_define_path(out), spec, info = f)
+  }
+})
+
+test_that("every spec converts to the other version and stays valid", {
+  skip_if_not_installed("xml2")
+  # The eight-way matrix: each example written as each version.
+  for (f in c(
+    "define20-sdtm.xml",
+    "define20-adam.xml",
+    "define21-sdtm.xml",
+    "define21-adam.xml"
+  )) {
+    spec <- read_define(f)
+    for (version in c("2.0", "2.1")) {
+      out <- file.path(withr::local_tempdir(), paste0(version, "-", f))
+      suppressWarnings(write_spec(
+        spec,
+        out,
+        version = version,
+        created = FROZEN
+      ))
+      report <- validate_define(out)
+      expect_true(report@summary$valid, info = paste(f, "->", version))
+      expect_identical(report@summary$define_version, version, info = f)
+    }
+  }
+})
+
+test_that("the version switch is exactly the set of things the standards renamed", {
+  skip_if_not_installed("xml2")
+  # Pins the switch as DELIBERATE. Anything else that starts differing between
+  # the two outputs of one spec is an accident until this list says otherwise.
+  dir <- withr::local_tempdir()
+  a <- file.path(dir, "v21.xml")
+  b <- file.path(dir, "v20.xml")
+  spec <- small_spec()
+  write_spec(spec, a, version = "2.1", created = FROZEN, stylesheet = FALSE)
+  suppressWarnings(
+    write_spec(spec, b, version = "2.0", created = FROZEN, stylesheet = FALSE)
+  )
+
+  census <- function(path) {
+    nodes <- xml2::xml_find_all(xml2::read_xml(path), "//*")
+    list(
+      elements = unique(vapply(nodes, xml2::xml_name, character(1))),
+      attributes = unique(unlist(lapply(nodes, function(n) {
+        paste0(xml2::xml_name(n), "@", names(xml2::xml_attrs(n)))
+      })))
+    )
+  }
+  v21 <- census(a)
+  v20 <- census(b)
+
+  expect_setequal(
+    setdiff(v21$elements, v20$elements),
+    c("Standards", "Standard", "Class")
+  )
+  expect_identical(setdiff(v20$elements, v21$elements), character(0))
+  expect_setequal(
+    setdiff(v21$attributes, v20$attributes),
+    c(
+      "Standards@",
+      "Standard@OID",
+      "Standard@Name",
+      "Standard@Type",
+      "Standard@Version",
+      "Standard@Status",
+      "Class@Name",
+      "ItemGroupDef@StandardOID",
+      "ODM@Context",
+      "Origin@Source"
+    )
+  )
+  expect_setequal(
+    setdiff(v20$attributes, v21$attributes),
+    c(
+      "ItemGroupDef@Class",
+      "MetaDataVersion@StandardName",
+      "MetaDataVersion@StandardVersion"
+    )
+  )
+})
+
+test_that("a downgrade says once what it cannot carry", {
+  skip_if_not_installed("xml2")
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      version = "2.0",
+      created = FROZEN
+    ),
+    class = "artoo_warning_define"
+  )
+  expect_snapshot(
+    spec <- write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      version = "2.0",
+      created = FROZEN
+    )
+  )
+  # ...and says nothing when there is nothing to say.
+  expect_no_warning(
+    write_spec(small_spec(), path, version = "2.1", created = FROZEN)
+  )
+})
+
+test_that("2.0 asserts def:DefineVersion rather than echoing the spec", {
+  skip_if_not_installed("xml2")
+  # 2.0 fixes the value at 2.0.0, and libxml2 drops `fixed` through
+  # xs:redefine, so the schema gate cannot catch a wrong one.
+  spec <- read_define("define21-sdtm.xml")
+  expect_identical(spec@study$define_version, "2.1.10")
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, path, version = "2.0", created = FROZEN))
+  mdv <- xml2::xml_find_first(
+    xml2::read_xml(path),
+    "//*[local-name()='MetaDataVersion']"
+  )
+  expect_identical(xml2::xml_attr(mdv, "DefineVersion"), "2.0.0")
+})
+
+test_that("2.0 takes its single standard from the primary row, or the scalar", {
+  skip_if_not_installed("xml2")
+  p20 <- artoo:::.define_profile("2.0")
+  # From the standards table's is_primary row.
+  expect_identical(
+    artoo:::.dx_standard_attrs(read_define("define21-sdtm.xml"), p20),
+    list(`def:StandardName` = "SDTMIG", `def:StandardVersion` = "3.1.2")
+  )
+  # From the scalar @standard when there is no standards table -- the shape a
+  # spec built from a workbook has.
+  expect_identical(
+    artoo:::.dx_standard_attrs(small_spec(), p20),
+    list(`def:StandardName` = "SDTMIG", `def:StandardVersion` = "3.4")
+  )
+})
+
+test_that("2.0 refuses a spec that names no standard at all", {
+  skip_if_not_installed("xml2")
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    error = TRUE
+  )
 })

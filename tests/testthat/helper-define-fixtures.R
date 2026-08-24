@@ -6,3 +6,6 @@
 read_define <- function(name) {
   suppressWarnings(read_spec(testthat::test_path("fixtures", name)))
 }
+
+# Same, for a file written during a test rather than a bundled fixture.
+read_define_path <- function(path) suppressWarnings(read_spec(path))

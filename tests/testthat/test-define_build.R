@@ -182,3 +182,86 @@ test_that("an emission order is used only when it is complete and unique", {
   expect_identical(artoo:::.dx_row_order(data.frame(x = 1:2)), 1:2)
   expect_identical(artoo:::.dx_row_order(NULL), integer(0))
 })
+
+test_that("the origin vocabulary is translated in both directions", {
+  # CDISC renamed the collection origins between the versions, so a spec read
+  # from one and written as the other dies on the first collected variable
+  # unless the rename is applied.
+  expect_identical(artoo:::.dx_origin_type("CRF", p21()), "Collected")
+  expect_identical(artoo:::.dx_origin_type("eDT", p21()), "Collected")
+  expect_identical(artoo:::.dx_origin_type("Collected", p20()), "CRF")
+  # Everything else is spelled the same in both.
+  for (v in c("Derived", "Assigned", "Protocol", "Predecessor")) {
+    expect_identical(artoo:::.dx_origin_type(v, p21()), v)
+    expect_identical(artoo:::.dx_origin_type(v, p20()), v)
+  }
+})
+
+test_that("a 2.1 origin with no 2.0 spelling is refused, not approximated", {
+  # "Not Available" and "Other" have no 2.0 equivalent. Writing either as
+  # something else would record a provenance the sponsor never claimed.
+  for (v in c("Not Available", "Other")) {
+    expect_error(
+      artoo:::.dx_origin_type(v, p20()),
+      class = "artoo_error_define"
+    )
+  }
+  expect_snapshot(
+    artoo:::.dx_origin_type("Not Available", p20()),
+    error = TRUE
+  )
+})
+
+test_that("def:Origin/@Source is emitted only where the version has it", {
+  row <- list(
+    origin = "Collected",
+    source = "Investigator",
+    origin_description = NA_character_,
+    origin_document_id = NA_character_,
+    pages = NA_character_,
+    page_type = NA_character_
+  )
+  expect_identical(
+    artoo:::.dx_origin(row, p21(), "x")$attrs$Source,
+    "Investigator"
+  )
+  # A LOCAL attribute, so the emitter's def: guard cannot see it: the builder
+  # gates it on the profile carrying no @Source vocabulary.
+  expect_null(artoo:::.dx_origin(row, p20(), "x")$attrs$Source)
+  expect_identical(artoo:::.dx_origin(row, p20(), "x")$attrs$Type, "CRF")
+})
+
+test_that("a MethodDef type outside Define-XML's vocabulary is refused", {
+  # ODM's own schema accepts Transpose and Other; Define-XML forbids them, so
+  # the schema gate cannot catch a wrong one.
+  md <- data.frame(
+    method_id = "MT.1",
+    name = "x",
+    description = "y",
+    type = "Transpose",
+    stringsAsFactors = FALSE
+  )
+  expect_error(
+    artoo:::.dx_method(md, 1L, data.frame(), p21()),
+    class = "artoo_error_define"
+  )
+  # Both versions close it to the same pair.
+  expect_identical(p20()$enum$method_type, p21()$enum$method_type)
+})
+
+test_that("an EMPTY decode is a decoded term, not an absent one", {
+  # <Decode><TranslatedText/></Decode> is schema-valid and means "decoded,
+  # nothing to say". Treating it as absent refused a document that had
+  # round-tripped before.
+  cl <- data.frame(
+    codelist_id = "CL.1",
+    term = c("A", "B"),
+    decode = c("Alpha", ""),
+    name = "One",
+    data_type = "text",
+    stringsAsFactors = FALSE
+  )
+  expect_no_error(artoo:::.dx_codelist(cl, p21()))
+  cl$decode <- c("Alpha", NA)
+  expect_error(artoo:::.dx_codelist(cl, p21()), class = "artoo_error_codelist")
+})

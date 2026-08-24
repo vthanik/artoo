@@ -115,6 +115,27 @@
     )
   }
 
+  # A def:ValueListRef naming no def:ValueListDef is a dangling reference, and
+  # the schema gate cannot see it: OIDs are odm:oidref, not xs:IDREF, so
+  # libxml2 never resolves them. It reaches a reviewer as a Pinnacle 21
+  # finding instead, which is exactly what minting every identifier up front
+  # is supposed to make impossible.
+  emitted <- unname(oids$value_list)
+  orphan <- !.dx_blank(parent$value_list_id) &
+    !(parent$value_list_id %in% emitted)
+  if (any(orphan)) {
+    where <- unique(paste0(var$dataset[orphan], ".", var$variable[orphan]))
+    .artoo_abort(
+      c(
+        "{length(where)} variable{?s} point{?s/} at a value list the spec does not define.",
+        "x" = "{.val {where}}.",
+        "i" = "Add value-level rows, or clear {.code value_list_id}."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+
   pool <- rbind(parent, child)
   .dx_pool_itemdefs(pool, call)
 }

@@ -18,16 +18,6 @@
       x "VS.VSORRES".
       i A def:ValueListDef hangs off its parent ItemDef, so the variable must be in the spec.
 
-# Define-XML 2.0 output is refused, for now, by name
-
-    Code
-      write_spec(small_spec(), path, version = "2.0", created = FROZEN)
-    Condition
-      Error:
-      ! artoo cannot write Define-XML 2.0 yet.
-      x This release writes Define-XML 2.1.
-      i Pass `version = "2.1"` to write the spec as 2.1.
-
 # an invalid document never replaces the target file
 
     Code
@@ -67,4 +57,25 @@
       ! The spec declares Define-XML version "1.0.0".
       x artoo writes "2.0" and "2.1".
       i Pass `version` to write it as one of those anyway.
+
+# a downgrade says once what it cannot carry
+
+    Code
+      spec <- write_spec(read_define("define21-sdtm.xml"), path, version = "2.0",
+      created = FROZEN)
+    Condition
+      Warning:
+      Define-XML 2.0 cannot carry everything this spec holds.
+      x Dropped: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:IsNonStandard", "def:HasNoData", and "def:Origin/@Source".
+      i Write the spec as "2.1", or to native JSON, to keep it whole.
+
+# 2.0 refuses a spec that names no standard at all
+
+    Code
+      write_spec(spec, path, version = "2.0", created = FROZEN)
+    Condition
+      Error in `.dx_metadata_version()`:
+      ! Define-XML 2.0 needs a standard name and version.
+      x `def:StandardName` and `def:StandardVersion` are required on MetaDataVersion.
+      i Set `standard` on the spec, or flag a `standards` row `is_primary`.
 

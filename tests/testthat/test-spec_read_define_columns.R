@@ -146,3 +146,23 @@ test_that("dropping an external codelist is reported, not silent (#p4-review)", 
     transform = function(x) sub("'.*/(define20-sdtm.xml)'", "'\\1'", x)
   )
 })
+
+test_that("dropping a second def:Origin is reported, not silent (#p4-review)", {
+  skip_if_not_installed("xml2")
+  # Accumulating into a list from inside an lapply binds a LOCAL copy, and
+  # the first version of this warning never fired for exactly that reason.
+  src <- file.path(withr::local_tempdir(), "two-origins.xml")
+  base <- readLines(
+    system.file("extdata", "define-minimal.xml", package = "artoo"),
+    warn = FALSE
+  )
+  hit <- grep("<def:Origin Type=\"Derived\"/>", base, fixed = FALSE)
+  expect_length(hit, 1L)
+  base[[hit]] <- paste0(base[[hit]], "\n", base[[hit]])
+  writeLines(base, src)
+  expect_warning(read_spec(src), class = "artoo_warning_spec")
+  expect_snapshot(
+    spec <- read_spec(src),
+    transform = function(x) sub("'.*/(two-origins.xml)'", "'\\1'", x)
+  )
+})

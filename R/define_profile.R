@@ -68,6 +68,39 @@
     # def:Class is a CHILD ELEMENT here, positioned after every ItemRef and
     # before def:leaf.
     class_slot = "element",
+    # def:DefineVersion is a PATTERN in 2.1 (2.1.0, 2.1.10, ...), so a
+    # document's own revision is kept.
+    define_version_fixed = FALSE,
+    # The def:-namespaced attributes each element may carry. The emitter
+    # refuses anything else, so a 2.1-only attribute cannot reach a 2.0
+    # document and surface later as a schema error against a line number.
+    #
+    # PER ELEMENT, not one global set: def:CommentOID is legal in 2.0, but
+    # not on CodeList, and a global set passes exactly that document.
+    #
+    # A test re-derives this from the bundled XSDs with comments stripped --
+    # def:Label, def:DomainKeys and def:Rank are DECLARED in 2.0 but their
+    # references are commented out as deprecated, so they are not usable.
+    def_attrs = list(
+      CodeList = c("def:CommentOID", "def:IsNonStandard", "def:StandardOID"),
+      CodeListItem = "def:ExtendedValue",
+      EnumeratedItem = "def:ExtendedValue",
+      ItemDef = c("def:CommentOID", "def:DisplayFormat"),
+      ItemGroupDef = c(
+        "def:ArchiveLocationID",
+        "def:CommentOID",
+        "def:HasNoData",
+        "def:IsNonStandard",
+        "def:StandardOID",
+        "def:Structure"
+      ),
+      ItemRef = c("def:HasNoData", "def:IsNonStandard"),
+      MetaDataVersion = c("def:CommentOID", "def:DefineVersion"),
+      ODM = "def:Context",
+      RangeCheck = "def:ItemOID",
+      `def:Standard` = "def:CommentOID",
+      `def:WhereClauseDef` = "def:CommentOID"
+    ),
     order = c(
       .dx_order_common,
       list(
@@ -167,6 +200,28 @@
     ),
     # def:Class is an ATTRIBUTE here, and unconstrained odm:text.
     class_slot = "attribute",
+    # 2.0 fixes def:DefineVersion at 2.0.0, but libxml2 drops `fixed` through
+    # xs:redefine, so artoo asserts it rather than emitting whatever the spec
+    # happens to carry.
+    define_version_fixed = TRUE,
+    def_attrs = list(
+      CodeListItem = "def:ExtendedValue",
+      EnumeratedItem = "def:ExtendedValue",
+      ItemDef = c("def:CommentOID", "def:DisplayFormat"),
+      ItemGroupDef = c(
+        "def:ArchiveLocationID",
+        "def:Class",
+        "def:CommentOID",
+        "def:Structure"
+      ),
+      MetaDataVersion = c(
+        "def:DefineVersion",
+        "def:StandardName",
+        "def:StandardVersion"
+      ),
+      RangeCheck = "def:ItemOID",
+      `def:WhereClauseDef` = "def:CommentOID"
+    ),
     order = c(
       .dx_order_common,
       list(
