@@ -48,6 +48,10 @@
   "Codelist" = "codelist_id",
   "Origin" = "origin",
   "Source" = "source",
+  # Which document the pages are pages OF. Without a column for it, a
+  # workbook round trip kept the page numbers and lost what they point at,
+  # so every collected variable came back with an unattachable reference.
+  "Origin Document" = "origin_document_id",
   "Pages" = "pages",
   "Method" = "method_id",
   "Predecessor" = "predecessor",
@@ -409,6 +413,52 @@ read_spec <- function(
   tables$datasets <- keep_rows(tables$datasets)
   tables$variables <- keep_rows(tables$variables)
   tables$values <- keep_rows(tables$values)
+
+  # A where clause is a GROUP of range checks, and one of them may name a
+  # variable in another dataset -- a VS value conditioned on DM.COUNTRY. So
+  # the whole clause goes when ANY of its checks names a dataset out of
+  # scope: keeping the rest would change which rows it selects, which is
+  # worse than losing it.
+  wc <- tables$where_clauses
+  if (is.data.frame(wc) && nrow(wc)) {
+    out <- rep(FALSE, nrow(wc))
+    if ("dataset" %in% names(wc)) {
+      out <- out | (!is.na(wc$dataset) & !(trimws(wc$dataset) %in% datasets))
+    }
+    # A Define-XML read leaves `dataset` NA and puts the authority in
+    # `itemoid`, so scoping on the dataset column alone left every clause
+    # conditioning on an out-of-scope domain behind, dangling.
+    kept <- if ("itemoid" %in% names(tables$variables)) {
+      as.character(tables$variables$itemoid)
+    } else {
+      character(0)
+    }
+    if ("itemoid" %in% names(wc) && length(kept)) {
+      out <- out | (!is.na(wc$itemoid) & !(wc$itemoid %in% kept))
+    }
+    doomed <- unique(as.character(wc$where_clause_id)[out])
+    tables$where_clauses <- wc[
+      !(as.character(wc$where_clause_id) %in% doomed),
+      ,
+      drop = FALSE
+    ]
+  }
+
+  # Analysis results name their analysis dataset, and a display with no
+  # results left is a display of nothing.
+  ar <- tables$arm_results
+  if (is.data.frame(ar) && nrow(ar) && "dataset" %in% names(ar)) {
+    tables$arm_results <- keep_rows(ar)
+    ad <- tables$arm_displays
+    if (is.data.frame(ad) && nrow(ad)) {
+      tables$arm_displays <- ad[
+        as.character(ad$display_id) %in%
+          as.character(tables$arm_results$display_id),
+        ,
+        drop = FALSE
+      ]
+    }
+  }
   tables
 }
 
@@ -676,7 +726,9 @@ read_spec <- function(
   codelists <- .scope_codelists(codelists, call)
   methods <- .drop_blank_key(methods, "method_id")
   comments <- .drop_blank_key(comments, "comment_id")
-  documents <- .drop_blank_key(documents, "document_id")
+  documents <- .normalise_document_roles(
+    .drop_blank_key(documents, "document_id")
+  )
 
   # ---- where clauses, from whichever shape the workbook uses -------------
   # A WhereClauses sheet is authoritative; without one, the ValueLevel
@@ -741,6 +793,27 @@ read_spec <- function(
       .normalise_p21_cols(ar_raw, .p21_arm_result_map)
     )
   )
+
+  # A SECOND scoping pass. The tables above are built after the first one --
+  # the where clauses are derived from the ValueLevel sheet, the analysis
+  # results read from their own sheets -- so scoping only the first three
+  # left every clause and analysis result naming an out-of-scope dataset
+  # behind, dangling in the define written from it.
+  late <- .spec_scope_tables(
+    list(
+      datasets = datasets,
+      variables = variables,
+      values = values,
+      where_clauses = where_clauses,
+      arm_displays = arm_displays,
+      arm_results = arm_results
+    ),
+    scope,
+    call
+  )
+  where_clauses <- late$where_clauses
+  arm_displays <- late$arm_displays
+  arm_results <- late$arm_results
 
   artoo_spec(
     datasets = datasets,
@@ -1074,6 +1147,35 @@ read_spec <- function(
     })
   )
   df[own_id | filled, , drop = FALSE]
+}
+
+# The document role, as a workbook spells it.
+#
+# artoo stores the role as the container it came out of (annotated_crf,
+# supplemental, archive, other), but a person filling a Role cell writes
+# "Annotated CRF". Recognising only the internal token meant a workbook that
+# named its annotated CRF got no default, and every Pages cell then aborted
+# telling the author to supply the CRF they had supplied.
+#' @noRd
+.normalise_document_roles <- function(df) {
+  if (is.null(df) || !nrow(df) || !("role" %in% names(df))) {
+    return(df)
+  }
+  key <- gsub("[^a-z]", "", tolower(trimws(as.character(df$role))))
+  canonical <- c(
+    annotatedcrf = "annotated_crf",
+    acrf = "annotated_crf",
+    crf = "annotated_crf",
+    supplementaldoc = "supplemental",
+    supplementaldocument = "supplemental",
+    supplemental = "supplemental",
+    archive = "archive",
+    archivelocation = "archive",
+    other = "other"
+  )
+  hit <- unname(canonical[key])
+  df$role <- ifelse(is.na(hit), as.character(df$role), hit)
+  df
 }
 
 #' @noRd

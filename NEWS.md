@@ -1,5 +1,21 @@
 # artoo 0.1.3.9000
 
+* `write_spec()` on a Pinnacle 21 workbook now names the individual columns
+  a workbook cannot carry, not just the one slot it has no sheet for. The
+  sheets added for Define-XML closed the slot-level gaps and opened
+  column-level ones: `Standards` has no column for which standard is primary,
+  and none of the sheets has one for an ItemOID.
+
+* `write_spec()` on a Pinnacle 21 workbook keys a ValueLevel row to the
+  `WhereClauses` sheet by ID. It wrote the rendered expression there, which
+  left every value-level row of an SDTM define naming a clause the same
+  workbook did not define.
+
+* `write_spec()` renders HTML through the stylesheet the document's
+  processing instruction actually names, so `stylesheet = "acme.xsl"` and
+  `html = TRUE` no longer render through the bundled sheet and disagree with
+  the browser.
+
 * `write_spec()` writes Define-XML 2.1 when given a `.xml` path, so a
   Pinnacle 21 workbook or a native JSON spec becomes a submission-grade
   define.xml in one call. The document is schema-validated before it reaches
@@ -9,6 +25,21 @@
   `def:WhereClauseRef` and `def:WhereClauseDef` behind it. Define-XML 2.0
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
+
+* `read_spec()` and `write_spec()` no longer lose a multi-value `IN` where
+  clause through a Pinnacle 21 workbook. The workbook holds one row per range
+  check and the spec holds one per value, and writing them row for row made
+  `PARAMCD IN (A, B, C)` read back as three ANDed one-value checks, which
+  select nothing.
+
+* `read_spec()` on a Pinnacle 21 workbook reads an `Origin Document` column
+  on the Variables sheet, so a page reference keeps what it points at.
+  `read_spec()` on a Define-XML document now records which dataset defines a
+  where clause's target, which a workbook has a column for and an OID does
+  not.
+
+* Reading a spec scoped to some datasets no longer leaves its where clauses
+  and analysis results referencing the others.
 
 * `write_spec()` now emits a variable's predecessor and assigned value.
   Define-XML has no attribute for either, so both go in the origin's

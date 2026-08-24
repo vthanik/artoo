@@ -284,3 +284,67 @@ test_that("rendered text is not glued together by whitespace stripping (#p8-revi
   expect_false(grepl("SUBJIDcatx", rendered, fixed = TRUE))
   expect_match(rendered, "catx", fixed = TRUE)
 })
+
+test_that("a renamed stylesheet is the one rendered through (#p10-review-m1)", {
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("xslt")
+  skip_if_not_installed("callr")
+  # `stylesheet = "acme.xsl"` names acme.xsl in the processing instruction
+  # and leaves the file to the sponsor. Rendering through the bundled sheet
+  # anyway would hand a browser and artoo two different renderings of one
+  # document -- the same defect the keep-a-sponsor-sheet rule exists for,
+  # reached by a different door.
+  dir <- withr::local_tempdir()
+  writeLines(
+    c(
+      "<?xml version=\"1.0\"?>",
+      "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">",
+      "<xsl:template match=\"/\"><html><body>ACME RENDERING</body></html></xsl:template>",
+      "</xsl:stylesheet>"
+    ),
+    file.path(dir, "acme.xsl")
+  )
+  suppressWarnings(
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      file.path(dir, "define.xml"),
+      created = FROZEN_HTML,
+      stylesheet = "acme.xsl",
+      html = TRUE
+    )
+  )
+  expect_match(
+    paste(
+      readLines(file.path(dir, "define.html"), warn = FALSE),
+      collapse = ""
+    ),
+    "ACME RENDERING"
+  )
+})
+
+test_that("a malformed document is a render error, not partial HTML (#p10-review-m2)", {
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("xslt")
+  skip_if_not_installed("callr")
+  # The renderer asks libxml2 for no options at all. Every option that would
+  # keep the whitespace the stylesheets need also suppresses parse errors,
+  # and a define truncated in transit rendering as plausible partial HTML is
+  # worse than one that will not render.
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "define.xml")
+  suppressWarnings(
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      created = FROZEN_HTML,
+      stylesheet = FALSE
+    )
+  )
+  lines <- readLines(path, warn = FALSE)
+  writeLines(head(lines, length(lines) %/% 2L), path)
+  expect_error(
+    artoo:::.dx_render_html(path, TRUE, artoo:::.define_profile("2.1")),
+    class = "artoo_error_codec"
+  )
+  expect_false(file.exists(file.path(dir, "define.html")))
+})

@@ -251,20 +251,35 @@
   )
   S7::set_props(
     spec,
-    values = if (is.null(existing) || !nrow(existing)) {
-      derived
-    } else {
-      rbind(existing, derived[names(existing)])
-    },
-    where_clauses = if (!nrow(spec@where_clauses)) {
-      clauses
-    } else {
-      rbind(spec@where_clauses, clauses[names(spec@where_clauses)])
-    }
+    values = .dx_stack(existing, derived),
+    where_clauses = .dx_stack(spec@where_clauses, clauses)
   )
 }
 
+# Stack two frames that need not share columns.
+#
+# The constructor deliberately preserves columns artoo does not model, so a
+# spec read from a workbook with an extra header reaches here with one --
+# and indexing the derived rows by the existing names then failed with a bare
+# "undefined columns selected" in the middle of a write.
+#' @noRd
+.dx_stack <- function(existing, derived) {
+  if (is.null(existing) || !nrow(existing)) {
+    return(derived)
+  }
+  for (column in setdiff(names(existing), names(derived))) {
+    derived[[column]] <- existing[[column]][NA_integer_]
+  }
+  for (column in setdiff(names(derived), names(existing))) {
+    existing[[column]] <- derived[[column]][NA_integer_]
+  }
+  rbind(existing, derived[names(existing)])
+}
+
 # ---- lengths --------------------------------------------------------------
+
+# The types a Define-XML Length does not apply to.
+.dx_untimed_types <- c("date", "datetime", "time")
 
 # The real maximum byte width of a character column, or NA for anything else.
 # Bytes, not characters: a Define-XML Length is a byte width, and counting
@@ -299,6 +314,11 @@
     }
     column <- as.character(var$variable[[i]])
     if (!(column %in% names(frame))) {
+      next
+    }
+    if (.dx_chr(var, "data_type")[[i]] %in% .dx_untimed_types) {
+      # A Define-XML Length applies to text, integer and float. The official
+      # examples carry none on a date-typed item, and P21 flags one.
       next
     }
     width <- .dx_data_width(frame[[column]])
@@ -417,10 +437,17 @@
   if (is.numeric(values)) {
     return(if (all(values == trunc(values))) "integer" else "float")
   }
-  text <- as.character(values)
-  numbers <- suppressWarnings(as.numeric(text))
-  if (!anyNA(numbers)) {
-    return(if (all(numbers == trunc(numbers))) "integer" else "float")
+  # From the LEXICAL form, not the parse. "1.0" parses to a whole number but
+  # xs:integer has no decimal point in its lexical space, so typing it
+  # integer makes the data disagree with the define it describes.
+  text <- trimws(as.character(values))
+  if (all(grepl("^[+-]?[0-9]+$", text))) {
+    return("integer")
+  }
+  if (
+    all(grepl("^[+-]?([0-9]+[.]?[0-9]*|[.][0-9]+)([eE][+-]?[0-9]+)?$", text))
+  ) {
+    return("float")
   }
   "text"
 }
@@ -445,9 +472,16 @@
   comments <- .dx_chr(ds, "comment_id")
   flagged <- character(0)
   uncommented <- character(0)
+  contradicted <- character(0)
   for (i in seq_len(nrow(ds))) {
     frame <- data[[as.character(ds$dataset[[i]])]]
-    if (is.null(frame) || nrow(frame) > 0L) {
+    if (is.null(frame)) {
+      next
+    }
+    if (nrow(frame) > 0L) {
+      if (isTRUE(flags[[i]])) {
+        contradicted <- c(contradicted, as.character(ds$dataset[[i]]))
+      }
       next
     }
     if (.dx_blank(comments[[i]])) {
@@ -456,6 +490,17 @@
     }
     flags[[i]] <- TRUE
     flagged <- c(flagged, as.character(ds$dataset[[i]]))
+  }
+  if (length(contradicted)) {
+    .artoo_warn(
+      c(
+        "{length(contradicted)} dataset{?s} {?is/are} flagged as having no data, but the data has rows.",
+        "x" = "{.val {contradicted}}.",
+        "i" = "The flag is left as the spec set it; a conformance run cross-checks it against the data."
+      ),
+      kind = "spec",
+      call = call
+    )
   }
   if (length(uncommented)) {
     .artoo_warn(

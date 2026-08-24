@@ -7,7 +7,9 @@ Authors@R: c(
     person("Lex", "Jansen", role = "cph",
            comment = "Author of the bundled CDISC Define-XML stylesheets"),
     person(family = "CDISC", role = "cph",
-           comment = "Author of the bundled Define-XML, ODM and ARM schemas")
+           comment = "Author of the bundled Define-XML, ODM and ARM schemas"),
+    person(family = "World Wide Web Consortium", role = "cph",
+           comment = "Author of the bundled xml, xlink and xmldsig schemas")
   )
 Description: Reads and writes clinical-trial datasets losslessly across
     'SAS' XPORT (XPT), Clinical Data Interchange Standards Consortium
@@ -18,10 +20,14 @@ Description: Reads and writes clinical-trial datasets losslessly across
     controlled-terminology references, and sort keys identically across
     every format, so conversion between any two formats is lossless by
     construction. Pure 'R' and lightweight, with no external 'SAS' or
-    'Java' runtime. Implements the published format specifications for
+    'Java' runtime. Reads and writes CDISC Define-XML, the specification
+    document that accompanies a submission, and renders it as HTML through
+    its own stylesheet. Implements the published format specifications for
     CDISC Dataset-JSON
-    (<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>)
-    and 'SAS' XPORT
+    (<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>),
+    CDISC Define-XML
+    (<https://www.cdisc.org/standards/data-exchange/define-xml>), and 'SAS'
+    XPORT
     (<https://www.loc.gov/preservation/digital/formats/fdd/fdd000466.shtml>).
 License: MIT + file LICENSE
 URL: https://vthanik.github.io/artoo/, https://github.com/vthanik/artoo

@@ -176,34 +176,41 @@ test_that("a where clause may qualify a variable in another dataset", {
   skip_if_not_installed("xml2")
   skip_if_not_installed("readxl")
   # The bundled SDTM workbook conditions a VS value-level definition on
-  # DM.COUNTRY. The free-text parser stamps the value-level row's own dataset
-  # onto every condition, because at parse time there is no spec to check
-  # against, so the writer has to resolve the name across datasets.
+  # DM.COUNTRY. The workbook now carries the owning dataset on each range
+  # check -- a Define-XML read used to leave it NA, so a round trip kept
+  # only the variable name and a name two datasets share was unresolvable.
   workbook <- p21_workbooks()[["sdtm"]]
   skip_if(!nzchar(workbook) || !file.exists(workbook), "workbook not bundled")
   spec <- suppressWarnings(read_spec(workbook))
-  clause <- spec@where_clauses[
-    spec@where_clauses$where_clause_id == "WC.VS.VSORRESU",
+  cross <- spec@where_clauses[
+    grepl("COUNTRY", spec@where_clauses$where_clause_id, fixed = TRUE),
     ,
     drop = FALSE
   ]
-  expect_true("COUNTRY" %in% clause$variable)
-  # ...and the reader really did stamp the wrong dataset on it.
-  expect_identical(unique(clause$dataset), "VS")
-  expect_false(
-    "COUNTRY" %in% spec@variables$variable[spec@variables$dataset == "VS"]
-  )
+  expect_gt(nrow(cross), 0L)
+  expect_true("COUNTRY" %in% cross$variable)
+  expect_setequal(unique(cross$dataset), c("VS", "DM"))
 
   out <- file.path(withr::local_tempdir(), "define.xml")
-  suppressWarnings(write_spec(spec, out, created = FROZEN_P21))
+  suppressMessages(suppressWarnings(write_spec(
+    spec,
+    out,
+    created = FROZEN_P21
+  )))
+  id <- cross$where_clause_id[[1]]
   checks <- xml2::xml_find_all(
     xml2::read_xml(out),
-    "//*[local-name()='WhereClauseDef'][@OID='WC.VS.VSORRESU']/*[local-name()='RangeCheck']"
+    sprintf(
+      "//*[local-name()='WhereClauseDef'][@OID='%s']/*[local-name()='RangeCheck']",
+      id
+    )
   )
-  expect_identical(
+  # Each condition resolves to the ItemDef of its OWN dataset.
+  expect_setequal(
     xml2::xml_attr(checks, "ItemOID"),
     c("IT.VS.VSTESTCD", "IT.DM.COUNTRY")
   )
+  expect_false(any(grepl("dangling", define_lint(out)@findings$check)))
 })
 
 test_that("a variable named by two datasets is refused, not guessed", {
@@ -719,4 +726,101 @@ test_that("the newer sheets survive an xlsx round trip (#p8-review-q5)", {
   expect_true(all(
     readxl::excel_sheets(book) %in% readxl::excel_sheets(template)
   ))
+})
+
+test_that("what a workbook loses is exactly what it warns about (#p10-review-M6)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # The five sheets the Define-XML work added closed the slot-level gaps and
+  # opened column-level ones -- P21 has no column for which standard is
+  # primary, or for an ItemOID. The contract is not that nothing is lost; it
+  # is that the warning names the loss exactly, so this compares the two.
+  spec <- read_define("define21-sdtm.xml")
+  book <- file.path(withr::local_tempdir(), "round.xlsx")
+  warned <- NULL
+  expect_warning(
+    {
+      warned <- artoo:::.p21_dropped_cols(spec)
+      write_spec(spec, book)
+    },
+    class = "artoo_warning_spec"
+  )
+  back <- suppressWarnings(read_spec(book))
+
+  # What actually failed to come back: a column the spec populated that the
+  # workbook returns absent or empty.
+  lost <- lapply(names(artoo:::.p21_slot_maps), function(slot) {
+    a <- S7::prop(spec, slot)
+    b <- S7::prop(back, slot)
+    if (is.null(a) || !nrow(a)) {
+      return(character(0))
+    }
+    held <- names(a)[!vapply(a, function(col) all(is.na(col)), logical(1))]
+    held[vapply(
+      held,
+      function(cl) !cl %in% names(b) || all(is.na(b[[cl]])),
+      logical(1)
+    )]
+  })
+  names(lost) <- names(artoo:::.p21_slot_maps)
+  lost <- lost[lengths(lost) > 0L]
+
+  expect_identical(names(lost), names(warned))
+  for (slot in names(lost)) {
+    expect_setequal(lost[[slot]], warned[[slot]])
+  }
+  # ...and the loss is real, not an empty claim on both sides.
+  expect_true("is_primary" %in% warned$standards)
+  expect_true("itemoid" %in% warned$variables)
+})
+
+test_that("every populated column of the newer sheets round-trips (#p10-review-Q4)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # Row counts alone cannot fail on a column that comes back empty, which is
+  # how the standards sheet lost `is_primary` unnoticed. This compares
+  # content, column by column, for everything the maps say a sheet carries.
+  spec <- read_define("define21-adam.xml")
+  book <- file.path(withr::local_tempdir(), "round.xlsx")
+  suppressWarnings(write_spec(spec, book))
+  back <- suppressWarnings(read_spec(book))
+  for (slot in c("standards", "where_clauses", "arm_displays", "arm_results")) {
+    a <- S7::prop(spec, slot)
+    b <- S7::prop(back, slot)
+    expect_identical(nrow(b), nrow(a), info = slot)
+    mapped <- unname(artoo:::.p21_slot_maps[[slot]][[2]])
+    for (cl in intersect(mapped, names(a))) {
+      if (all(is.na(a[[cl]]))) {
+        next
+      }
+      expect_identical(
+        as.character(b[[cl]]),
+        as.character(a[[cl]]),
+        info = paste(slot, cl)
+      )
+    }
+  }
+})
+
+test_that("value-level rows resolve to the WhereClauses sheet (#p10-review)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # A workbook carrying a WhereClauses sheet keys its ValueLevel rows to it
+  # by ID. Writing the rendered expression there instead left all 32
+  # value-level rows of the SDTM example naming a clause the same workbook
+  # did not define -- a dangling reference artoo warns about on its own
+  # output.
+  spec <- read_define("define21-sdtm.xml")
+  book <- file.path(withr::local_tempdir(), "round.xlsx")
+  suppressWarnings(write_spec(spec, book))
+  expect_no_warning(back <- read_spec(book))
+  expect_identical(nrow(back@values), nrow(spec@values))
+  expect_true(all(
+    back@values$where_clause %in% back@where_clauses$where_clause_id
+  ))
+  # ...and the clause each row lands on is the one it started from.
+  expect_identical(back@values$where_clause, spec@values$where_clause_id)
 })

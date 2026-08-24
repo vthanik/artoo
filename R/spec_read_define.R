@@ -411,6 +411,9 @@
   }
   ds_rows <- list()
   var_rows <- list()
+  # ItemOID -> the dataset whose ItemGroupDef references it. A pooled ItemDef
+  # has several; the first wins, which is enough to name the variable.
+  item_owner <- character(0)
   vl_owner <- list() # ValueListOID -> c(dataset, variable)
   for (ig in ig_nodes) {
     ds_name <- xml2::xml_attr(ig, "Name")
@@ -479,6 +482,9 @@
       }
       if (!is.na(it$value_list)) {
         vl_owner[[it$value_list]] <- c(ds_name, it$name)
+      }
+      if (!(ref_oid[j] %in% names(item_owner))) {
+        item_owner[[ref_oid[j]]] <- ds_name
       }
       var_rows[[length(var_rows) + 1L]] <- data.frame(
         dataset = ds_name,
@@ -759,7 +765,7 @@
   }
 
   # ---- def:WhereClauseDef, structured ------------------------------------
-  where_clauses <- .dx_where_clauses(mdv, items)
+  where_clauses <- .dx_where_clauses(mdv, items, item_owner)
 
   # ---- MethodDef/FormalExpression ----------------------------------------
   method_expressions <- .dx_method_expressions(md_nodes)
@@ -773,7 +779,14 @@
   # Scope before the duplicate guard (a problem confined to another
   # ItemGroup never blocks this read), then resolve duplicates by policy.
   scoped <- .spec_scope_tables(
-    list(datasets = datasets, variables = variables, values = values),
+    list(
+      datasets = datasets,
+      variables = variables,
+      values = values,
+      where_clauses = where_clauses,
+      arm_displays = arm$displays,
+      arm_results = arm$results
+    ),
     scope_datasets,
     call
   )
@@ -794,10 +807,10 @@
     comments = comments,
     documents = documents,
     standards = standards,
-    where_clauses = where_clauses,
+    where_clauses = scoped$where_clauses,
     method_expressions = method_expressions,
-    arm_displays = arm$displays,
-    arm_results = arm$results
+    arm_displays = scoped$arm_displays,
+    arm_results = scoped$arm_results
   )
 }
 
@@ -1008,7 +1021,7 @@
 # collapsed encoding would be lossy. The rendered display string on
 # `values$where_clause` stays, but this is now the authoritative form.
 #' @noRd
-.dx_where_clauses <- function(mdv, items) {
+.dx_where_clauses <- function(mdv, items, owner = character(0)) {
   wc_nodes <- .dx_find_all(mdv, "WhereClauseDef")
   if (!length(wc_nodes)) {
     return(NULL)
@@ -1030,7 +1043,11 @@
       rows[[length(rows) + 1L]] <- data.frame(
         where_clause_id = wc_id,
         check_order = ci,
-        dataset = NA_character_,
+        # The dataset that DEFINES the target, not the one the value-level
+        # row belongs to -- a VS value may be conditioned on DM.COUNTRY.
+        # Leaving it NA meant a workbook round trip kept only the variable
+        # name, and a name two datasets share cannot be resolved back.
+        dataset = unname(owner[target]) %||% NA_character_,
         variable = if (is.null(it)) NA_character_ else it$name,
         itemoid = target,
         comparator = .dx_attr(rc, "Comparator"),

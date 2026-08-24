@@ -8,36 +8,50 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 24
-        ..$ CodeList        : int 30
-        ..$ CodeListItem    : int 97
-        ..$ CodeListRef     : int 54
-        ..$ CommentDef      : int 22
-        ..$ Decode          : int 97
-        ..$ Description     : int 182
-        ..$ DocumentRef     : int 4
-        ..$ EnumeratedItem  : int 104
-        ..$ GlobalVariables : int 1
-        ..$ ItemDef         : int 104
-        ..$ ItemGroupDef    : int 2
-        ..$ ItemRef         : int 104
-        ..$ MetaDataVersion : int 1
-        ..$ MethodDef       : int 54
-        ..$ ODM             : int 1
-        ..$ Origin          : int 104
-        ..$ PDFPageRef      : int 1
-        ..$ ProtocolName    : int 1
-        ..$ Study           : int 1
-        ..$ StudyDescription: int 1
-        ..$ StudyName       : int 1
-        ..$ TranslatedText  : int 279
-        ..$ leaf            : int 9
-        ..$ title           : int 9
+       $ elements:List of 38
+        ..$ Alias                 : int 48
+        ..$ AnalysisDataset       : int 2
+        ..$ AnalysisDatasets      : int 1
+        ..$ AnalysisResult        : int 1
+        ..$ AnalysisResultDisplays: int 1
+        ..$ AnalysisVariable      : int 2
+        ..$ CheckValue            : int 3
+        ..$ CodeList              : int 30
+        ..$ CodeListItem          : int 97
+        ..$ CodeListRef           : int 54
+        ..$ CommentDef            : int 22
+        ..$ Decode                : int 97
+        ..$ Description           : int 185
+        ..$ DocumentRef           : int 8
+        ..$ Documentation         : int 1
+        ..$ EnumeratedItem        : int 104
+        ..$ GlobalVariables       : int 1
+        ..$ ItemDef               : int 104
+        ..$ ItemGroupDef          : int 2
+        ..$ ItemRef               : int 104
+        ..$ MetaDataVersion       : int 1
+        ..$ MethodDef             : int 54
+        ..$ ODM                   : int 1
+        ..$ Origin                : int 104
+        ..$ PDFPageRef            : int 2
+        ..$ ProgrammingCode       : int 1
+        ..$ ProtocolName          : int 1
+        ..$ RangeCheck            : int 3
+        ..$ ResultDisplay         : int 1
+        ..$ Study                 : int 1
+        ..$ StudyDescription      : int 1
+        ..$ StudyName             : int 1
+        ..$ SupplementalDoc       : int 1
+        ..$ TranslatedText        : int 282
+        ..$ WhereClauseDef        : int 2
+        ..$ WhereClauseRef        : int 2
+        ..$ leaf                  : int 9
+        ..$ title                 : int 9
        $ lint    :List of 4
-        ..$ define_orphan_leaf    : int 5
+        ..$ define_orphan_leaf    : int 3
         ..$ define_orphan_method  : int 9
         ..$ define_orphan_codelist: int 10
-        ..$ define_orphan_comment : int 15
+        ..$ define_orphan_comment : int 14
 
 ---
 
@@ -49,37 +63,55 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 25
-        ..$ Class           : int 2
-        ..$ CodeList        : int 30
-        ..$ CodeListItem    : int 97
-        ..$ CodeListRef     : int 54
-        ..$ CommentDef      : int 22
-        ..$ Decode          : int 97
-        ..$ Description     : int 182
-        ..$ DocumentRef     : int 4
-        ..$ EnumeratedItem  : int 104
-        ..$ GlobalVariables : int 1
-        ..$ ItemDef         : int 104
-        ..$ ItemGroupDef    : int 2
-        ..$ ItemRef         : int 104
-        ..$ MetaDataVersion : int 1
-        ..$ MethodDef       : int 54
-        ..$ ODM             : int 1
-        ..$ Origin          : int 104
-        ..$ PDFPageRef      : int 1
-        ..$ ProtocolName    : int 1
-        ..$ Study           : int 1
-        ..$ StudyDescription: int 1
-        ..$ StudyName       : int 1
-        ..$ TranslatedText  : int 279
-        ..$ leaf            : int 9
-        ..$ title           : int 9
-       $ lint    :List of 4
-        ..$ define_orphan_leaf    : int 5
+       $ elements:List of 42
+        ..$ Alias                 : int 48
+        ..$ AnalysisDataset       : int 2
+        ..$ AnalysisDatasets      : int 1
+        ..$ AnalysisResult        : int 1
+        ..$ AnalysisResultDisplays: int 1
+        ..$ AnalysisVariable      : int 2
+        ..$ CheckValue            : int 3
+        ..$ Class                 : int 2
+        ..$ CodeList              : int 30
+        ..$ CodeListItem          : int 97
+        ..$ CodeListRef           : int 54
+        ..$ CommentDef            : int 22
+        ..$ Decode                : int 97
+        ..$ Description           : int 185
+        ..$ DocumentRef           : int 8
+        ..$ Documentation         : int 1
+        ..$ EnumeratedItem        : int 104
+        ..$ GlobalVariables       : int 1
+        ..$ ItemDef               : int 104
+        ..$ ItemGroupDef          : int 2
+        ..$ ItemRef               : int 104
+        ..$ MetaDataVersion       : int 1
+        ..$ MethodDef             : int 54
+        ..$ ODM                   : int 1
+        ..$ Origin                : int 104
+        ..$ PDFPageRef            : int 2
+        ..$ ProgrammingCode       : int 1
+        ..$ ProtocolName          : int 1
+        ..$ RangeCheck            : int 3
+        ..$ ResultDisplay         : int 1
+        ..$ Standard              : int 4
+        ..$ Standards             : int 1
+        ..$ Study                 : int 1
+        ..$ StudyDescription      : int 1
+        ..$ StudyName             : int 1
+        ..$ SubClass              : int 1
+        ..$ SupplementalDoc       : int 1
+        ..$ TranslatedText        : int 282
+        ..$ WhereClauseDef        : int 2
+        ..$ WhereClauseRef        : int 2
+        ..$ leaf                  : int 9
+        ..$ title                 : int 9
+       $ lint    :List of 5
+        ..$ define_orphan_leaf    : int 3
+        ..$ define_orphan_standard: int 4
         ..$ define_orphan_method  : int 9
         ..$ define_orphan_codelist: int 10
-        ..$ define_orphan_comment : int 15
+        ..$ define_orphan_comment : int 11
 
 ---
 
@@ -91,15 +123,16 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 30
-        ..$ CheckValue      : int 41
+       $ elements:List of 32
+        ..$ Alias           : int 160
+        ..$ CheckValue      : int 29
         ..$ CodeList        : int 39
         ..$ CodeListItem    : int 89
         ..$ CodeListRef     : int 27
         ..$ CommentDef      : int 30
         ..$ Decode          : int 89
-        ..$ Description     : int 154
-        ..$ DocumentRef     : int 3
+        ..$ Description     : int 155
+        ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 73
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
@@ -108,26 +141,27 @@
         ..$ MetaDataVersion : int 1
         ..$ MethodDef       : int 33
         ..$ ODM             : int 1
-        ..$ Origin          : int 49
-        ..$ PDFPageRef      : int 2
+        ..$ Origin          : int 72
+        ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 39
+        ..$ RangeCheck      : int 27
         ..$ Study           : int 1
         ..$ StudyDescription: int 1
         ..$ StudyName       : int 1
-        ..$ TranslatedText  : int 243
+        ..$ SupplementalDoc : int 1
+        ..$ TranslatedText  : int 244
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 35
+        ..$ WhereClauseDef  : int 23
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
        $ lint    :List of 5
-        ..$ define_missing_origin : int 9
-        ..$ define_orphan_leaf    : int 10
+        ..$ define_missing_origin : int 2
+        ..$ define_orphan_leaf    : int 9
+        ..$ define_orphan_comment : int 17
         ..$ define_orphan_codelist: int 18
         ..$ define_orphan_method  : int 18
-        ..$ define_orphan_comment : int 19
 
 ---
 
@@ -139,16 +173,17 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 31
-        ..$ CheckValue      : int 41
+       $ elements:List of 35
+        ..$ Alias           : int 160
+        ..$ CheckValue      : int 29
         ..$ Class           : int 4
         ..$ CodeList        : int 39
         ..$ CodeListItem    : int 89
         ..$ CodeListRef     : int 27
         ..$ CommentDef      : int 30
         ..$ Decode          : int 89
-        ..$ Description     : int 154
-        ..$ DocumentRef     : int 3
+        ..$ Description     : int 155
+        ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 73
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
@@ -157,26 +192,30 @@
         ..$ MetaDataVersion : int 1
         ..$ MethodDef       : int 33
         ..$ ODM             : int 1
-        ..$ Origin          : int 49
-        ..$ PDFPageRef      : int 2
+        ..$ Origin          : int 72
+        ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 39
+        ..$ RangeCheck      : int 27
+        ..$ Standard        : int 6
+        ..$ Standards       : int 1
         ..$ Study           : int 1
         ..$ StudyDescription: int 1
         ..$ StudyName       : int 1
-        ..$ TranslatedText  : int 243
+        ..$ SupplementalDoc : int 1
+        ..$ TranslatedText  : int 244
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 35
+        ..$ WhereClauseDef  : int 23
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
-       $ lint    :List of 5
-        ..$ define_missing_origin : int 9
-        ..$ define_orphan_leaf    : int 10
+       $ lint    :List of 6
+        ..$ define_missing_origin : int 2
+        ..$ define_orphan_standard: int 6
+        ..$ define_orphan_leaf    : int 9
+        ..$ define_orphan_comment : int 11
         ..$ define_orphan_codelist: int 18
         ..$ define_orphan_method  : int 18
-        ..$ define_orphan_comment : int 19
 
 # an incomplete workbook is written, and every gap is named
 

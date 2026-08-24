@@ -40,19 +40,55 @@ toolchain expects to receive it.
 Copyright (c) CDISC (Clinical Data Interchange Standards Consortium).
 
 Published as part of the Define-XML v2.0 and v2.1 release packages and the
-Analysis Results Metadata v1.0 package. Redistributed unmodified so that
-schema validation works offline, without a network round trip, on a
-submission-critical path.
+Analysis Results Metadata v1.0 package, which CDISC distributes without
+charge for public use. CDISC's Terms of Use permit reproduction and
+distribution of its published standards provided the copyright notice is
+retained and the material is not modified: these files are redistributed
+byte-for-byte, with every notice they carry, and are pinned by sha256 so
+that is verifiable.
+
+  https://www.cdisc.org/terms-use
+
+Redistributed so that schema validation works offline, without a network
+round trip, on a submission-critical path.
 
 The 2.0 and 2.1 trees have different internal layouts and are deliberately
 not merged: every xs:import and xs:redefine in them is a relative path.
 
-xml.xsd, xlink.xsd and xmldsig-core-schema.xsd are W3C schemas included in
-those CDISC packages, published under the W3C Software and Document Notice
-and License.
+3. W3C schemas
+--------------
+
+  inst/extdata/2.1.0/core/xml.xsd
+  inst/extdata/2.1.0/core/xlink.xsd
+  inst/extdata/2.1.0/core/xmldsig-core-schema.xsd
+  inst/extdata/2.0.0/cdisc-odm-1.3.2/xlink.xsd
+
+Copyright (c) World Wide Web Consortium.
+(Massachusetts Institute of Technology, European Research Consortium for
+Informatics and Mathematics, Keio University, Beihang University.)
+
+Included in the CDISC release packages above and redistributed unmodified
+under the W3C Software and Document License:
+
+  Permission to copy, modify, and distribute this work, with or without
+  modification, for any purpose and without fee or royalty is hereby
+  granted, provided that you include this notice and a link or URL to
+  this document on ALL copies of the work or portions thereof, including
+  modifications.
+
+  https://www.w3.org/copyright/software-license-2023/
+
+  THIS WORK IS PROVIDED "AS IS", AND COPYRIGHT HOLDERS MAKE NO
+  REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+  LIMITED TO, WARRANTIES OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR
+  PURPOSE OR THAT THE USE OF THE SOFTWARE OR DOCUMENT WILL NOT INFRINGE
+  ANY THIRD PARTY PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.
+  COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL
+  OR CONSEQUENTIAL DAMAGES ARISING OUT OF ANY USE OF THE SOFTWARE OR
+  DOCUMENT.
 
 
-3. Example Define-XML documents (not installed)
+4. Example Define-XML documents (not installed)
 -----------------------------------------------
 
   tests/testthat/fixtures/define20-sdtm.xml
@@ -69,4 +105,7 @@ Provenance and integrity
 
 Every file above is pinned by sha256 in data-raw/vendor-define-assets.R,
 which also documents where each tree came from and re-verifies the bytes on
-every run.
+every run. That script is not shipped in the tarball; it is in the source
+repository:
+
+  https://github.com/vthanik/artoo/blob/main/data-raw/vendor-define-assets.R

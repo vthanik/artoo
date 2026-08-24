@@ -644,6 +644,22 @@
 #
 # `html` is TRUE for a sibling .html, or a path to write it to.
 #' @noRd
+# The stylesheet href the document names, or NULL when it names none.
+# Read from the file rather than reconstructed, so the renderer and the
+# browser can only ever agree.
+#' @noRd
+.dx_pi_href <- function(path) {
+  head <- tryCatch(readLines(path, n = 4L, warn = FALSE), error = function(e) {
+    character(0)
+  })
+  pi <- grep("<\\?xml-stylesheet", head, value = TRUE)
+  if (!length(pi)) {
+    return(NULL)
+  }
+  href <- sub('.*href="([^"]+)".*', "\\1", pi[[1]])
+  if (identical(href, pi[[1]]) || !nzchar(href)) NULL else href
+}
+
 .dx_render_html <- function(path, html, p, call = rlang::caller_env()) {
   rlang::check_installed(
     c("xslt", "callr"),
@@ -655,7 +671,12 @@
   # their file is exactly what .dx_copy_stylesheet() goes out of its way to
   # do. Reading it by path keeps its base URI, so a relative xsl:import in a
   # sponsor's sheet still resolves.
-  beside <- file.path(dirname(path), p$stylesheet)
+  # The name comes from the document's own processing instruction, not from
+  # the profile default: `stylesheet = "acme.xsl"` writes a PI naming
+  # acme.xsl, and rendering through the bundled sheet instead would give the
+  # browser and artoo two different renderings of one document.
+  href <- .dx_pi_href(path)
+  beside <- file.path(dirname(path), href %||% p$stylesheet)
   sheet <- if (file.exists(beside)) {
     beside
   } else {
@@ -697,7 +718,10 @@
         # "Concatenation of STUDYID and SUBJIDcatx(...)" instead of leaving a
         # space between the sentence and the code. libxslt applies the XSLT
         # whitespace rules itself; stripping first is not a shortcut to them.
-        keep <- c("RECOVER", "NOERROR")
+        # No options at all: xml2's default is NOBLANKS, and everything
+        # else it offers here would suppress parse errors, which is how a
+        # truncated define would render as plausible partial HTML.
+        keep <- character(0)
         as.character(
           xslt::xml_xslt(
             xml2::read_xml(source_path, options = keep),

@@ -76,7 +76,8 @@
     origin_document_id = .dx_default_document(
       .dx_chr(var, "origin_document_id"),
       .dx_chr(var, "pages"),
-      crf
+      crf,
+      .dx_chr(var, "origin")
     ),
     predecessor = .dx_chr(var, "predecessor"),
     assigned_value = .dx_chr(var, "assigned_value"),
@@ -124,7 +125,8 @@
       origin_document_id = .dx_default_document(
         .dx_chr(val, "origin_document_id"),
         .dx_chr(val, "pages"),
-        crf
+        crf,
+        .dx_chr(val, "origin")
       ),
       predecessor = .dx_chr(val, "predecessor"),
       assigned_value = .dx_chr(val, "assigned_value"),
@@ -177,9 +179,16 @@
   as.character(docs$document_id[[hit]])
 }
 
+# Only a COLLECTED origin's pages are CRF pages. A derived variable
+# documented by a page number is documented by a method or a report, not by
+# the annotated CRF, and pointing it there asserts a provenance nobody wrote.
+.dx_crf_origins <- c("Collected", "CRF", "eDT")
+
 #' @noRd
-.dx_default_document <- function(document_id, pages, crf) {
-  blank <- .dx_blank(document_id) & !.dx_blank(pages)
+.dx_default_document <- function(document_id, pages, crf, origin) {
+  blank <- .dx_blank(document_id) &
+    !.dx_blank(pages) &
+    (as.character(origin) %in% .dx_crf_origins)
   document_id[blank] <- crf
   document_id
 }

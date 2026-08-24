@@ -130,6 +130,22 @@
   if ("data_type" %in% names(values) && nrow(values)) {
     values$data_type <- .to_define_datatype(values$data_type)
   }
+  # The ValueLevel "Where Clause" cell is a WhereClause ID when the workbook
+  # has a WhereClauses sheet to resolve it against, and the rendered
+  # expression only in the older single-sheet workbooks artoo also reads.
+  # Emitting the expression alongside a sheet keyed by ID leaves every
+  # value-level row pointing at a clause the reader cannot find -- a
+  # workbook artoo itself rejects as dangling.
+  clauses <- spec@where_clauses
+  has_rows <- function(x) !is.null(x) && is.data.frame(x) && nrow(x) > 0L
+  if (
+    has_rows(values) &&
+      has_rows(clauses) &&
+      "where_clause_id" %in% names(values)
+  ) {
+    known <- values$where_clause_id %in% clauses$where_clause_id
+    values$where_clause[known] <- values$where_clause_id[known]
+  }
 
   sheets <- list(
     Define = .p21_study_sheet(spec@study),
@@ -174,11 +190,7 @@
     # when the Define-XML work landed, and write_template() offers them, so a
     # writer that still emitted only the eight classic sheets would lose on
     # its own round trip exactly what artoo had just taught itself to read.
-    WhereClauses = .p21_sheet_frame(
-      spec@where_clauses,
-      .p21_where_map,
-      names(.spec_cols_where_clauses)
-    ),
+    WhereClauses = .p21_where_sheet(spec@where_clauses),
     Dictionaries = .p21_sheet_frame(
       spec@dictionaries,
       .p21_dictionary_map,
@@ -226,28 +238,149 @@
   invisible(path)
 }
 
-# Name the populated slots a Pinnacle 21 workbook cannot carry.
+# The WhereClauses sheet, as the TRUE INVERSE of .wc_from_sheet().
+#
+# The slot is one row per CheckValue; the sheet is one row per RangeCheck,
+# with a set comparator's values in one cell. Projecting the slot row for row
+# -- which is what the generic sheet builder does -- makes the reader see
+# each value as its own RangeCheck, so `PARAMCD IN (ACITM01, ..., ACITM14)`
+# came back as fourteen ANDed one-value checks and selected nothing.
+#
+# Values are joined the way .wc_split_values() parses them: comma-separated,
+# and quoted when the value itself contains a comma, which is the whole
+# reason that splitter is quote-aware.
+#' @noRd
+.p21_where_sheet <- function(wc) {
+  if (is.null(wc) || !nrow(wc)) {
+    return(NULL)
+  }
+  key <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
+  first <- !duplicated(key)
+  collapse <- function(values) {
+    values <- as.character(values)
+    values <- values[!is.na(values)]
+    if (!length(values)) {
+      return(NA_character_)
+    }
+    quoted <- ifelse(
+      grepl(",", values, fixed = TRUE),
+      paste0('"', values, '"'),
+      values
+    )
+    if (length(quoted) == 1L) {
+      quoted
+    } else {
+      paste0("(", paste(quoted, collapse = ", "), ")")
+    }
+  }
+  ordered <- order(key, suppressWarnings(as.integer(wc$value_order)))
+  wc <- wc[ordered, , drop = FALSE]
+  key <- key[ordered]
+  first <- !duplicated(key)
+  out <- wc[first, , drop = FALSE]
+  out$value <- vapply(
+    split(wc$value, factor(key, levels = unique(key))),
+    collapse,
+    character(1)
+  )[unique(key)]
+  .p21_sheet_frame(out, .p21_where_map, names(.spec_cols_where_clauses))
+}
+
+# Every slot that HAS a sheet, paired with the reader map that defines what
+# that sheet can carry. One list, used by both the writer and the drop
+# warning, so a map gaining a header teaches both at once.
+#' @noRd
+.p21_slot_maps <- list(
+  datasets = list(.spec_cols_datasets, .p21_ds_map),
+  variables = list(.spec_cols_variables, .p21_var_map),
+  where_clauses = list(.spec_cols_where_clauses, .p21_where_map),
+  codelists = list(.spec_cols_codelists, .p21_codelist_map),
+  dictionaries = list(.spec_cols_dictionaries, .p21_dictionary_map),
+  methods = list(.spec_cols_methods, .p21_method_map),
+  comments = list(.spec_cols_comments, .p21_comment_map),
+  documents = list(.spec_cols_documents, .p21_document_map),
+  standards = list(.spec_cols_standards, .p21_standard_map),
+  arm_displays = list(.spec_cols_arm_displays, .p21_arm_display_map),
+  arm_results = list(.spec_cols_arm_results, .p21_arm_result_map)
+)
+
+# The two columns no sheet has a header for and none needs one: the
+# WhereClauses sheet encodes them in its SHAPE -- one row per range check,
+# a set comparator's values collapsed into one cell -- and the reader
+# rebuilds both on read. Excluded from the warning because nothing is lost.
+#
+# `order` is deliberately NOT here. Four slots have no Order column, and a
+# populated `order` on any of them really is dropped.
+#' @noRd
+.p21_structural <- c("check_order", "value_order")
+
+# Columns with no header of their own that the workbook nonetheless carries,
+# so nothing is lost: a variable's key_sequence is rebuilt from the Datasets
+# sheet's Key Variables, and a range check's soft_hard is only lost when it
+# is not the "Soft" the reader assumes for a workbook clause. Each entry is a
+# predicate on the column, TRUE when this spec's values do survive.
+#' @noRd
+.p21_recovered <- list(
+  variables = list(key_sequence = function(x) TRUE),
+  where_clauses = list(soft_hard = function(x) all(is.na(x) | x == "Soft"))
+)
+
+# Name what a Pinnacle 21 workbook cannot carry: the one slot with no sheet
+# at all, and the populated COLUMNS whose slot has a sheet with no header
+# for them. Both lists are derived -- the slot from the sheet builders, the
+# columns from the reader maps -- so neither can drift out of step with the
+# workbook actually written.
+#
+# The column half exists because the five sheets the Define-XML work added
+# closed the slot-level gaps and opened column-level ones: `standards` gets
+# a sheet, but P21 has no column for which standard is primary, and silence
+# there is the same silent truncation the slot warning was written against.
+#' @noRd
+.p21_dropped_cols <- function(spec) {
+  out <- lapply(names(.p21_slot_maps), function(nm) {
+    df <- S7::prop(spec, nm)
+    if (is.null(df) || !nrow(df)) {
+      return(character(0))
+    }
+    pair <- .p21_slot_maps[[nm]]
+    unmapped <- setdiff(names(pair[[1]]), c(unname(pair[[2]]), .p21_structural))
+    held <- intersect(unmapped, names(df))
+    held <- held[!vapply(df[held], function(col) all(is.na(col)), logical(1))]
+    recovered <- .p21_recovered[[nm]]
+    keep <- vapply(
+      held,
+      function(cl) is.null(recovered[[cl]]) || !recovered[[cl]](df[[cl]]),
+      logical(1)
+    )
+    held[keep]
+  })
+  names(out) <- names(.p21_slot_maps)
+  out[lengths(out) > 0L]
+}
+
 #' @noRd
 .p21_warn_dropped <- function(spec, call = rlang::caller_env()) {
-  # Only what a workbook genuinely has no column for. The other five slots
-  # got sheets when the reader learned to read them.
-  slots <- c(method_expressions = "formal expressions")
-  filled <- vapply(
-    names(slots),
-    function(nm) {
-      x <- S7::prop(spec, nm)
-      !is.null(x) && is.data.frame(x) && nrow(x) > 0L
-    },
-    logical(1)
-  )
-  if (!any(filled)) {
+  msg <- character(0)
+  # The one slot a workbook has no sheet for.
+  expressions <- spec@method_expressions
+  if (!is.null(expressions) && nrow(expressions)) {
+    msg <- c(msg, "x" = "No sheet holds a method's formal expressions.")
+  }
+  cols <- .p21_dropped_cols(spec)
+  for (nm in names(cols)) {
+    lost <- cols[[nm]]
+    # Formatted NOW, not left for cli to interpolate: the condition is built
+    # once after the loop, by which time `nm` and `lost` hold the last slot.
+    msg <- c(msg, "x" = cli::format_inline("{.field {nm}}: {.val {lost}}"))
+  }
+  if (!length(msg)) {
     return(invisible(NULL))
   }
-  lost <- unname(slots[filled])
   .artoo_warn(
     c(
-      "A Pinnacle 21 workbook has no sheet for {.val {lost}}.",
-      "i" = "{cli::qty(length(lost))}{?It is/They are} dropped here; write {.val .json} to keep the spec whole."
+      "A Pinnacle 21 workbook cannot carry all of this spec.",
+      msg,
+      "i" = "That is dropped here; write {.val .json} to keep the spec whole."
     ),
     kind = "spec",
     call = call

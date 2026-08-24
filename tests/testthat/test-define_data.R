@@ -646,3 +646,134 @@ test_that(".dx_data_width counts bytes, and only for text", {
   expect_identical(artoo:::.dx_data_width(c(NA_character_)), NA_integer_)
   expect_identical(artoo:::.dx_data_width(factor(c("a", "bbb"))), 3L)
 })
+
+test_that("no Length is filled on a date or time typed item (#p10-review)", {
+  skip_if_not_installed("xml2")
+  # A Define-XML Length applies to text, integer and float. The official
+  # examples carry none on a date-typed item, and P21 flags one.
+  spec <- data_spec(
+    variables = data.frame(
+      dataset = "VS",
+      variable = c("VSDTC", "VSORRES"),
+      label = "x",
+      data_type = c("datetime", "string"),
+      length = NA_integer_,
+      origin = "Collected",
+      stringsAsFactors = FALSE
+    )
+  )
+  frame <- data.frame(
+    VSDTC = c("2020-01-01T09:00", "2020-01-02T10:30"),
+    VSORRES = c("162.6", "170.0"),
+    stringsAsFactors = FALSE
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN_DATA, data = list(VS = frame))
+  ))
+  items <- xml2::xml_find_all(
+    xml2::read_xml(path),
+    "//*[local-name()='ItemDef']"
+  )
+  lengths <- stats::setNames(
+    xml2::xml_attr(items, "Length"),
+    xml2::xml_attr(items, "Name")
+  )
+  expect_true(is.na(lengths[["VSDTC"]]))
+  expect_identical(lengths[["VSORRES"]], "5")
+})
+
+test_that("data that contradicts def:HasNoData is reported (#p10-review)", {
+  skip_if_not_installed("xml2")
+  # The pass's contract is that it never contradicts the spec silently, and a
+  # conformance run cross-checks the flag against the actual dataset.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      has_no_data = TRUE,
+      comment_id = "COM.EMPTY",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "COM.EMPTY",
+      description = "Nothing was collected.",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    suppressMessages(
+      write_spec(spec, path, created = FROZEN_DATA, data = list(VS = vs_data()))
+    ),
+    "the data has rows"
+  )
+  # The flag is left as the spec set it; artoo reports rather than decides.
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(
+        xml2::read_xml(path),
+        "//*[local-name()='ItemGroupDef']"
+      ),
+      "HasNoData"
+    ),
+    "Yes"
+  )
+})
+
+test_that("derived rows stack onto a spec carrying a foreign column (#p10-review)", {
+  skip_if_not_installed("xml2")
+  # The constructor deliberately preserves columns artoo does not model, and
+  # indexing the derived rows by the existing names failed with a bare
+  # "undefined columns selected" in the middle of a write.
+  spec <- data_spec(
+    variables = data.frame(
+      dataset = "VS",
+      variable = c("VSTESTCD", "VSORRES", "VSORRESU"),
+      label = "x",
+      data_type = "string",
+      length = 20L,
+      origin = "Collected",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRESU",
+      where_clause_id = "WC.MINE",
+      data_type = "text",
+      reviewer_note = "checked 2026-08",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.MINE",
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSTESTCD",
+      comparator = "EQ",
+      value = "HEIGHT",
+      value_order = 1L,
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_true("reviewer_note" %in% names(spec@values))
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_no_error(suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN_DATA, data = list(VS = vs_data()))
+  )))
+  expect_true(validate_define(path)@summary$valid)
+  # The author's row survives alongside the derived ones.
+  expect_gt(
+    length(xml2::xml_find_all(
+      xml2::read_xml(path),
+      "//*[local-name()='WhereClauseDef']"
+    )),
+    1L
+  )
+})

@@ -72,6 +72,7 @@ reference:
   - artoo_spec
   - read_spec
   - write_spec
+  - write_template
   - set_type
   - repair_spec
   - is_artoo_spec
