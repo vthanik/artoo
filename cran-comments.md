@@ -37,26 +37,36 @@ sha256 of every vendored file.
 ## Test environments
 
 - Local: macOS 26.5.1 (aarch64-apple-darwin20), R 4.5.3 --
-  `R CMD check --as-cran` on the release tarball.
+  `R CMD check --as-cran` on the release tarball: 0 errors, 0 warnings,
+  1 note (local HTML Tidy predates the validator; not present on CRAN).
+- win-builder, R-release (R 4.6.1, x86_64-w64-mingw32): 1 note, below.
 - win-builder, R-devel (x86_64-w64-mingw32).
 - GitHub Actions: Ubuntu (R-devel, R-release, R-oldrel-1), macOS, and
   Windows (R-release).
 
-<!-- NOT YET SUBMITTABLE. Only the local check has been run for 0.2.0.
-     Run win-builder and let CI go green on the release commit, then
-     delete this comment. A cran-comments.md that claims a check nobody
-     ran is the one thing a reviewer can catch us out on for free. -->
+<!-- NOT YET SUBMITTABLE until the R-devel win-builder result and CI are
+     in. Delete this comment then, and only then. -->
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note.
 
-The note is environmental: "Skipping checking HTML validation" (the local
-HTML Tidy predates the validator). It does not appear on CRAN's build
-machines.
+On win-builder the note is:
 
-A misspelled-words NOTE, if it appears, names domain vocabulary (CDISC,
-ADaM, SDTM, ODM) that is spelled correctly.
+    Possibly misspelled words in DESCRIPTION:
+      stylesheet (24:28)
+
+"stylesheet" is spelled correctly and is the term the standards use: the
+document artoo renders through is named by an `<?xml-stylesheet?>`
+processing instruction and its root element is `xsl:stylesheet`. Any other
+misspelled-words note names domain vocabulary in the same position (CDISC,
+ADaM, SDTM, ODM).
+
+The note seen locally is different and environmental: "Skipping checking
+HTML validation", because this machine's HTML Tidy predates the validator.
+It does not appear on CRAN's build machines.
+
+Windows check time was 467s in total (tests 365s), well inside the limit.
 
 ## Reverse dependencies
 
