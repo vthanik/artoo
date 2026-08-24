@@ -824,3 +824,78 @@ test_that("value-level rows resolve to the WhereClauses sheet (#p10-review)", {
   # ...and the clause each row lands on is the one it started from.
   expect_identical(back@values$where_clause, spec@values$where_clause_id)
 })
+
+test_that("a where clause survives as one range check per row (#p11-review-M2)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # The slot is one row per CheckValue and the sheet is one row per
+  # RangeCheck. Projecting row for row makes `IN (A, ..., N)` read back as N
+  # ANDed one-value checks, which select nothing -- and it is invisible to a
+  # comparison of the mapped columns, because both shapes give the same rows
+  # with the same values. Only the two counters tell them apart.
+  spec <- read_define("define21-adam.xml")
+  book <- file.path(withr::local_tempdir(), "round.xlsx")
+  suppressWarnings(write_spec(spec, book))
+  back <- suppressWarnings(read_spec(book))
+  expect_identical(
+    back@where_clauses$check_order,
+    spec@where_clauses$check_order
+  )
+  expect_identical(
+    back@where_clauses$value_order,
+    spec@where_clauses$value_order
+  )
+  # The set comparator that motivated it: one check, fourteen values.
+  wide <- spec@where_clauses[
+    spec@where_clauses$where_clause_id == "WC.ADQSADAS.AVAL.ACITM01-ACITM14",
+  ]
+  skip_if(!nrow(wide), "fixture lost its multi-value clause")
+  expect_gt(nrow(wide), 1L)
+  expect_identical(length(unique(wide$check_order)), 1L)
+  back_wide <- back@where_clauses[
+    back@where_clauses$where_clause_id == "WC.ADQSADAS.AVAL.ACITM01-ACITM14",
+  ]
+  expect_identical(nrow(back_wide), nrow(wide))
+  expect_identical(length(unique(back_wide$check_order)), 1L)
+  expect_setequal(back_wide$value, wide$value)
+})
+
+test_that("a clause with ten range checks keeps its order (#p11-review-B)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # The sheet's row order is the only record of check_order, and a composite
+  # string key sorts "10" before "2".
+  n <- 12L
+  spec <- artoo_spec(
+    data.frame(dataset = "VS", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "VS",
+      variable = c("VSORRES", paste0("Q", seq_len(n))),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      where_clause_id = "WC.WIDE",
+      data_type = "text",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.WIDE",
+      check_order = seq_len(n),
+      dataset = "VS",
+      variable = paste0("Q", seq_len(n)),
+      comparator = "EQ",
+      value = paste0("V", seq_len(n)),
+      value_order = 1L,
+      stringsAsFactors = FALSE
+    )
+  )
+  book <- file.path(withr::local_tempdir(), "wide.xlsx")
+  suppressWarnings(write_spec(spec, book))
+  back <- suppressWarnings(read_spec(book))
+  expect_identical(back@where_clauses$variable, paste0("Q", seq_len(n)))
+  expect_identical(back@where_clauses$check_order, seq_len(n))
+})

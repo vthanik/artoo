@@ -9,8 +9,12 @@
 #
 # Honest contract: native JSON is the lossless format; P21 xlsx is the
 # interchange format. Spec fields with no P21 column (itemoid,
-# target_data_type, per-variable key_sequence, codelist `extended`) are
-# not emitted and do not survive an xlsx round-trip. The data_type column is
+# target_data_type, per-variable key_sequence, codelist `extended`) are not
+# emitted and do not survive an xlsx round-trip -- except on the ValueLevel
+# sheet, whose canonical columns ARE its mapped ones, so everything else it
+# carries rides out as a foreign column under its own snake_case name.
+# .p21_warn_dropped() names the losses for the spec in hand rather than
+# leaving this paragraph to be read as the whole story. The data_type column is
 # re-encoded into the Define-XML / ODM vocabulary (.to_define_datatype): a
 # character variable becomes "text" (ODM has no "string"), and decimal/double
 # collapse to "float", boolean/URI to "text" -- a non-injective map, so those
@@ -273,7 +277,15 @@
       paste0("(", paste(quoted, collapse = ", "), ")")
     }
   }
-  ordered <- order(key, suppressWarnings(as.integer(wc$value_order)))
+  # Ordered NUMERICALLY on both counters, not by the composite string key:
+  # a clause with ten or more range checks sorts "10" before "2" as text, and
+  # the sheet's row order is the only place the reader can recover
+  # check_order from.
+  ordered <- order(
+    wc$where_clause_id,
+    suppressWarnings(as.integer(wc$check_order)),
+    suppressWarnings(as.integer(wc$value_order))
+  )
   wc <- wc[ordered, , drop = FALSE]
   key <- key[ordered]
   first <- !duplicated(key)
@@ -314,15 +326,36 @@
 #' @noRd
 .p21_structural <- c("check_order", "value_order")
 
-# Columns with no header of their own that the workbook nonetheless carries,
-# so nothing is lost: a variable's key_sequence is rebuilt from the Datasets
-# sheet's Key Variables, and a range check's soft_hard is only lost when it
-# is not the "Soft" the reader assumes for a workbook clause. Each entry is a
-# predicate on the column, TRUE when this spec's values do survive.
+# Columns with no header of their own that the workbook can nonetheless
+# rebuild, so nothing is lost. Each entry is a predicate on (slot, spec),
+# TRUE only when THIS spec's values really do survive -- a blanket "always
+# recovered" would put a silent truncation inside the very mechanism built
+# to prevent one.
+#
+# `key_sequence` is rebuilt by .derive_key_sequence() from the Datasets
+# sheet's Key Variables, which recovers it only when that string agrees with
+# the column: with no keys string the column is lost outright, and with a
+# keys string in a different order the read-back is silently RE-SORTED, which
+# changes the define's sort keys downstream. So the predicate runs the
+# rebuild and compares.
+#
+# `soft_hard` survives only while every value is the "Soft" the reader
+# assumes for a workbook clause.
 #' @noRd
 .p21_recovered <- list(
-  variables = list(key_sequence = function(x) TRUE),
-  where_clauses = list(soft_hard = function(x) all(is.na(x) | x == "Soft"))
+  variables = list(
+    key_sequence = function(df, spec) {
+      blank <- df
+      blank$key_sequence <- NA_integer_
+      rebuilt <- .derive_key_sequence(spec@datasets, blank)
+      identical(rebuilt$key_sequence, df$key_sequence)
+    }
+  ),
+  where_clauses = list(
+    soft_hard = function(df, spec) {
+      all(is.na(df$soft_hard) | df$soft_hard == "Soft")
+    }
+  )
 )
 
 # Name what a Pinnacle 21 workbook cannot carry: the one slot with no sheet
@@ -349,7 +382,7 @@
     recovered <- .p21_recovered[[nm]]
     keep <- vapply(
       held,
-      function(cl) is.null(recovered[[cl]]) || !recovered[[cl]](df[[cl]]),
+      function(cl) is.null(recovered[[cl]]) || !recovered[[cl]](df, spec),
       logical(1)
     )
     held[keep]

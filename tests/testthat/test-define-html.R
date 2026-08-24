@@ -326,10 +326,13 @@ test_that("a malformed document is a render error, not partial HTML (#p10-review
   skip_if_not_installed("xml2")
   skip_if_not_installed("xslt")
   skip_if_not_installed("callr")
-  # The renderer asks libxml2 for no options at all. Every option that would
-  # keep the whitespace the stylesheets need also suppresses parse errors,
-  # and a define truncated in transit rendering as plausible partial HTML is
-  # worse than one that will not render.
+  # What this pins: a document that will not parse is a codec error and
+  # leaves no half-written HTML behind. It is NOT a probe of the options
+  # change -- measured on xml2 1.6.0, `RECOVER` + `NOERROR` also throws on a
+  # truncated document and on a tag mismatch, so the renderer asking for no
+  # options at all is a no-op for malformed input on this stack. The change
+  # stands on not asking libxml2 for error suppression we do not want, and
+  # this test would have been green before it.
   dir <- withr::local_tempdir()
   path <- file.path(dir, "define.xml")
   suppressWarnings(
@@ -347,4 +350,28 @@ test_that("a malformed document is a render error, not partial HTML (#p10-review
     class = "artoo_error_codec"
   )
   expect_false(file.exists(file.path(dir, "define.html")))
+})
+
+test_that("a PI naming an absent stylesheet is not rendered in silence (#p11-review)", {
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("xslt")
+  skip_if_not_installed("callr")
+  # `stylesheet = "acme.xsl"` names a file the sponsor supplies. Before they
+  # do, artoo can only render through the bundled sheet -- which is the same
+  # browser-and-artoo divergence the href lookup exists to prevent, reached
+  # from the other side, so it says so.
+  dir <- withr::local_tempdir()
+  expect_warning(
+    suppressMessages(
+      write_spec(
+        read_define("define21-sdtm.xml"),
+        file.path(dir, "define.xml"),
+        created = FROZEN_HTML,
+        stylesheet = "acme.xsl",
+        html = TRUE
+      )
+    ),
+    class = "artoo_warning_define"
+  )
+  expect_true(file.exists(file.path(dir, "define.html")))
 })

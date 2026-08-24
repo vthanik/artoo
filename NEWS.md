@@ -1,5 +1,10 @@
 # artoo 0.1.3.9000
 
+* The bundled `sdtm-spec.xlsx` and `adam-spec.xlsx` are rebuilt. They were
+  written before the where-clause fix below, so reading the package's own
+  example workbook warned that 23 value-level rows named a clause it did not
+  define.
+
 * `write_spec()` on a Pinnacle 21 workbook now names the individual columns
   a workbook cannot carry, not just the one slot it has no sheet for. The
   sheets added for Define-XML closed the slot-level gaps and opened

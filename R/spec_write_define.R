@@ -680,6 +680,22 @@
   sheet <- if (file.exists(beside)) {
     beside
   } else {
+    # Falling back to the bundled sheet is the only thing left to do, but it
+    # is silently the divergence this function exists to prevent: the
+    # document names a stylesheet a browser will not find, and artoo renders
+    # through a different one. `stylesheet = TRUE` cannot reach here (a copy
+    # is placed beside the output); a sponsor sheet not yet delivered can.
+    if (!is.null(href)) {
+      .artoo_warn(
+        c(
+          "The document names a stylesheet that is not beside it.",
+          "x" = "No {.file {href}} in {.path {dirname(path)}}.",
+          "i" = "This HTML is rendered through the bundled Define-XML {p$version} stylesheet; a browser opening the document will find nothing."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
     .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
   }
   if (!nzchar(sheet)) {
