@@ -289,8 +289,9 @@ selection is:
 - newer shape: `Selection Criteria`, one bracket group per analysis
   dataset — `ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]`, and `ADSL[]` for every
   record;
-- older shape: an `Analysis Criteria` sheet, one row per analysis dataset
-  with its own `Variables` and `Where Clause`.
+- older shape: an `Analysis Criteria` sheet, one row per analysis dataset,
+  keyed by `Display` and `Result`, with its own `Variables` and
+  `Where Clause` — the same condition grammar as ValueLevel.
 
 `Variables` names the analysis variables, qualified by dataset when the
 result spans more than one: `ADAE.AEBODSYS, ADAE.AEDECOD`. `Documentation
