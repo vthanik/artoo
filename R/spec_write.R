@@ -87,8 +87,15 @@
 #' CDISC standard. A dataset with neither a structure nor keys aborts with
 #' `artoo_error_define` rather than being given an invented one.
 #'
-#' Define-XML 2.0 output, Analysis Results Metadata, and external
-#' dictionaries (`MedDRA`, ISO 3166) are not written yet.
+#' **HTML.** A define.xml renders through an XSLT stylesheet, and the written
+#' document names one in a processing instruction and gets a copy of it
+#' alongside (a reference to a stylesheet that is not there is itself a
+#' conformance finding). An existing stylesheet beside the output is never
+#' overwritten, so a customised rendering survives. Pass `html = TRUE` to also
+#' materialise the rendered HTML: browsers are removing XSLT support, and a
+#' reviewer working from a submission archive should not need one.
+#'
+#' External dictionaries (`MedDRA`, ISO 3166) are not written yet.
 #'
 #' Fields with no P21 column (`itemoid`, `target_data_type`,
 #' per-variable `key_sequence`) likewise do not survive an xlsx round-trip;
@@ -117,6 +124,9 @@
 #'     writes the `xml-stylesheet` processing instruction and copies the
 #'     bundled CDISC stylesheet beside the output; a string names a
 #'     stylesheet without copying one; `FALSE` writes neither.
+#'   * `html` -- `<logical(1)> | <character(1)>: default FALSE`. `TRUE` also
+#'     renders the document through its stylesheet into a sibling `.html`; a
+#'     string renders it to that path. Needs the `xslt` and `callr` packages.
 #'   * `validate` -- `<logical(1)>: default TRUE`. Schema-validate before the
 #'     file is put in place.
 #'

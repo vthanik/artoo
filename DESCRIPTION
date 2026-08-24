@@ -40,6 +40,7 @@ Imports:
     S7,
     utf8
 Suggests:
+    callr,
     digest,
     quarto,
     readxl,
@@ -47,7 +48,8 @@ Suggests:
     tibble,
     withr,
     writexl,
-    xml2
+    xml2,
+    xslt
 VignetteBuilder: quarto
 Config/testthat/edition: 3
 LazyData: true

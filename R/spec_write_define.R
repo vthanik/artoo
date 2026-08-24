@@ -22,10 +22,17 @@
   version = NULL,
   created = NULL,
   stylesheet = TRUE,
+  html = FALSE,
   validate = TRUE,
   call = rlang::caller_env()
 ) {
   rlang::check_installed("xml2", reason = "to write Define-XML specs.")
+  if (!isFALSE(html)) {
+    rlang::check_installed(
+      c("xslt", "callr"),
+      reason = "to render a define.xml as HTML."
+    )
+  }
   target <- .dx_target_version(version, spec, call)
   p <- .define_profile(target, call)
 
@@ -54,6 +61,9 @@
 
   if (isTRUE(stylesheet)) {
     .dx_copy_stylesheet(path, p, call)
+  }
+  if (!isFALSE(html)) {
+    .dx_render_html(path, html, p, call)
   }
   invisible(path)
 }
@@ -571,8 +581,14 @@
 #' @noRd
 .dx_copy_stylesheet <- function(path, p, call = rlang::caller_env()) {
   src <- .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
-  ok <- nzchar(src) &&
-    file.copy(src, file.path(dirname(path), p$stylesheet), overwrite = TRUE)
+  target <- file.path(dirname(path), p$stylesheet)
+  # NEVER clobber a stylesheet already sitting beside the output. A sponsor
+  # who has customised the rendering keeps it, and the copy exists only so
+  # the processing instruction resolves to something.
+  if (file.exists(target)) {
+    return(invisible(TRUE))
+  }
+  ok <- nzchar(src) && file.copy(src, target)
   if (!ok) {
     # The document already names the stylesheet in its processing
     # instruction, and a PI naming an absent file is itself a conformance
@@ -589,6 +605,85 @@
     )
   }
   invisible(ok)
+}
+
+# ---- HTML ----------------------------------------------------------------
+
+# Render the document through its stylesheet, into a real HTML file.
+#
+# The processing instruction is not enough on its own. Chrome removes XSLT
+# support in Chrome 158 (2026-11-17), so a define.xml that renders only by
+# being opened in a browser stops rendering; and a reviewer working from a
+# submission archive should not need a browser at all. The PI still ships,
+# because the CDISC specification calls for it and conformance tooling checks
+# the file it names exists.
+#
+# `html` is TRUE for a sibling .html, or a path to write it to.
+#' @noRd
+.dx_render_html <- function(path, html, p, call = rlang::caller_env()) {
+  rlang::check_installed(
+    c("xslt", "callr"),
+    reason = "to render a define.xml as HTML."
+  )
+  sheet <- .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
+  if (!nzchar(sheet)) {
+    stylesheet <- p$stylesheet
+    .artoo_abort(
+      c(
+        "The Define-XML {p$version} stylesheet is missing from the artoo install.",
+        "x" = "Expected {.file {stylesheet}}.",
+        "i" = "Reinstall artoo; the stylesheets ship with the package."
+      ),
+      kind = "install",
+      call = call
+    )
+  }
+  target <- if (isTRUE(html)) {
+    paste0(tools::file_path_sans_ext(path), ".html")
+  } else {
+    html
+  }
+  .check_path(target, call = call)
+  # IN A SEPARATE PROCESS, and this is not caution for its own sake.
+  #
+  # libxslt and libxml2's XSD validator share global state, and driving both
+  # in one session corrupts it: after the schema gate has validated a
+  # document, rendering through a stylesheet leaves reading ANY XML liable to
+  # segfault. Measured at nine runs in ten over the four bundled examples,
+  # and never once when the render has a process to itself. A crashed R
+  # session is a worse failure than a missing HTML file, so the render is
+  # exiled and whatever it damages dies with it.
+  rendered <- tryCatch(
+    callr::r(
+      function(source_path, sheet_path) {
+        as.character(
+          xslt::xml_xslt(
+            xml2::read_xml(source_path),
+            xml2::read_xml(sheet_path)
+          )
+        )
+      },
+      args = list(source_path = path, sheet_path = sheet)
+    ),
+    error = function(e) {
+      msg <- .safe_msg(e)
+      .artoo_abort(
+        c(
+          "The stylesheet could not render {.path {path}}.",
+          "x" = "{msg}"
+        ),
+        kind = "codec",
+        call = call
+      )
+    }
+  )
+  .with_atomic_write(
+    target,
+    ".html",
+    function(tmp) writeLines(enc2utf8(rendered), tmp, useBytes = TRUE),
+    call = call
+  )
+  invisible(target)
 }
 
 # ---- validation gate ------------------------------------------------------

@@ -27,6 +27,9 @@ for a reproducible submission build; the default is the current time.
 writes the \code{xml-stylesheet} processing instruction and copies the
 bundled CDISC stylesheet beside the output; a string names a
 stylesheet without copying one; \code{FALSE} writes neither.
+\item \code{html} -- \verb{<logical(1)> | <character(1)>: default FALSE}. \code{TRUE} also
+renders the document through its stylesheet into a sibling \code{.html}; a
+string renders it to that path. Needs the \code{xslt} and \code{callr} packages.
 \item \code{validate} -- \verb{<logical(1)>: default TRUE}. Schema-validate before the
 file is put in place.
 }}
@@ -89,8 +92,15 @@ schema-required attributes are derived rather than demanded:
 CDISC standard. A dataset with neither a structure nor keys aborts with
 \code{artoo_error_define} rather than being given an invented one.
 
-Define-XML 2.0 output, Analysis Results Metadata, and external
-dictionaries (\code{MedDRA}, ISO 3166) are not written yet.
+\strong{HTML.} A define.xml renders through an XSLT stylesheet, and the written
+document names one in a processing instruction and gets a copy of it
+alongside (a reference to a stylesheet that is not there is itself a
+conformance finding). An existing stylesheet beside the output is never
+overwritten, so a customised rendering survives. Pass \code{html = TRUE} to also
+materialise the rendered HTML: browsers are removing XSLT support, and a
+reviewer working from a submission archive should not need one.
+
+External dictionaries (\code{MedDRA}, ISO 3166) are not written yet.
 
 Fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;

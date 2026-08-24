@@ -10,6 +10,16 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `write_spec()` gains `html`, which renders the define.xml through its own
+  CDISC stylesheet into real HTML. Browsers are dropping XSLT support, so a
+  document that renders only by being opened in one is on its way to being
+  unreadable. Needs the `xslt` and `callr` packages; the transform runs in a
+  separate process because libxslt and libxml2's schema validator corrupt each
+  other's state in one session.
+
+* `write_spec()` no longer overwrites a stylesheet already sitting beside the
+  output, so a customised rendering survives a rewrite.
+
 * `write_spec()` warns when the define.xml it wrote is valid but not
   submission-grade, naming every column nothing fills. None of them is required
   by the schema, and every one draws a conformance finding, so a spec that is
