@@ -140,7 +140,8 @@ identical(read_json(p)$TRTSDT, adsl$TRTSDT)
 
 ## Where to next
 
-- [Specifications](specs.html) &mdash; the spec each recipe starts from.
+- [Specifications](specs.html) &mdash; the spec each recipe starts from, and
+  the define.xml it writes.
 - [Conform & validate](conform.html) &mdash; `apply_spec()` and the findings
   in depth.
 - [Formats & lossless conversion](convert.html) &mdash; the round trips these

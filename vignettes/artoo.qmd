@@ -170,6 +170,15 @@ and `lint_define()` for the reference integrity a schema cannot see:
 validate_define(define)
 ```
 
+```{r}
+lint_define(define)
+```
+
+Two orphans, no dangling references. An orphan is something defined that
+nothing points at &mdash; here a leaf and a CDISC standard the pilot spec's
+other datasets used &mdash; and the document is valid with them. A dangling
+reference, one pointing at nothing, is the error case.
+
 Pass `data =` and the datasets inform the document: a blank length is filled
 from the real maximum byte width, and value-level metadata is derived for
 the standard findings shapes. Pass `html = TRUE` and the document is also
@@ -211,4 +220,3 @@ archived is what you analysed.
 - [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) &mdash;
   end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist decoding,
   each rendered live on the demo data.
-```

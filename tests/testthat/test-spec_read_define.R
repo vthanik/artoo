@@ -216,3 +216,41 @@ test_that("a MetaDataVersion without ItemGroupDefs aborts", {
   writeLines(.mini_define(""), p)
   expect_error(read_spec(p), class = "artoo_error_spec")
 })
+
+test_that("scoping drops the metadata it orphans, not the author's (#p12-review-4)", {
+  skip_if_not_installed("xml2")
+  # Scoping removes the referrers, so a codelist left behind is not the
+  # author's orphan but one artoo just made: a spec narrowed to two ADaM
+  # datasets wrote a define.xml its own linter flagged thirty-two times.
+  full <- suppressWarnings(read_spec(test_path(
+    "fixtures",
+    "define21-adam.xml"
+  )))
+  scoped <- suppressWarnings(read_spec(
+    test_path("fixtures", "define21-adam.xml"),
+    datasets = c("ADSL", "ADAE")
+  ))
+  expect_lt(
+    length(unique(scoped@codelists$codelist_id)),
+    length(unique(full@codelists$codelist_id))
+  )
+  expect_lt(nrow(scoped@methods), nrow(full@methods))
+  # Nothing that survived is now dangling, which is the failure mode every
+  # hand-written list of reference columns produced.
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(scoped, path, created = "2020-01-01 00:00:00")
+  ))
+  findings <- lint_define(path)@findings
+  expect_false(any(grepl("^define_dangling", findings$check)))
+  # An UNSCOPED read is left exactly as the author wrote it.
+  expect_identical(
+    nrow(full@codelists),
+    nrow(
+      suppressWarnings(read_spec(test_path(
+        "fixtures",
+        "define21-adam.xml"
+      )))@codelists
+    )
+  )
+})

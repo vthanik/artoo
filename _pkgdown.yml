@@ -49,12 +49,15 @@ home:
   description: >
     Read and write clinical-trial datasets losslessly across SAS XPORT,
     CDISC Dataset-JSON, Apache Parquet, and RDS through one canonical
-    metadata model. Pure R and lightweight.
+    metadata model, and author the submission's Define-XML from the same
+    spec. Pure R and lightweight.
   links:
   - text: artoo on CRAN
     href: https://CRAN.R-project.org/package=artoo
   - text: CDISC Dataset-JSON v1.1
     href: https://cdisc-org.github.io/DataExchange-DatasetJson/
+  - text: CDISC Define-XML
+    href: https://www.cdisc.org/standards/data-exchange/define-xml
   - text: FDA Study Data Technical Conformance Guide
     href: https://www.fda.gov/media/153632/download
   - text: PHUSE Test Data Factory (demo data)
@@ -65,9 +68,10 @@ reference:
   desc: >
     Build a artoo_spec — the canonical CDISC-shaped description of your
     datasets, one CDISC standard each — or read one from native JSON, a
-    Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
-    R when the data disagrees, then read any slot back with the spec_*
-    accessors.
+    Pinnacle 21 workbook, or Define-XML, and write it back out as any of
+    the three: a .xml path writes a schema-validated Define-XML 2.1 or 2.0.
+    Amend it in R when the data disagrees, then read any slot back with the
+    spec_* accessors.
   contents:
   - artoo_spec
   - read_spec
@@ -92,8 +96,9 @@ reference:
     decode single variables through its codelists, and read or replace the
     artoo_meta the result carries. Then surface every conformance finding
     for one dataset or a whole study, plus the spec's own integrity, with
-    the control object that scopes both. Schema-validate a Define-XML
-    document offline against the bundled CDISC schemas.
+    the control object that scopes both. Schema-validate any vendor's
+    Define-XML offline against the bundled CDISC schemas, and lint the OID
+    reference graph the schema is blind to.
   contents:
   - apply_spec
   - decode_column

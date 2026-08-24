@@ -882,7 +882,20 @@
       values = values,
       where_clauses = where_clauses,
       arm_displays = arm$displays,
-      arm_results = arm$results
+      arm_results = arm$results,
+      # Shared metadata rides along so scoping can drop what it orphans: a
+      # spec narrowed to two datasets kept the codelists, methods and
+      # comments of the ones it dropped, and writing it produced a
+      # define.xml artoo's own linter flagged thirty-two times.
+      codelists = codelists,
+      methods = methods,
+      comments = comments,
+      # Not scoped themselves, but they hold references: a comment cited by
+      # a def:Standard is not an orphan, and pruning it left a dangling
+      # reference, which is worse than the orphan it removed.
+      standards = standards,
+      documents = documents,
+      method_expressions = method_expressions
     ),
     scope_datasets,
     call
@@ -897,15 +910,15 @@
   artoo_spec(
     datasets = scoped$datasets,
     variables = variables,
-    codelists = codelists,
+    codelists = scoped$codelists,
     study = study,
     values = scoped$values,
-    methods = methods,
-    comments = comments,
-    documents = documents,
-    standards = standards,
+    methods = scoped$methods,
+    comments = scoped$comments,
+    documents = scoped$documents,
+    standards = scoped$standards,
     where_clauses = scoped$where_clauses,
-    method_expressions = method_expressions,
+    method_expressions = scoped$method_expressions,
     arm_displays = scoped$arm_displays,
     arm_results = scoped$arm_results
   )

@@ -461,6 +461,97 @@ read_spec <- function(
       ]
     }
   }
+  .spec_scope_referenced(tables)
+}
+
+# Drop the shared metadata nothing in scope still points at.
+#
+# Scoping removes the referrers, so what is left is not the author's orphan
+# but one artoo just made: writing a spec scoped to two ADaM datasets
+# produced a define.xml its own linter flagged thirty-two times, for
+# codelists, methods and comments belonging to datasets the spec no longer
+# contains. An orphan in an UNSCOPED spec is left exactly where it is --
+# that one is the author's, and artoo does not edit a spec it was not asked
+# to narrow.
+#
+# References are found by column SUFFIX, not by an enumerated list of column
+# names. One comment is reachable through eight columns across seven slots
+# (`comment_id`, and `datasets_comment_id` on an analysis result), and every
+# hand-written list of them was missing one -- each omission turning an
+# orphan this pass removed into a dangling reference, which is worse.
+#' @noRd
+.spec_scope_referenced <- function(tables) {
+  # Columns holding a reference of this kind: the bare id, or any column
+  # ending in it. `except` is the slot that DEFINES the id, whose own column
+  # is the definition -- counting it made every orphan look referenced by
+  # itself.
+  refs <- function(pattern, except) {
+    out <- unlist(
+      lapply(names(tables), function(nm) {
+        df <- tables[[nm]]
+        if (identical(nm, except) || !is.data.frame(df) || !nrow(df)) {
+          return(NULL)
+        }
+        cols <- grep(pattern, names(df), value = TRUE)
+        unlist(lapply(cols, function(cl) as.character(df[[cl]])))
+      }),
+      use.names = FALSE
+    )
+    unique(out[!is.na(out)])
+  }
+  prune <- function(slot, id, keep) {
+    df <- tables[[slot]]
+    if (!is.data.frame(df) || !nrow(df) || !(id %in% names(df))) {
+      return(df)
+    }
+    df[as.character(df[[id]]) %in% keep, , drop = FALSE]
+  }
+  # A codelist row is one TERM, so the whole list goes or none of it does.
+  tables$codelists <- prune(
+    "codelists",
+    "codelist_id",
+    refs("(^|_)codelist_id$", "codelists")
+  )
+  tables$methods <- prune(
+    "methods",
+    "method_id",
+    refs("(^|_)method_id$", "methods")
+  )
+  # A method's formal expressions go with the method they belong to.
+  tables$method_expressions <- prune(
+    "method_expressions",
+    "method_id",
+    as.character(tables$methods$method_id)
+  )
+  # Comments after codelists and methods: a comment may hang off one of
+  # those, so its referrers are counted once they are gone.
+  tables$comments <- prune(
+    "comments",
+    "comment_id",
+    refs("(^|_)comment_id$", "comments")
+  )
+  # A document is pruned only when nothing points at it AND it sits in no
+  # container: the annotated CRF and the supplemental documents are
+  # referenced by their container rather than by an id, so an id-only test
+  # would delete the two leaves every submission has. `archive_location_id`
+  # is a leaf reference under another name.
+  docs <- tables$documents
+  if (is.data.frame(docs) && nrow(docs) && "document_id" %in% names(docs)) {
+    held <- c(
+      refs("(^|_)document_id$", "documents"),
+      refs("(^|_)archive_location_id$", "documents")
+    )
+    contained <- if ("role" %in% names(docs)) {
+      !is.na(docs$role) & docs$role != "other"
+    } else {
+      rep(FALSE, nrow(docs))
+    }
+    tables$documents <- docs[
+      contained | as.character(docs$document_id) %in% held,
+      ,
+      drop = FALSE
+    ]
+  }
   tables
 }
 

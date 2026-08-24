@@ -1,4 +1,30 @@
-# artoo 0.1.3.9000
+# artoo 0.2.0.9000
+
+* `define_lint()` is now `lint_define()`, matching the verb-first grammar of
+  every other export. The function is new in this development version and has
+  never been released, so nothing that ran before breaks.
+
+* `read_spec()` with `datasets =` no longer keeps the codelists, methods,
+  comments and documents belonging to the datasets it dropped. Scoping
+  removes the referrers, so what was left over was an orphan artoo had just
+  created: a spec narrowed to two ADaM datasets wrote a define.xml its own
+  linter flagged 32 times. An orphan in an unscoped spec is left exactly
+  where the author put it.
+
+* `read_spec()` on a define.xml is about four times faster and no longer
+  grows super-linearly. Every XPath matches by `local-name()`, but `xml2`
+  rebuilt a namespace prefix table from the whole document on each one.
+
+* `read_spec()` on a define.xml reads a value-level `ItemRef/@Role`, and
+  reports the codelist aliases, `CodeList` descriptions and declared
+  languages it has no column for, rather than dropping them in silence.
+
+* `write_spec()` to `.xml` no longer aborts when `data =` covers only some
+  of the datasets sharing an `ItemDef` OID; the widest measurement applies
+  to the whole group.
+
+* `write_spec()` to `.xml` no longer reports an ADaM spec as missing
+  `datasets$domain`, which is an SDTM concept ADaM leaves blank.
 
 * The bundled `sdtm-spec.xlsx` and `adam-spec.xlsx` are rebuilt. They were
   written before the where-clause fix below, so reading the package's own

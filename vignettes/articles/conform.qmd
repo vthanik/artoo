@@ -164,7 +164,7 @@ duplicates a definition.)
 ## Where to next
 
 - [Specifications](specs.html) &mdash; build, inspect, and repair the spec
-  this verb consumes.
+  this verb consumes, and write it out as the submission's define.xml.
 - [Formats & lossless conversion](convert.html) &mdash; write the conformed
   frame to any format, and the qualification evidence behind "lossless".
 - [Recipes](recipes.html) &mdash; conform inside an end-to-end ADaM and SDTM

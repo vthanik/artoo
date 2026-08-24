@@ -124,6 +124,12 @@ validate_define(define)
 lint_define(define)
 ```
 
+The two orphan warnings are honest: the bundled pilot spec is scoped to
+ADSL and ADAE, and it still names a leaf and a CDISC standard that only the
+datasets outside that scope used. An orphan is a warning rather than an
+error because a define.xml with one is valid and loads &mdash; a *dangling*
+reference is the error, and there are none.
+
 The write also says what the document is missing. None of these is required
 by the schema &mdash; the document validates without them &mdash; and every one
 draws a conformance finding, so the write names them rather than refusing:
