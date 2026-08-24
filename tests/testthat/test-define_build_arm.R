@@ -12,13 +12,29 @@ arm_spec <- function(displays = NULL, results = NULL) {
     standard = "ADaMIG 1.1",
     datasets = data.frame(
       dataset = c("ADSL", "ADQSADAS"),
+      label = c("Subject Level", "ADAS-Cog"),
+      class = c("SUBJECT LEVEL ANALYSIS DATASET", "BASIC DATA STRUCTURE"),
+      domain = c("ADSL", "ADQSADAS"),
+      purpose = "Analysis",
+      repeating = c(FALSE, TRUE),
+      archive_location_id = c("LF.adsl", "LF.adqsadas"),
       structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = c("LF.adsl", "LF.adqsadas"),
+      title = c("adsl.xpt", "adqsadas.xpt"),
+      href = c("adsl.xpt", "adqsadas.xpt"),
+      role = "archive",
       stringsAsFactors = FALSE
     ),
     variables = data.frame(
       dataset = c("ADSL", "ADSL", "ADQSADAS", "ADQSADAS"),
       variable = c("USUBJID", "TRT01P", "CHG", "PARAMCD"),
+      label = c("Subject", "Planned Treatment", "Change", "Parameter Code"),
       data_type = "string",
+      length = 20L,
+      origin = "Derived",
       stringsAsFactors = FALSE
     ),
     arm_displays = displays %||%
@@ -387,4 +403,137 @@ test_that("an unresolvable ItemGroup is kept verbatim, an absent one refused", {
     class = "artoo_error_define"
   )
   expect_snapshot(write_spec(none, out, created = FROZEN_ARM), error = TRUE)
+})
+
+# ---- phase 6 review ------------------------------------------------------
+
+test_that("a result naming no display is refused, not dropped (#p6-review-1)", {
+  skip_if_not_installed("xml2")
+  # The writer loops over displays, so a result whose display does not exist
+  # was simply never visited. The reader cannot produce that shape, so no
+  # round trip could see it -- but a workbook with a mistyped Displays sheet
+  # produces exactly it.
+  spec <- arm_spec(
+    results = data.frame(
+      display_id = c("RD.T1", "RD.TYPO"),
+      result_id = c("AR.T1.R1", "AR.T1.R2"),
+      description = "x",
+      reason = "DATA DRIVEN",
+      purpose = "EXPLORATORY OUTCOME MEASURE",
+      dataset = "ADSL",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN_ARM),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN_ARM), error = TRUE)
+})
+
+test_that("results with no displays at all are refused (#p6-review-1)", {
+  skip_if_not_installed("xml2")
+  spec <- arm_spec(
+    displays = data.frame(
+      display_id = character(0),
+      name = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN_ARM),
+    class = "artoo_error_define"
+  )
+})
+
+test_that("a result that describes itself two ways is refused (#p6-review-3)", {
+  skip_if_not_installed("xml2")
+  # The result-level columns repeat across a result's dataset rows. Taking
+  # the first non-blank would contradict the refusal to choose a reason at
+  # all when none is given.
+  spec <- arm_spec(
+    results = data.frame(
+      display_id = "RD.T1",
+      result_id = "AR.T1.R1",
+      description = "x",
+      reason = c("SPECIFIED IN SAP", "DATA DRIVEN"),
+      purpose = "PRIMARY OUTCOME MEASURE",
+      dataset = c("ADSL", "ADQSADAS"),
+      order = 1L,
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN_ARM),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN_ARM), error = TRUE)
+})
+
+test_that("one result under two displays is refused (#p6-review-7)", {
+  skip_if_not_installed("xml2")
+  # ODM requires OID uniqueness and libxml2 does not check it, so this would
+  # have shipped two arm:AnalysisResult elements with one OID.
+  spec <- arm_spec(
+    displays = data.frame(
+      display_id = c("RD.T1", "RD.T2"),
+      name = c("Table 1", "Table 2"),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    ),
+    results = data.frame(
+      display_id = c("RD.T1", "RD.T2"),
+      result_id = "AR.SHARED",
+      description = "x",
+      reason = "DATA DRIVEN",
+      purpose = "EXPLORATORY OUTCOME MEASURE",
+      dataset = "ADSL",
+      order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN_ARM),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN_ARM), error = TRUE)
+})
+
+test_that("an analysis variable in another dataset is not repointed (#p6-review-2)", {
+  skip_if_not_installed("xml2")
+  # An ItemOID reduced to a bare name is re-derived from the ANALYSIS
+  # dataset's namespace on write, so a cross-dataset reference silently
+  # became the sibling of the same name -- a different sponsor assertion,
+  # schema-valid and lint-clean.
+  src <- file.path(withr::local_tempdir(), "cross.xml")
+  base <- readLines(test_path("fixtures", "define21-adam.xml"), warn = FALSE)
+  hit <- grep('AnalysisVariable ItemOID="IT.ADQSADAS.CHG"', base, fixed = TRUE)
+  expect_gt(length(hit), 0L)
+  base[[hit[[1]]]] <- sub(
+    "IT.ADQSADAS.CHG",
+    "IT.ADSL.USUBJID",
+    base[[hit[[1]]]],
+    fixed = TRUE
+  )
+  writeLines(base, src)
+
+  spec <- read_define_path(src)
+  expect_true(any(grepl("IT.ADSL.USUBJID", spec@arm_results$variables)))
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN_ARM))
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(
+        xml2::read_xml(out),
+        "//*[local-name()='AnalysisVariable']"
+      ),
+      "ItemOID"
+    ),
+    "IT.ADSL.USUBJID"
+  )
+  expect_true(validate_define(out)@summary$valid)
 })

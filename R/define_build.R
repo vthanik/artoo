@@ -287,6 +287,22 @@
   }
   std <- spec@standards
   if (!nrow(std)) {
+    if (!is.na(spec@standard)) {
+      # The spec names a standard but not in a form def:Standard can carry,
+      # which is the shape every workbook-built spec has. Saying nothing here
+      # while the partly-filled path warns would make the quieter case the
+      # more misleading one.
+      version <- p$version
+      .artoo_warn(
+        c(
+          "The {.code def:Standards} block was not written.",
+          "x" = "The spec names {.val {spec@standard}} but carries no {.code standards} table.",
+          "i" = "Define-XML {version} needs a name, version, type and status for each standard."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
     return(NULL)
   }
   # def:Standard requires a Name from a CLOSED list, a Version, a Type and a
@@ -839,7 +855,14 @@
     "def:CommentDef",
     attrs = .dx_attrs(OID = cm$comment_id[[i]]),
     kids = list(
-      Description = .dx_desc(.dx_chr(cm, "description")[[i]]),
+      # Description is required on def:CommentDef. A workbook that carries a
+      # comment id with no text is an ordinary input, so this falls back to
+      # the id rather than emitting an element the schema refuses; the
+      # missing column is named up front by .dx_incomplete_notice().
+      Description = .dx_desc({
+        text <- .dx_chr(cm, "description")[[i]]
+        if (.dx_blank(text)) cm$comment_id[[i]] else text
+      }),
       `def:DocumentRef` = .dx_docref(
         .dx_chr(cm, "document_id")[[i]],
         .dx_chr(cm, "pages")[[i]],

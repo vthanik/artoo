@@ -24,9 +24,53 @@
 .dx_arm_displays <- function(spec, oids, p, call = rlang::caller_env()) {
   displays <- spec@arm_displays
   if (!nrow(displays)) {
+    if (nrow(spec@arm_results)) {
+      .artoo_abort(
+        c(
+          "The spec carries analysis results but no displays.",
+          "x" = "{nrow(spec@arm_results)} row{?s} in {.code arm_results}, none in {.code arm_displays}.",
+          "i" = "Every {.code arm:AnalysisResult} lives inside an {.code arm:ResultDisplay}."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
     return(NULL)
   }
   results <- spec@arm_results
+  # A result whose display does not exist would simply never be visited by
+  # the loop below. The reader cannot produce that shape, so no round trip
+  # can see it -- but a workbook with a mistyped or missing Displays sheet
+  # produces exactly it, and the rows would vanish without a word.
+  orphaned <- setdiff(
+    as.character(results$display_id),
+    as.character(displays$display_id)
+  )
+  if (length(orphaned)) {
+    .artoo_abort(
+      c(
+        "{length(orphaned)} analysis result{?s} name a display the spec does not define.",
+        "x" = "{.val {orphaned}}.",
+        "i" = "Add them to {.code arm_displays}, or correct {.code display_id}."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+  shared <- unique(results$result_id[duplicated(
+    unique(results[c("display_id", "result_id")])$result_id
+  )])
+  if (length(shared)) {
+    .artoo_abort(
+      c(
+        "{length(shared)} analysis result{?s} under more than one display.",
+        "x" = "{.val {shared}}.",
+        "i" = "An {.code arm:AnalysisResult} OID must be unique in the document; give each display its own result ids."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
   ord <- .dx_row_order(displays)
   .dx_node(
     "arm:AnalysisResultDisplays",
@@ -117,6 +161,11 @@
 #' @noRd
 .dx_arm_result <- function(rows, oids, p, call = rlang::caller_env()) {
   id <- rows$result_id[[1]]
+  # The result-level columns repeat across a result's dataset rows, the way
+  # the codelist slot repeats its list-level fields. .dx_one() takes the one
+  # non-blank value; two DIFFERENT values mean the spec says two things, and
+  # picking the first would contradict the refusal below to choose at all.
+  .dx_check_result_headers(rows, id, call)
   reason <- .dx_one(.dx_chr(rows, "reason"))
   purpose <- .dx_one(.dx_chr(rows, "purpose"))
   missing <- c(
@@ -164,6 +213,54 @@
       `arm:Documentation` = .dx_arm_documentation(rows, p, id, call),
       `arm:ProgrammingCode` = .dx_arm_code(rows, p, call)
     )
+  )
+}
+
+# The columns that describe the RESULT rather than one of its datasets.
+.dx_arm_result_headers <- c(
+  "description",
+  "parameter_id",
+  "reason",
+  "purpose",
+  "datasets_comment_id",
+  "documentation",
+  "documentation_document_id",
+  "documentation_pages",
+  "documentation_page_type",
+  "documentation_page_title",
+  "programming_context",
+  "programming_code",
+  "programming_document_id",
+  "programming_pages",
+  "programming_page_type",
+  "programming_page_title"
+)
+
+#' @noRd
+.dx_check_result_headers <- function(rows, id, call = rlang::caller_env()) {
+  if (nrow(rows) < 2L) {
+    return(invisible(NULL))
+  }
+  split <- vapply(
+    .dx_arm_result_headers,
+    function(column) {
+      values <- .dx_chr(rows, column)
+      length(unique(values[!.dx_blank(values)])) > 1L
+    },
+    logical(1)
+  )
+  if (!any(split)) {
+    return(invisible(NULL))
+  }
+  columns <- names(split)[split]
+  .artoo_abort(
+    c(
+      "Analysis result {.val {id}} describes itself two ways.",
+      "x" = "Its rows disagree on {.val {columns}}.",
+      "i" = "Those columns describe the result, so they repeat on each of its dataset rows and must agree."
+    ),
+    kind = "define",
+    call = call
   )
 }
 

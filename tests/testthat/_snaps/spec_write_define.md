@@ -3,6 +3,10 @@
     Code
       write_spec(spec, path, created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$structure", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", and "the CDISC standard".
+      i A conformance report will raise 11 findings; fill them in the source spec.
       Error:
       ! Dataset "DM" has no structure.
       x Define-XML requires `def:Structure` on every ItemGroupDef.
@@ -13,6 +17,10 @@
     Code
       write_spec(spec, path, created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", and "the CDISC standard".
+      i A conformance report will raise 10 findings; fill them in the source spec.
       Error:
       ! 1 value-level row qualifies a variable the spec does not carry.
       x "VS.VSORRES".
@@ -33,6 +41,10 @@
     Code
       write_spec(spec, path, created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", "codelists$nci_code", and "the CDISC standard".
+      i A conformance report will raise 11 findings; fill them in the source spec.
       Error:
       ! Codelist "CL.SEX" decodes some terms and not others.
       x 1 term carries no decode: "U".
@@ -74,6 +86,10 @@
     Code
       write_spec(spec, path, version = "2.0", created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", and "the CDISC standard".
+      i A conformance report will raise 10 findings; fill them in the source spec.
       Error in `.dx_metadata_version()`:
       ! Define-XML 2.0 needs a standard name and version.
       x The spec names no standard.
@@ -84,6 +100,10 @@
     Code
       write_spec(spec, path, version = "2.0", created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", and "variables$length".
+      i A conformance report will raise 9 findings; fill them in the source spec.
       Error in `.dx_metadata_version()`:
       ! Define-XML 2.0 needs a standard name and version.
       x `standard` is "SDTMIG", which names no version.
@@ -94,6 +114,10 @@
     Code
       spec <- write_spec(spec, path, version = "2.0", created = FROZEN)
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", and "variables$length".
+      i A conformance report will raise 9 findings; fill them in the source spec.
       Warning:
       Define-XML 2.0 cannot carry everything this spec holds.
       x Dropped or rewritten: "def:Origin/@Source" and "Collected origins, rewritten as CRF".

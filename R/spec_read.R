@@ -207,6 +207,12 @@
   "Pages" = "pages"
 )
 
+# NOTE: these header names are what the analysis-results sheets are commonly
+# spelled, not a transcription of a template artoo has been checked against.
+# A header that is not here rides along as a foreign column -- kept on the
+# spec and re-emitted to xlsx, but invisible to the Define-XML writer, which
+# reads canonical names. Verify against a real workbook before relying on the
+# analysis-results path.
 #' @noRd
 .p21_arm_result_map <- c(
   "Display" = "display_id",
@@ -216,6 +222,7 @@
   "Purpose" = "purpose",
   "Dataset" = "dataset",
   "Variables" = "variables",
+  "Parameter" = "parameter_id",
   "Where Clause" = "where_clause_id",
   "Join Comment" = "datasets_comment_id",
   "Documentation" = "documentation",
@@ -696,15 +703,29 @@ read_spec <- function(
       "standard_id"
     )
   )
+  # A P21 workbook MERGES the display cell across a display's results and the
+  # result id across a result's analysis-dataset rows, exactly as it merges
+  # the dataset cell on the Variables sheet. Without the same forward fill
+  # the continuation rows arrive with a blank key and .drop_blank_key()
+  # deletes them -- silently, and most of the ARM with them.
   arm_displays <- .nullify_empty(
     .drop_blank_key(
-      .normalise_p21_cols(ad_raw, .p21_arm_display_map),
+      .fill_down(
+        .normalise_p21_cols(ad_raw, .p21_arm_display_map),
+        "display_id"
+      ),
       "display_id"
     )
   )
   arm_results <- .nullify_empty(
     .drop_blank_key(
-      .normalise_p21_cols(ar_raw, .p21_arm_result_map),
+      .fill_down(
+        .fill_down(
+          .normalise_p21_cols(ar_raw, .p21_arm_result_map),
+          "display_id"
+        ),
+        "result_id"
+      ),
       "result_id"
     )
   )

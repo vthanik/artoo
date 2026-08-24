@@ -31,6 +31,7 @@ small_spec <- function() {
       structure = c("One record per subject", NA),
       keys = c("STUDYID USUBJID", "STUDYID USUBJID VSTESTCD VSSEQ"),
       domain = c("DM", "VS"),
+      purpose = "Tabulation",
       repeating = c(FALSE, TRUE),
       archive_location_id = c("LF.dm", NA),
       standard_id = c("STD.1", "STD.1"),
@@ -1003,8 +1004,9 @@ test_that("a downgrade says once what it cannot carry", {
     )
   )
   # ...and says nothing when there is nothing to say.
-  expect_no_warning(
-    write_spec(small_spec(), path, version = "2.1", created = FROZEN)
+  expect_no_condition(
+    write_spec(small_spec(), path, version = "2.1", created = FROZEN),
+    class = "artoo_warning_define"
   )
 })
 
@@ -1242,4 +1244,82 @@ test_that("a value-level row's origin source counts as a downgrade loss", {
   expect_snapshot(
     spec <- write_spec(spec, path, version = "2.0", created = FROZEN)
   )
+})
+
+test_that("an empty standards table says so on a 2.1 write (#p6-review-5)", {
+  skip_if_not_installed("xml2")
+  # The partly-filled path warned and the empty path did not, which made the
+  # quieter case the more misleading one: every workbook-built 2.1 define
+  # shipped with no def:Standards and no mention of it.
+  spec <- artoo_spec(
+    standard = "ADaMIG 1.1",
+    datasets = data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "ADSL",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    write_spec(spec, path, version = "2.1", created = FROZEN),
+    class = "artoo_warning_define"
+  )
+  expect_true(validate_define(path)@summary$valid)
+})
+
+test_that("a value-level page title counts as a downgrade loss (#p6-review-6)", {
+  skip_if_not_installed("xml2")
+  # The notice checked four tables for page_title and artoo carries it on
+  # seven, so a spec whose only Title sits on a value-level row or an
+  # analysis result was downgraded silently.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      origin = "Collected",
+      origin_document_id = "LF.acrf",
+      pages = "11",
+      page_type = "PhysicalRef",
+      page_title = "Vital Signs page",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.acrf",
+      title = "acrf.pdf",
+      href = "acrf.pdf",
+      role = "annotated_crf",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  lost <- NULL
+  withCallingHandlers(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    warning = function(w) {
+      if (inherits(w, "artoo_warning_define")) {
+        lost <<- conditionMessage(w)
+      }
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_match(lost, "def:PDFPageRef/@Title", fixed = TRUE)
 })

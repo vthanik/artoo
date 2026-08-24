@@ -4,16 +4,33 @@ p21 <- function() artoo:::.define_profile("2.1")
 
 vlm_spec <- function(values = NULL, where_clauses = NULL, variables = NULL) {
   artoo_spec(
+    standard = "SDTMIG 3.4",
     datasets = data.frame(
       dataset = "VS",
+      label = "Vital Signs",
+      class = "FINDINGS",
+      domain = "VS",
+      purpose = "Tabulation",
+      repeating = TRUE,
+      archive_location_id = "LF.vs",
       structure = "One record per subject per test",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.vs",
+      title = "vs.xpt",
+      href = "vs.xpt",
+      role = "archive",
       stringsAsFactors = FALSE
     ),
     variables = variables %||%
       data.frame(
         dataset = "VS",
         variable = c("VSTESTCD", "VSORRES"),
+        label = c("Test Short Name", "Result"),
         data_type = "string",
+        length = 20L,
+        origin = "Collected",
         stringsAsFactors = FALSE
       ),
     values = values,

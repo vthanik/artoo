@@ -319,14 +319,51 @@
   })
 }
 
+# The ItemDef OID of a variable named without its dataset. NA when nothing
+# defines it; an abort when more than one dataset does, because guessing
+# would silently change which rows a value-level definition applies to.
+#' @noRd
+.dx_resolve_by_name <- function(map, variable, id, call = rlang::caller_env()) {
+  if (.dx_blank(variable) || !length(map)) {
+    return(NA_character_)
+  }
+  hit <- which(sub("^[^\r]*\r", "", names(map)) == trimws(variable))
+  if (!length(hit)) {
+    return(NA_character_)
+  }
+  found <- unique(unname(map[hit]))
+  if (length(found) > 1L) {
+    owners <- sub("\r.*$", "", names(map)[hit])
+    .artoo_abort(
+      c(
+        "Where clause {.val {id}} names {.val {variable}} without a dataset.",
+        "x" = "{length(owners)} datasets define it: {.val {owners}}.",
+        "i" = "Set {.code dataset} on the where-clause row to say which."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+  found[[1]]
+}
+
 #' @noRd
 .dx_range_check <- function(rc, id, oids, p, call = rlang::caller_env()) {
   item <- .dx_one(.dx_chr(rc, "itemoid"))
   if (.dx_blank(item)) {
-    item <- .dx_get(
-      oids$variable,
-      .dx_key(.dx_one(.dx_chr(rc, "dataset")), .dx_one(.dx_chr(rc, "variable")))
-    )
+    dataset <- .dx_one(.dx_chr(rc, "dataset"))
+    variable <- .dx_one(.dx_chr(rc, "variable"))
+    item <- .dx_get(oids$variable, .dx_key(dataset, variable))
+    if (is.na(item)) {
+      # A where clause can qualify a variable in a DIFFERENT dataset -- the
+      # CDISC SDTM example conditions a VS value on DM.COUNTRY -- and the
+      # free-text parser stamps the value-level row's own dataset onto every
+      # condition, because at parse time there is no spec to check against.
+      # Resolve by name when exactly one dataset defines it; refuse when
+      # several do, rather than picking one and changing which rows the
+      # definition selects.
+      item <- .dx_resolve_by_name(oids$variable, variable, id, call)
+    }
   }
   if (.dx_blank(item)) {
     .artoo_abort(

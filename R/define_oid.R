@@ -168,7 +168,10 @@
     # pool refuses the document with a message about identifiers the user
     # never supplied.
     value_item <- .dx_fill(val$itemoid, minted)
-    supplied <- as.character(val$itemoid)
+    # Every OID the spec supplies anywhere, not just on the value-level
+    # rows: a VARIABLE itemoid shaped like "<parent>.1" occupies the same
+    # namespace a minted ordinal draws from.
+    supplied <- c(as.character(val$itemoid), as.character(var$itemoid))
     supplied <- supplied[!is.na(supplied) & nzchar(trimws(supplied))]
     for (k in unique(value_parent)) {
       hit <- which(value_parent == k)

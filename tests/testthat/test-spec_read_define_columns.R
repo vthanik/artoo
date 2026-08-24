@@ -172,16 +172,27 @@ test_that("a second def:DocumentRef is reported, not silent (#p5-review-4)", {
   # Verified against the bundled CDISC ADaM example, whose COM.ADQSADAS
   # points at both a program and the analysis data reviewer's guide. The
   # drop is symmetric with the writer, so no round-trip test can see it.
-  expect_warning(
-    read_spec(test_path("fixtures", "define21-adam.xml")),
-    "more than one .*DocumentRef"
-  )
-  # Every bundled example loses at least one.
-  for (f in c("define20-sdtm.xml", "define20-adam.xml", "define21-sdtm.xml")) {
+  for (f in c("define21-adam.xml", "define20-adam.xml")) {
     expect_warning(
       read_spec(test_path("fixtures", f)),
       "more than one .*DocumentRef",
       info = f
     )
+  }
+  # ...and def:AnnotatedCRF / def:SupplementalDoc are CONTAINERS of document
+  # references. artoo reads every one of them, so counting their children
+  # here fired on nearly every real submission with a claim that was false.
+  # Both SDTM examples carry a multi-reference def:SupplementalDoc and lose
+  # nothing, so neither may warn.
+  for (f in c("define20-sdtm.xml", "define21-sdtm.xml")) {
+    warned <- character(0)
+    withCallingHandlers(
+      read_spec(test_path("fixtures", f)),
+      warning = function(w) {
+        warned <<- c(warned, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    expect_false(any(grepl("more than one", warned)), info = f)
   }
 })

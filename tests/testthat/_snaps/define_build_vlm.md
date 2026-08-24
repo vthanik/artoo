@@ -3,6 +3,10 @@
     Code
       write_spec(spec, path, created = "2020-01-01 00:00:00")
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", and "the CDISC standard".
+      i A conformance report will raise 9 findings; fill them in the source spec.
       Error:
       ! 1 ItemDef OID is defined more than one way.
       x "IT.SHARED".
@@ -13,6 +17,10 @@
     Code
       write_spec(spec, path, created = "2020-01-01 00:00:00")
     Condition
+      Warning:
+      The `def:Standards` block was not written.
+      x The spec names "SDTMIG 3.4" but carries no `standards` table.
+      i Define-XML 2.1 needs a name, version, type and status for each standard.
       Error:
       ! Where clause "WC.1" names no variable.
       x `RangeCheck/@def:ItemOID` is required, and the clause carries neither `itemoid` nor a dataset and variable that resolve to one.
@@ -23,6 +31,10 @@
     Code
       write_spec(spec, path, created = "2020-01-01 00:00:00")
     Condition
+      Warning:
+      The `def:Standards` block was not written.
+      x The spec names "SDTMIG 3.4" but carries no `standards` table.
+      i Define-XML 2.1 needs a name, version, type and status for each standard.
       Error:
       ! Value-level row 1 ("VS"."VSORRES") names a where clause the spec does not define.
       x "VSTESTCD EQ (WEIGHT)".
@@ -33,6 +45,10 @@
     Code
       write_spec(spec, path, created = "2020-01-01 00:00:00")
     Condition
+      Warning:
+      The define.xml is valid but not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", and "the CDISC standard".
+      i A conformance report will raise 10 findings; fill them in the source spec.
       Error:
       ! 1 variable points at a value list the spec does not define.
       x "DM.SEX".

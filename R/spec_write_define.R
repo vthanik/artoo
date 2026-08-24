@@ -29,6 +29,7 @@
   target <- .dx_target_version(version, spec, call)
   p <- .define_profile(target, call)
 
+  .dx_incomplete_notice(spec, call)
   .dx_downgrade_notice(spec, p, call)
 
   doc <- .dx_document(spec, p, created, call)
@@ -55,6 +56,73 @@
     .dx_copy_stylesheet(path, p, call)
   }
   invisible(path)
+}
+
+# The columns a submission-grade define.xml is expected to carry, by slot.
+#
+# None of these is required by the SCHEMA -- a document without them validates
+# -- and every one of them is something a conformance report will raise. artoo
+# still writes the file: a spec is often incomplete on purpose partway through
+# a study, and refusing to write it would make the tool useless exactly when
+# it is most wanted. It says what is missing instead, once, before building.
+.dx_expected_columns <- list(
+  datasets = c(
+    "label",
+    "class",
+    "domain",
+    "purpose",
+    "repeating",
+    "structure",
+    "archive_location_id"
+  ),
+  variables = c("label", "origin", "length"),
+  codelists = c("name", "nci_code"),
+  methods = c("description"),
+  comments = c("description")
+)
+
+# Name every expected column the spec does not fill.
+#
+# "Does not fill" means absent OR entirely blank, because a workbook that
+# emits a header and no values is the ordinary shape of a partly written
+# spec, and a column of NAs is exactly as missing as no column.
+#' @noRd
+.dx_incomplete_notice <- function(spec, call = rlang::caller_env()) {
+  gaps <- character(0)
+  for (slot in names(.dx_expected_columns)) {
+    tbl <- S7::prop(spec, slot)
+    if (is.null(tbl) || !nrow(tbl)) {
+      next
+    }
+    for (column in .dx_expected_columns[[slot]]) {
+      empty <- if (!(column %in% names(tbl))) {
+        TRUE
+      } else if (is.logical(tbl[[column]])) {
+        all(is.na(tbl[[column]]))
+      } else {
+        all(.dx_blank(tbl[[column]]))
+      }
+      if (empty) {
+        gaps <- c(gaps, paste0(slot, "$", column))
+      }
+    }
+  }
+  if (is.na(spec@standard) && !nrow(spec@standards)) {
+    gaps <- c(gaps, "the CDISC standard")
+  }
+  if (!length(gaps)) {
+    return(invisible(character(0)))
+  }
+  .artoo_warn(
+    c(
+      "The define.xml is valid but not submission-grade.",
+      "x" = "Nothing fills {.val {gaps}}.",
+      "i" = "A conformance report will raise {length(gaps)} finding{?s}; fill them in the source spec."
+    ),
+    kind = "spec_incomplete",
+    call = call
+  )
+  invisible(gaps)
 }
 
 # Say once, before a single node exists, what a downgrade will not carry.
@@ -132,10 +200,19 @@
   }
   if (
     !("Title" %in% p$local_attrs[["def:PDFPageRef"]]) &&
-      (any_value(spec@arm_displays, "page_title") ||
-        any_value(spec@variables, "page_title") ||
-        any_value(spec@methods, "page_title") ||
-        any_value(spec@comments, "page_title"))
+      any(vapply(
+        list(
+          list(spec@arm_displays, "page_title"),
+          list(spec@variables, "page_title"),
+          list(spec@values, "page_title"),
+          list(spec@methods, "page_title"),
+          list(spec@comments, "page_title"),
+          list(spec@arm_results, "documentation_page_title"),
+          list(spec@arm_results, "programming_page_title")
+        ),
+        function(where) any_value(where[[1]], where[[2]]),
+        logical(1)
+      ))
   ) {
     lost <- c(lost, "def:PDFPageRef/@Title")
   }

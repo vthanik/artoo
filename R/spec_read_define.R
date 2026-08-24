@@ -72,9 +72,19 @@
 # a program and the analysis data reviewer's guide.
 #' @noRd
 .dx_warn_dropped <- function(mdv, local, label, path, call) {
+  # def:AnnotatedCRF and def:SupplementalDoc are CONTAINERS of document
+  # references and artoo reads every one of them, so counting their children
+  # here fired on nearly every real submission with a claim that was false.
   parents <- xml2::xml_find_all(
     mdv,
-    sprintf(".//*[count(*[local-name()='%s']) > 1]", local)
+    sprintf(
+      paste0(
+        ".//*[count(*[local-name()='%s']) > 1]",
+        "[not(local-name() = 'AnnotatedCRF')]",
+        "[not(local-name() = 'SupplementalDoc')]"
+      ),
+      local
+    )
   )
   if (!length(parents)) {
     return(invisible(NULL))
@@ -835,14 +845,22 @@
       stringsAsFactors = FALSE
     )
     results <- xml2::xml_find_all(d, "./*[local-name()='AnalysisResult']")
+    # A running counter across the display's ROWS, not the result ordinal: a
+    # result spanning two analysis datasets is two rows, and stamping both
+    # with the same order made .dx_row_order() discard the column entirely.
+    row_order <- 0L
     for (ri in seq_along(results)) {
-      res_rows[[length(res_rows) + 1L]] <- .dx_read_arm_result(
+      part <- .dx_read_arm_result(
         results[[ri]],
         did,
-        ri,
+        row_order,
         items,
-        group_name
+        group_name,
+        ig_nodes
       )
+      part$order <- row_order + seq_len(nrow(part))
+      row_order <- row_order + nrow(part)
+      res_rows[[length(res_rows) + 1L]] <- part
     }
   }
   list(
@@ -867,8 +885,29 @@
   )
 }
 
+# The ItemDef OIDs one ItemGroupDef actually references.
 #' @noRd
-.dx_read_arm_result <- function(node, display_id, order, items, group_name) {
+.dx_group_items <- function(ig_nodes, group_oid) {
+  hit <- Filter(
+    function(n) identical(.dx_attr(n, "OID"), group_oid),
+    ig_nodes
+  )
+  if (!length(hit)) {
+    return(character(0))
+  }
+  refs <- xml2::xml_find_all(hit[[1]], "./*[local-name()='ItemRef']")
+  if (!length(refs)) character(0) else xml2::xml_attr(refs, "ItemOID")
+}
+
+#' @noRd
+.dx_read_arm_result <- function(
+  node,
+  display_id,
+  order,
+  items,
+  group_name,
+  ig_nodes
+) {
   sets <- .dx_child(node, "AnalysisDatasets")
   comment <- if (is.na(sets)) NA_character_ else .dx_attr(sets, "CommentOID")
   each <- if (is.na(sets)) {
@@ -933,11 +972,20 @@
   parts <- lapply(each, function(ds) {
     oid <- .dx_attr(ds, "ItemGroupOID")
     named <- unname(group_name[oid])
+
     vars <- xml2::xml_find_all(ds, "./*[local-name()='AnalysisVariable']")
     var_oids <- vapply(vars, .dx_attr, character(1), name = "ItemOID")
+    # Resolve an OID to its bare NAME only when THIS analysis dataset
+    # defines it. A name is only unambiguous inside one ItemGroup, and the
+    # writer re-derives the OID from the analysis dataset's namespace -- so
+    # reducing a cross-dataset reference to a name silently repoints it at
+    # the sibling of the same name, which is a different assertion.
+    own <- if (is.na(named)) character(0) else .dx_group_items(ig_nodes, oid)
     var_names <- vapply(
       var_oids,
-      function(o) items[[o]]$name %||% o,
+      function(o) {
+        if (o %in% own) items[[o]]$name %||% o else o
+      },
       character(1)
     )
     wcr <- .dx_child(ds, "WhereClauseRef")

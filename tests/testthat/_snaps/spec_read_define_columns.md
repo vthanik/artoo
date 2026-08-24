@@ -7,10 +7,6 @@
       3 external codelists in 'define20-sdtm.xml' dropped.
       x "MEDDRA", "WHODRUG", and "ISO3166": artoo does not model external dictionaries yet.
       i Their references are dropped too, so writing this spec back will not reproduce them.
-      Warning:
-      1 element carries more than one `def:DocumentRef`.
-      x In 'define20-sdtm.xml', only the first is read, on: "SupplementalDoc".
-      i Writing this spec back will not reproduce the others.
 
 # dropping a second def:Origin is reported, not silent (#p4-review)
 

@@ -10,6 +10,20 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `write_spec()` warns when the define.xml it wrote is valid but not
+  submission-grade, naming every column nothing fills. None of them is required
+  by the schema, and every one draws a conformance finding, so a spec that is
+  incomplete partway through a study is still written rather than refused.
+
+* `read_spec()` on a Pinnacle 21 workbook now forward-fills the merged cells on
+  the analysis-results sheets, as it already did for every other sheet. A
+  workbook merges the display cell across a display's results and the result id
+  across a result's analysis datasets; without the fill those rows were dropped.
+
+* A where clause may now qualify a variable in a different dataset, which is
+  what a value-level condition on `DM.COUNTRY` means. A variable two datasets
+  define is refused rather than resolved to one of them.
+
 * `read_spec()` on a Define-XML 2.0 document now reads its standard as a
   `standards` row rather than one concatenated string. A version containing a
   space (`3.1.2 Amendment 1` is a real one) used to have half of it moved into
