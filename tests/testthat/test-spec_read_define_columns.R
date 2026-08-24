@@ -135,7 +135,7 @@ test_that("codelist list-level attributes must agree within a codelist", {
 test_that("dropping an external codelist is reported, not silent (#p4-review)", {
   skip_if_not_installed("xml2")
   # artoo has no dictionary model yet, so the list AND every reference to it
-  # are dropped. define_lint() then sees nothing dangling in a document
+  # are dropped. lint_define() then sees nothing dangling in a document
   # written back, which makes the loss undetectable unless the read says so.
   expect_warning(
     read_spec(test_path("fixtures", "define20-sdtm.xml")),

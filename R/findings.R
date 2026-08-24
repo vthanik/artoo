@@ -31,7 +31,7 @@
   "schema"
 )
 .spec_severities <- c("error", "warning", "note")
-# engine == "define" -> validate_define() / define_lint(), which read a
+# engine == "define" -> validate_define() / lint_define(), which read a
 # Define-XML document rather than an artoo_spec.
 .spec_engines <- c("spec", "data", "define")
 

@@ -1,5 +1,11 @@
 # spec_read_define.R — read_spec() on a native Define-XML v2.x document.
 #
+# Every abort in this file is `kind = "spec"`, never "input": the argument
+# was fine, the FILE is wrong. The workbook reader already classes the same
+# category that way, so one `artoo_error_spec` handler catches a malformed
+# specification whichever format it arrived in. "input" stays what it is
+# everywhere else in artoo -- a bad function argument.
+#
 # Maps the CDISC Define-XML 2.0/2.1 metadata model onto the artoo_spec slots
 # (the slots are already Define-shaped, so the walk is mostly mechanical):
 #   ItemGroupDef            -> datasets (keys derived from ItemRef KeySequence)
@@ -22,9 +28,25 @@
 .dx_find_all <- function(node, name) {
   xml2::xml_find_all(node, sprintf(".//*[local-name()='%s']", name))
 }
+# Every XPath in the Define-XML code matches by `local-name()`, so no prefix
+# is ever resolved -- but xml2 defaults `ns` to `xml_ns(x)`, which re-walks
+# the WHOLE document to build a prefix table on every single call. Reading a
+# 3.7 MB define spent 61% of its time there, and it is why reading grew
+# faster than linearly while writing stayed flat. Passing an empty table
+# skips the walk and cannot change a result no prefix depends on.
+#' @noRd
+.dx_find <- function(x, xpath) {
+  xml2::xml_find_all(x, xpath, ns = character())
+}
+
+#' @noRd
+.dx_find1 <- function(x, xpath) {
+  xml2::xml_find_first(x, xpath, ns = character())
+}
+
 #' @noRd
 .dx_child <- function(node, name) {
-  xml2::xml_find_first(node, sprintf("./*[local-name()='%s']", name))
+  .dx_find1(node, sprintf("./*[local-name()='%s']", name))
 }
 #' @noRd
 .dx_attr <- function(node, name) {
@@ -75,7 +97,7 @@
   # def:AnnotatedCRF and def:SupplementalDoc are CONTAINERS of document
   # references and artoo reads every one of them, so counting their children
   # here fired on nearly every real submission with a claim that was false.
-  parents <- xml2::xml_find_all(
+  parents <- .dx_find(
     mdv,
     sprintf(
       paste0(
@@ -103,6 +125,79 @@
   invisible(NULL)
 }
 
+# Three more things the model has no room for, each of which reaches a
+# reviewer as a blank or as a changed assertion, and none of which any
+# round-trip test can see -- the reader does not take them and the writer
+# does not emit them, so both documents agree about their absence.
+#
+#   A codelist or term Alias with a context other than nci:ExtCodeID  -- on
+#     a codelist artoo models the NCI code and nothing else, so a Sponsor
+#     alias is lost. CDISC's own 2.1 SDTM example carries eighteen. (A
+#     dataset or variable alias is modelled whatever its context.)
+#   CodeList/Description  -- the 2.1 stylesheet renders it, so the sponsor's
+#     own words about a codelist become a blank cell.
+#   xml:lang other than "en"  -- artoo writes "en" on every TranslatedText
+#     it emits, which does not lose the text but does change what the
+#     document asserts about it.
+#' @noRd
+.dx_warn_unmodelled <- function(mdv, path, call) {
+  # ItemGroupDef and ItemDef aliases ARE modelled, whatever their context --
+  # `alias_context` / `alias_name` on the datasets and variables slots. The
+  # gap is on codelists and their terms, where only the NCI code is read.
+  aliases <- .dx_find(
+    mdv,
+    paste0(
+      ".//*[local-name()='CodeList' or local-name()='CodeListItem'",
+      " or local-name()='EnumeratedItem']",
+      "/*[local-name()='Alias'][@Context != 'nci:ExtCodeID']"
+    )
+  )
+  if (length(aliases)) {
+    contexts <- unique(xml2::xml_attr(aliases, "Context"))
+    n <- length(aliases)
+    .artoo_warn(
+      c(
+        "{n} {.code Alias} element{?s} name{?s/} a context artoo does not model.",
+        "x" = "In {.path {path}}: {.val {contexts}}.",
+        "i" = "Only {.val nci:ExtCodeID} is read; writing this spec back will not reproduce the others."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  described <- .dx_find(
+    mdv,
+    ".//*[local-name()='CodeList']/*[local-name()='Description']"
+  )
+  if (length(described)) {
+    n <- length(described)
+    .artoo_warn(
+      c(
+        "{n} {.code CodeList} element{?s} carr{?ies/y} a {.code Description}.",
+        "x" = "In {.path {path}}, artoo has no column for it.",
+        "i" = "The Define-XML stylesheet renders it, so writing this spec back leaves that text blank."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  langs <- .dx_find(mdv, ".//*[local-name()='TranslatedText'][@xml:lang]")
+  langs <- unique(xml2::xml_attr(langs, "lang"))
+  langs <- langs[!is.na(langs) & langs != "en"]
+  if (length(langs)) {
+    .artoo_warn(
+      c(
+        "{length(langs)} language{?s} other than {.val en} {?is/are} declared.",
+        "x" = "In {.path {path}}: {.val {langs}}.",
+        "i" = "artoo writes {.code xml:lang=\"en\"} on every text it emits; the text itself is kept."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  invisible(NULL)
+}
+
 #' @noRd
 .dx_page_refs <- function(pg) {
   refs <- .dx_attr(pg, "PageRefs")
@@ -125,7 +220,7 @@
 # The first Alias with the given Context under `node`, as c(context, name).
 #' @noRd
 .dx_alias <- function(node, context = NULL) {
-  al <- xml2::xml_find_all(node, "./*[local-name()='Alias']")
+  al <- .dx_find(node, "./*[local-name()='Alias']")
   if (!length(al)) {
     return(c(NA_character_, NA_character_))
   }
@@ -155,7 +250,7 @@
           "{.path {path}} is not parseable XML.",
           "x" = "{msg}"
         ),
-        kind = "input",
+        kind = "spec",
         call = call
       )
     }
@@ -168,31 +263,31 @@
         "x" = "artoo reads Define-XML 2.0 and 2.1.",
         "i" = "Re-export the define from a 2.x-capable tool."
       ),
-      kind = "input",
+      kind = "spec",
       call = call
     )
   }
-  mdv <- xml2::xml_find_first(doc, "//*[local-name()='MetaDataVersion']")
+  mdv <- .dx_find1(doc, "//*[local-name()='MetaDataVersion']")
   if (is.na(mdv) || !any(grepl("cdisc.org/ns/def/v2", ns_uris))) {
     .artoo_abort(
       c(
         "{.path {path}} is not a Define-XML document.",
         "x" = "No MetaDataVersion in the Define-XML 2.x namespaces was found."
       ),
-      kind = "input",
+      kind = "spec",
       call = call
     )
   }
 
   # ---- study -----------------------------------------------------------
   study_name <- xml2::xml_text(
-    xml2::xml_find_first(doc, "//*[local-name()='StudyName']")
+    .dx_find1(doc, "//*[local-name()='StudyName']")
   )
   study_desc <- xml2::xml_text(
-    xml2::xml_find_first(doc, "//*[local-name()='StudyDescription']")
+    .dx_find1(doc, "//*[local-name()='StudyDescription']")
   )
   protocol <- xml2::xml_text(
-    xml2::xml_find_first(doc, "//*[local-name()='ProtocolName']")
+    .dx_find1(doc, "//*[local-name()='ProtocolName']")
   )
   standards <- .dx_find_all(mdv, "Standard")
   standard <- if (length(standards)) {
@@ -229,7 +324,7 @@
   # The document's OWN identifiers, so a read and a write back keep every
   # name a reviewer, a prior submission, or a tracking system may already
   # reference. Minting fresh ones from the study name breaks all of them.
-  study_node <- xml2::xml_find_first(doc, "//*[local-name()='Study']")
+  study_node <- .dx_find1(doc, "//*[local-name()='Study']")
   study <- data.frame(
     study_name = study_name,
     study_description = study_desc,
@@ -266,7 +361,7 @@
     # rather than an enumerable membership list, and artoo has no model for
     # one yet. Both the list AND every reference to it are dropped, so a
     # document written back from this spec loses the dictionary silently and
-    # define_lint() sees nothing dangling: the loss is undetectable unless
+    # lint_define() sees nothing dangling: the loss is undetectable unless
     # the read says so.
     dicts <- vapply(
       cl_nodes[external],
@@ -301,7 +396,7 @@
     item_nodes[vapply(
       item_nodes,
       function(n) {
-        length(xml2::xml_find_all(n, "./*[local-name()='Origin']")) > 1L
+        length(.dx_find(n, "./*[local-name()='Origin']")) > 1L
       },
       logical(1)
     )],
@@ -316,6 +411,8 @@
   )
   .dx_warn_dropped(mdv, "PDFPageRef", "def:PDFPageRef", path, call)
   .dx_warn_dropped(mdv, "TranslatedText", "TranslatedText", path, call)
+  .dx_warn_dropped(mdv, "Alias", "Alias", path, call)
+  .dx_warn_unmodelled(mdv, path, call)
   if (length(multi_origin)) {
     .artoo_warn(
       c(
@@ -405,7 +502,7 @@
         "x" = "The MetaDataVersion has no ItemGroupDef.",
         "i" = "Check that this is a study Define-XML, not a standards or CT document."
       ),
-      kind = "input",
+      kind = "spec",
       call = call
     )
   }
@@ -418,7 +515,7 @@
   for (ig in ig_nodes) {
     ds_name <- xml2::xml_attr(ig, "Name")
     cls <- .dx_child(ig, "Class")
-    refs <- xml2::xml_find_all(ig, "./*[local-name()='ItemRef']")
+    refs <- .dx_find(ig, "./*[local-name()='ItemRef']")
     ref_oid <- xml2::xml_attr(refs, "ItemOID")
     ks <- .dx_int(xml2::xml_attr(refs, "KeySequence"))
     keyed <- !is.na(ks)
@@ -476,7 +573,7 @@
             "{.path {path}} is inconsistent.",
             "x" = "ItemRef {.val {ref_oid[j]}} has no ItemDef."
           ),
-          kind = "input",
+          kind = "spec",
           call = call
         )
       }
@@ -532,7 +629,7 @@
       next
     }
     n <- cl_nodes[[k]]
-    terms <- xml2::xml_find_all(
+    terms <- .dx_find(
       n,
       "./*[local-name()='CodeListItem' or local-name()='EnumeratedItem']"
     )
@@ -656,7 +753,7 @@
     if (is.na(node)) {
       return(character(0))
     }
-    refs <- xml2::xml_find_all(node, "./*[local-name()='DocumentRef']")
+    refs <- .dx_find(node, "./*[local-name()='DocumentRef']")
     if (!length(refs)) {
       character(0)
     } else {
@@ -834,7 +931,7 @@
   if (is.na(root)) {
     return(none)
   }
-  displays <- xml2::xml_find_all(root, "./*[local-name()='ResultDisplay']")
+  displays <- .dx_find(root, "./*[local-name()='ResultDisplay']")
   if (!length(displays)) {
     return(none)
   }
@@ -858,7 +955,7 @@
       order = di,
       stringsAsFactors = FALSE
     )
-    results <- xml2::xml_find_all(d, "./*[local-name()='AnalysisResult']")
+    results <- .dx_find(d, "./*[local-name()='AnalysisResult']")
     # A running counter across the display's ROWS, not the result ordinal: a
     # result spanning two analysis datasets is two rows, and stamping both
     # with the same order made .dx_row_order() discard the column entirely.
@@ -909,7 +1006,7 @@
   if (!length(hit)) {
     return(character(0))
   }
-  refs <- xml2::xml_find_all(hit[[1]], "./*[local-name()='ItemRef']")
+  refs <- .dx_find(hit[[1]], "./*[local-name()='ItemRef']")
   if (!length(refs)) character(0) else xml2::xml_attr(refs, "ItemOID")
 }
 
@@ -927,7 +1024,7 @@
   each <- if (is.na(sets)) {
     list()
   } else {
-    xml2::xml_find_all(sets, "./*[local-name()='AnalysisDataset']")
+    .dx_find(sets, "./*[local-name()='AnalysisDataset']")
   }
   doc <- .dx_child(node, "Documentation")
   doc_ref <- if (is.na(doc)) {
@@ -987,7 +1084,7 @@
     oid <- .dx_attr(ds, "ItemGroupOID")
     named <- unname(group_name[oid])
 
-    vars <- xml2::xml_find_all(ds, "./*[local-name()='AnalysisVariable']")
+    vars <- .dx_find(ds, "./*[local-name()='AnalysisVariable']")
     var_oids <- vapply(vars, .dx_attr, character(1), name = "ItemOID")
     # Resolve an OID to its bare NAME only when THIS analysis dataset
     # defines it. A name is only unambiguous inside one ItemGroup, and the
@@ -1029,13 +1126,13 @@
   rows <- list()
   for (w in wc_nodes) {
     wc_id <- .dx_attr(w, "OID")
-    checks <- xml2::xml_find_all(w, "./*[local-name()=\'RangeCheck\']")
+    checks <- .dx_find(w, "./*[local-name()=\'RangeCheck\']")
     for (ci in seq_along(checks)) {
       rc <- checks[[ci]]
       target <- .dx_attr(rc, "ItemOID")
       it <- items[[target]]
       vals <- xml2::xml_text(
-        xml2::xml_find_all(rc, "./*[local-name()=\'CheckValue\']")
+        .dx_find(rc, "./*[local-name()=\'CheckValue\']")
       )
       if (!length(vals)) {
         vals <- NA_character_
@@ -1072,7 +1169,7 @@
   rows <- list()
   for (m in md_nodes) {
     mid <- .dx_attr(m, "OID")
-    fes <- xml2::xml_find_all(m, "./*[local-name()=\'FormalExpression\']")
+    fes <- .dx_find(m, "./*[local-name()=\'FormalExpression\']")
     for (i in seq_along(fes)) {
       rows[[length(rows) + 1L]] <- data.frame(
         method_id = mid,
@@ -1099,7 +1196,7 @@
   wc_text <- vapply(
     wc_nodes,
     function(w) {
-      checks <- xml2::xml_find_all(w, "./*[local-name()='RangeCheck']")
+      checks <- .dx_find(w, "./*[local-name()='RangeCheck']")
       paste(
         vapply(
           checks,
@@ -1110,7 +1207,7 @@
             } else {
               target
             }
-            vals <- xml2::xml_text(xml2::xml_find_all(
+            vals <- xml2::xml_text(.dx_find(
               rc,
               "./*[local-name()='CheckValue']"
             ))
@@ -1134,10 +1231,10 @@
   for (vl in vl_nodes) {
     oid <- xml2::xml_attr(vl, "OID")
     owner <- vl_owner[[oid]] %||% c(NA_character_, NA_character_)
-    refs <- xml2::xml_find_all(vl, "./*[local-name()='ItemRef']")
+    refs <- .dx_find(vl, "./*[local-name()='ItemRef']")
     for (r in refs) {
       it <- items[[xml2::xml_attr(r, "ItemOID")]]
-      wcrs <- xml2::xml_find_all(r, "./*[local-name()='WhereClauseRef']")
+      wcrs <- .dx_find(r, "./*[local-name()='WhereClauseRef']")
       if (length(wcrs) > 1L) {
         # Define-XML combines several refs with OR. Keeping the first would
         # silently narrow which rows the definition applies to, which is the
@@ -1149,7 +1246,7 @@
             "x" = "{.val {oids}} are combined with OR, and artoo carries one clause per value-level row.",
             "i" = "Merge them into one def:WhereClauseDef, or split the item into one row per clause."
           ),
-          kind = "input",
+          kind = "spec",
           call = call
         )
       }
@@ -1178,7 +1275,7 @@
         # A value-level row IS an ItemDef, so it carries the whole ItemDef
         # surface. Reading only label/type/length made every value-level
         # origin, comment and display format vanish on a round trip, which
-        # define_lint() then reported as a missing Origin.
+        # lint_define() then reported as a missing Origin.
         significant_digits = if (is.null(it)) {
           NA_integer_
         } else {
@@ -1205,6 +1302,8 @@
         method_id = xml2::xml_attr(r, "MethodOID"),
         order = .dx_int(xml2::xml_attr(r, "OrderNumber")),
         mandatory = identical(xml2::xml_attr(r, "Mandatory"), "Yes"),
+        role = xml2::xml_attr(r, "Role"),
+        role_codelist_id = xml2::xml_attr(r, "RoleCodeListOID"),
         stringsAsFactors = FALSE
       )
     }

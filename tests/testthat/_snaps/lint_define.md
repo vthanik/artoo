@@ -1,9 +1,9 @@
 # a document with no MetaDataVersion is refused
 
     Code
-      define_lint(other)
+      lint_define(other)
     Condition
-      Error in `define_lint()`:
+      Error in `lint_define()`:
       ! '<tmp>/no-mdv.xml' is not a Define-XML document.
       x It has no MetaDataVersion element.
 
@@ -27,7 +27,7 @@
 ---
 
     Code
-      print(define_lint(minimal()))
+      print(lint_define(minimal()))
     Output
       artoo Define-XML Reference Check
       ================================

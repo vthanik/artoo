@@ -24,7 +24,7 @@
       Error:
       ! Could not place the stylesheet reference.
       x The serialised document does not begin with an XML declaration.
-      i Pass `stylesheet = NULL` to write the file without one.
+      i Pass `stylesheet = FALSE` to write the file without one.
 
 # a def: attribute the version does not have is refused
 

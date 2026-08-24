@@ -164,7 +164,7 @@ write_spec(adam_spec, define)
 artoo schema-validates what it built before the file reaches its
 destination, so an invalid document never replaces a good one. Two checks
 read it back &mdash; `validate_define()` against the bundled CDISC schemas,
-and `define_lint()` for the reference integrity a schema cannot see:
+and `lint_define()` for the reference integrity a schema cannot see:
 
 ```{r}
 validate_define(define)

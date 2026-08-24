@@ -2,7 +2,7 @@
 #
 # The most important tests here are the NEGATIVE ones, and specifically the
 # two that assert schema validation stays GREEN. Schema validation is blind to
-# reference integrity, and that blindness is the entire reason define_lint()
+# reference integrity, and that blindness is the entire reason lint_define()
 # exists. Pinning it here means nobody can later mistake a green schema run for
 # a sound document.
 #
@@ -137,7 +137,7 @@ test_that("schema validation catches def:Class emitted out of sequence", {
   expect_false(report@summary$valid)
 })
 
-# ---- what the schema is BLIND to (the reason define_lint() exists) ------
+# ---- what the schema is BLIND to (the reason lint_define() exists) ------
 
 test_that("schema validation is BLIND to a removed def:ValueListRef", {
   # Deleting the ValueListRef orphans its def:ValueListDef: nothing points at

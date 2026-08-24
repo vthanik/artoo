@@ -88,7 +88,7 @@ test_that("reading the ADaM example leaves no dangling ARM reference", {
   suppressWarnings(
     write_spec(read_define("define21-adam.xml"), out, created = FROZEN_ARM)
   )
-  checks <- define_lint(out)@findings$check
+  checks <- lint_define(out)@findings$check
   expect_false(any(checks == "define_orphan_leaf"))
   expect_false(any(checks == "define_orphan_where_clause"))
   expect_false(any(checks == "define_orphan_comment"))
@@ -200,7 +200,7 @@ test_that("one result over two datasets emits two arm:AnalysisDataset", {
 test_that("an analysis variable artoo cannot resolve is kept verbatim", {
   skip_if_not_installed("xml2")
   # A spec read from a document whose ARM references an item the spec does
-  # not carry keeps the OID rather than losing the reference; define_lint()
+  # not carry keeps the OID rather than losing the reference; lint_define()
   # reports it as dangling.
   spec <- arm_spec(
     results = data.frame(
@@ -358,7 +358,7 @@ test_that(".dx_arm_variables splits on any run of whitespace", {
 test_that("an unresolvable ItemGroup is kept verbatim, an absent one refused", {
   skip_if_not_installed("xml2")
   # A dataset the spec does not carry is passed through as an OID, so the
-  # reference survives for define_lint() to report...
+  # reference survives for lint_define() to report...
   kept <- arm_spec(
     results = data.frame(
       display_id = "RD.T1",
@@ -382,7 +382,7 @@ test_that("an unresolvable ItemGroup is kept verbatim, an absent one refused", {
     "IG.NOT.IN.THIS.SPEC"
   )
   expect_true(any(
-    define_lint(path)@findings$check == "define_dangling_arm_item_group"
+    lint_define(path)@findings$check == "define_dangling_arm_item_group"
   ))
 
   # ...but @ItemGroupOID is required, so naming nothing at all is refused.

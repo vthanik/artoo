@@ -21,15 +21,15 @@
   `html = TRUE` no longer render through the bundled sheet and disagree with
   the browser.
 
-* `write_spec()` writes Define-XML 2.1 when given a `.xml` path, so a
-  Pinnacle 21 workbook or a native JSON spec becomes a submission-grade
-  define.xml in one call. The document is schema-validated before it reaches
-  its destination, so an invalid one never overwrites a good file. Value-level
-  metadata is emitted whole: the parent variable's `def:ValueListRef`, the
-  `def:ValueListDef`, an `ItemDef` per value-level row, and the
-  `def:WhereClauseRef` and `def:WhereClauseDef` behind it. Define-XML 2.0
-  output, analysis-results metadata, and external dictionaries are not written
-  yet. Needs the `xml2` package.
+* `write_spec()` writes Define-XML when given a `.xml` path, so a Pinnacle 21
+  workbook or a native JSON spec becomes a submission-grade define.xml in one
+  call. The document is schema-validated before it reaches its destination, so
+  an invalid one never overwrites a good file. Value-level metadata is emitted
+  whole: the parent variable's `def:ValueListRef`, the `def:ValueListDef`, an
+  `ItemDef` per value-level row, and the `def:WhereClauseRef` and
+  `def:WhereClauseDef` behind it. External dictionaries are the one thing not
+  written yet; a populated `dictionaries` table is reported rather than
+  emitted. Needs the `xml2` package.
 
 * `read_spec()` and `write_spec()` no longer lose a multi-value `IN` where
   clause through a Pinnacle 21 workbook. The workbook holds one row per range
@@ -61,7 +61,7 @@
   it was an `ItemRef` with no children: schema-valid, nothing dangling, and
   asserting that the definition applies to every row of its parent.
 
-* `define_lint()` gains `define_unconditional_value` and
+* `lint_define()` gains `define_unconditional_value` and
   `define_no_data_uncommented`. Both catch things the schema cannot see (a
   well-formed element, an optional attribute) and the reference checks cannot
   see (nothing to dangle).
@@ -222,7 +222,7 @@
   is a child element in 2.1 but an attribute in 2.0, and only the element was
   read, so every 2.0 document came back with an empty `class` column.
 
-* `define_lint()` reports the reference-integrity defects XML Schema cannot
+* `lint_define()` reports the reference-integrity defects XML Schema cannot
   express: an OID reference that resolves to nothing, and a definition nothing
   references. Findings are directional, and an orphaned `def:ValueListDef` is an
   error rather than a warning because every value-level definition it holds then

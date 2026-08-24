@@ -150,7 +150,7 @@ test_that("derived value-level metadata has zero dangling references", {
     write_spec(spec, path, created = FROZEN_DATA, data = list(VS = vs_data()))
   ))
   expect_true(validate_define(path)@summary$valid)
-  expect_false(any(grepl("dangling", define_lint(path)@findings$check)))
+  expect_false(any(grepl("dangling", lint_define(path)@findings$check)))
 
   doc <- xml2::read_xml(path)
   # One value list per result variable, one entry per test code present.
@@ -477,7 +477,7 @@ test_that("the whole demo study writes with zero dangling references", {
     )
   ))
   expect_true(validate_define(path)@summary$valid)
-  expect_false(any(grepl("dangling", define_lint(path)@findings$check)))
+  expect_false(any(grepl("dangling", lint_define(path)@findings$check)))
   # VSSTRESU has no author rows, so it gains one per test code in the data.
   derived <- xml2::xml_find_all(
     xml2::read_xml(path),
@@ -775,5 +775,58 @@ test_that("derived rows stack onto a spec carrying a foreign column (#p10-review
       "//*[local-name()='WhereClauseDef']"
     )),
     1L
+  )
+})
+
+test_that("a widened length carries across a shared ItemDef OID (#p12-review-B1)", {
+  skip_if_not_installed("xml2")
+  # Define-XML allows one ItemDef per OID, and the bundled SDTM spec gives
+  # STUDYID a single IT.STUDYID across four datasets. Widening is measured
+  # per dataset, so supplying data for some of them -- the natural call, you
+  # pass what is on disk -- left one OID defined two ways and aborted,
+  # blaming the author for a state the write had just created.
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_no_error(suppressMessages(suppressWarnings(
+    write_spec(
+      sdtm_spec,
+      path,
+      created = FROZEN_DATA,
+      data = list(VS = cdisc_vs, DM = cdisc_dm)
+    )
+  )))
+  expect_true(validate_define(path)@summary$valid)
+  # One definition, and it is the widest measurement, not the last one seen.
+  studyid <- xml2::xml_find_all(
+    xml2::read_xml(path),
+    "//*[local-name()='ItemDef'][@OID='IT.STUDYID']"
+  )
+  expect_length(studyid, 1L)
+  expect_identical(
+    xml2::xml_attr(studyid, "Length"),
+    as.character(max(nchar(c(cdisc_vs$STUDYID, cdisc_dm$STUDYID))))
+  )
+})
+
+test_that("a pre-existing shared-OID conflict still aborts (#p12-review-B1)", {
+  skip_if_not_installed("xml2")
+  # Pooling only groups the data pass touched: two rows that disagreed before
+  # any data arrived are the author's conflict, and keep their own message.
+  spec <- artoo_spec(
+    data.frame(dataset = c("DM", "VS"), stringsAsFactors = FALSE),
+    data.frame(
+      dataset = c("DM", "VS"),
+      variable = "STUDYID",
+      itemoid = "IT.STUDYID",
+      data_type = "string",
+      length = c(8L, 12L),
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    suppressMessages(suppressWarnings(
+      write_spec(spec, path, created = FROZEN_DATA, data = list(VS = cdisc_vs))
+    )),
+    class = "artoo_error_define"
   )
 })

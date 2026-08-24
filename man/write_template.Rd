@@ -73,5 +73,5 @@ if (requireNamespace("readxl", quietly = TRUE)) {
 \strong{Fill it in:} \code{\link[=read_spec]{read_spec()}} reads the completed workbook.
 
 \strong{Then write:} \code{\link[=write_spec]{write_spec()}} turns the spec into a define.xml,
-\code{\link[=validate_define]{validate_define()}} and \code{\link[=define_lint]{define_lint()}} check the result.
+\code{\link[=validate_define]{validate_define()}} and \code{\link[=lint_define]{lint_define()}} check the result.
 }

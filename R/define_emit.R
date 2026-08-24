@@ -166,7 +166,7 @@
       c(
         "Could not place the stylesheet reference.",
         "x" = "The serialised document does not begin with an XML declaration.",
-        "i" = "Pass {.code stylesheet = NULL} to write the file without one."
+        "i" = "Pass {.code stylesheet = FALSE} to write the file without one."
       ),
       kind = "define",
       call = call

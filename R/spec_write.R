@@ -36,7 +36,7 @@
 #' Serialise a `artoo_spec`, dispatching on the file extension: a `.json`
 #' path writes artoo's native, lossless JSON; a `.xlsx` path writes a
 #' Pinnacle 21 (P21) style Excel workbook; a `.xml` path writes a
-#' submission-grade Define-XML 2.1 document. Each is the inverse of
+#' submission-grade Define-XML 2.1 or 2.0 document. Each is the inverse of
 #' [read_spec()] on its format, which makes the spec converters free
 #' compositions: `read_spec("spec.xlsx") |> write_spec("define.xml")` turns
 #' a workbook into a define.xml in one line.
@@ -72,7 +72,7 @@
 #' expressions. Write JSON when you need the spec back whole.
 #'
 #' **Define-XML is the submission format.** The `.xml` path emits
-#' Define-XML 2.1 (needs the `xml2` package) and SCHEMA-VALIDATES what it
+#' Define-XML 2.1 or 2.0 (needs the `xml2` package) and SCHEMA-VALIDATES what it
 #' built before the file reaches its destination, so an invalid document
 #' never overwrites a good one. Value-level metadata is emitted whole: the
 #' parent variable's `def:ValueListRef`, the `def:ValueListDef`, a real
@@ -126,14 +126,15 @@
 #'   Build one with [artoo_spec()] or [read_spec()].
 #' @param path *Destination file.* `<character(1)>: required`. The extension
 #'   picks the format: `.json` (native, lossless), `.xlsx` (P21
-#'   interchange; needs the `writexl` package), or `.xml` (Define-XML 2.1;
+#'   interchange; needs the `writexl` package), or `.xml` (Define-XML;
 #'   needs the `xml2` package). Any other extension aborts with
 #'   `artoo_error_input`.
 #' @param ... *Format-specific options.* Ignored by the JSON and xlsx paths.
 #'   Define-XML accepts:
 #'
-#'   * `version` -- `<character(1)> | NULL`. `"2.1"` (default), resolved from
-#'     the spec's own `define_version` when unset. `"2.0"` is not written yet.
+#'   * `version` -- `<character(1)> | NULL`. `"2.1"` (default) or `"2.0"`,
+#'     resolved from the spec's own `define_version` when unset. Writing 2.0
+#'     from a 2.1-shaped spec warns about each construct 2.0 cannot carry.
 #'   * `created` -- the `CreationDateTime` stamp, formatted as UTC. Freeze it
 #'     for a reproducible submission build; the default is the current time.
 #'   * `stylesheet` -- `<logical(1)> | <character(1)>: default TRUE`. `TRUE`
@@ -193,7 +194,7 @@
 #' Define-XML back into a `artoo_spec`.
 #'
 #' **Check the Define-XML written:** [validate_define()] schema-validates it,
-#' [define_lint()] checks its reference integrity.
+#' [lint_define()] checks its reference integrity.
 #'
 #' **Build / inspect:** [artoo_spec()], [spec_datasets()],
 #' [spec_variables()], [spec_standard()].

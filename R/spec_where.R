@@ -194,7 +194,7 @@
   rows <- list()
   # An environment, not a named vector: `seen[[id]]` on a name that is not
   # present throws rather than returning NULL, and the ids here come straight
-  # from the sheet. This is the same trap that once crashed define_lint().
+  # from the sheet. This is the same trap that once crashed lint_define().
   seen <- new.env(parent = emptyenv())
   for (i in seq_len(nrow(df))) {
     id <- as.character(df$where_clause_id[[i]])

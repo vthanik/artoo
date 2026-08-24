@@ -78,7 +78,7 @@
     Condition
       Warning:
       Define-XML 2.0 cannot carry everything this spec holds.
-      x Dropped or rewritten: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:IsNonStandard", "def:HasNoData", "def:Origin/@Source", "ODM/@def:Context", and "Collected origins, rewritten as CRF".
+      x Dropped or rewritten: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:CommentOID on a CodeList", "def:IsNonStandard", "def:HasNoData", "def:Origin/@Source", "ODM/@def:Context", and "Collected origins, rewritten as CRF".
       i Write the spec as "2.1", or to native JSON, to keep it whole.
       Warning:
       Dataset "SUPPVS" is flagged as having no data, with no comment.
@@ -133,8 +133,8 @@
     Condition
       Warning:
       The spec is not submission-grade.
-      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", and "variables$length".
-      i A conformance report will raise 8 findings; fill them in the source spec.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", and "variables$length".
+      i A conformance report will raise 7 findings; fill them in the source spec.
       Warning:
       The `def:Standards` block was not written.
       x The spec names "ADaMIG 1.1" but carries no `standards` table.

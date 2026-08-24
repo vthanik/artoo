@@ -1,4 +1,4 @@
-# define_lint.R — define_lint(): reference integrity of a Define-XML document.
+# lint_define.R — lint_define(): reference integrity of a Define-XML document.
 #
 # This is the half of correctness XML Schema cannot express. A schema checks
 # that every element is shaped right; it has no way to say "this OID reference
@@ -209,7 +209,7 @@
   # false positive (a CommentDef referenced only from MetaDataVersion looked
   # orphaned) and a false negative (a dangling reference there went unreported
   # despite being error severity).
-  all_nodes <- xml2::xml_find_all(mdv, "descendant-or-self::*")
+  all_nodes <- .dx_find(mdv, "descendant-or-self::*")
   for (site in .define_loose_refs) {
     vals <- vapply(all_nodes, .dx_attr, character(1), name = site$attr)
     keep <- !is.na(vals) & nzchar(vals)
@@ -284,7 +284,7 @@
 #' # The bundled minimal example resolves cleanly, so the findings table is
 #' # empty and the summary counts what was inspected.
 #' minimal <- system.file("extdata", "define-minimal.xml", package = "artoo")
-#' report <- define_lint(minimal)
+#' report <- lint_define(minimal)
 #' nrow(report@findings)
 #' report@summary$n_definitions
 #'
@@ -301,14 +301,14 @@
 #'   broken
 #' )
 #' validate_define(broken)@summary$valid
-#' define_lint(broken)@findings[, c("check", "severity", "message")]
+#' lint_define(broken)@findings[, c("check", "severity", "message")]
 #'
 #' @seealso
 #' **Validate first:** [validate_define()] for schema conformance, which this
 #' complements rather than repeats.
 #'
 #' @export
-define_lint <- function(path) {
+lint_define <- function(path) {
   call <- rlang::current_env()
   rlang::check_installed("xml2", reason = "to lint Define-XML documents.")
   .check_path(path, call = call)
@@ -334,7 +334,7 @@ define_lint <- function(path) {
       )
     }
   )
-  mdv <- xml2::xml_find_first(doc, "//*[local-name()='MetaDataVersion']")
+  mdv <- .dx_find1(doc, "//*[local-name()='MetaDataVersion']")
   if (is.na(mdv)) {
     .artoo_abort(
       c(
@@ -468,7 +468,7 @@ define_lint <- function(path) {
   vl_items <- list()
   for (vl in vls) {
     oid <- .dx_attr(vl, "OID")
-    refs <- xml2::xml_find_all(vl, "./*[local-name()='ItemRef']")
+    refs <- .dx_find(vl, "./*[local-name()='ItemRef']")
     if (!is.na(oid) && length(refs)) {
       vl_items[[oid]] <- xml2::xml_attr(refs, "ItemOID")
     }
@@ -558,9 +558,9 @@ define_lint <- function(path) {
   flagged <- character(0)
   for (vl in lists) {
     oid <- .dx_attr(vl, "OID")
-    refs <- xml2::xml_find_all(vl, "./*[local-name()='ItemRef']")
+    refs <- .dx_find(vl, "./*[local-name()='ItemRef']")
     for (ref in refs) {
-      wc <- xml2::xml_find_all(ref, "./*[local-name()='WhereClauseRef']")
+      wc <- .dx_find(ref, "./*[local-name()='WhereClauseRef']")
       if (!length(wc)) {
         flagged <- c(flagged, paste0(oid, " / ", .dx_attr(ref, "ItemOID")))
       }

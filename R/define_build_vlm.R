@@ -331,7 +331,9 @@
                 .dx_lgl(val, "mandatory")[[i]],
                 default = FALSE
               ),
-              MethodOID = .dx_chr(val, "method_id")[[i]]
+              MethodOID = .dx_chr(val, "method_id")[[i]],
+              Role = .dx_chr(val, "role")[[i]],
+              RoleCodeListOID = .dx_chr(val, "role_codelist_id")[[i]]
             ),
             kids = list(
               `def:WhereClauseRef` = if (is.na(wc)) {

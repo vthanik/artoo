@@ -1,4 +1,4 @@
-# Tests for define_lint() — reference integrity of a Define-XML document.
+# Tests for lint_define() — reference integrity of a Define-XML document.
 #
 # The organising idea: every finding this reports is invisible to
 # validate_define(). Several tests therefore assert BOTH — the schema says the
@@ -46,7 +46,7 @@ checks_of <- function(report) sort(unique(report@findings$check))
 # ---- the gate: clean documents stay clean -------------------------------
 
 test_that("the bundled minimal document has no reference problems", {
-  report <- define_lint(minimal())
+  report <- lint_define(minimal())
   expect_s3_class(report, "artoo::artoo_check")
   expect_identical(nrow(report@findings), 0L)
   expect_gt(report@summary$n_definitions, 0L)
@@ -55,7 +55,7 @@ test_that("the bundled minimal document has no reference problems", {
 
 test_that("both official Define-XML 2.0 examples are clean", {
   for (f in c("define20-sdtm.xml", "define20-adam.xml")) {
-    report <- define_lint(fixture(f))
+    report <- lint_define(fixture(f))
     expect_identical(nrow(report@findings), 0L, info = f)
   }
 })
@@ -67,7 +67,7 @@ test_that("the official 2.1 examples report only their one real defect", {
   # the expectation pins it rather than suppressing it. If this count ever
   # moves, either the fixture changed or the lint gained a false positive.
   for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
-    report <- define_lint(fixture(f))
+    report <- lint_define(fixture(f))
     expect_true("define_orphan_standard" %in% report@findings$check, info = f)
     expect_match(
       report@findings$message[
@@ -81,7 +81,7 @@ test_that("the official 2.1 examples report only their one real defect", {
   # flagged def:HasNoData with no comment explaining it, which is what
   # Pinnacle 21 DD0133 asks for. Pinned rather than suppressed, for the same
   # reason as the orphan standard.
-  sdtm <- define_lint(fixture("define21-sdtm.xml"))@findings
+  sdtm <- lint_define(fixture("define21-sdtm.xml"))@findings
   expect_setequal(
     sdtm$check,
     c("define_orphan_standard", "define_no_data_uncommented")
@@ -91,7 +91,7 @@ test_that("the official 2.1 examples report only their one real defect", {
     "SUPPVS"
   )
   expect_identical(
-    nrow(define_lint(fixture("define21-adam.xml"))@findings),
+    nrow(lint_define(fixture("define21-adam.xml"))@findings),
     1L
   )
 })
@@ -102,7 +102,7 @@ test_that("a dangling variable reference is caught, though the schema passes", {
   bad <- edit_xml(minimal(), 'ItemOID="IT.DM.SEX"', 'ItemOID="IT.DM.NOPE"')
   expect_true(validate_define(bad)@summary$valid)
 
-  report <- define_lint(bad)
+  report <- lint_define(bad)
   expect_true("define_dangling_item" %in% checks_of(report))
   expect_identical(
     report@findings$severity[report@findings$check == "define_dangling_item"],
@@ -117,7 +117,7 @@ test_that("a dangling variable reference is caught, though the schema passes", {
 test_that("a dangling codelist reference is caught", {
   bad <- edit_xml(minimal(), 'CodeListOID="CL.SEX"', 'CodeListOID="CL.NOPE"')
   expect_true(validate_define(bad)@summary$valid)
-  expect_true("define_dangling_codelist" %in% checks_of(define_lint(bad)))
+  expect_true("define_dangling_codelist" %in% checks_of(lint_define(bad)))
 })
 
 test_that("a dangling comment reference is caught", {
@@ -126,7 +126,7 @@ test_that("a dangling comment reference is caught", {
     'def:CommentOID="COM.SEX"',
     'def:CommentOID="COM.NOPE"'
   )
-  expect_true("define_dangling_comment" %in% checks_of(define_lint(bad)))
+  expect_true("define_dangling_comment" %in% checks_of(lint_define(bad)))
 })
 
 test_that("a dangling standard reference is caught", {
@@ -135,7 +135,7 @@ test_that("a dangling standard reference is caught", {
     'def:StandardOID="STD.1"',
     'def:StandardOID="STD.NOPE"'
   )
-  expect_true("define_dangling_standard" %in% checks_of(define_lint(bad)))
+  expect_true("define_dangling_standard" %in% checks_of(lint_define(bad)))
 })
 
 test_that("a dangling archive location gets its own finding, not a leaf one", {
@@ -147,7 +147,7 @@ test_that("a dangling archive location gets its own finding, not a leaf one", {
     'def:ArchiveLocationID="LF.DM"',
     'def:ArchiveLocationID="LF.NOPE"'
   )
-  found <- checks_of(define_lint(bad))
+  found <- checks_of(lint_define(bad))
   expect_true("define_dangling_archive_location" %in% found)
   expect_false("define_dangling_leaf" %in% found)
 })
@@ -161,7 +161,7 @@ test_that("a dangling value list reference is caught", {
   out <- file.path(withr::local_tempdir(), "vl.xml")
   writeLines(txt, out)
 
-  expect_true("define_dangling_value_list" %in% checks_of(define_lint(out)))
+  expect_true("define_dangling_value_list" %in% checks_of(lint_define(out)))
 })
 
 test_that("a dangling where clause reference is caught", {
@@ -177,7 +177,7 @@ test_that("a dangling where clause reference is caught", {
   out <- file.path(withr::local_tempdir(), "wc.xml")
   writeLines(txt, out)
 
-  expect_true("define_dangling_where_clause" %in% checks_of(define_lint(out)))
+  expect_true("define_dangling_where_clause" %in% checks_of(lint_define(out)))
 })
 
 test_that("a dangling method reference is caught", {
@@ -189,7 +189,7 @@ test_that("a dangling method reference is caught", {
   out <- file.path(withr::local_tempdir(), "mt.xml")
   writeLines(txt, out)
 
-  expect_true("define_dangling_method" %in% checks_of(define_lint(out)))
+  expect_true("define_dangling_method" %in% checks_of(lint_define(out)))
 })
 
 test_that("a dangling document reference is caught", {
@@ -201,7 +201,7 @@ test_that("a dangling document reference is caught", {
   out <- file.path(withr::local_tempdir(), "lf.xml")
   writeLines(txt, out)
 
-  expect_true("define_dangling_leaf" %in% checks_of(define_lint(out)))
+  expect_true("define_dangling_leaf" %in% checks_of(lint_define(out)))
 })
 
 # ---- orphan definitions -------------------------------------------------
@@ -220,7 +220,7 @@ test_that("an orphaned value list is an ERROR, not a warning", {
 
   expect_true(validate_define(out)@summary$valid)
 
-  report <- define_lint(out)
+  report <- lint_define(out)
   rows <- report@findings[report@findings$check == "define_orphan_value_list", ]
   expect_identical(nrow(rows), 1L)
   expect_identical(rows$severity, "error")
@@ -228,7 +228,7 @@ test_that("an orphaned value list is an ERROR, not a warning", {
 
 test_that("an orphaned codelist is reported as a warning", {
   bad <- edit_xml(minimal(), '<CodeListRef CodeListOID="CL.SEX"/>', "")
-  report <- define_lint(bad)
+  report <- lint_define(bad)
   rows <- report@findings[report@findings$check == "define_orphan_codelist", ]
   expect_identical(nrow(rows), 1L)
   expect_identical(rows$severity, "warning")
@@ -236,12 +236,12 @@ test_that("an orphaned codelist is reported as a warning", {
 
 test_that("an orphaned comment is reported", {
   bad <- edit_xml(minimal(), ' def:CommentOID="COM.SEX"', "")
-  expect_true("define_orphan_comment" %in% checks_of(define_lint(bad)))
+  expect_true("define_orphan_comment" %in% checks_of(lint_define(bad)))
 })
 
 test_that("an orphaned document leaf is reported", {
   bad <- edit_xml(minimal(), ' def:ArchiveLocationID="LF.DM"', "")
-  expect_true("define_orphan_leaf" %in% checks_of(define_lint(bad)))
+  expect_true("define_orphan_leaf" %in% checks_of(lint_define(bad)))
 })
 
 test_that("an orphaned variable is reported", {
@@ -250,7 +250,7 @@ test_that("an orphaned variable is reported", {
     '<ItemRef ItemOID="IT.DM.SEX" OrderNumber="3" Mandatory="Yes"/>',
     ""
   )
-  expect_true("define_orphan_item" %in% checks_of(define_lint(bad)))
+  expect_true("define_orphan_item" %in% checks_of(lint_define(bad)))
 })
 
 # ---- the carve-outs that prevent false positives ------------------------
@@ -274,7 +274,7 @@ test_that("a dictionary-backed codelist is exempt from the orphan check", {
   out <- file.path(withr::local_tempdir(), "external.xml")
   writeLines(injected, out)
 
-  report <- define_lint(out)
+  report <- lint_define(out)
   expect_identical(report@summary$n_external_codelists, 1L)
   expect_false("define_orphan_codelist" %in% checks_of(report))
 })
@@ -294,14 +294,14 @@ test_that("a codelist reached through RoleCodeListOID counts as referenced", {
   out <- file.path(withr::local_tempdir(), "role.xml")
   writeLines(txt, out)
 
-  expect_false("define_orphan_codelist" %in% checks_of(define_lint(out)))
+  expect_false("define_orphan_codelist" %in% checks_of(lint_define(out)))
 })
 
 # ---- Origin inheritance, both directions --------------------------------
 
 test_that("a variable with no Origin anywhere is reported", {
   bad <- edit_xml(minimal(), '<def:Origin Type="Derived"/>', "")
-  report <- define_lint(bad)
+  report <- lint_define(bad)
   expect_true("define_missing_origin" %in% checks_of(report))
   expect_match(
     report@findings$message[report@findings$check == "define_missing_origin"],
@@ -313,7 +313,7 @@ test_that("a parent variable inherits Origin from its value-level items", {
   # define21-sdtm.xml's LBORRES carries no Origin of its own; its value-level
   # items supply one each. Reporting that parent would be a false positive,
   # and it is exactly the mistake the first implementation made.
-  report <- define_lint(fixture("define21-sdtm.xml"))
+  report <- lint_define(fixture("define21-sdtm.xml"))
   expect_false("define_missing_origin" %in% checks_of(report))
 })
 
@@ -322,15 +322,15 @@ test_that("a parent variable inherits Origin from its value-level items", {
 test_that("a non-XML file is refused", {
   bad <- file.path(withr::local_tempdir(), "junk.xml")
   writeLines("not xml <<<", bad)
-  expect_error(define_lint(bad), class = "artoo_error_input")
+  expect_error(lint_define(bad), class = "artoo_error_input")
 })
 
 test_that("a document with no MetaDataVersion is refused", {
   other <- file.path(withr::local_tempdir(), "no-mdv.xml")
   writeLines("<root><child/></root>", other)
-  expect_error(define_lint(other), class = "artoo_error_input")
+  expect_error(lint_define(other), class = "artoo_error_input")
   expect_snapshot(
-    define_lint(other),
+    lint_define(other),
     error = TRUE,
     transform = function(x) {
       gsub("'[^']*[/\\\\]([^/\\\\']+\\.xml)'", "'<tmp>/\\1'", x)
@@ -339,12 +339,12 @@ test_that("a document with no MetaDataVersion is refused", {
 })
 
 test_that("a bad path argument is refused", {
-  expect_error(define_lint(123), class = "artoo_error_input")
+  expect_error(lint_define(123), class = "artoo_error_input")
 })
 
 test_that("a missing file says so, rather than reporting unparseable XML", {
   expect_error(
-    define_lint(file.path(withr::local_tempdir(), "absent.xml")),
+    lint_define(file.path(withr::local_tempdir(), "absent.xml")),
     class = "artoo_error_input"
   )
 })
@@ -361,7 +361,7 @@ test_that("a MetaDataVersion with no definitions or references is handled", {
     ),
     bare
   )
-  report <- define_lint(bare)
+  report <- lint_define(bare)
   expect_identical(nrow(report@findings), 0L)
   expect_identical(report@summary$n_definitions, 0L)
   expect_identical(report@summary$n_references, 0L)
@@ -373,7 +373,7 @@ test_that("the printed reports name what they actually checked", {
   # Variables: 0" is false for a define document, and the fields that matter
   # (version, verdict, reference counts) would never be shown.
   expect_snapshot(print(validate_define(minimal())))
-  expect_snapshot(print(define_lint(minimal())))
+  expect_snapshot(print(lint_define(minimal())))
 })
 
 test_that("the lint report shows the external-codelist exemption count", {
@@ -389,7 +389,7 @@ test_that("the lint report shows the external-codelist exemption count", {
   )
   out <- file.path(withr::local_tempdir(), "external-report.xml")
   writeLines(injected, out)
-  expect_output(print(define_lint(out)), "External codelists")
+  expect_output(print(lint_define(out)), "External codelists")
 })
 
 test_that("a dangling ItemOID inside a value list does not crash the lint (#blocker)", {
@@ -397,7 +397,7 @@ test_that("a dangling ItemOID inside a value list does not crash the lint (#bloc
   # value list referenced an ItemOID no ItemDef defines -- which is herald bug
   # (b), the exact defect this lint exists to report. The gate crashed
   # precisely on the failure it was built to catch, and later phases lean on
-  # define_lint() as the gate over writer output.
+  # lint_define() as the gate over writer output.
   txt <- readLines(minimal(), warn = FALSE)
   anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
   expect_length(anchor, 1L)
@@ -422,7 +422,7 @@ test_that("a dangling ItemOID inside a value list does not crash the lint (#bloc
   out <- file.path(withr::local_tempdir(), "dangling-vl.xml")
   writeLines(injected, out)
 
-  report <- expect_no_error(define_lint(out))
+  report <- expect_no_error(lint_define(out))
   found <- checks_of(report)
   expect_true("define_dangling_item" %in% found)
   expect_true("define_missing_origin" %in% found)
@@ -448,7 +448,7 @@ test_that("a comment referenced only from MetaDataVersion is not an orphan", {
   out <- file.path(withr::local_tempdir(), "mdv-comment.xml")
   writeLines(txt, out)
 
-  expect_false("define_orphan_comment" %in% checks_of(define_lint(out)))
+  expect_false("define_orphan_comment" %in% checks_of(lint_define(out)))
 })
 
 test_that("a dangling comment reference on MetaDataVersion is caught", {
@@ -463,7 +463,7 @@ test_that("a dangling comment reference on MetaDataVersion is caught", {
   out <- file.path(withr::local_tempdir(), "mdv-dangling.xml")
   writeLines(txt, out)
 
-  expect_true("define_dangling_comment" %in% checks_of(define_lint(out)))
+  expect_true("define_dangling_comment" %in% checks_of(lint_define(out)))
 })
 
 test_that("the two gates that only lint can see (#p9-review)", {
@@ -496,7 +496,7 @@ test_that("the two gates that only lint can see (#p9-review)", {
     ),
     path
   )
-  checks <- define_lint(path)@findings$check
+  checks <- lint_define(path)@findings$check
   expect_true("define_unconditional_value" %in% checks)
   expect_true("define_no_data_uncommented" %in% checks)
 })

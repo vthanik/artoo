@@ -84,7 +84,6 @@
   datasets = c(
     "label",
     "class",
-    "domain",
     "purpose",
     "repeating",
     "structure",
@@ -98,6 +97,16 @@
   comments = c("description")
 )
 
+# ADaM or not, read off the standard the spec names -- the same test
+# .dx_purpose() uses to choose Analysis over Tabulation, so the two cannot
+# disagree about what an ADaM spec is.
+#' @noRd
+.dx_is_adam <- function(spec) {
+  named <- c(spec@standard, spec@standards$name)
+  named <- named[!is.na(named)]
+  any(grepl("adam", named, ignore.case = TRUE))
+}
+
 # Name every expected column the spec does not fill.
 #
 # "Does not fill" means absent OR entirely blank, because a workbook that
@@ -106,12 +115,23 @@
 #' @noRd
 .dx_incomplete_notice <- function(spec, call = rlang::caller_env()) {
   gaps <- character(0)
-  for (slot in names(.dx_expected_columns)) {
+  expected <- .dx_expected_columns
+  # `domain` is an SDTM concept. An ADaM dataset legitimately leaves it
+  # blank -- CDISC's own reference ADaM define does -- so expecting it of
+  # every spec told the author of a complete ADaM define that it was not
+  # submission-grade, on the strength of a column ADaM does not use. A
+  # notice that fires on correct input teaches users to ignore the channel
+  # the whole degradation contract runs on.
+  if (!.dx_is_adam(spec)) {
+    at <- match("class", expected$datasets)
+    expected$datasets <- append(expected$datasets, "domain", after = at)
+  }
+  for (slot in names(expected)) {
     tbl <- S7::prop(spec, slot)
     if (is.null(tbl) || !nrow(tbl)) {
       next
     }
-    for (column in .dx_expected_columns[[slot]]) {
+    for (column in expected[[slot]]) {
       empty <- if (!(column %in% names(tbl))) {
         TRUE
       } else if (is.logical(tbl[[column]])) {
@@ -164,6 +184,16 @@
         any_value(spec@codelists, "standard_id")
     ) {
       lost <- c(lost, "def:StandardOID")
+    }
+  }
+  # A per-ELEMENT check, not the document-wide `has()`: 2.0 carries
+  # def:CommentOID on ItemGroupDef and ItemDef, and only CodeList loses it.
+  # Left unnamed, the downgrade dropped four codelist comments from the 2.1
+  # SDTM example and artoo's own linter then reported ten orphan comments
+  # against the document artoo had just written.
+  if (!("def:CommentOID" %in% p$def_attrs$CodeList)) {
+    if (any_value(spec@codelists, "comment_id")) {
+      lost <- c(lost, "def:CommentOID on a CodeList")
     }
   }
   if (!has("def:IsNonStandard")) {
@@ -544,7 +574,7 @@
 }
 
 # MetaDataVersion/@def:CommentOID is 2.1-only. Dropping it left the comment
-# it names defined but unreferenced, which define_lint() reports as an orphan.
+# it names defined but unreferenced, which lint_define() reports as an orphan.
 #' @noRd
 .dx_mdv_comment <- function(spec, p) {
   if (!("def:CommentOID" %in% p$def_attrs$MetaDataVersion)) {

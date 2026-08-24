@@ -297,6 +297,46 @@
   as.integer(max(nchar(values, type = "bytes")))
 }
 
+# Carry a widened length across every row that shares its ItemDef OID.
+#
+# Define-XML allows one ItemDef per OID, and artoo pools them -- the bundled
+# SDTM spec gives STUDYID a single `IT.STUDYID` across four datasets. Widening
+# is measured per dataset, so supplying data for SOME of them (the natural
+# call: you pass what is on disk) left one OID defined two ways and aborted,
+# blaming the author for a state this pass had just created. The widest
+# measurement wins for the whole group, which is what a shared definition
+# means.
+#
+# Only groups this pass actually touched are pooled. Two rows that shared an
+# OID and disagreed BEFORE any data arrived are the author's conflict to
+# resolve, and still abort with their own message.
+#' @noRd
+.dx_pool_lengths <- function(
+  spec,
+  lengths,
+  touched,
+  call = rlang::caller_env()
+) {
+  if (!any(touched)) {
+    return(lengths)
+  }
+  oids <- .dx_oids(spec, call)$variable
+  if (length(oids) != length(lengths)) {
+    return(lengths)
+  }
+  for (oid in unique(oids[touched])) {
+    rows <- which(oids == oid)
+    if (length(rows) < 2L) {
+      next
+    }
+    widest <- suppressWarnings(max(lengths[rows], na.rm = TRUE))
+    if (is.finite(widest)) {
+      lengths[rows] <- as.integer(widest)
+    }
+  }
+  lengths
+}
+
 #' @noRd
 .dx_data_lengths <- function(spec, data, call = rlang::caller_env()) {
   var <- spec@variables
@@ -304,6 +344,7 @@
     return(spec)
   }
   lengths <- as.integer(.dx_chr(var, "length"))
+  touched <- rep(FALSE, nrow(var))
   filled <- character(0)
   widened <- character(0)
   narrower <- character(0)
@@ -328,9 +369,11 @@
     where <- paste0(var$dataset[[i]], ".", column)
     if (is.na(lengths[[i]])) {
       lengths[[i]] <- width
+      touched[[i]] <- TRUE
       filled <- c(filled, where)
     } else if (width > lengths[[i]]) {
       lengths[[i]] <- width
+      touched[[i]] <- TRUE
       widened <- c(widened, where)
     } else if (width < lengths[[i]]) {
       narrower <- c(narrower, where)
@@ -359,7 +402,7 @@
   if (!length(filled) && !length(widened)) {
     return(spec)
   }
-  var$length <- lengths
+  var$length <- .dx_pool_lengths(spec, lengths, touched, call)
   S7::set_props(spec, variables = var)
 }
 

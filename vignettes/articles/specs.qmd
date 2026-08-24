@@ -115,13 +115,13 @@ write_spec(adam_spec, file.path(tempdir(), "define20.xml"), version = "2.0")
 artoo schema-validates what it built against the bundled CDISC schemas
 *before* the file reaches its destination, so an invalid document never
 replaces a good one. Read it back with the two checks &mdash;
-`validate_define()` for the schema, `define_lint()` for the reference
+`validate_define()` for the schema, `lint_define()` for the reference
 integrity a schema cannot see, because an OID is `odm:oidref` rather than
 `xs:ID` and libxml2 never resolves one:
 
 ```{r}
 validate_define(define)
-define_lint(define)
+lint_define(define)
 ```
 
 The write also says what the document is missing. None of these is required
@@ -151,7 +151,7 @@ informed <- file.path(tempdir(), "informed.xml")
 invisible(
   write_spec(sdtm_spec, informed, data = list(VS = cdisc_vs, DM = cdisc_dm))
 )
-define_lint(informed)
+lint_define(informed)
 ```
 
 A stated length shorter than the data is widened, because a length below the

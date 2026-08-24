@@ -7,7 +7,7 @@
 # The four gates:
 #   1. the write succeeds, or refuses for a reason the schema forces
 #   2. the document is schema-valid against the bundled CDISC schemas
-#   3. define_lint() reports zero DANGLING references -- orphans are allowed,
+#   3. lint_define() reports zero DANGLING references -- orphans are allowed,
 #      because a workbook routinely defines codelists and comments nothing
 #      uses, and dropping them would lose the author's work
 #   4. a structural digest is snapshotted, so a change to what artoo emits
@@ -33,7 +33,7 @@ define_digest <- function(path) {
   doc <- xml2::read_xml(path)
   nodes <- xml2::xml_find_all(doc, "//*")
   census <- table(vapply(nodes, xml2::xml_name, character(1)))
-  findings <- define_lint(path)@findings
+  findings <- lint_define(path)@findings
   list(
     elements = as.list(census[order(names(census))]),
     lint = as.list(sort(table(findings$check)))
@@ -67,7 +67,7 @@ test_that("every workbook writes a valid Define-XML with no dangling reference",
       report <- validate_define(out)
       expect_true(report@summary$valid, info = label)
       expect_identical(report@summary$define_version, version, info = label)
-      checks <- define_lint(out)@findings$check
+      checks <- lint_define(out)@findings$check
       expect_false(any(grepl("dangling", checks)), info = label)
     }
   }
@@ -145,7 +145,7 @@ test_that("an incomplete workbook is written, and every gap is named", {
     class = "artoo_warning_spec_incomplete"
   )
   expect_true(validate_define(out)@summary$valid)
-  expect_false(any(grepl("dangling", define_lint(out)@findings$check)))
+  expect_false(any(grepl("dangling", lint_define(out)@findings$check)))
   expect_snapshot(
     spec <- write_spec(spec, out, version = "2.1", created = FROZEN_P21)
   )
@@ -210,7 +210,7 @@ test_that("a where clause may qualify a variable in another dataset", {
     xml2::xml_attr(checks, "ItemOID"),
     c("IT.VS.VSTESTCD", "IT.DM.COUNTRY")
   )
-  expect_false(any(grepl("dangling", define_lint(out)@findings$check)))
+  expect_false(any(grepl("dangling", lint_define(out)@findings$check)))
 })
 
 test_that("a variable named by two datasets is refused, not guessed", {
@@ -361,7 +361,7 @@ test_that("a merged display id does not become two displays (#p7-review-1)", {
   # Forward-filling the display id gave every continuation row the same id,
   # and the writer emitted one arm:ResultDisplay per ROW -- two elements with
   # one OID. Schema-valid, because an OID is odm:oidref rather than xs:ID,
-  # and invisible to define_lint().
+  # and invisible to lint_define().
   book <- file.path(withr::local_tempdir(), "merged.xlsx")
   writexl::write_xlsx(
     list(

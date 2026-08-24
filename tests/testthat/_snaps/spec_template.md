@@ -3,7 +3,7 @@
     Code
       write_template(path)
     Condition
-      Error:
+      Error in `write_template()`:
       ! A workbook template is written as ".xlsx".
       x You gave '<tmp>/t.csv'.
 

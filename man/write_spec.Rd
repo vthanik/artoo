@@ -12,15 +12,16 @@ Build one with \code{\link[=artoo_spec]{artoo_spec()}} or \code{\link[=read_spec
 
 \item{path}{\emph{Destination file.} \verb{<character(1)>: required}. The extension
 picks the format: \code{.json} (native, lossless), \code{.xlsx} (P21
-interchange; needs the \code{writexl} package), or \code{.xml} (Define-XML 2.1;
+interchange; needs the \code{writexl} package), or \code{.xml} (Define-XML;
 needs the \code{xml2} package). Any other extension aborts with
 \code{artoo_error_input}.}
 
 \item{...}{\emph{Format-specific options.} Ignored by the JSON and xlsx paths.
 Define-XML accepts:
 \itemize{
-\item \code{version} -- \verb{<character(1)> | NULL}. \code{"2.1"} (default), resolved from
-the spec's own \code{define_version} when unset. \code{"2.0"} is not written yet.
+\item \code{version} -- \verb{<character(1)> | NULL}. \code{"2.1"} (default) or \code{"2.0"},
+resolved from the spec's own \code{define_version} when unset. Writing 2.0
+from a 2.1-shaped spec warns about each construct 2.0 cannot carry.
 \item \code{created} -- the \code{CreationDateTime} stamp, formatted as UTC. Freeze it
 for a reproducible submission build; the default is the current time.
 \item \code{stylesheet} -- \verb{<logical(1)> | <character(1)>: default TRUE}. \code{TRUE}
@@ -44,7 +45,7 @@ file is put in place.
 Serialise a \code{artoo_spec}, dispatching on the file extension: a \code{.json}
 path writes artoo's native, lossless JSON; a \code{.xlsx} path writes a
 Pinnacle 21 (P21) style Excel workbook; a \code{.xml} path writes a
-submission-grade Define-XML 2.1 document. Each is the inverse of
+submission-grade Define-XML 2.1 or 2.0 document. Each is the inverse of
 \code{\link[=read_spec]{read_spec()}} on its format, which makes the spec converters free
 compositions: \code{read_spec("spec.xlsx") |> write_spec("define.xml")} turns
 a workbook into a define.xml in one line.
@@ -80,7 +81,7 @@ Define-XML document and writing it to xlsx therefore loses its
 expressions. Write JSON when you need the spec back whole.
 
 \strong{Define-XML is the submission format.} The \code{.xml} path emits
-Define-XML 2.1 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it
+Define-XML 2.1 or 2.0 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it
 built before the file reaches its destination, so an invalid document
 never overwrites a good one. Value-level metadata is emitted whole: the
 parent variable's \code{def:ValueListRef}, the \code{def:ValueListDef}, a real
@@ -173,7 +174,7 @@ if (requireNamespace("xml2", quietly = TRUE)) {
 Define-XML back into a \code{artoo_spec}.
 
 \strong{Check the Define-XML written:} \code{\link[=validate_define]{validate_define()}} schema-validates it,
-\code{\link[=define_lint]{define_lint()}} checks its reference integrity.
+\code{\link[=lint_define]{lint_define()}} checks its reference integrity.
 
 \strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
 \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_standard]{spec_standard()}}.

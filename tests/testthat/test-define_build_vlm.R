@@ -370,7 +370,7 @@ test_that("a pooled ItemDef keeps its def:ValueListRef (#p4-review)", {
   )
   # No dangling or orphaned reference: the pooled ItemDef, its value list and
   # the value-level item all agree.
-  checks <- define_lint(path)@findings$check
+  checks <- lint_define(path)@findings$check
   expect_false(any(grepl("dangling|orphan", checks)))
 })
 
@@ -487,7 +487,7 @@ test_that("a spec with no value-level metadata emits no value list", {
 test_that("an orphan where clause is still written, since it is still a definition", {
   skip_if_not_installed("xml2")
   # A def:WhereClauseDef nothing references is schema-valid, and dropping it
-  # would lose a definition the spec carries. define_lint() reports it.
+  # would lose a definition the spec carries. lint_define() reports it.
   spec <- vlm_spec(
     where_clauses = data.frame(
       where_clause_id = "WC.ORPHAN",
@@ -510,6 +510,6 @@ test_that("an orphan where clause is still written, since it is still a definiti
     1L
   )
   expect_true(any(
-    define_lint(path)@findings$check == "define_orphan_where_clause"
+    lint_define(path)@findings$check == "define_orphan_where_clause"
   ))
 })

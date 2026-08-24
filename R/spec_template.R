@@ -130,10 +130,13 @@
 #' **Fill it in:** [read_spec()] reads the completed workbook.
 #'
 #' **Then write:** [write_spec()] turns the spec into a define.xml,
-#' [validate_define()] and [define_lint()] check the result.
+#' [validate_define()] and [lint_define()] check the result.
 #' @export
 write_template <- function(path, version = "2.1") {
-  call <- rlang::caller_env()
+  # current_env(), not caller_env(): this IS the user's call, so naming the
+  # caller leaves a bare "Error:" with no function attached, unlike every
+  # other entry point.
+  call <- rlang::current_env()
   .check_path(path, call = call)
   rlang::check_installed(
     "writexl",

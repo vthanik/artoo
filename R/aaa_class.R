@@ -308,6 +308,12 @@
   comment_id = "character",
   order = "integer",
   mandatory = "logical",
+  # A value-level ItemRef takes Role and RoleCodeListOID exactly as a
+  # dataset-level one does; reading only the dataset-level pair meant every
+  # value-level Role vanished on a round trip -- seven of them in CDISC's own
+  # 2.1 SDTM example.
+  role = "character", # ItemRef/@Role
+  role_codelist_id = "character", # ItemRef/@RoleCodeListOID
   origin = "character",
   source = "character",
   # A value-level def:Origin carries the same Description and annotated-CRF

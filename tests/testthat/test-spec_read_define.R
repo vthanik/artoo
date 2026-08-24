@@ -142,16 +142,16 @@ test_that("a Define-XML v1.0 document aborts with guidance", {
     ),
     p
   )
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
 })
 
 test_that("a non-Define XML document aborts cleanly", {
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines("<root><child/></root>", p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
   p2 <- withr::local_tempfile(fileext = ".xml")
   writeLines("not xml at all <<<", p2)
-  expect_error(read_spec(p2), class = "artoo_error_input")
+  expect_error(read_spec(p2), class = "artoo_error_spec")
 })
 
 # ---- a minimal Define-XML 2.0 document (edge coverage) ----------------------
@@ -208,11 +208,11 @@ test_that("an ItemRef without its ItemDef aborts as inconsistent", {
   )
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines(.mini_define(body), p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
 })
 
 test_that("a MetaDataVersion without ItemGroupDefs aborts", {
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines(.mini_define(""), p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
 })

@@ -272,7 +272,7 @@
   if (is.na(group)) {
     # Not an error on its own: a spec read from a document whose ARM points
     # at an ItemGroup the spec does not carry keeps the OID verbatim rather
-    # than losing the reference. define_lint() reports it as dangling.
+    # than losing the reference. lint_define() reports it as dangling.
     group <- dataset
   }
   if (.dx_blank(group)) {

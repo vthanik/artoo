@@ -278,9 +278,11 @@
 #' `artoo_error_spec` rather than being silently dropped.
 #'
 #' @param path *The specification file to read.* `<character(1)>:
-#'   required`. A `.json` (native) or `.xlsx` / `.xls` (P21) file.
+#'   required`. A `.json` (native), `.xlsx` / `.xls` (P21), or `.xml`
+#'   (Define-XML 2.0 or 2.1) file.
 #'
-#'   **Requirement:** reading a P21 workbook needs the `readxl` package.
+#'   **Requirement:** reading a P21 workbook needs the `readxl` package, and
+#'   reading a define.xml needs `xml2`.
 #' @param datasets *Read only these datasets.* `<character> | NULL`. `NULL`
 #'   (default) reads the whole spec. Otherwise the spec is scoped to the
 #'   named datasets before validation, so one broken sheet elsewhere in a
@@ -351,7 +353,7 @@ read_spec <- function(
     .artoo_abort(
       c(
         "Spec file {.path {path}} does not exist.",
-        "i" = "Pass a path to a {.val .json} or {.val .xlsx} spec."
+        "i" = "Pass a path to a {.val .json}, {.val .xlsx} or {.val .xml} spec."
       ),
       kind = "input",
       call = call
@@ -1070,7 +1072,7 @@ read_spec <- function(
 # A merged ID cell spanning a two-line description reads back as two rows
 # naming one display. Emitting both writes two arm:ResultDisplay elements
 # with the same OID -- schema-valid, because an OID is odm:oidref rather
-# than xs:ID, and invisible to define_lint(). Rows that disagree on a
+# than xs:ID, and invisible to lint_define(). Rows that disagree on a
 # non-blank value are refused rather than merged, the same policy the
 # analysis-result headers follow.
 #' @noRd

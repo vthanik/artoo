@@ -5,7 +5,7 @@
 #   1. the Tier-1 golden -- a small but COMPLETE spec, ~200 lines, the tier a
 #      human reads. Regenerate it only after the other three are green.
 #   2. schema validation, against the bundled CDISC schemas.
-#   3. reference integrity, via define_lint().
+#   3. reference integrity, via lint_define().
 #   4. round trip: read -> write -> read reconstructs an identical spec, on
 #      the two official CDISC 2.1 examples.
 #
@@ -243,7 +243,7 @@ test_that("the written document is schema-valid and reference-clean", {
   expect_true(report@summary$valid)
   expect_identical(report@summary$define_version, "2.1")
 
-  lint <- define_lint(path)
+  lint <- lint_define(path)
   expect_identical(nrow(lint@findings), 0L)
 })
 
@@ -834,7 +834,7 @@ test_that("several def:WhereClauseRefs on one item are refused, not narrowed", {
   hit <- grep("<def:WhereClauseRef", base)[[1]]
   base[[hit]] <- paste0(base[[hit]], "\n", base[[hit]])
   writeLines(base, src)
-  expect_error(suppressWarnings(read_spec(src)), class = "artoo_error_input")
+  expect_error(suppressWarnings(read_spec(src)), class = "artoo_error_spec")
   expect_snapshot(
     suppressWarnings(read_spec(src)),
     error = TRUE,
@@ -1534,4 +1534,83 @@ test_that("a value-level row with no condition is refused (#p9-review-2)", {
     class = "artoo_error_define"
   )
   expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
+})
+
+test_that("value-level Role survives a round trip (#p12-review-2a)", {
+  skip_if_not_installed("xml2")
+  # A value-level ItemRef takes Role exactly as a dataset-level one does.
+  # Reading only the dataset-level pair dropped all seven Roles in CDISC's
+  # own 2.1 SDTM example, and no round-trip test could see it: the reader
+  # did not take them and the writer did not emit them, so both documents
+  # agreed about their absence.
+  spec <- read_define("define21-sdtm.xml")
+  expect_gt(sum(!is.na(spec@values$role)), 0L)
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN, stylesheet = FALSE)
+  ))
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(back@values$role, spec@values$role)
+  expect_identical(back@values$role_codelist_id, spec@values$role_codelist_id)
+})
+
+test_that("a 2.0 downgrade names the codelist comments it drops (#p12-review-2e)", {
+  skip_if_not_installed("xml2")
+  # 2.0 carries def:CommentOID on ItemGroupDef and ItemDef and only CodeList
+  # loses it, so the document-wide check said nothing -- and artoo's own
+  # linter then reported ten orphan comments against the document artoo had
+  # just written.
+  spec <- read_define("define21-sdtm.xml")
+  expect_gt(sum(!is.na(spec@codelists$comment_id)), 0L)
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  expect_warning(
+    suppressMessages(
+      write_spec(
+        spec,
+        path,
+        version = "2.0",
+        created = FROZEN,
+        stylesheet = FALSE
+      )
+    ),
+    "def:CommentOID on a CodeList"
+  )
+})
+
+test_that("unmodelled content is named on read, not dropped in silence (#p12-review-2)", {
+  skip_if_not_installed("xml2")
+  # Four constructs artoo has no column for. Each reaches a reviewer as a
+  # blank or a changed assertion, and none is visible to a round-trip test:
+  # the reader does not take them and the writer does not emit them, so the
+  # two documents agree about their absence.
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "probe.xml")
+  file.copy(testthat::test_path("fixtures", "define21-sdtm.xml"), path)
+  # A Sponsor alias, which CDISC's own example carries eighteen of.
+  expect_warning(
+    read_spec(path),
+    "context artoo does not model"
+  )
+  # A CodeList Description and a non-English text, injected into the same
+  # document so one read reports both.
+  doc <- xml2::read_xml(path)
+  codelist <- xml2::xml_find_first(
+    doc,
+    "//*[local-name()='CodeList']",
+    ns = character()
+  )
+  xml2::xml_add_child(
+    codelist,
+    xml2::read_xml(
+      paste0(
+        "<Description xmlns='http://www.cdisc.org/ns/odm/v1.3'>",
+        "<TranslatedText xml:lang='ja'>The sponsor's own words</TranslatedText>",
+        "</Description>"
+      )
+    ),
+    .where = "before"
+  )
+  xml2::write_xml(doc, path)
+  expect_warning(read_spec(path), "carries a `Description`")
+  expect_warning(read_spec(path), "other than \"en\"")
 })
