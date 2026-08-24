@@ -10,15 +10,14 @@
       x "studyid" and "StudyName" carry 2 distinct values: "CDISC01" and "OTHER".
       i Reconcile them to one value, or drop the stale field.
 
-# mixing standards aborts at construction
+# an explicit standard contradicting the source aborts (D10)
 
     Code
-      artoo_spec(data.frame(dataset = c("ADSL", "DM"), standard = c("ADaMIG 1.1",
-        "SDTMIG 3.2")), data.frame(dataset = c("ADSL", "DM"), variable = c("AGE",
-        "USUBJID"), data_type = c("integer", "string")))
+      artoo_spec(data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"), data.frame(
+        dataset = "ADSL", variable = "AGE", data_type = "integer"), standard = "SDTMIG 3.2")
     Condition
       Error:
-      ! A <artoo_spec> carries exactly one CDISC standard.
-      x Found 2 distinct standards: "ADaMIG 1.1" and "SDTMIG 3.2".
-      i Split the source by standard, or scope the read to one standard's datasets with `read_spec(path, datasets = ...)`.
+      ! `standard` contradicts the source.
+      x "SDTMIG 3.2" was given; the source names "ADaMIG 1.1".
+      i Drop the argument, or pass one of the source's values.
 

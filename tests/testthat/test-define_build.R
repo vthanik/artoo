@@ -269,6 +269,107 @@ test_that("an EMPTY decode is a decoded term, not an absent one", {
     stringsAsFactors = FALSE
   )
   expect_no_error(artoo:::.dx_codelist(cl, p21()))
+  # A term the author left blank in an otherwise decoded list is a
+  # CodeListItem with an empty Decode -- never the string "NA", and never a
+  # refusal: partly-decoded lists are ordinary sponsor input.
   cl$decode <- c("Alpha", NA)
-  expect_error(artoo:::.dx_codelist(cl, p21()), class = "artoo_error_codelist")
+  node <- artoo:::.dx_codelist(cl, p21())
+  terms <- node$kids$CodeListItem
+  expect_length(terms, 2L)
+  expect_identical(
+    terms[[2L]]$kids$Decode$kids$TranslatedText$text,
+    ""
+  )
+})
+
+test_that("a duplicated coded value collapses only when its rows agree (#p12-final-2)", {
+  # A sponsor sheet re-lists UNSCHEDULED under each visit block. The schema
+  # allows a CodedValue once per list (UC-CL-3), so agreeing repeats keep
+  # the first row, out loud; repeats that disagree are refused HERE, where
+  # the codelist and values can be named, not at the schema gate, which
+  # blames artoo for sponsor input.
+  cl <- data.frame(
+    codelist_id = "CL.AVISIT",
+    term = c("Visit 1", "UNSCHEDULED", "Visit 2", "UNSCHEDULED"),
+    decode = NA_character_,
+    name = "Visit",
+    data_type = "text",
+    order = c(1L, 2L, 3L, 4L),
+    stringsAsFactors = FALSE
+  )
+  expect_warning(
+    node <- artoo:::.dx_codelist(cl, p21()),
+    class = "artoo_warning_codelist"
+  )
+  terms <- vapply(
+    node$kids$EnumeratedItem,
+    function(n) n$attrs$CodedValue,
+    character(1)
+  )
+  expect_identical(terms, c("Visit 1", "UNSCHEDULED", "Visit 2"))
+
+  cl$decode <- c(NA, "Unscheduled visit", NA, "Extra visit")
+  expect_error(
+    suppressWarnings(artoo:::.dx_codelist(cl, p21())),
+    class = "artoo_error_codelist"
+  )
+  expect_snapshot(
+    suppressWarnings(artoo:::.dx_codelist(cl, p21())),
+    error = TRUE
+  )
+})
+
+test_that("colliding OrderNumbers are dropped rather than emitted (#p12-final-2)", {
+  # UC-CL-4 keys EnumeratedItem on OrderNumber, so two terms seated at one
+  # number cannot both keep it, and keeping half a numbering (or inventing
+  # a new one) misstates the sheet. The attribute is optional; the terms
+  # still emit in the order the sheet gave them, which is what
+  # .dx_row_order() already falls back to for a collided column.
+  cl <- data.frame(
+    codelist_id = "CL.AVISIT",
+    term = c("Visit 3", "UNSCHEDULED"),
+    decode = NA_character_,
+    name = "Visit",
+    data_type = "text",
+    order = c(3L, 3L),
+    stringsAsFactors = FALSE
+  )
+  expect_warning(
+    node <- artoo:::.dx_codelist(cl, p21()),
+    class = "artoo_warning_codelist"
+  )
+  items <- node$kids$EnumeratedItem
+  expect_identical(
+    vapply(items, function(n) n$attrs$CodedValue, character(1)),
+    c("Visit 3", "UNSCHEDULED")
+  )
+  expect_false(any(vapply(
+    items,
+    function(n) "OrderNumber" %in% names(n$attrs),
+    logical(1)
+  )))
+})
+
+test_that("a repeated definition row collapses only when identical (#p12-final-2)", {
+  # Comments and methods emit one element per row, and their OIDs share the
+  # document-wide UC-MDV-OID-unique constraint. A sponsor sheet stating one
+  # comment twice, identically, is one definition; stating it two ways is a
+  # contradiction artoo must not resolve silently.
+  cm <- data.frame(
+    comment_id = c("COM.1", "COM.1", "COM.2"),
+    description = c("Same text", "Same text", "Other"),
+    stringsAsFactors = FALSE
+  )
+  out <- artoo:::.dx_unique_defs(cm, "comment_id", "comment")
+  expect_identical(out$comment_id, c("COM.1", "COM.2"))
+
+  cm$description[2] <- "Different text"
+  expect_error(
+    artoo:::.dx_unique_defs(cm, "comment_id", "comment"),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    artoo:::.dx_unique_defs(cm, "comment_id", "comment"),
+    error = TRUE
+  )
 })

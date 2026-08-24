@@ -326,6 +326,13 @@ write_spec(spec, define)
 validate_define(define)
 ```
 
+Pass `html = TRUE` to also render the document through the CDISC
+stylesheet. One quirk of that stylesheet to not chase: every 2.1 dataset
+heading ends `... - ` with the class blank, because the heading reads the
+2.0 class *attribute* and 2.1 records the class as an *element* — CDISC's
+own published 2.1 examples render the same bare dash, and the class does
+appear in the Datasets summary table.
+
 And `lint_define()` walks the reference graph the schema cannot see — an OID
 in Define-XML is a plain string as far as the schema is concerned, so a
 reference pointing at nothing is schema-valid:

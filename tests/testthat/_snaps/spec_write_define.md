@@ -36,20 +36,6 @@
       x 1 schema error, first: "Element 'ItemDef': something is wrong.".
       i This is an artoo defect; the spec that produced it is worth attaching to a report.
 
-# a codelist that decodes only some of its terms is refused (#p4-review)
-
-    Code
-      write_spec(spec, path, created = FROZEN)
-    Condition
-      Warning:
-      The spec is not submission-grade.
-      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", "codelists$nci_code", and "the CDISC standard".
-      i A conformance report will raise 11 findings; fill them in the source spec.
-      Error:
-      ! Codelist "CL.SEX" decodes some terms and not others.
-      x 1 term carries no decode: "U".
-      i A CodeListItem requires a Decode, so give every term one, or clear them all and emit an enumerated list.
-
 # several def:WhereClauseRefs on one item are refused, not narrowed
 
     Code

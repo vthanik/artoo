@@ -543,7 +543,13 @@
           call
         ),
         "def:Class" = cls_attr,
-        "def:ArchiveLocationID" = .dx_chr(ds, "archive_location_id")[[i]],
+        # Defaults to the leaf derived from the dataset name, so the
+        # attribute and the def:leaf below cannot disagree.
+        "def:ArchiveLocationID" = .dx_archive_id(
+          .dx_chr(ds, "archive_location_id")[[i]],
+          name,
+          isTRUE(.dx_lgl(ds, "has_no_data")[[i]])
+        ),
         "def:CommentOID" = .dx_chr(ds, "comment_id")[[i]]
       ),
       .dx_only(
@@ -835,29 +841,89 @@
   name <- .dx_one(.dx_chr(cl, "name"))
   dtype <- .dx_one(.dx_chr(cl, "data_type"))
   dtype <- if (.dx_blank(dtype)) "text" else .to_define_datatype(dtype)
-  # A term with a decode is a CodeListItem; one without is an EnumeratedItem.
-  # The schema offers a choice between the two, not a mixture, so the whole
-  # list follows whichever its terms need.
-  # An empty decode is not an absent one: a document may carry
-  # <Decode><TranslatedText/></Decode>, and that is a decoded term with
-  # nothing to say. Only NA means the source gave no decode at all.
-  decodes <- .dx_chr(cl, "decode")
-  decoded <- any(!is.na(decodes))
-  if (decoded) {
-    undecoded <- is.na(decodes)
-    if (any(undecoded)) {
-      terms <- as.character(cl$term)[undecoded]
+  # The schema allows a CodedValue once per list (UC-CL-3), so a term listed
+  # twice collapses to its first row when every repeat says the same thing:
+  # a sponsor sheet re-listing UNSCHEDULED under each visit block makes one
+  # statement twice, and a document cannot legally carry the repeat anyway.
+  # Repeats that DISAGREE are a choice artoo must not make silently, so
+  # those are refused by name -- here, where the codelist and its values
+  # can be named, not at the schema gate, which blames artoo.
+  term_key <- as.character(cl$term)
+  dup <- term_key %in% term_key[duplicated(term_key)]
+  if (any(dup)) {
+    # Position (order, rank) is excluded from the signature: two listings
+    # of one term cannot both keep a position, so differing positions are
+    # the duplication itself, not a second definition.
+    sig <- paste(
+      .dx_chr(cl, "decode"),
+      .dx_chr(cl, "term_nci_code"),
+      .dx_chr(cl, "term_description"),
+      .dx_chr(cl, "extended"),
+      sep = "\r"
+    )
+    shared <- unique(term_key[duplicated(term_key)])
+    conflicting <- shared[vapply(
+      shared,
+      function(k) length(unique(sig[term_key == k])) > 1L,
+      logical(1)
+    )]
+    if (length(conflicting)) {
       .artoo_abort(
         c(
-          "Codelist {.val {id}} decodes some terms and not others.",
-          "x" = "{length(terms)} term{?s} carr{?ies/y} no decode: {.val {terms}}.",
-          "i" = "A CodeListItem requires a Decode, so give every term one, or clear them all and emit an enumerated list."
+          "Codelist {.val {id}} defines {length(conflicting)} coded value{?s} more than one way.",
+          "x" = "{.val {conflicting}}.",
+          "i" = "Define-XML allows a coded value once per codelist; make the repeated rows agree, or drop the wrong ones."
         ),
         kind = "codelist",
         call = call
       )
     }
+    .artoo_warn(
+      c(
+        "Codelist {.val {id}} lists {length(shared)} coded value{?s} more than once.",
+        "i" = "Kept the first row of {.val {shared}}; Define-XML allows a coded value once per codelist."
+      ),
+      kind = "codelist",
+      call = call
+    )
+    cl <- cl[!duplicated(term_key), , drop = FALSE]
   }
+  # OrderNumber must be unique within the list too (UC-CL-4). When the
+  # stated numbers collide on distinct terms the column is unusable as a
+  # whole -- .dx_row_order() already falls back to source order for exactly
+  # this case -- so none is emitted, rather than half of them or invented
+  # replacements. The attribute is optional; the terms still emit in the
+  # order the sheet gave them.
+  orders <- .dx_chr(cl, "order")
+  collided <- unique(orders[!is.na(orders) & duplicated(orders)])
+  if (length(collided)) {
+    .artoo_warn(
+      c(
+        "Codelist {.val {id}} seats two terms at one OrderNumber: {.val {collided}}.",
+        "i" = "Terms are written in source order without OrderNumber; renumber the codelist to keep one."
+      ),
+      kind = "codelist",
+      call = call
+    )
+    cl$order <- NA
+  }
+  # A term with a decode is a CodeListItem; one without is an EnumeratedItem.
+  # The schema offers a choice between the two, not a mixture, so the whole
+  # list follows whichever its terms need -- and ONE term with a decode
+  # decides it for all of them. A term left blank in a decoded list gets an
+  # empty Decode, which is what the schema wants (the element is required,
+  # its text is not) and what the reference tooling emits.
+  #
+  # artoo used to refuse the mixture outright, which is stricter than the
+  # standard and stopped a real sponsor specification dead: partly-decoded
+  # lists are ordinary, and the alternatives -- inventing decode text, or
+  # dropping every decode in the list -- are both worse than an empty one.
+  #
+  # An empty decode is not an absent one: a document may carry
+  # <Decode><TranslatedText/></Decode>, and that is a decoded term with
+  # nothing to say. Only NA means the source gave no decode at all.
+  decodes <- .dx_chr(cl, "decode")
+  decoded <- any(!is.na(decodes))
   ord <- .dx_row_order(cl)
   terms <- lapply(ord, function(i) .dx_codelist_term(cl, i, decoded, p))
   kids <- list(
@@ -907,7 +973,9 @@
         TranslatedText = .dx_node(
           "TranslatedText",
           attrs = list(`xml:lang` = "en"),
-          text = as.character(.dx_chr(cl, "decode")[[i]])
+          # A term the author left blank in an otherwise decoded list
+          # gets an empty Decode rather than the string "NA".
+          text = .dx_decode_text(.dx_chr(cl, "decode")[[i]])
         )
       )
     )
@@ -1006,4 +1074,59 @@
       )
     )
   )
+}
+
+# The archive-location id that matches the leaf emitted beside it.
+#' @noRd
+.dx_archive_id <- function(stated, dataset, empty) {
+  if (!.dx_blank(stated)) {
+    return(stated)
+  }
+  if (.dx_blank(dataset) || isTRUE(empty)) {
+    return(NA_character_)
+  }
+  paste0("LF.", trimws(dataset))
+}
+
+# The decode text of one term, empty when the author gave none.
+#' @noRd
+.dx_decode_text <- function(x) {
+  if (is.na(x)) "" else as.character(x)
+}
+
+# One definition per OID, for the def tables that emit one element per row
+# (methods, comments). Two rows may share an id only when every column
+# agrees; otherwise the document would keep one row and silently discard a
+# contradicting sponsor assertion. The agreeing repeat is dropped here,
+# where the id can be named, because emitting it would break the schema's
+# UC-MDV-OID-unique constraint and the schema gate blames artoo.
+#' @noRd
+.dx_unique_defs <- function(df, key_col, what, call = rlang::caller_env()) {
+  if (is.null(df) || !nrow(df)) {
+    return(df)
+  }
+  key <- as.character(df[[key_col]])
+  dup <- key %in% key[duplicated(key)]
+  if (!any(dup)) {
+    return(df)
+  }
+  sig <- do.call(paste, c(lapply(df, as.character), list(sep = "\r")))
+  shared <- unique(key[duplicated(key)])
+  conflicting <- shared[vapply(
+    shared,
+    function(k) length(unique(sig[key == k])) > 1L,
+    logical(1)
+  )]
+  if (length(conflicting)) {
+    .artoo_abort(
+      c(
+        "{length(conflicting)} {what} id{?s} {?is/are} defined more than one way.",
+        "x" = "{.val {conflicting}}.",
+        "i" = "Define-XML allows one definition per OID; make the repeated rows agree, or give them distinct ids."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+  df[!duplicated(key), , drop = FALSE]
 }

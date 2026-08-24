@@ -482,92 +482,6 @@
   ))
 }
 
-# Render a where clause back into the single-cell expression the current
-# workbook generation carries on the ValueLevel sheet.
-#
-# The exact inverse of .wc_from_values(): scalar operands bare, a set in
-# parentheses comma-separated, conditions joined by lowercase " and ", and a
-# value quoted only when it contains a space or a comma -- because that is
-# the one thing the reader needs the quotes for.
-#
-# artoo used to emit a where-clause ID here and a separate WhereClauses
-# sheet beside it. That sheet belongs to the RETIRED workbook generation,
-# whose ValueLevel sheet named its label column differently; pairing it with
-# current-generation headers produced a workbook of no generation at all.
-#' @noRd
-.wc_render <- function(wc, owner = NULL) {
-  if (is.null(wc) || !nrow(wc)) {
-    return(character(0))
-  }
-  # A value needs quoting when it contains a comma (which separates set
-  # members) or the word that separates conditions. A bare space needs
-  # none, since a value runs to the end of its condition.
-  quote_if_needed <- function(x) {
-    needs <- grepl(",", x, fixed = TRUE) |
-      grepl("\\s(?i:AND|OR)\\s", x, perl = TRUE)
-    ifelse(needs, paste0('"', x, '"'), x)
-  }
-  # Which dataset owns each clause. The parser's rule is that an
-  # UNQUALIFIED name belongs to the dataset of the row the cell sits on, so
-  # the renderer has to use that same dataset -- and the caller is the only
-  # one who knows it.
-  #
-  # Guessing it from the clause's first check, as an earlier version did,
-  # disagreed with the parser whenever the first check was the foreign one:
-  # a VS value conditioned on `DM.COUNTRY EQ USA and VSTESTCD EQ HEIGHT`
-  # rendered the qualifier away and read back as VS.COUNTRY. Silently, and
-  # in exactly the case the qualifier exists for.
-  ids <- unique(as.character(wc$where_clause_id))
-  if (is.null(owner)) {
-    owner <- stats::setNames(rep(NA_character_, length(ids)), ids)
-  }
-  owners <- owner[ids]
-  names(owners) <- ids
-  # With no owner named, fall back to the first check's dataset: a clause
-  # nothing references has no row to take one from, and every check then
-  # renders qualified, which is lossless if wordy.
-  blank <- is.na(owners)
-  if (any(blank)) {
-    first <- vapply(
-      split(as.character(wc$dataset), factor(wc$where_clause_id, ids)),
-      function(x) {
-        x <- x[!is.na(x)]
-        if (length(x)) x[[1L]] else NA_character_
-      },
-      character(1)
-    )
-    owners[blank] <- first[names(owners)[blank]]
-  }
-  check <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
-  by_check <- vapply(
-    split(seq_len(nrow(wc)), factor(check, levels = unique(check))),
-    function(rows) {
-      row <- wc[rows[[1L]], , drop = FALSE]
-      values <- quote_if_needed(as.character(wc$value[rows]))
-      values <- values[!is.na(values) & nzchar(values)]
-      operand <- if (length(values) > 1L) {
-        paste0("(", paste(values, collapse = ", "), ")")
-      } else if (length(values)) {
-        values
-      } else {
-        ""
-      }
-      trimws(paste(.wc_qualify(row, owners), row$comparator, operand))
-    },
-    character(1)
-  )
-  ids <- vapply(
-    strsplit(names(by_check), "\r", fixed = TRUE),
-    function(x) x[[1L]],
-    character(1)
-  )
-  vapply(
-    split(unname(by_check), factor(ids, levels = unique(ids))),
-    paste,
-    character(1),
-    collapse = " and "
-  )
-}
 
 # ---- Analysis-results selection criteria ---------------------------------
 #
@@ -579,29 +493,6 @@
 # Reading it is how a workbook's analysis results reach `arm:AnalysisDataset`
 # at all: without it a vendor-authored workbook has no `@ItemGroupOID` and
 # the define write refuses the result outright.
-
-# Render one result's rows back into a single cell.
-#' @noRd
-.arm_render_criteria <- function(rows, rendered) {
-  groups <- vapply(
-    seq_len(nrow(rows)),
-    function(i) {
-      ds <- as.character(rows$dataset[[i]])
-      if (is.na(ds) || !nzchar(ds)) {
-        return(NA_character_)
-      }
-      id <- as.character(rows$where_clause_id[[i]])
-      cond <- if (!is.na(id) && id %in% names(rendered)) rendered[[id]] else ""
-      paste0(ds, "[", cond, "]")
-    },
-    character(1)
-  )
-  groups <- groups[!is.na(groups)]
-  if (!length(groups)) {
-    return(NA_character_)
-  }
-  paste(groups, collapse = " ")
-}
 
 # Split a cell into its bracket groups: dataset name, then the condition.
 # Bracket-aware rather than a split on "]", so a condition is never cut.
@@ -661,17 +552,4 @@
     v[at] <- substring(v[at], nchar(dataset) + 2L)
   }
   v
-}
-
-# A variable name for the cell: qualified when the check leaves the dataset
-# that owns its clause.
-#' @noRd
-.wc_qualify <- function(row, owners) {
-  ds <- as.character(row$dataset)
-  own <- owners[[as.character(row$where_clause_id)]]
-  if (is.na(ds) || is.na(own) || identical(ds, own)) {
-    as.character(row$variable)
-  } else {
-    paste0(ds, ".", row$variable)
-  }
 }

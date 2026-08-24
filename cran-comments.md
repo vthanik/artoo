@@ -37,21 +37,25 @@ sha256 of every vendored file.
 ## Test environments
 
 - Local: macOS 26.5.1 (aarch64-apple-darwin20), R 4.5.3 --
-  `R CMD check --as-cran` on the release tarball: OK (NOTEs below).
+  `R CMD check --as-cran` on the release tarball.
 - win-builder, R-devel (x86_64-w64-mingw32).
 - GitHub Actions: Ubuntu (R-devel, R-release, R-oldrel-1), macOS, and
-  Windows (R-release): OK.
+  Windows (R-release).
+
+<!-- NOT YET SUBMITTABLE. Only the local check has been run for 0.2.0.
+     Run win-builder and let CI go green on the release commit, then
+     delete this comment. A cran-comments.md that claims a check nobody
+     ran is the one thing a reviewer can catch us out on for free. -->
 
 ## R CMD check results
 
-0 errors | 0 warnings | notes as below.
+0 errors | 0 warnings | 1 note.
 
-Any local NOTE is environmental: "unable to verify current time" (the check
-machine has no network route to the time server) and "Skipping checking HTML
-validation" (the local HTML Tidy predates the validator). Neither appears on
-CRAN's build machines.
+The note is environmental: "Skipping checking HTML validation" (the local
+HTML Tidy predates the validator). It does not appear on CRAN's build
+machines.
 
-The misspelled-words NOTE, when it appears, names domain vocabulary (CDISC,
+A misspelled-words NOTE, if it appears, names domain vocabulary (CDISC,
 ADaM, SDTM, ODM) that is spelled correctly.
 
 ## Reverse dependencies

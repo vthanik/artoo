@@ -377,8 +377,25 @@
   # ItemGroupDef; every other leaf sits on the MetaDataVersion. Reading the
   # placement off the reference, not off the document's title, is what makes
   # a read/write round trip put each leaf back where it came from.
+  #
+  # The reference is the RESOLVED one, not the stated column: a blank cell
+  # derives `LF.<DATASET>`, and a document already carrying that id (a
+  # define read through a workbook keeps the leaves and loses only the
+  # pointer) is claimed by its ItemGroupDef exactly as a stated one is.
+  # Building this map off the stated column emitted that document twice,
+  # and an xs:ID may appear once.
   archive_of <- .dx_map(
-    .dx_chr(ds, "archive_location_id"),
+    vapply(
+      seq_len(nrow(ds)),
+      function(i) {
+        .dx_archive_id(
+          .dx_chr(ds, "archive_location_id")[[i]],
+          as.character(ds$dataset[[i]]),
+          isTRUE(.dx_lgl(ds, "has_no_data")[[i]])
+        )
+      },
+      character(1)
+    ),
     as.character(ds$dataset)
   )
 
@@ -399,7 +416,12 @@
       spec,
       i,
       refs,
-      .dx_archive_leaf(docs, .dx_chr(ds, "archive_location_id")[[i]]),
+      .dx_archive_leaf(
+        docs,
+        .dx_chr(ds, "archive_location_id")[[i]],
+        as.character(ds$dataset[[i]]),
+        isTRUE(.dx_lgl(ds, "has_no_data")[[i]])
+      ),
       p,
       oids,
       call
@@ -437,13 +459,13 @@
   # nothing: schema-valid, and rejected by artoo's own reference check.
   codelists <- c(codelists, .dx_dictionaries(spec@dictionaries, p, call))
 
-  md <- spec@methods
+  md <- .dx_unique_defs(spec@methods, "method_id", "method", call)
   fes <- spec@method_expressions
   methods <- lapply(.dx_row_order(md), function(i) {
     .dx_method(md, i, fes, p, call)
   })
 
-  cm <- spec@comments
+  cm <- .dx_unique_defs(spec@comments, "comment_id", "comment", call)
   comments <- lapply(.dx_row_order(cm), function(i) .dx_comment(cm, i, p, call))
 
   .dx_node(
@@ -597,19 +619,64 @@
 }
 
 #' @noRd
-.dx_archive_leaf <- function(documents, archive_id) {
-  if (is.null(documents) || !nrow(documents) || .dx_blank(archive_id)) {
+.dx_archive_leaf <- function(
+  documents,
+  archive_id,
+  dataset = NA_character_,
+  empty = FALSE
+) {
+  # Nothing stated: derive the id, and prefer a document that already
+  # carries it. A workbook has no archive-location column, so a define read
+  # into a workbook and back keeps the LEAVES on its documents table and
+  # loses only the pointer -- minting a second leaf with the same id then
+  # produced two, and an xs:ID may appear once.
+  derived <- .dx_blank(archive_id)
+  if (derived) {
+    archive_id <- .dx_archive_id(NA_character_, dataset, empty)
+    if (is.na(archive_id)) {
+      return(NULL)
+    }
+  }
+  if (!is.null(documents) && nrow(documents)) {
+    i <- match(trimws(archive_id), as.character(documents$document_id))
+    if (!is.na(i)) {
+      return(.dx_leaf(
+        documents$document_id[[i]],
+        .dx_chr(documents, "href")[[i]],
+        .dx_chr(documents, "title")[[i]]
+      ))
+    }
+  }
+  # A stated id the documents table does not carry is the user's to fix,
+  # and lint_define() reports the dangle. Minting a leaf here would pair a
+  # `def:ArchiveLocationID` of one name with a leaf of another.
+  if (!derived) {
     return(NULL)
   }
-  i <- match(trimws(archive_id), as.character(documents$document_id))
-  if (is.na(i)) {
+  .dx_default_archive(dataset, empty)
+}
+
+# Where a dataset's own file is, when nothing said.
+#
+# A workbook has no column for it, so nothing ever said -- and a define
+# without it renders every dataset heading as "[Location: ]", which is the
+# first thing a reviewer sees. This is derivation, not invention: CDISC's
+# own published examples carry it on every dataset that has one, always as
+# `LF.<NAME>` pointing at `<name>.xpt`, and the reference tooling derives
+# it the same way.
+#
+# The carve-out is exactly the one those examples make. In the 2.1 SDTM
+# example, 9 of 11 datasets carry a location and the two that do not are
+# precisely the two flagged `def:HasNoData` -- a dataset with no records
+# has no file to point at. An explicit `archive_location_id` still wins
+# over both.
+#' @noRd
+.dx_default_archive <- function(dataset, empty = FALSE) {
+  if (.dx_blank(dataset) || isTRUE(empty)) {
     return(NULL)
   }
-  .dx_leaf(
-    documents$document_id[[i]],
-    .dx_chr(documents, "href")[[i]],
-    .dx_chr(documents, "title")[[i]]
-  )
+  file <- paste0(tolower(trimws(dataset)), ".xpt")
+  .dx_leaf(paste0("LF.", trimws(dataset)), file, file)
 }
 
 # ---- stylesheet -----------------------------------------------------------

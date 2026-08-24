@@ -19,15 +19,26 @@ test_that("artoo_spec() builds a valid spec from each bundled pair", {
   expect_identical(spec_standard(sdtm), "SDTMIG 3.1.2")
 })
 
-test_that("mixing the ADaM and SDTM demo tables aborts (one spec, one standard)", {
-  expect_error(
-    artoo_spec(
-      rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
-      rbind(cdisc_adam_variables, cdisc_sdtm_variables),
-      codelists = cdisc_codelists
-    ),
-    class = "artoo_error_spec"
+test_that("mixing the ADaM and SDTM demo tables links each to its own standard (D10)", {
+  # This used to abort: everything folded into ONE scalar, so two values
+  # meant information loss. Per-row values now survive as standard_id
+  # links, the scalar is only the primary, and CDISC's own 2.1 SDTM example
+  # names three standards across its datasets.
+  spec <- artoo_spec(
+    rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
+    rbind(cdisc_adam_variables, cdisc_sdtm_variables),
+    codelists = cdisc_codelists
   )
+  # A tie is broken by first appearance.
+  expect_identical(spec_standard(spec), "ADaMIG 1.1")
+  linked <- stats::setNames(
+    spec@standards$name[
+      match(spec@datasets$standard_id, spec@standards$standard_id)
+    ],
+    spec@datasets$dataset
+  )
+  expect_identical(unname(linked[["ADSL"]]), "ADaMIG")
+  expect_identical(unname(linked[["DM"]]), "SDTMIG")
 })
 
 test_that("artoo_spec() coerces a tibble slot to a plain data frame", {
@@ -247,33 +258,45 @@ test_that("agreeing sources resolve to the one standard", {
   expect_identical(spec_standard(spec), "ADaMIG 1.1")
 })
 
-test_that("mixing standards aborts at construction", {
+test_that("mixing standards mints a row for each and links the datasets (D10)", {
+  spec <- artoo_spec(
+    data.frame(
+      dataset = c("ADSL", "AE", "DM"),
+      standard = c("ADaMIG 1.1", "SDTMIG 3.2", "SDTMIG 3.2")
+    ),
+    data.frame(
+      dataset = c("ADSL", "AE", "DM"),
+      variable = c("AGE", "AETERM", "USUBJID"),
+      data_type = c("integer", "string", "string")
+    )
+  )
+  # The scalar is the value the most datasets name...
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
+  # ...and every row resolves through its own minted standards entry.
+  expect_identical(nrow(spec@standards), 2L)
+  expect_true(all(spec@datasets$standard_id %in% spec@standards$standard_id))
+  expect_setequal(spec@standards$name, c("ADaMIG", "SDTMIG"))
+  # The display column is consumed; standard_id is its durable form.
+  expect_false("standard" %in% names(spec@datasets))
+})
+
+test_that("an explicit standard contradicting the source aborts (D10)", {
+  # A file describing several standards is data; an ARGUMENT naming one the
+  # file never mentions is the caller contradicting the file.
   expect_error(
     artoo_spec(
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
-      ),
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        variable = c("AGE", "USUBJID"),
-        data_type = c("integer", "string")
-      )
+      data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"),
+      data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+      standard = "SDTMIG 3.2"
     ),
     class = "artoo_error_spec"
   )
   expect_snapshot(
     error = TRUE,
     artoo_spec(
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
-      ),
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        variable = c("AGE", "USUBJID"),
-        data_type = c("integer", "string")
-      )
+      data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"),
+      data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+      standard = "SDTMIG 3.2"
     )
   )
 })

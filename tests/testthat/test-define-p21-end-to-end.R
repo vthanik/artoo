@@ -997,3 +997,553 @@ test_that("the older shape's Analysis Criteria sheet is read (#p12-P3)", {
     lint_define(path)@findings$check
   )))
 })
+
+test_that("the criteria sheet's edges are handled (#p12-P3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  base <- function(criteria) {
+    dir <- withr::local_tempdir(.local_envir = parent.frame())
+    path <- file.path(dir, "old.xlsx")
+    writexl::write_xlsx(
+      list(
+        Study = data.frame(
+          Attribute = c("StudyName", "StandardName", "StandardVersion"),
+          Value = c("CDISC01", "ADaM-IG", "1.1"),
+          stringsAsFactors = FALSE
+        ),
+        Datasets = data.frame(
+          Dataset = c("ADAE", "ADSL"),
+          Description = "x",
+          Structure = "One record per subject",
+          stringsAsFactors = FALSE
+        ),
+        Variables = data.frame(
+          Dataset = c("ADAE", "ADAE", "ADSL"),
+          Variable = c("AESER", "AEBODSYS", "SAFFL"),
+          `Data Type` = "text",
+          check.names = FALSE,
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Displays` = data.frame(
+          ID = "RD.1",
+          Title = "Table 1",
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Results` = data.frame(
+          Display = "RD.1",
+          ID = "AR.1",
+          Description = "d",
+          Reason = "SPECIFIED IN PROTOCOL",
+          Purpose = "PRIMARY OUTCOME MEASURE",
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Criteria` = criteria
+      ),
+      path
+    )
+    path
+  }
+
+  # A criteria row naming a result that does not exist belongs to nothing,
+  # so the result it does not name keeps its own single row.
+  orphan <- base(data.frame(
+    Display = "RD.1",
+    Result = c("AR.1", "AR.NOPE"),
+    Dataset = c("ADAE", "ADSL"),
+    Variables = c("AEBODSYS", ""),
+    `Where Clause` = c("AESER EQ Y", "SAFFL EQ Y"),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  ))
+  spec <- suppressWarnings(read_spec(orphan))
+  expect_identical(nrow(spec@arm_results), 1L)
+  expect_identical(spec@arm_results$dataset, "ADAE")
+
+  # A cell already naming a defined clause is left as the reference it is,
+  # rather than parsed as a condition.
+  keyed <- base(data.frame(
+    Display = "RD.1",
+    Result = "AR.1",
+    Dataset = "ADAE",
+    Variables = "AEBODSYS",
+    `Where Clause` = "AESER EQ Y",
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  ))
+  spec2 <- suppressWarnings(read_spec(keyed))
+  expect_true(
+    spec2@arm_results$where_clause_id %in% spec2@where_clauses$where_clause_id
+  )
+
+  # Every record: a dataset with no condition at all.
+  every <- base(data.frame(
+    Display = "RD.1",
+    Result = "AR.1",
+    Dataset = "ADSL",
+    Variables = "SAFFL",
+    `Where Clause` = NA_character_,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  ))
+  spec3 <- suppressWarnings(read_spec(every))
+  expect_identical(spec3@arm_results$dataset, "ADSL")
+  expect_true(is.na(spec3@arm_results$where_clause_id))
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec3, path, created = FROZEN_P21, stylesheet = FALSE)
+  ))
+  expect_true(validate_define(path)@summary$valid)
+})
+
+test_that("selection criteria assigns variables per dataset (#p12-P3)", {
+  # The newer shape packs several datasets into one cell, and each takes
+  # only the variables qualified by its own name; an unqualified name
+  # belongs to the group only when there is one.
+  expect_identical(
+    artoo:::.arm_group_variables("ADAE.X, ADSL.Y", "ADAE", 2L),
+    "X"
+  )
+  expect_identical(
+    artoo:::.arm_group_variables("ADAE.X, ADSL.Y", "ADSL", 2L),
+    "Y"
+  )
+  expect_true(is.na(artoo:::.arm_group_variables("X Y", "ADAE", 2L)))
+  expect_identical(artoo:::.arm_group_variables("X Y", "ADAE", 1L), "X Y")
+  expect_true(is.na(artoo:::.arm_group_variables(NA_character_, "ADAE", 1L)))
+})
+
+test_that("a criteria sheet may omit its optional columns (#p12-final-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # An Analysis Criteria sheet naming only datasets is legitimate -- a
+  # result may take every record with no variable list -- and indexing the
+  # absent columns died with a bare R error mid-read.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "old.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Variable = c("AEBODSYS", "SAFFL"),
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.1",
+        Title = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.1",
+        ID = "AR.1",
+        Description = "d",
+        Reason = "SPECIFIED IN PROTOCOL",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Criteria` = data.frame(
+        Display = "RD.1",
+        Result = "AR.1",
+        Dataset = "ADAE",
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(spec@arm_results$dataset, "ADAE")
+  expect_true(is.na(spec@arm_results$variables))
+  expect_true(is.na(spec@arm_results$where_clause_id))
+})
+
+test_that("the criteria sheet overriding a Selection Criteria cell warns (#p12-final-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # A hand-authored workbook can name a result's datasets both ways, and
+  # they can disagree. The sheet wins -- it is the more precise grain --
+  # but the losing cell must not vanish silently.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "both.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADAE", "ADAE", "ADSL"),
+        Variable = c("AESER", "AEBODSYS", "SAFFL"),
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.1",
+        Title = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.1",
+        ID = "AR.1",
+        Description = "d",
+        Reason = "SPECIFIED IN PROTOCOL",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        `Selection Criteria` = "ADSL[SAFFL EQ Y]",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Criteria` = data.frame(
+        Display = "RD.1",
+        Result = "AR.1",
+        Dataset = "ADAE",
+        Variables = "AEBODSYS",
+        `Where Clause` = "AESER EQ Y",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  expect_warning(
+    spec <- suppressMessages(read_spec(book)),
+    class = "artoo_warning_spec"
+  )
+  # The sheet's dataset stands; the cell's is gone, and was announced.
+  expect_identical(spec@arm_results$dataset, "ADAE")
+})
+
+test_that("a Selection Criteria cell expands into per-dataset rows (#p12-final-4)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # The standard shape packs a result's analysis datasets into ONE cell, a
+  # bracket group each; artoo's grain is one row per result x dataset. The
+  # expansion is what gives the define its arm:AnalysisDataset children.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "packed.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADAE", "ADAE", "ADSL"),
+        Variable = c("AESER", "AEBODSYS", "SAFFL"),
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.1",
+        Title = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.1",
+        ID = "AR.1",
+        Description = "d",
+        Reason = "SPECIFIED IN PROTOCOL",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        Variables = "ADAE.AEBODSYS ADSL.SAFFL",
+        `Selection Criteria` = "ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_results), 2L)
+  expect_identical(spec@arm_results$dataset, c("ADAE", "ADSL"))
+  # Each dataset takes only the variables qualified by its own name.
+  expect_identical(spec@arm_results$variables, c("AEBODSYS", "SAFFL"))
+  # Each bracket group's condition became a defined clause.
+  expect_true(all(
+    spec@arm_results$where_clause_id %in% spec@where_clauses$where_clause_id
+  ))
+  expect_setequal(spec@where_clauses$variable, c("AESER", "SAFFL"))
+
+  # A cell artoo cannot read is refused by name, not expanded wrongly:
+  # text outside any bracket group has no dataset to belong to.
+  bad <- file.path(dir, "bad.xlsx")
+  sheets <- readxl::excel_sheets(book)
+  content <- lapply(sheets, function(s) readxl::read_excel(book, sheet = s))
+  names(content) <- sheets
+  content$`Analysis Results`$`Selection Criteria` <- "AESER EQ Y"
+  writexl::write_xlsx(content, bad)
+  expect_error(
+    suppressWarnings(read_spec(bad)),
+    class = "artoo_error_spec"
+  )
+  expect_snapshot(suppressWarnings(read_spec(bad)), error = TRUE)
+})
+
+test_that("an ARM condition cell stacks onto the clauses the workbook defines (#p12-final-4)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # A result's Where Clause cell may hold a CONDITION rather than the id of
+  # one. When the workbook also defines clauses on their own sheet, the
+  # minted clause joins them -- replacing them lost every value-level
+  # clause the moment one result spelled its condition out.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "stack.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADAE", "ADSL"),
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADAE", "ADAE", "ADSL"),
+        Variable = c("AESER", "AEBODSYS", "SAFFL"),
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      WhereClauses = data.frame(
+        ID = "WC.OTHER",
+        Dataset = "ADAE",
+        Variable = "AESER",
+        Comparator = "EQ",
+        Value = "Y",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.1",
+        Title = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.1",
+        ID = c("AR.1", "AR.2"),
+        Description = "d",
+        Reason = "SPECIFIED IN PROTOCOL",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        Dataset = c(NA, "ADSL"),
+        `Where Clause` = c("WC.OTHER", "SAFFL EQ Y"),
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      # A criteria sheet that names only AR.1: AR.2 has no row there, and
+      # keeps its own single row untouched.
+      `Analysis Criteria` = data.frame(
+        Display = "RD.1",
+        Result = "AR.1",
+        Dataset = "ADAE",
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_results), 2L)
+  expect_identical(spec@arm_results$dataset, c("ADAE", "ADSL"))
+  # AR.1 keeps its stated reference; AR.2's condition became a clause that
+  # joined WC.OTHER rather than replacing it.
+  expect_identical(spec@arm_results$where_clause_id[[1]], "WC.OTHER")
+  minted <- spec@arm_results$where_clause_id[[2]]
+  expect_false(identical(minted, "SAFFL EQ Y"))
+  expect_contains(
+    unique(spec@where_clauses$where_clause_id),
+    c("WC.OTHER", minted)
+  )
+})
+
+test_that("a workbook's Standard column reaches def:StandardOID (#p12-final-5)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # The Datasets sheet states a standard per row; Define-XML states it as
+  # def:StandardOID resolving into the def:Standards block, which is what
+  # the stylesheet renders in every dataset heading. artoo minted the block
+  # and never linked the datasets to it, so every heading rendered bare.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "std.xlsx")
+  writexl::write_xlsx(
+    list(
+      Study = data.frame(
+        Attribute = c("StudyName", "StandardName", "StandardVersion"),
+        Value = c("CDISC01", "ADaM-IG", "1.1"),
+        stringsAsFactors = FALSE
+      ),
+      Datasets = data.frame(
+        Dataset = c("ADSL", "ADAE"),
+        Label = c("Subject Level", "Adverse Events"),
+        Structure = "One record per subject",
+        Standard = "ADaMIG 1.1",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = c("ADSL", "ADAE"),
+        Variable = c("USUBJID", "AETERM"),
+        Label = "x",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_false(anyNA(spec@datasets$standard_id))
+  expect_true(all(spec@datasets$standard_id %in% spec@standards$standard_id))
+
+  out <- file.path(dir, "define.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN_P21))
+  doc <- xml2::read_xml(out)
+  igs <- xml2::xml_find_all(
+    doc,
+    "//*[local-name()='ItemGroupDef']",
+    ns = character()
+  )
+  oids <- xml2::xml_attr(igs, "StandardOID")
+  expect_length(igs, 2L)
+  expect_false(anyNA(oids))
+  # ...and the reference resolves to the block the stylesheet renders from.
+  std <- xml2::xml_find_first(
+    doc,
+    sprintf("//*[local-name()='Standard'][@OID='%s']", oids[[1]]),
+    ns = character()
+  )
+  expect_identical(xml2::xml_attr(std, "Name"), "ADaMIG")
+  expect_identical(xml2::xml_attr(std, "Version"), "1.1")
+  expect_false(any(grepl("dangling", lint_define(out)@findings$check)))
+})
+
+test_that("the criteria sheet's required columns are required (#p12-decision)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # Three of the five columns are required and two are not, and the split
+  # is the reference importer's own: it declares Display, Result and
+  # Dataset required, Variables and Where Clause optional -- and its
+  # control workbook carries a row with both optional cells blank, so
+  # "every record, no variable list" is ordinary authored data.
+  #
+  # An absent REQUIRED column used to be tolerated too, and silently: the
+  # key matched nothing, the whole sheet was discarded without a word, and
+  # the failure surfaced later at write time naming the wrong surface.
+  book <- function(criteria) {
+    path <- file.path(
+      withr::local_tempdir(.local_envir = parent.frame()),
+      "w.xlsx"
+    )
+    writexl::write_xlsx(
+      list(
+        Study = data.frame(
+          Attribute = c("StudyName", "StandardName", "StandardVersion"),
+          Value = c("CDISC01", "ADaM-IG", "1.1"),
+          stringsAsFactors = FALSE
+        ),
+        Datasets = data.frame(
+          Dataset = "ADAE",
+          Description = "Adverse Events",
+          Structure = "One record per event",
+          stringsAsFactors = FALSE
+        ),
+        Variables = data.frame(
+          Dataset = "ADAE",
+          Variable = "AESER",
+          `Data Type` = "text",
+          check.names = FALSE,
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Displays` = data.frame(
+          ID = "RD.1",
+          Title = "Table 1",
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Results` = data.frame(
+          Display = "RD.1",
+          ID = "AR.1",
+          Description = "d",
+          Reason = "SPECIFIED IN PROTOCOL",
+          Purpose = "PRIMARY OUTCOME MEASURE",
+          stringsAsFactors = FALSE
+        ),
+        `Analysis Criteria` = criteria
+      ),
+      path
+    )
+    path
+  }
+
+  # Optional columns absent: read, with the payload NA and nothing said.
+  spec <- suppressWarnings(read_spec(book(data.frame(
+    Display = "RD.1",
+    Result = "AR.1",
+    Dataset = "ADAE",
+    stringsAsFactors = FALSE
+  ))))
+  expect_identical(spec@arm_results$dataset, "ADAE")
+  expect_true(is.na(spec@arm_results$variables))
+  expect_true(is.na(spec@arm_results$where_clause_id))
+
+  # A required column absent: refused, naming the column by its header.
+  for (missing in list(
+    list(
+      drop = "Result",
+      crit = data.frame(
+        Display = "RD.1",
+        Dataset = "ADAE",
+        stringsAsFactors = FALSE
+      )
+    ),
+    list(
+      drop = "Display",
+      crit = data.frame(
+        Result = "AR.1",
+        Dataset = "ADAE",
+        stringsAsFactors = FALSE
+      )
+    ),
+    list(
+      drop = "Dataset",
+      crit = data.frame(
+        Display = "RD.1",
+        Result = "AR.1",
+        stringsAsFactors = FALSE
+      )
+    )
+  )) {
+    path <- book(missing$crit)
+    expect_error(
+      read_spec(path),
+      class = "artoo_error_p21_sheet",
+      info = missing$drop
+    )
+    expect_error(read_spec(path), missing$drop, info = missing$drop)
+  }
+})

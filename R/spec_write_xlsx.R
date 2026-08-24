@@ -135,11 +135,18 @@
   .p21_warn_dropped(spec, call)
 
   datasets <- spec@datasets
-  # The spec's one standard is interchange-encoded as the P21 Datasets
-  # sheet's repeated Standard column (the shape the reader's resolver
-  # consumes), not a bespoke study sheet.
-  if (!is.na(spec@standard) && nrow(datasets)) {
-    datasets$standard <- spec@standard
+  # Each dataset's OWN standard, as the display string the reader's linker
+  # resolves back into `standard_id`. Stamping the scalar over every row
+  # mislabelled the rows that name another standard -- CDISC's own 2.1 SDTM
+  # example names three across its datasets. A row linked to nothing falls
+  # back to the scalar, which keeps the resolver fed on the classic
+  # one-standard shape.
+  if (nrow(datasets)) {
+    per_row <- .p21_dataset_standard(datasets, spec@standards)
+    per_row[is.na(per_row)] <- spec@standard
+    if (any(!is.na(per_row))) {
+      datasets$standard <- per_row
+    }
   }
 
   # Re-encode the canonical dataType into the Define-XML / ODM vocabulary the
@@ -158,7 +165,6 @@
   # foreign key -- it looks the id up and raises a per-row reference error
   # when it does not resolve -- so a rendered condition there is not a
   # condition to it, it is a name for a clause that does not exist.
-  # `.wc_render()` is kept for the newer shape, which has no such sheet.
   clauses <- spec@where_clauses
   has_rows <- function(x) !is.null(x) && is.data.frame(x) && nrow(x) > 0L
   if (
@@ -319,8 +325,48 @@
 #
 # `soft_hard` survives only while every value is the "Soft" the reader
 # assumes for a workbook clause.
+#
+# `standard_id` survives through the Standard column's display strings: the
+# writer emits each linked row's "name version" and the reader's
+# .link_dataset_standards() resolves it against the round-tripped Standards
+# sheet. That recovery holds only while every id in use resolves to a row
+# whose display parses back unambiguously -- a blank name or version, a
+# version containing a space (the parser takes the last token), or two
+# standards sharing one display would each break it.
 #' @noRd
 .p21_recovered <- list(
+  datasets = list(
+    standard_id = function(df, spec) {
+      std <- spec@standards
+      ids <- trimws(as.character(df$standard_id))
+      ids <- unique(ids[!is.na(ids) & nzchar(ids)])
+      if (!length(ids)) {
+        return(TRUE)
+      }
+      if (is.null(std) || !nrow(std)) {
+        return(FALSE)
+      }
+      name <- trimws(as.character(std$name))
+      version <- trimws(as.character(std$version))
+      display <- paste(name, version)
+      at <- match(ids, trimws(as.character(std$standard_id)))
+      if (anyNA(at)) {
+        return(FALSE)
+      }
+      all(
+        !is.na(name[at]) &
+          nzchar(name[at]) &
+          !is.na(version[at]) &
+          nzchar(version[at]) &
+          !grepl("[[:space:]]", version[at]) &
+          vapply(
+            at,
+            function(i) sum(display == display[[i]], na.rm = TRUE) == 1L,
+            logical(1)
+          )
+      )
+    }
+  ),
   variables = list(
     key_sequence = function(df, spec) {
       blank <- df
@@ -532,17 +578,36 @@
 # and quoted when the value itself contains a comma, which is the whole
 # reason that splitter is quote-aware.
 #' @noRd
-.p21_where_sheet <- function(wc) {
+.p21_where_sheet <- function(wc, call = rlang::caller_env()) {
   if (is.null(wc) || !nrow(wc)) {
     return(NULL)
   }
   key <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
   first <- !duplicated(key)
-  collapse <- function(values) {
+  # Quoting is COMPARATOR-AWARE. A quote only means anything in a set,
+  # where a comma separates members; on a scalar the reader takes the cell
+  # verbatim, so quoting an EQ value whose text happens to contain a comma
+  # put the quote characters INTO the value. Silently, and on artoo's own
+  # round trip.
+  collapse <- function(values, comparator) {
     values <- as.character(values)
     values <- values[!is.na(values)]
     if (!length(values)) {
       return(NA_character_)
+    }
+    if (!(toupper(comparator) %in% .wc_set_comparators)) {
+      return(values[[1L]])
+    }
+    if (any(grepl('"', values, fixed = TRUE))) {
+      .artoo_abort(
+        c(
+          "A where-clause value contains a quote character.",
+          "x" = "{.val {values[grepl('\"', values, fixed = TRUE)][[1]]}}.",
+          "i" = "A set's values are comma separated and quote delimited, so a value cannot carry one. Write the clause to {.val .json} instead."
+        ),
+        kind = "spec",
+        call = call
+      )
     }
     quoted <- ifelse(
       grepl(",", values, fixed = TRUE),
@@ -568,11 +633,18 @@
   key <- key[ordered]
   first <- !duplicated(key)
   out <- wc[first, , drop = FALSE]
+  comparators <- split(
+    as.character(wc$comparator),
+    factor(key, levels = unique(key))
+  )
   out$value <- vapply(
-    split(wc$value, factor(key, levels = unique(key))),
-    collapse,
+    seq_along(comparators),
+    function(k) {
+      group <- split(wc$value, factor(key, levels = unique(key)))[[k]]
+      collapse(group, comparators[[k]][[1L]])
+    },
     character(1)
-  )[unique(key)]
+  )
   .p21_sheet_frame(out, .p21_where_map, names(.spec_cols_where_clauses))
 }
 
@@ -587,6 +659,41 @@
   if (is.null(df) || !nrow(df) || !("Label" %in% names(df))) {
     return(df)
   }
-  df$Description <- df[["Label"]]
+  # Only when the sheet does not already carry one: a `Description` here is
+  # a user's own foreign column that rode through the read, and clobbering
+  # it with the label destroys the one copy of their text.
+  if (!("Description" %in% names(df))) {
+    df$Description <- df[["Label"]]
+  }
   df
+}
+
+# The Standard cell for each dataset row: the display string ("SDTMIG 3.2")
+# of the standards row its `standard_id` names, or NA when the id is blank,
+# unresolvable, or the row it names has no name/version to display. The
+# reader's .link_dataset_standards() parses exactly this shape back.
+#' @noRd
+.p21_dataset_standard <- function(datasets, standards) {
+  blank <- rep(NA_character_, nrow(datasets))
+  if (
+    !("standard_id" %in% names(datasets)) ||
+      is.null(standards) ||
+      !nrow(standards)
+  ) {
+    return(blank)
+  }
+  at <- match(
+    trimws(as.character(datasets$standard_id)),
+    trimws(as.character(standards$standard_id))
+  )
+  name <- trimws(as.character(standards$name))[at]
+  version <- trimws(as.character(standards$version))[at]
+  ok <- !is.na(at) &
+    !is.na(name) &
+    nzchar(name) &
+    !is.na(version) &
+    nzchar(version)
+  out <- blank
+  out[ok] <- paste(name[ok], version[ok])
+  out
 }

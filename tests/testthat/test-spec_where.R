@@ -470,46 +470,6 @@ test_that("a quoted value keeps its quotes out of the data (#p12-p21)", {
   )
 })
 
-test_that("a rendered clause is what the reader parses back (#p12-p21)", {
-  # The ValueLevel cell IS the clause in the current workbook format, so the
-  # renderer has to be the parser's exact inverse: bare scalars, a set in
-  # parentheses, conditions joined by lowercase " and ", and a quote only
-  # where the value needs protecting.
-  clauses <- data.frame(
-    where_clause_id = c("WC.1", "WC.1", "WC.2", "WC.2"),
-    check_order = c(1L, 2L, 1L, 1L),
-    dataset = "ADQS",
-    variable = c("PARAMCD", "AVISIT", "PARAMCD", "PARAMCD"),
-    comparator = c("EQ", "EQ", "IN", "IN"),
-    value = c("ACTOT", "Week 24", "ACITM01", "ACITM02"),
-    value_order = c(1L, 1L, 1L, 2L),
-    stringsAsFactors = FALSE
-  )
-  rendered <- artoo:::.wc_render(clauses)
-  # A space needs no quotes: a value runs to the end of its condition, so
-  # `AVISIT EQ Week 24` already means the seven characters.
-  expect_identical(
-    unname(rendered[["WC.1"]]),
-    "PARAMCD EQ ACTOT and AVISIT EQ Week 24"
-  )
-  expect_identical(
-    unname(rendered[["WC.2"]]),
-    "PARAMCD IN (ACITM01, ACITM02)"
-  )
-  # Round trip: parse what was rendered, and the conditions come back whole.
-  values <- data.frame(
-    dataset = "ADQS",
-    variable = "AVAL",
-    where_clause = unname(rendered),
-    stringsAsFactors = FALSE
-  )
-  back <- artoo:::.wc_from_values(values)$where_clauses
-  expect_setequal(
-    paste(back$variable, back$comparator, back$value),
-    paste(clauses$variable, clauses$comparator, clauses$value)
-  )
-})
-
 test_that("selection criteria split into one group per dataset (#p12-p21)", {
   # An analysis result names its datasets, and each one's condition, in a
   # single cell. Without splitting it the result reached the writer with no
@@ -544,41 +504,27 @@ test_that("an analysis variable keeps its own dataset's qualifier (#p12-p21)", {
   expect_identical(artoo:::.arm_variable_names("AVAL CNSR"), c("AVAL", "CNSR"))
 })
 
-test_that("a foreign check keeps its dataset whichever position it is in (#p12-review-B1)", {
-  # The parser's rule is that an unqualified name belongs to the dataset of
-  # the row the cell sits on. The renderer used to guess the owner from the
-  # clause's FIRST check instead, so a clause whose foreign check came
-  # first rendered the qualifier away and read back re-homed -- silently,
-  # in exactly the case the qualifier exists for.
-  clauses <- data.frame(
-    where_clause_id = "WC.1",
-    check_order = 1:2,
-    dataset = c("DM", "VS"),
-    variable = c("COUNTRY", "VSTESTCD"),
-    comparator = "EQ",
-    value = c("USA", "HEIGHT"),
-    value_order = 1L,
-    stringsAsFactors = FALSE
-  )
-  # Rendered for a VS row, the DM check is qualified and the VS one is not.
-  cell <- artoo:::.wc_render(clauses, c(WC.1 = "VS"))
-  expect_identical(
-    unname(cell[["WC.1"]]),
-    "DM.COUNTRY EQ USA and VSTESTCD EQ HEIGHT"
-  )
-  back <- artoo:::.wc_from_values(data.frame(
+test_that("a qualified check keeps its own dataset (#p12-review-B1)", {
+  # A condition may name a variable in another dataset -- a VS value
+  # conditioned on DM.COUNTRY -- and the qualifier is the only thing that
+  # says so. An unqualified name belongs to the dataset of the row the
+  # condition sits on, and the caller fills that in.
+  parsed <- artoo:::.wc_from_values(data.frame(
     dataset = "VS",
     variable = "VSORRES",
-    where_clause = unname(cell[["WC.1"]]),
+    where_clause = "DM.COUNTRY EQ USA and VSTESTCD EQ HEIGHT",
     stringsAsFactors = FALSE
   ))$where_clauses
-  expect_identical(back$dataset, c("DM", "VS"))
-  expect_identical(back$variable, c("COUNTRY", "VSTESTCD"))
-  # Rendered for a DM row, the other way round.
-  expect_identical(
-    unname(artoo:::.wc_render(clauses, c(WC.1 = "DM"))[["WC.1"]]),
-    "COUNTRY EQ USA and VS.VSTESTCD EQ HEIGHT"
-  )
+  expect_identical(parsed$dataset, c("DM", "VS"))
+  expect_identical(parsed$variable, c("COUNTRY", "VSTESTCD"))
+  # ...whichever order they come in.
+  reversed <- artoo:::.wc_from_values(data.frame(
+    dataset = "VS",
+    variable = "VSORRES",
+    where_clause = "VSTESTCD EQ HEIGHT and DM.COUNTRY EQ USA",
+    stringsAsFactors = FALSE
+  ))$where_clauses
+  expect_identical(reversed$dataset, c("VS", "DM"))
 })
 
 test_that("a value containing 'and' survives its own round trip (#p12-review-M1)", {
@@ -593,10 +539,5 @@ test_that("a value containing 'and' survives its own round trip (#p12-review-M1)
   )
   parsed <- artoo:::.wc_from_values(values)$where_clauses
   expect_identical(parsed$value, c("Nausea and vomiting", "Y"))
-  # ...and the renderer quotes it back, so the cell it writes is the cell
-  # it can read.
-  expect_identical(
-    unname(artoo:::.wc_render(parsed)[[1]]),
-    'AEDECOD EQ "Nausea and vomiting" and AESER EQ Y'
-  )
+  expect_identical(parsed$variable, c("AEDECOD", "AESER"))
 })

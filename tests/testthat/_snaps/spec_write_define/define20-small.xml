@@ -34,7 +34,7 @@
           <def:title>dm.xpt</def:title>
         </def:leaf>
       </ItemGroupDef>
-      <ItemGroupDef OID="IG.VS" Name="VS" Domain="VS" Repeating="Yes" SASDatasetName="VS" Purpose="Tabulation" def:Structure="One record per STUDYID, USUBJID, VSTESTCD, VSSEQ" def:Class="FINDINGS">
+      <ItemGroupDef OID="IG.VS" Name="VS" Domain="VS" Repeating="Yes" SASDatasetName="VS" Purpose="Tabulation" def:Structure="One record per STUDYID, USUBJID, VSTESTCD, VSSEQ" def:Class="FINDINGS" def:ArchiveLocationID="LF.VS">
         <Description>
           <TranslatedText xml:lang="en">Vital Signs</TranslatedText>
         </Description>
@@ -45,6 +45,9 @@
         <ItemRef ItemOID="IT.VS.VSORRES" OrderNumber="5" Mandatory="No"/>
         <ItemRef ItemOID="IT.VS.VSORRESU" OrderNumber="6" Mandatory="No"/>
         <ItemRef ItemOID="IT.VS.VSDTC" OrderNumber="7" Mandatory="No"/>
+        <def:leaf ID="LF.VS" xlink:href="vs.xpt">
+          <def:title>vs.xpt</def:title>
+        </def:leaf>
       </ItemGroupDef>
       <ItemDef OID="IT.DM.STUDYID" Name="STUDYID" DataType="text" Length="20">
         <Description>

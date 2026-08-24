@@ -62,13 +62,14 @@ by \code{comment_id}; must carry \code{comment_id} when supplied.}
 \item{documents}{\emph{Document references.} \verb{<data.frame> | NULL}. Referenced
 by \code{document_id}; must carry \code{document_id} when supplied.}
 
-\item{standard}{\emph{The CDISC standard the spec implements.}
+\item{standard}{\emph{The primary CDISC standard the spec implements.}
 \verb{<character(1)> | NULL}. E.g. \code{"ADaMIG 1.1"} or \code{"SDTMIG 3.2"}. When
-\code{NULL} (default) it is resolved from \code{datasets$standard} or
-\code{study$standard}; absent everywhere, \verb{@standard} is \code{NA}.
+\code{NULL} (default) it is resolved from \code{study$standard}, or from the
+value most rows of \code{datasets$standard} name; absent everywhere,
+\verb{@standard} is \code{NA}.
 
-\strong{Restriction:} all sources must agree on one value; conflicting
-standards abort with \code{artoo_error_spec}.}
+\strong{Restriction:} an explicit value that matches nothing the source
+names aborts with \code{artoo_error_spec}.}
 
 \item{standards}{\emph{CDISC standards this spec claims.} \verb{<data.frame> | NULL}.
 Must carry \code{standard_id}, \code{name} and \code{version}. Define-XML 2.1 emits these
@@ -131,14 +132,17 @@ SAS / P21 spellings resolve automatically (\code{"text"}, \code{"Char"},
 variable names a dataset absent from \code{datasets}, or references a
 \code{codelist_id} absent from \code{codelists}.
 
-\strong{One spec, one standard.} A \code{artoo_spec} carries exactly one CDISC
-standard, stored as the scalar \verb{@standard} property. The constructor
-resolves it from the \code{standard} argument, a \code{standard} column in
-\code{datasets} (the P21 workbook shape), and a \code{standard} field in \code{study}
-(the Define-XML shape) — those columns are consumed, so \verb{@standard} is
-the single home. More than one distinct value aborts with
-\code{artoo_error_spec}; scope the source to one standard (e.g.
-\code{read_spec(path, datasets = ...)}) instead of mixing.
+\strong{One primary standard, linked per dataset.} The scalar \verb{@standard}
+property holds the spec's primary CDISC standard, resolved from the
+\code{standard} argument, a \code{standard} column in \code{datasets} (the P21 workbook
+shape), and a \code{standard} field in \code{study} (the Define-XML shape) — those
+columns are consumed, so \verb{@standard} is the single home. A \code{datasets}
+column naming several standards is legitimate (a study may mix
+implementation-guide versions): each row is linked to its standard via
+\code{datasets$standard_id}, minting a \code{standards} row where none defines the
+name, and \verb{@standard} takes the study's stated standard, or failing that
+the one most datasets name. An explicit \code{standard} argument contradicting
+every value in the source aborts with \code{artoo_error_spec}.
 
 \strong{One study vocabulary.} Well-known study fields are canonicalised to
 the CDISC ODM GlobalVariables names, snake_cased: \code{study_name},

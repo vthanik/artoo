@@ -1477,12 +1477,15 @@ read_spec <- function(
   }
   if (!"label" %in% names(df) || all(is.na(df$label))) {
     df$label <- df[["Description"]]
+    # CONSUMED, so removed. The two spellings name one fact, and leaving
+    # the raw column behind meant the writer emitted it beside the one it
+    # derives from `label` -- two columns of the same name, and one more
+    # of them on every pass. When `Label` supplied the label, though, the
+    # Description column was never consumed: it is the sponsor's own text,
+    # possibly saying something different, and it survives as a foreign
+    # column the way every unrecognised column does.
+    df[["Description"]] <- NULL
   }
-  # CONSUMED, so removed. The two spellings name one fact, and leaving the
-  # raw column behind meant the writer emitted it beside the one it derives
-  # from `label` -- two columns of the same name, and one more of them on
-  # every pass.
-  df[["Description"]] <- NULL
   df
 }
 
@@ -1648,6 +1651,32 @@ read_spec <- function(
   ) {
     return(arm_results)
   }
+  # Three columns are required and two are not, and the split is the
+  # reference importer's: it declares Display, Result and Dataset required
+  # and Variables and Where Clause optional, so a criteria row that names
+  # no variables and no condition is ordinary authored data -- its own
+  # control workbook carries exactly that row.
+  #
+  # Tolerating an absent REQUIRED column is a different thing, and it was
+  # silent: without Display or Result the key matched nothing, the whole
+  # sheet was discarded without a word, and the failure surfaced three
+  # steps later at write time naming `arm_results` rather than the sheet
+  # that caused it. Refuse here, where the column can be named.
+  absent <- setdiff(c("display_id", "result_id", "dataset"), names(criteria))
+  if (length(absent)) {
+    headers <- names(.p21_arm_criteria_map)[
+      match(absent, unname(.p21_arm_criteria_map))
+    ]
+    .artoo_abort(
+      c(
+        "The Analysis Criteria sheet is missing {length(headers)} required column{?s}: {.val {headers}}.",
+        "x" = "Each row names the display, the result, and the analysis dataset it belongs to.",
+        "i" = "Only {.val Variables} and {.val Where Clause} may be left out; remove the sheet if it carries no criteria."
+      ),
+      kind = "p21_sheet",
+      call = call
+    )
+  }
   criteria <- .fill_down(.fill_down(criteria, "display_id"), "result_id")
   # The older Analysis Results sheet has none of these columns, so make
   # them before filling any in: adding a column to one row and not the
@@ -1655,6 +1684,9 @@ read_spec <- function(
   for (column in c("dataset", "variables", "where_clause_id")) {
     if (!(column %in% names(arm_results))) {
       arm_results[[column]] <- NA_character_
+    }
+    if (!(column %in% names(criteria))) {
+      criteria[[column]] <- NA_character_
     }
   }
   key <- function(df) {
@@ -1666,22 +1698,50 @@ read_spec <- function(
   }
   ck <- key(criteria)
   rows <- list()
+  overridden <- character(0)
   for (i in seq_len(nrow(arm_results))) {
     mine <- which(ck == key(arm_results[i, , drop = FALSE]))
     if (!length(mine)) {
       rows[[length(rows) + 1L]] <- arm_results[i, , drop = FALSE]
       next
     }
+    # Once a criteria row hands this result a dataset, its own Selection
+    # Criteria cell goes unread (.arm_from_criteria skips rows that carry
+    # one) -- and the two can disagree. artoo's writer clears the cell when
+    # it emits the sheet, so both being non-blank is a hand-authored
+    # workbook saying the same thing twice; the sheet wins, out loud.
+    cell <- if ("selection_criteria" %in% names(arm_results)) {
+      as.character(arm_results$selection_criteria[[i]])
+    } else {
+      NA_character_
+    }
+    handed <- FALSE
     for (j in mine) {
       row <- arm_results[i, , drop = FALSE]
       for (column in c("dataset", "variables", "where_clause_id")) {
         value <- as.character(criteria[[column]][[j]])
         if (!is.na(value) && nzchar(trimws(value))) {
           row[[column]] <- value
+          if (column == "dataset") {
+            handed <- TRUE
+          }
         }
       }
       rows[[length(rows) + 1L]] <- row
     }
+    if (handed && !is.na(cell) && nzchar(trimws(cell))) {
+      overridden <- c(overridden, as.character(arm_results$result_id[[i]]))
+    }
+  }
+  if (length(overridden)) {
+    .artoo_warn(
+      c(
+        "The Analysis Criteria sheet overrides the Selection Criteria cell of {length(unique(overridden))} analysis result{?s}: {.val {unique(overridden)}}.",
+        "i" = "Both name analysis datasets for the same result; the sheet wins and the cell is ignored."
+      ),
+      kind = "spec",
+      call = call
+    )
   }
   do.call(rbind, rows)
 }

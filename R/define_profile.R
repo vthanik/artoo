@@ -397,15 +397,25 @@
   if (is.null(allowed) || is.na(value) || !nzchar(value)) {
     return(value)
   }
-  if (!value %in% allowed) {
-    .artoo_abort(
-      c(
-        "{what} {.val {value}} is not allowed in this Define-XML version.",
-        "i" = "Allowed: {.val {allowed}}."
-      ),
-      kind = "define",
-      call = call
-    )
+  if (value %in% allowed) {
+    return(value)
   }
-  value
+  # Matched without regard to CASE, then written in the spelling the schema
+  # uses. A controlled term differing only in case is unambiguous, and
+  # artoo already normalises the case of a data type on the way in, so
+  # refusing here was an inconsistency rather than a standard being
+  # upheld -- one `COMPUTATION` among 335 `Computation`s stopped a real
+  # sponsor specification dead. Nothing is lost: the term is the term.
+  at <- match(toupper(trimws(value)), toupper(allowed))
+  if (!is.na(at)) {
+    return(allowed[[at]])
+  }
+  .artoo_abort(
+    c(
+      "{what} {.val {value}} is not allowed in this Define-XML version.",
+      "i" = "Allowed: {.val {allowed}}."
+    ),
+    kind = "define",
+    call = call
+  )
 }

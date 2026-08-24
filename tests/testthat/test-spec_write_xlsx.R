@@ -555,3 +555,196 @@ test_that("the workbook is the shape the widest tooling imports (#p12-interchang
   # either finds it.
   expect_true(all(c("Label", "Description") %in% names(values)))
 })
+
+test_that("a comma in a scalar value is not quoted into it (#p12-final-B1)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # Quotes only mean something inside a SET, where a comma separates
+  # members. On a scalar the reader takes the cell verbatim, so quoting an
+  # `EQ` value whose text contains a comma -- "Nausea, vomiting and
+  # retching" is a real preferred term -- put the quote characters into the
+  # value and changed which records the clause selects. Silently, on
+  # artoo's own round trip.
+  mk <- function(comparator, values) {
+    artoo_spec(
+      data.frame(dataset = "AE", structure = "one", stringsAsFactors = FALSE),
+      data.frame(
+        dataset = "AE",
+        variable = c("AESEV", "AEDECOD"),
+        data_type = "string",
+        stringsAsFactors = FALSE
+      ),
+      values = data.frame(
+        dataset = "AE",
+        variable = "AESEV",
+        where_clause_id = "WC.1",
+        data_type = "text",
+        stringsAsFactors = FALSE
+      ),
+      where_clauses = data.frame(
+        where_clause_id = "WC.1",
+        check_order = 1L,
+        dataset = "AE",
+        variable = "AEDECOD",
+        comparator = comparator,
+        value = values,
+        value_order = seq_along(values),
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+  round_trip <- function(spec) {
+    path <- withr::local_tempfile(fileext = ".xlsx")
+    suppressWarnings(write_spec(spec, path))
+    list(
+      cell = readxl::read_excel(path, sheet = "WhereClauses")[["Value"]][[1]],
+      back = suppressWarnings(read_spec(path))@where_clauses$value
+    )
+  }
+
+  scalar <- round_trip(mk("EQ", "Nausea, vomiting and retching"))
+  expect_identical(scalar$cell, "Nausea, vomiting and retching")
+  expect_identical(scalar$back, "Nausea, vomiting and retching")
+
+  # A set still quotes, because there a comma really does separate.
+  set <- round_trip(mk("IN", c("Nausea, vomiting", "Rash")))
+  expect_identical(set$cell, '("Nausea, vomiting", Rash)')
+  expect_identical(set$back, c("Nausea, vomiting", "Rash"))
+})
+
+test_that("a set value carrying a quote is refused, not mangled (#p12-final-B1)", {
+  skip_if_not_installed("writexl")
+  # A set's values are comma separated and quote delimited, so a value that
+  # contains a quote cannot be written at all. artoo used to write one and
+  # then refuse to read its own file back.
+  spec <- artoo_spec(
+    data.frame(dataset = "AE", structure = "one", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "AE",
+      variable = c("AESEV", "AEDECOD"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "AE",
+      variable = "AESEV",
+      where_clause_id = "WC.1",
+      data_type = "text",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "AE",
+      variable = "AEDECOD",
+      comparator = "IN",
+      value = c('say "ouch"', "Rash"),
+      value_order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  expect_error(write_spec(spec, path), class = "artoo_error_spec")
+})
+
+test_that("every dataset states where its file is (#p12-location)", {
+  skip_if_not_installed("xml2")
+  # A define whose ItemGroupDefs carry no `def:ArchiveLocationID` renders
+  # every dataset heading as "[Location: ]". CDISC's own published examples
+  # carry it on every dataset that has a file -- always `LF.<NAME>` at
+  # `<name>.xpt` -- so artoo derives the same rather than leaving a blank.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = c("DM", "VS"),
+      structure = "One record per subject",
+      has_no_data = c(FALSE, TRUE),
+      comment_id = c(NA, "COM.EMPTY"),
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = c("DM", "VS"),
+      variable = c("USUBJID", "VSORRES"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "COM.EMPTY",
+      description = "Nothing was collected.",
+      stringsAsFactors = FALSE
+    ),
+    standard = "SDTMIG 3.4"
+  )
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  groups <- xml2::xml_find_all(
+    doc,
+    "//*[local-name()='ItemGroupDef']",
+    ns = character()
+  )
+  located <- stats::setNames(
+    xml2::xml_attr(groups, "ArchiveLocationID"),
+    xml2::xml_attr(groups, "Name")
+  )
+  expect_identical(unname(located[["DM"]]), "LF.DM")
+  leaf <- xml2::xml_find_first(
+    doc,
+    "//*[local-name()='ItemGroupDef'][@Name='DM']/*[local-name()='leaf']",
+    ns = character()
+  )
+  expect_identical(xml2::xml_attr(leaf, "href"), "dm.xpt")
+  # ...except a dataset with no records, which has no file to point at.
+  # That is the carve-out CDISC's own examples make: in the 2.1 SDTM
+  # example the only two datasets without a location are the two flagged
+  # HasNoData.
+  expect_true(is.na(located[["VS"]]))
+  expect_false(any(grepl("dangling", lint_define(path)@findings$check)))
+})
+
+test_that("a user's own ValueLevel Description is not clobbered (#p12-final-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # The dual-spelling convenience writes the label under `Description` for
+  # the older reader -- but only when the sheet does not already carry a
+  # `Description`. When it does, that column is the user's own text that
+  # rode through the read, and overwriting it with the label destroys the
+  # one copy.
+  book <- file.path(withr::local_tempdir(), "vl.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Label = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = c("AGEGR1", "AGEGR1N"),
+        Label = "Age Group",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      ValueLevel = data.frame(
+        Dataset = "ADSL",
+        Variable = "AGEGR1",
+        `Where Clause` = "AGEGR1N EQ 1",
+        Label = "Under 65",
+        Description = "Sponsor cell kept verbatim",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  out <- file.path(withr::local_tempdir(), "back.xlsx")
+  suppressWarnings(write_spec(spec, out))
+  sheet <- readxl::read_excel(out, sheet = "ValueLevel")
+  expect_identical(sheet$Label[[1]], "Under 65")
+  expect_identical(sheet$Description[[1]], "Sponsor cell kept verbatim")
+})

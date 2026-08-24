@@ -1,6 +1,48 @@
 # artoo 0.2.0
 
-* `write_spec()` to `.xlsx` writes the workbook shape that the widest range
+* `read_spec()` refuses an `Analysis Criteria` sheet missing `Display`,
+  `Result` or `Dataset`, naming the column. It used to tolerate the absence
+  silently: the join key matched nothing, the whole sheet was discarded
+  without a word, and the failure surfaced later at write time naming the
+  analysis results rather than the sheet that caused it. `Variables` and
+  `Where Clause` stay optional, which is the split the format itself
+  declares.
+
+* `read_spec()` links each dataset to the standard its `Standard` cell
+  names, minting a `standards` row where none defines it — so a
+  workbook-sourced define carries `def:StandardOID` on every `ItemGroupDef`
+  and the rendered dataset headings show the standard, as CDISC's own
+  examples do. A `Standard` column naming several standards no longer
+  aborts: each row keeps its own and `@standard` holds only the primary.
+  `write_spec()` to `.xlsx` accordingly writes each dataset's own standard
+  rather than stamping the primary over every row.
+
+* `read_spec()` reads an `Analysis Criteria` sheet that omits its optional
+  columns — one naming only datasets used to die mid-read — and warns when
+  that sheet overrides a result's non-blank `Selection Criteria` cell
+  instead of discarding the cell silently.
+
+* `read_spec()` keeps a sheet's own `Description` column when `Label`
+  supplied the label: it is unconsumed sponsor text, not a second spelling
+  of one. `write_spec()` to `.xlsx` likewise no longer overwrites a
+  foreign `Description` on the ValueLevel sheet with the label.
+
+* `write_spec()` to Define-XML derives a dataset's archive location
+  (`LF.<DATASET>` pointing at `<dataset>.xpt`) when the spec states none,
+  reusing a document already carrying that id rather than minting a second
+  leaf beside it — two leaves with one `xs:ID` failed schema validation on
+  artoo's own workbook round trip. A dataset flagged as having no data
+  derives none, the carve-out CDISC's own examples make.
+
+* `write_spec()` to Define-XML writes the partly-decoded and duplicated
+  codelist shapes real sponsor specifications carry, instead of refusing
+  them at the schema gate as an artoo defect: a term without a decode in a
+  decoded list gets an empty `Decode` (never the string `"NA"`), a coded
+  value listed twice identically collapses to its first row with a warning,
+  one defined two ways is refused naming the codelist and values, and a
+  codelist seating two terms at one `OrderNumber` is written in source
+  order without the attribute. Identical repeated method and comment rows
+  collapse the same way; contradictory ones are refused by id.
   of tooling imports. The study sheet is named `Study`, a value-level row
   names its condition by ID and a `WhereClauses` sheet defines it, an
   analysis result's datasets sit on an `Analysis Criteria` sheet, and a

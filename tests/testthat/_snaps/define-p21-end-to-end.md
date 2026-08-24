@@ -49,8 +49,8 @@
         ..$ leaf                  : int 8
         ..$ title                 : int 8
        $ lint    :List of 2
+        ..$ define_orphan_leaf   : int 1
         ..$ define_orphan_comment: int 3
-        ..$ define_orphan_leaf   : int 3
 
 ---
 
@@ -107,8 +107,8 @@
         ..$ leaf                  : int 8
         ..$ title                 : int 8
        $ lint    :List of 2
-        ..$ define_orphan_leaf    : int 3
-        ..$ define_orphan_standard: int 4
+        ..$ define_orphan_leaf    : int 1
+        ..$ define_orphan_standard: int 3
 
 ---
 
@@ -157,8 +157,8 @@
         ..$ title           : int 12
        $ lint    :List of 3
         ..$ define_missing_origin: int 2
+        ..$ define_orphan_leaf   : int 5
         ..$ define_orphan_comment: int 8
-        ..$ define_orphan_leaf   : int 9
 
 ---
 
@@ -210,8 +210,8 @@
         ..$ title           : int 12
        $ lint    :List of 3
         ..$ define_missing_origin : int 2
-        ..$ define_orphan_standard: int 6
-        ..$ define_orphan_leaf    : int 9
+        ..$ define_orphan_leaf    : int 5
+        ..$ define_orphan_standard: int 5
 
 # an incomplete workbook is written, and every gap is named
 
@@ -264,4 +264,14 @@
       ! Document "LF.dm" has no location.
       x `def:leaf/@xlink:href` is required by Define-XML.
       i Set `href` on the documents table.
+
+# a Selection Criteria cell expands into per-dataset rows (#p12-final-4)
+
+    Code
+      suppressWarnings(read_spec(bad))
+    Condition
+      Error:
+      ! Analysis result "AR.1" has selection criteria artoo cannot read.
+      x "AESER EQ Y"
+      i Expected one bracket group per analysis dataset, as `ADSL[SAFFL EQ Y]`.
 

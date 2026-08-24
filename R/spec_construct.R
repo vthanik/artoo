@@ -58,14 +58,17 @@
 #' variable names a dataset absent from `datasets`, or references a
 #' `codelist_id` absent from `codelists`.
 #'
-#' **One spec, one standard.** A `artoo_spec` carries exactly one CDISC
-#' standard, stored as the scalar `@standard` property. The constructor
-#' resolves it from the `standard` argument, a `standard` column in
-#' `datasets` (the P21 workbook shape), and a `standard` field in `study`
-#' (the Define-XML shape) — those columns are consumed, so `@standard` is
-#' the single home. More than one distinct value aborts with
-#' `artoo_error_spec`; scope the source to one standard (e.g.
-#' `read_spec(path, datasets = ...)`) instead of mixing.
+#' **One primary standard, linked per dataset.** The scalar `@standard`
+#' property holds the spec's primary CDISC standard, resolved from the
+#' `standard` argument, a `standard` column in `datasets` (the P21 workbook
+#' shape), and a `standard` field in `study` (the Define-XML shape) — those
+#' columns are consumed, so `@standard` is the single home. A `datasets`
+#' column naming several standards is legitimate (a study may mix
+#' implementation-guide versions): each row is linked to its standard via
+#' `datasets$standard_id`, minting a `standards` row where none defines the
+#' name, and `@standard` takes the study's stated standard, or failing that
+#' the one most datasets name. An explicit `standard` argument contradicting
+#' every value in the source aborts with `artoo_error_spec`.
 #'
 #' **One study vocabulary.** Well-known study fields are canonicalised to
 #' the CDISC ODM GlobalVariables names, snake_cased: `study_name`,
@@ -96,13 +99,14 @@
 #'   as `StudyName` or `studyid` resolve automatically); other fields pass
 #'   through verbatim. A `standard` field, when present, is consumed into
 #'   `@standard`.
-#' @param standard *The CDISC standard the spec implements.*
+#' @param standard *The primary CDISC standard the spec implements.*
 #'   `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
-#'   `NULL` (default) it is resolved from `datasets$standard` or
-#'   `study$standard`; absent everywhere, `@standard` is `NA`.
+#'   `NULL` (default) it is resolved from `study$standard`, or from the
+#'   value most rows of `datasets$standard` name; absent everywhere,
+#'   `@standard` is `NA`.
 #'
-#'   **Restriction:** all sources must agree on one value; conflicting
-#'   standards abort with `artoo_error_spec`.
+#'   **Restriction:** an explicit value that matches nothing the source
+#'   names aborts with `artoo_error_spec`.
 #' @param values *Value-level (VLM) metadata.* `<data.frame> | NULL`.
 #' @param methods *Derivation methods.* `<data.frame> | NULL`. The
 #'   Define-XML method definitions variables reference by `method_id`; must
@@ -335,6 +339,12 @@ artoo_spec <- function(
   # those columns — @standard is the single home.
   study <- .study_standard_pair(study)
   standard <- .resolve_standard(standard, datasets, study, call)
+  # Each dataset keeps ITS standard as a standard_id link before the
+  # display column is consumed -- the scalar above is only the primary,
+  # and stamping it over rows that name another misdescribed them.
+  linked <- .link_dataset_standards(datasets, standards)
+  datasets <- linked$datasets
+  standards <- linked$standards
   datasets$standard <- NULL
   study$standard <- NULL
 
@@ -465,32 +475,129 @@ artoo_spec <- function(
   study
 }
 
-# Resolve the spec's one CDISC standard. Unions the explicit argument, a
-# P21-style `standard` column on the datasets table, and a Define-XML-style
-# `standard` field on the study row; drops NA/blank; aborts when more than
-# one distinct value survives. Returns a length-1 character (NA when no
-# source names a standard).
+# Resolve the spec's PRIMARY standard. The datasets column naming several
+# standards is legitimate -- a study mixes implementation-guide versions,
+# and CDISC's own 2.1 SDTM example names three -- so it no longer aborts:
+# each row keeps its own via `standard_id` (.link_dataset_standards), and
+# the scalar is only the primary. The study field is the author's explicit
+# primary assertion, so it wins; failing that, the value the most datasets
+# name, ties broken by first appearance (stable under row reordering,
+# which "first seen" alone is not).
+#
+# An explicit `standard` argument that matches NOTHING in the source is a
+# different fault -- the caller contradicting the file -- and still aborts.
 #' @noRd
 .resolve_standard <- function(standard, datasets, study, call) {
-  cands <- c(
-    standard,
-    if ("standard" %in% names(datasets)) datasets$standard,
-    if ("standard" %in% names(study)) study$standard
-  )
-  cands <- trimws(as.character(cands))
-  cands <- unique(cands[!is.na(cands) & nzchar(cands)])
-  if (length(cands) > 1L) {
-    .artoo_abort(
-      c(
-        "A {.cls artoo_spec} carries exactly one CDISC standard.",
-        "x" = "Found {length(cands)} distinct standards: {.val {cands}}.",
-        "i" = "Split the source by standard, or scope the read to one standard's datasets with {.code read_spec(path, datasets = ...)}."
-      ),
-      kind = "spec",
-      call = call
-    )
+  clean <- function(x) {
+    x <- trimws(as.character(x))
+    x[!is.na(x) & nzchar(x)]
   }
-  if (length(cands)) cands else NA_character_
+  explicit <- unique(clean(standard))
+  from_ds <- if ("standard" %in% names(datasets)) {
+    clean(datasets$standard)
+  } else {
+    character(0)
+  }
+  from_study <- unique(clean(
+    if ("standard" %in% names(study)) study$standard
+  ))
+  in_file <- unique(c(from_ds, from_study))
+  if (length(explicit)) {
+    if (length(in_file) && !explicit[[1L]] %in% in_file) {
+      .artoo_abort(
+        c(
+          "{.arg standard} contradicts the source.",
+          "x" = "{.val {explicit[[1L]]}} was given; the source names {.val {in_file}}.",
+          "i" = "Drop the argument, or pass one of the source's values."
+        ),
+        kind = "spec",
+        call = call
+      )
+    }
+    return(explicit[[1L]])
+  }
+  if (length(from_study)) {
+    return(from_study[[1L]])
+  }
+  if (length(from_ds)) {
+    counts <- table(factor(from_ds, levels = unique(from_ds)))
+    return(names(counts)[[which.max(counts)]])
+  }
+  NA_character_
+}
+
+# Link each dataset to the standard its own cell names (workbook shape).
+#
+# The Datasets sheet records a standard PER ROW as a display string
+# ("ADaMIG 1.1"); Define-XML records it as `def:StandardOID` resolving into
+# the def:Standards block, and the stylesheet renders it in every dataset
+# heading. Folding the column into the scalar and dropping it left every
+# ItemGroupDef without the attribute, so a workbook-sourced define never
+# said which standard a dataset implements.
+#
+# An explicit `standard_id` on the row wins. A display string no standards
+# row defines mints one, in the shape .mint_primary_standard() mints for
+# the Study sheet's pair -- and only that shape: a string whose name part
+# does not end in IG has no derivable Type, and a guessed Type would be a
+# sponsor assertion artoo invented, so such rows stay unlinked.
+#' @noRd
+.link_dataset_standards <- function(datasets, standards) {
+  out <- list(datasets = datasets, standards = standards)
+  if (!nrow(datasets) || !("standard" %in% names(datasets))) {
+    return(out)
+  }
+  cells <- trimws(as.character(datasets$standard))
+  stated <- trimws(as.character(datasets$standard_id))
+  todo <- which(
+    !is.na(cells) & nzchar(cells) & (is.na(stated) | !nzchar(stated))
+  )
+  if (!length(todo)) {
+    return(out)
+  }
+  display <- function(name, version) {
+    trimws(paste(name, ifelse(is.na(version), "", version)))
+  }
+  known <- display(
+    trimws(as.character(standards$name)),
+    trimws(as.character(standards$version))
+  )
+  for (i in todo) {
+    parts <- strsplit(cells[[i]], "[[:space:]]+")[[1L]]
+    name <- paste(utils::head(parts, -1L), collapse = " ")
+    renamed <- unname(.dx_standard_renames[name])
+    if (!is.na(renamed)) {
+      name <- renamed
+    }
+    version <- if (length(parts) > 1L) utils::tail(parts, 1L) else ""
+    hit <- match(trimws(paste(name, version)), known)
+    if (is.na(hit)) {
+      if (length(parts) < 2L || !grepl("IG$", name)) {
+        next
+      }
+      n <- nrow(standards) + 1L
+      id <- sprintf("STD.%d", n)
+      while (id %in% as.character(standards$standard_id)) {
+        n <- n + 1L
+        id <- sprintf("STD.%d", n)
+      }
+      row <- standards[NA_integer_, , drop = FALSE]
+      row$standard_id <- id
+      row$name <- name
+      row$type <- "IG"
+      row$version <- version
+      # def:Standard requires a Status, and a row without one suppresses
+      # the whole block (see .dx_standards), dangling every reference this
+      # link exists to create. "Final" is the same claim the Study sheet's
+      # pair mints with.
+      row$status <- "Final"
+      standards <- rbind(standards, row)
+      rownames(standards) <- NULL
+      known <- c(known, trimws(paste(name, version)))
+      hit <- length(known)
+    }
+    datasets$standard_id[[i]] <- standards$standard_id[[hit]]
+  }
+  list(datasets = datasets, standards = standards)
 }
 
 # Friendly cross-slot reference checks (the S7 validator repeats these as a

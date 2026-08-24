@@ -572,13 +572,85 @@ test_that("an archive location naming no document emits no leaf", {
   docs <- data.frame(
     document_id = "LF.dm",
     href = "dm.xpt",
-    title = "dm.xpt",
+    title = "dm transport file",
     stringsAsFactors = FALSE
   )
   expect_null(artoo:::.dx_archive_leaf(docs, "LF.MISSING"))
   expect_null(artoo:::.dx_archive_leaf(docs, NA_character_))
   expect_null(artoo:::.dx_archive_leaf(NULL, "LF.dm"))
   expect_identical(artoo:::.dx_archive_leaf(docs, "LF.dm")$attrs$ID, "LF.dm")
+  # A STATED id that resolves to nothing stays a dangle for lint_define()
+  # to report, even when a dataset name is at hand: minting a leaf here
+  # would pair a def:ArchiveLocationID of one name with a leaf of another.
+  expect_null(artoo:::.dx_archive_leaf(docs, "LF.MISSING", "DM", FALSE))
+  # A DERIVED id prefers the document already carrying it -- title and all
+  # -- and mints the conventional leaf only when no document does.
+  reused <- artoo:::.dx_archive_leaf(docs, NA_character_, "dm", FALSE)
+  expect_identical(reused$attrs$ID, "LF.dm")
+  expect_identical(reused$kids[["def:title"]]$text, "dm transport file")
+  minted <- artoo:::.dx_archive_leaf(docs, NA_character_, "AE", FALSE)
+  expect_identical(minted$attrs$ID, "LF.AE")
+  expect_identical(minted$attrs[["xlink:href"]], "ae.xpt")
+})
+
+test_that("a derived archive location reuses the document carrying its id (#p12-final-1)", {
+  skip_if_not_installed("xml2")
+  # A define read through a workbook keeps its leaves on the documents
+  # table and loses only the pointer -- the workbook has no
+  # archive-location column. Deriving LF.<DATASET> then minted a SECOND
+  # leaf beside the one the documents table already carried, and an xs:ID
+  # may appear once, so the write refused its own round trip.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.DM",
+      title = "dm transport file",
+      href = "dm.xpt",
+      role = "other",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN, stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  leaves <- xml2::xml_find_all(
+    doc,
+    "//*[local-name()='leaf'][@ID='LF.DM']",
+    ns = character()
+  )
+  expect_length(leaves, 1L)
+  # ...and the one leaf sits inside the ItemGroupDef that references it,
+  # wearing the document's own title rather than a minted one.
+  expect_identical(
+    xml2::xml_name(xml2::xml_parent(leaves[[1L]])),
+    "ItemGroupDef"
+  )
+  ig <- xml2::xml_find_first(
+    doc,
+    "//*[local-name()='ItemGroupDef'][@Name='DM']",
+    ns = character()
+  )
+  expect_identical(xml2::xml_attr(ig, "ArchiveLocationID"), "LF.DM")
+  expect_identical(
+    xml2::xml_text(xml2::xml_find_first(
+      leaves[[1L]],
+      ".//*[local-name()='title']"
+    )),
+    "dm transport file"
+  )
 })
 
 test_that("a leaf with no title falls back to its id", {
@@ -760,10 +832,14 @@ test_that("a document's own identity survives a round trip (#p4-review)", {
   )
 })
 
-test_that("a codelist that decodes only some of its terms is refused (#p4-review)", {
+test_that("a codelist that decodes only some of its terms writes an empty Decode (#p4-review)", {
   skip_if_not_installed("xml2")
   # R writes NA into a string as the literal "NA", so an unguarded decode put
   # the characters N, A into a submission document as a sponsor assertion.
+  # Refusing the whole list was the first guard, and it was stricter than
+  # the standard: partly-decoded lists are ordinary sponsor input, and the
+  # term the author left blank gets <Decode><TranslatedText/></Decode> --
+  # decoded, nothing to say -- never the string "NA".
   spec <- artoo_spec(
     datasets = data.frame(
       dataset = "DM",
@@ -787,11 +863,23 @@ test_that("a codelist that decodes only some of its terms is refused (#p4-review
     )
   )
   path <- file.path(withr::local_tempdir(), "d.xml")
-  expect_error(
-    write_spec(spec, path, created = FROZEN),
-    class = "artoo_error_codelist"
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN, stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  items <- xml2::xml_find_all(doc, "//*[local-name()='CodeListItem']")
+  expect_length(items, 3L)
+  decodes <- vapply(
+    items,
+    function(n) {
+      xml2::xml_text(xml2::xml_find_first(
+        n,
+        ".//*[local-name()='TranslatedText']"
+      ))
+    },
+    character(1)
   )
-  expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
+  expect_identical(decodes, c("Male", "Female", ""))
 })
 
 test_that("NA text is refused rather than written as the string NA (#p4-review)", {
@@ -1613,4 +1701,60 @@ test_that("unmodelled content is named on read, not dropped in silence (#p12-rev
   xml2::write_xml(doc, path)
   expect_warning(read_spec(path), "carries a `Description`")
   expect_warning(read_spec(path), "other than \"en\"")
+})
+
+test_that("a sponsor's repeated coded value and comment write once, out loud (#p12-final-2)", {
+  skip_if_not_installed("xml2")
+  # The shape a real 18-dataset sponsor specification arrived in: one visit
+  # codelist re-listing UNSCHEDULED under each regimen block, and a comment
+  # stated twice, identically, once per variable that uses it. Both used to
+  # reach the schema gate, which refused the write and blamed artoo.
+  spec <- artoo_spec(
+    standard = "ADaMIG 1.1",
+    datasets = data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "ADSL",
+      variable = "AVISIT",
+      data_type = "string",
+      codelist_id = "AVISIT",
+      comment_id = "COM.1",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "AVISIT",
+      term = c("Visit 3", "UNSCHEDULED", "Visit 7", "UNSCHEDULED"),
+      order = c(3L, 3L, 7L, 7L),
+      name = "Analysis Visit",
+      data_type = "text",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = c("COM.1", "COM.1"),
+      description = "Set per the SAP.",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = FROZEN, stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  terms <- xml2::xml_attr(
+    xml2::xml_find_all(
+      doc,
+      "//*[local-name()='EnumeratedItem']",
+      ns = character()
+    ),
+    "CodedValue"
+  )
+  expect_identical(terms, c("Visit 3", "UNSCHEDULED", "Visit 7"))
+  expect_length(
+    xml2::xml_find_all(doc, "//*[local-name()='CommentDef']", ns = character()),
+    1L
+  )
+  expect_true(validate_define(path)@summary$valid)
 })
