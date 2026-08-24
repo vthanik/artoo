@@ -254,6 +254,7 @@ artoo_spec <- function(
     "method_expressions",
     call
   )
+  method_expressions <- .fold_method_expressions(methods, method_expressions)
   arm_displays <- .coerce_slot(
     arm_displays,
     .spec_cols_arm_displays,
@@ -589,4 +590,50 @@ artoo_spec <- function(
 #' @export
 is_artoo_spec <- function(x) {
   S7::S7_inherits(x, artoo_spec_class)
+}
+
+# A method may state one formal expression inline -- a context and a code
+# column on the methods table, which is how a workbook carries it -- or any
+# number of them in the `method_expressions` table, which is how Define-XML
+# does. Fold the inline form into the table so everything downstream sees
+# one representation.
+#
+# Without this the workbook columns were read and then consumed by nothing:
+# a method authored with a formal expression produced a define.xml with none,
+# silently, and writing a define's expressions back to a workbook warned that
+# no sheet could hold them while writing the two columns that can.
+#' @noRd
+.fold_method_expressions <- function(methods, expressions) {
+  if (
+    is.null(methods) ||
+      !nrow(methods) ||
+      !all(c("expression_context", "expression_code") %in% names(methods))
+  ) {
+    return(expressions)
+  }
+  code <- as.character(methods$expression_code)
+  has <- !is.na(code) & nzchar(trimws(code))
+  if (!any(has)) {
+    return(expressions)
+  }
+  already <- if (is.null(expressions)) {
+    character(0)
+  } else {
+    as.character(expressions$method_id)
+  }
+  has <- has & !(as.character(methods$method_id) %in% already)
+  if (!any(has)) {
+    return(expressions)
+  }
+  inline <- data.frame(
+    method_id = as.character(methods$method_id)[has],
+    order = 1L,
+    context = as.character(methods$expression_context)[has],
+    code = code[has],
+    stringsAsFactors = FALSE
+  )
+  if (is.null(expressions) || !nrow(expressions)) {
+    return(inline)
+  }
+  .dx_stack(expressions, inline)
 }

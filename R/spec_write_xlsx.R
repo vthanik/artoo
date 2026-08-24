@@ -179,7 +179,7 @@
       names(.spec_cols_codelists)
     ),
     Methods = .p21_sheet_frame(
-      spec@methods,
+      .p21_inline_expressions(spec@methods, spec@method_expressions),
       .p21_method_map,
       names(.spec_cols_methods)
     ),
@@ -410,10 +410,19 @@
 #' @noRd
 .p21_warn_dropped <- function(spec, call = rlang::caller_env()) {
   msg <- character(0)
-  # The one slot a workbook has no sheet for.
+  # The Methods sheet carries ONE formal expression per method, in its
+  # context and code columns. A method with more than one keeps the first.
   expressions <- spec@method_expressions
   if (!is.null(expressions) && nrow(expressions)) {
-    msg <- c(msg, "x" = "No sheet holds a method's formal expressions.")
+    extra <- unique(expressions$method_id[duplicated(expressions$method_id)])
+    if (length(extra)) {
+      msg <- c(
+        msg,
+        "x" = cli::format_inline(
+          "{.field methods}: only the first formal expression of {.val {extra}}."
+        )
+      )
+    }
   }
   cols <- .p21_dropped_cols(spec)
   for (nm in names(cols)) {
@@ -435,4 +444,24 @@
     call = call
   )
   invisible(NULL)
+}
+
+# Put each method's first formal expression back in the two columns the
+# Methods sheet carries it in.
+#' @noRd
+.p21_inline_expressions <- function(methods, expressions) {
+  if (
+    is.null(methods) ||
+      !nrow(methods) ||
+      is.null(expressions) ||
+      !nrow(expressions)
+  ) {
+    return(methods)
+  }
+  first <- expressions[!duplicated(expressions$method_id), , drop = FALSE]
+  at <- match(as.character(methods$method_id), as.character(first$method_id))
+  found <- !is.na(at)
+  methods$expression_context[found] <- as.character(first$context)[at[found]]
+  methods$expression_code[found] <- as.character(first$code)[at[found]]
+  methods
 }

@@ -370,3 +370,98 @@ test_that("a spec with no study row writes no Define sheet", {
   write_spec(spec, p)
   expect_false("Define" %in% readxl::excel_sheets(p))
 })
+
+test_that("a method's formal expression survives a workbook (#p12-p21)", {
+  # The Methods sheet carries one formal expression per method, in its
+  # context and code columns. artoo read those two columns into the methods
+  # table and then consumed them nowhere -- the Define-XML writer builds
+  # FormalExpression only from the separate expressions table -- so a method
+  # authored with an expression produced a define.xml with none, silently,
+  # while the write in the other direction warned that no sheet could hold
+  # what it was in the middle of writing.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = "ADSL",
+      variable = "AGEGR1",
+      data_type = "string",
+      origin = "Derived",
+      method_id = "MT.AGEGR1",
+      stringsAsFactors = FALSE
+    ),
+    methods = data.frame(
+      method_id = "MT.AGEGR1",
+      name = "Age group",
+      type = "Computation",
+      description = "Banded age",
+      expression_context = "SAS 9.4",
+      expression_code = "if age < 65 then agegr1 = '<65';",
+      stringsAsFactors = FALSE
+    )
+  )
+  # The inline pair is folded into the expressions table at construction, so
+  # every consumer downstream sees one representation.
+  expect_identical(nrow(spec@method_expressions), 1L)
+  expect_identical(spec@method_expressions$context, "SAS 9.4")
+
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  expression <- xml2::xml_find_first(
+    xml2::read_xml(path),
+    "//*[local-name()='FormalExpression']"
+  )
+  expect_identical(xml2::xml_attr(expression, "Context"), "SAS 9.4")
+  expect_match(xml2::xml_text(expression), "agegr1", fixed = TRUE)
+
+  # ...and back out to a workbook, in the two columns it came from.
+  book <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, book))
+  sheet <- readxl::read_excel(book, sheet = "Methods")
+  expect_identical(sheet[["Expression Context"]], "SAS 9.4")
+  expect_match(sheet[["Expression Code"]], "agegr1", fixed = TRUE)
+})
+
+test_that("a method with two expressions loses the second, loudly (#p12-p21)", {
+  # The sheet has one context and one code column, so a method carrying two
+  # formal expressions keeps the first. That is a real loss and it is named.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = "ADSL",
+      variable = "BMI",
+      data_type = "float",
+      origin = "Derived",
+      method_id = "MT.BMI",
+      stringsAsFactors = FALSE
+    ),
+    methods = data.frame(
+      method_id = "MT.BMI",
+      name = "BMI",
+      type = "Computation",
+      description = "Body mass index",
+      stringsAsFactors = FALSE
+    ),
+    method_expressions = data.frame(
+      method_id = "MT.BMI",
+      order = 1:2,
+      context = c("SAS 9.4", "R 4.5"),
+      code = c("bmi = wt / ht**2;", "bmi <- wt / ht^2"),
+      stringsAsFactors = FALSE
+    )
+  )
+  book <- withr::local_tempfile(fileext = ".xlsx")
+  expect_warning(write_spec(spec, book), "MT.BMI")
+  back <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(back@method_expressions), 1L)
+  expect_identical(back@method_expressions$context, "SAS 9.4")
+})

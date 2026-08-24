@@ -1,5 +1,11 @@
 # artoo 0.2.0.9000
 
+* `read_spec()` on a workbook reads a method's formal expression. The
+  `Methods` sheet carries one, in its expression context and code columns,
+  and artoo read those into the spec and then used them nowhere: a method
+  authored with a formal expression produced a define.xml with none. Writing
+  a workbook puts the expression back in the same two columns.
+
 * `read_spec()` and `write_spec()` now use the current Pinnacle 21 workbook
   shape for conditions. A value-level row states its condition as an
   expression in the `ValueLevel` sheet's `Where Clause` cell, and an analysis
