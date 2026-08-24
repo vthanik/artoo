@@ -50,8 +50,10 @@ which one you have from three things:
 | The label column is called | `Description` | `Label` |
 
 If your workbook came out of a validation tool, it is whichever that tool
-writes. If you are starting fresh, use the template above — it is the newer
-shape — and read on; anywhere the two differ, this article says so.
+writes. If you are starting fresh, use the template above: it names the study
+sheet `Study` and keeps conditions on `WhereClauses`, which is what every
+generation of tooling reads, while spelling the label column `Label`. Read on;
+anywhere the two shapes differ, this article says so.
 
 ## Define / Study — the study sheet
 
@@ -79,7 +81,7 @@ that document had identifiers this sheet is where to keep:
 ```{r}
 book3 <- tempfile(fileext = ".xlsx")
 suppressWarnings(write_spec(adam_spec, book3))
-readxl::read_excel(book3, sheet = "Define")
+readxl::read_excel(book3, sheet = "Study")
 ```
 
 You do not have to supply any of those; artoo mints what a new document
