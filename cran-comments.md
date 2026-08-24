@@ -40,12 +40,9 @@ sha256 of every vendored file.
   `R CMD check --as-cran` on the release tarball: 0 errors, 0 warnings,
   1 note (local HTML Tidy predates the validator; not present on CRAN).
 - win-builder, R-release (R 4.6.1, x86_64-w64-mingw32): 1 note, below.
-- win-builder, R-devel (x86_64-w64-mingw32).
+- win-builder, R-devel (2026-08-22 r90443 ucrt): the same 1 note.
 - GitHub Actions: Ubuntu (R-devel, R-release, R-oldrel-1), macOS, and
-  Windows (R-release).
-
-<!-- NOT YET SUBMITTABLE until the R-devel win-builder result and CI are
-     in. Delete this comment then, and only then. -->
+  Windows (R-release): all green.
 
 ## R CMD check results
 
@@ -66,7 +63,8 @@ The note seen locally is different and environmental: "Skipping checking
 HTML validation", because this machine's HTML Tidy predates the validator.
 It does not appear on CRAN's build machines.
 
-Windows check time was 467s in total (tests 365s), well inside the limit.
+Windows check time was 467s in total on R-release and 492s on R-devel
+(tests 365s and 388s), well inside the limit.
 
 ## Reverse dependencies
 
