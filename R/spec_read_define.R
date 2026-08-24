@@ -156,12 +156,22 @@
       .dx_attr(mdv, "StandardVersion")
     )
   }
+  # The document's OWN identifiers, so a read and a write back keep every
+  # name a reviewer, a prior submission, or a tracking system may already
+  # reference. Minting fresh ones from the study name breaks all of them.
+  study_node <- xml2::xml_find_first(doc, "//*[local-name()='Study']")
   study <- data.frame(
     study_name = study_name,
     study_description = study_desc,
     protocol_name = protocol,
     standard = standard,
     define_version = .dx_attr(mdv, "DefineVersion"),
+    study_oid = .dx_attr(study_node, "OID"),
+    file_oid = .dx_attr(xml2::xml_root(doc), "FileOID"),
+    odm_context = .dx_attr(xml2::xml_root(doc), "Context"),
+    metadata_version_oid = .dx_attr(mdv, "OID"),
+    metadata_version_name = .dx_attr(mdv, "Name"),
+    metadata_version_description = .dx_attr(mdv, "Description"),
     stringsAsFactors = FALSE
   )
 
@@ -174,8 +184,39 @@
     logical(1)
   )
   external_oids <- cl_oids[external]
+  if (length(external_oids)) {
+    # An ExternalCodeList names a dictionary (MedDRA, WHODrug, ISO 3166)
+    # rather than an enumerable membership list, and artoo has no model for
+    # one yet. Both the list AND every reference to it are dropped, so a
+    # document written back from this spec loses the dictionary silently and
+    # define_lint() sees nothing dangling: the loss is undetectable unless
+    # the read says so.
+    dicts <- vapply(
+      cl_nodes[external],
+      function(n) {
+        ext <- .dx_child(n, "ExternalCodeList")
+        d <- .dx_attr(ext, "Dictionary")
+        if (is.na(d)) .dx_attr(n, "Name") else d
+      },
+      character(1)
+    )
+    .artoo_warn(
+      c(
+        "{length(external_oids)} external codelist{?s} in {.path {path}} dropped.",
+        "x" = "{.val {dicts}}: artoo does not model external dictionaries yet.",
+        "i" = "Their references are dropped too, so writing this spec back will not reproduce them."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
 
   item_nodes <- .dx_find_all(mdv, "ItemDef")
+  # Define-XML 2.1 allows several def:Origin per ItemDef; artoo carries one.
+  # The extra provenance is dropped, so the read says so -- a symmetric drop
+  # in the reader and the writer is invisible to a round-trip test, and a
+  # loss nothing reports is worse than one that fails.
+  dropped <- list()
   items <- lapply(item_nodes, function(n) {
     clref <- .dx_child(n, "CodeListRef")
     clid <- if (is.na(clref)) {
@@ -186,7 +227,11 @@
     if (!is.na(clid) && clid %in% external_oids) {
       clid <- NA_character_ # dictionaries are not membership lists
     }
-    origin <- .dx_child(n, "Origin")
+    origins <- xml2::xml_find_all(n, "./*[local-name()='Origin']")
+    if (length(origins) > 1L) {
+      dropped[[length(dropped) + 1L]] <- xml2::xml_attr(n, "OID")
+    }
+    origin <- if (length(origins)) origins[[1]] else .dx_child(n, "Origin")
     vlref <- .dx_child(n, "ValueListRef")
     alias <- .dx_alias(n)
     # def:Origin carries more than a Type: 2.1 adds @Source, and both
@@ -241,6 +286,18 @@
     )
   })
   names(items) <- vapply(items, function(i) i$oid, character(1))
+  if (length(dropped)) {
+    many <- unlist(dropped)
+    .artoo_warn(
+      c(
+        "{length(many)} ItemDef{?s} in {.path {path}} carr{?ies/y} more than one {.code def:Origin}.",
+        "x" = "Only the first is read: {.val {many}}.",
+        "i" = "Writing this spec back will not reproduce the others."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
 
   # ---- ItemGroupDefs -> datasets + variables -----------------------------
   ig_nodes <- .dx_find_all(mdv, "ItemGroupDef")
@@ -460,6 +517,10 @@
       description = vapply(cm_nodes, .dx_text, character(1)),
       document_id = vapply(refs, `[`, character(1), 1L),
       pages = vapply(refs, `[`, character(1), 2L),
+      # Dropping @Type made the writer default it to PhysicalRef, so a
+      # comment pointing at a named destination came back asserting that
+      # destination was a page number.
+      page_type = vapply(refs, `[`, character(1), 3L),
       stringsAsFactors = FALSE
     )
   } else {
@@ -577,7 +638,7 @@
   method_expressions <- .dx_method_expressions(md_nodes)
 
   # ---- value-level metadata ----------------------------------------------
-  values <- .dx_values(mdv, items, vl_owner)
+  values <- .dx_values(mdv, items, vl_owner, path, call)
 
   # Scope before the duplicate guard (a problem confined to another
   # ItemGroup never blocks this read), then resolve duplicates by policy.
@@ -678,7 +739,7 @@
 # dataset/variable (from the parent ItemDef's def:ValueListRef) and the
 # WhereClauseDef rendered as readable "VAR IN (a, b)" text.
 #' @noRd
-.dx_values <- function(mdv, items, vl_owner) {
+.dx_values <- function(mdv, items, vl_owner, path, call) {
   vl_nodes <- .dx_find_all(mdv, "ValueListDef")
   if (!length(vl_nodes)) {
     return(NULL)
@@ -725,11 +786,26 @@
     refs <- xml2::xml_find_all(vl, "./*[local-name()='ItemRef']")
     for (r in refs) {
       it <- items[[xml2::xml_attr(r, "ItemOID")]]
-      wcr <- .dx_child(r, "WhereClauseRef")
-      wcid <- if (is.na(wcr)) {
+      wcrs <- xml2::xml_find_all(r, "./*[local-name()='WhereClauseRef']")
+      if (length(wcrs) > 1L) {
+        # Define-XML combines several refs with OR. Keeping the first would
+        # silently narrow which rows the definition applies to, which is the
+        # same class of defect as folding an OR into an AND.
+        oids <- vapply(wcrs, .dx_attr, character(1), name = "WhereClauseOID")
+        .artoo_abort(
+          c(
+            "{.path {path}} has a value-level item selected by more than one where clause.",
+            "x" = "{.val {oids}} are combined with OR, and artoo carries one clause per value-level row.",
+            "i" = "Merge them into one def:WhereClauseDef, or split the item into one row per clause."
+          ),
+          kind = "input",
+          call = call
+        )
+      }
+      wcid <- if (!length(wcrs)) {
         NA_character_
       } else {
-        xml2::xml_attr(wcr, "WhereClauseOID")
+        .dx_attr(wcrs[[1]], "WhereClauseOID")
       }
       rows[[length(rows) + 1L]] <- data.frame(
         dataset = owner[1],

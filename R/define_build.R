@@ -366,10 +366,10 @@
       Name = name,
       Domain = .dx_chr(ds, "domain")[[i]],
       Repeating = .dx_yesno(.dx_lgl(ds, "repeating")[[i]], default = FALSE),
-      IsReferenceData = .dx_yesno(
-        .dx_lgl(ds, "reference_data")[[i]],
-        default = FALSE
-      ),
+      # Repeating is schema-required, so an unset one takes a default;
+      # IsReferenceData is optional, so silence stays silent rather than
+      # becoming an assertion the spec never made.
+      IsReferenceData = .dx_yesno(.dx_lgl(ds, "reference_data")[[i]]),
       SASDatasetName = if (.dx_blank(.dx_chr(ds, "sas_dataset_name")[[i]])) {
         name
       } else {
@@ -547,6 +547,21 @@
   # The schema offers a choice between the two, not a mixture, so the whole
   # list follows whichever its terms need.
   decoded <- any(!.dx_blank(.dx_chr(cl, "decode")))
+  if (decoded) {
+    undecoded <- .dx_blank(.dx_chr(cl, "decode"))
+    if (any(undecoded)) {
+      terms <- as.character(cl$term)[undecoded]
+      .artoo_abort(
+        c(
+          "Codelist {.val {id}} decodes some terms and not others.",
+          "x" = "{length(terms)} term{?s} carr{?ies/y} no decode: {.val {terms}}.",
+          "i" = "A CodeListItem requires a Decode, so give every term one, or clear them all and emit an enumerated list."
+        ),
+        kind = "codelist",
+        call = call
+      )
+    }
+  }
   ord <- .dx_row_order(cl)
   terms <- lapply(ord, function(i) .dx_codelist_term(cl, i, decoded, p))
   kids <- list(
@@ -624,8 +639,14 @@
       OID = id,
       Name = if (.dx_blank(name)) id else name,
       # Type is required and closed to Computation / Imputation; a derivation
-      # is a computation unless the spec says otherwise.
-      Type = if (.dx_blank(type)) "Computation" else trimws(type)
+      # is a computation unless the spec says otherwise. ODM's own schema also
+      # accepts Transpose and Other, which Define-XML forbids, so the gate
+      # cannot catch a wrong one.
+      Type = if (.dx_blank(type)) {
+        "Computation"
+      } else {
+        .dx_enum(trimws(type), p$enum$method_type, "MethodDef Type", call)
+      }
     ),
     kids = list(
       # Description is required on MethodDef, so an undescribed method falls

@@ -294,7 +294,7 @@ test_that("CreationDateTime is UTC and comes from `created`", {
 test_that("the two official CDISC 2.1 examples round-trip to an identical spec", {
   skip_if_not_installed("xml2")
   for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
-    spec <- read_spec(test_path("fixtures", f))
+    spec <- read_define(f)
     out <- file.path(withr::local_tempdir(), f)
     write_spec(spec, out, created = FROZEN)
     expect_equal(read_spec(out), spec, info = f)
@@ -343,7 +343,7 @@ test_that("value-level metadata emits all five artefacts", {
 
 test_that("a shared ItemDef OID is emitted once", {
   skip_if_not_installed("xml2")
-  spec <- read_spec(test_path("fixtures", "define21-sdtm.xml"))
+  spec <- read_define("define21-sdtm.xml")
   out <- file.path(withr::local_tempdir(), "d.xml")
   write_spec(spec, out, created = FROZEN)
   doc <- xml2::read_xml(out)
@@ -483,7 +483,7 @@ test_that("an unknown version is refused as input", {
 
 test_that("the spec's own def:DefineVersion revision survives a round trip", {
   skip_if_not_installed("xml2")
-  spec <- read_spec(test_path("fixtures", "define21-sdtm.xml"))
+  spec <- read_define("define21-sdtm.xml")
   expect_identical(spec@study$define_version, "2.1.10")
   out <- file.path(withr::local_tempdir(), "d.xml")
   write_spec(spec, out, created = FROZEN)
@@ -623,7 +623,13 @@ test_that("a missing bundled stylesheet is not an error", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "define.xml")
   # `validate` is off because the schema tree is mocked away with the sheet.
-  write_spec(small_spec(), path, created = FROZEN, validate = FALSE)
+  # The document still names the stylesheet in its processing instruction, so
+  # a silent failure would hand the user a conformance finding to discover
+  # later; it warns instead.
+  expect_warning(
+    write_spec(small_spec(), path, created = FROZEN, validate = FALSE),
+    class = "artoo_warning_define"
+  )
   expect_true(file.exists(path))
   expect_false(file.exists(file.path(dir, "define2-1.xsl")))
 })
@@ -662,7 +668,7 @@ test_that("an invalid document never replaces the target file", {
 
 test_that("a spec read as 2.0 resolves to 2.0 and is refused without asking", {
   skip_if_not_installed("xml2")
-  spec <- read_spec(test_path("fixtures", "define20-sdtm.xml"))
+  spec <- read_define("define20-sdtm.xml")
   path <- file.path(withr::local_tempdir(), "d.xml")
   expect_error(
     write_spec(spec, path, created = FROZEN),
@@ -671,4 +677,186 @@ test_that("a spec read as 2.0 resolves to 2.0 and is refused without asking", {
   # ...and writes as 2.1 when asked to.
   write_spec(spec, path, version = "2.1", created = FROZEN)
   expect_true(validate_define(path)@summary$valid)
+})
+
+test_that("variables emit in the order column's order (#p4-review)", {
+  skip_if_not_installed("xml2")
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = c("A", "B", "C"),
+      data_type = "string",
+      order = c(2L, 3L, 1L),
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  write_spec(spec, path, created = FROZEN)
+  refs <- xml2::xml_find_all(
+    xml2::read_xml(path),
+    "//*[local-name()='ItemRef']"
+  )
+  expect_identical(
+    xml2::xml_attr(refs, "ItemOID"),
+    c("IT.DM.C", "IT.DM.A", "IT.DM.B")
+  )
+  expect_identical(xml2::xml_attr(refs, "OrderNumber"), c("1", "2", "3"))
+})
+
+test_that("a document's own identity survives a round trip (#p4-review)", {
+  skip_if_not_installed("xml2")
+  # Minting fresh identifiers from the study name breaks every external
+  # reference into the document: a reviewer's bookmark, a prior submission,
+  # a tracking system.
+  src <- system.file("extdata", "define-minimal.xml", package = "artoo")
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  write_spec(read_spec(src), out, created = FROZEN)
+  a <- xml2::read_xml(src)
+  b <- xml2::read_xml(out)
+  at <- function(doc, el, name) {
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, sprintf("//*[local-name()='%s']", el)),
+      name
+    )
+  }
+  expect_identical(at(b, "Study", "OID"), at(a, "Study", "OID"))
+  expect_identical(
+    at(b, "MetaDataVersion", "OID"),
+    at(a, "MetaDataVersion", "OID")
+  )
+  expect_identical(
+    at(b, "MetaDataVersion", "Name"),
+    at(a, "MetaDataVersion", "Name")
+  )
+  expect_identical(
+    xml2::xml_attr(xml2::xml_root(b), "FileOID"),
+    xml2::xml_attr(xml2::xml_root(a), "FileOID")
+  )
+  # ...including the ODM context, which artoo has no standing to assert.
+  expect_identical(
+    xml2::xml_attr(xml2::xml_root(b), "Context"),
+    xml2::xml_attr(xml2::xml_root(a), "Context")
+  )
+})
+
+test_that("a codelist that decodes only some of its terms is refused (#p4-review)", {
+  skip_if_not_installed("xml2")
+  # R writes NA into a string as the literal "NA", so an unguarded decode put
+  # the characters N, A into a submission document as a sponsor assertion.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      codelist_id = "CL.SEX",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.SEX",
+      term = c("M", "F", "U"),
+      decode = c("Male", "Female", NA),
+      name = "Sex",
+      data_type = "text",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN),
+    class = "artoo_error_codelist"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
+})
+
+test_that("NA text is refused rather than written as the string NA (#p4-review)", {
+  skip_if_not_installed("xml2")
+  doc <- xml2::xml_new_root(
+    "ODM",
+    "xmlns" = "http://www.cdisc.org/ns/odm/v1.3"
+  )
+  node <- artoo:::.dx_node("StudyName", text = NA_character_)
+  expect_error(
+    artoo:::.dx_emit(doc, node, artoo:::.define_profile("2.1")),
+    class = "artoo_error_define"
+  )
+})
+
+test_that("a comment's page type is not rewritten as a physical page (#p4-review)", {
+  skip_if_not_installed("xml2")
+  src <- file.path(withr::local_tempdir(), "src.xml")
+  base <- readLines(
+    system.file("extdata", "define-minimal.xml", package = "artoo"),
+    warn = FALSE
+  )
+  writeLines(
+    sub(
+      "<def:CommentDef OID=\"COM.SEX\">",
+      paste0(
+        "<def:CommentDef OID=\"COM.SEX\">"
+      ),
+      base
+    ),
+    src
+  )
+  spec <- read_spec(src)
+  spec@comments$document_id <- "LF.dm"
+  spec@comments$pages <- "Section_9_1"
+  spec@comments$page_type <- "NamedDestination"
+  out <- file.path(dirname(src), "out.xml")
+  write_spec(spec, out, created = FROZEN)
+  pg <- xml2::xml_find_first(
+    xml2::read_xml(out),
+    "//*[local-name()='CommentDef']//*[local-name()='PDFPageRef']"
+  )
+  expect_identical(xml2::xml_attr(pg, "Type"), "NamedDestination")
+  expect_identical(read_spec(out)@comments$page_type, "NamedDestination")
+})
+
+test_that("several def:WhereClauseRefs on one item are refused, not narrowed", {
+  skip_if_not_installed("xml2")
+  # Define-XML combines them with OR. Keeping the first silently changes which
+  # rows the value-level definition applies to.
+  src <- file.path(withr::local_tempdir(), "or.xml")
+  base <- readLines(test_path("fixtures", "define21-adam.xml"), warn = FALSE)
+  hit <- grep("<def:WhereClauseRef", base)[[1]]
+  base[[hit]] <- paste0(base[[hit]], "\n", base[[hit]])
+  writeLines(base, src)
+  expect_error(suppressWarnings(read_spec(src)), class = "artoo_error_input")
+  expect_snapshot(
+    suppressWarnings(read_spec(src)),
+    error = TRUE,
+    transform = function(x) sub("'.*/or\\.xml'", "'<tmp>/or.xml'", x)
+  )
+})
+
+test_that("a spec declaring a version artoo cannot write is refused", {
+  spec <- artoo_spec(
+    study = data.frame(define_version = "1.0.0", stringsAsFactors = FALSE),
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_error(
+    artoo:::.dx_target_version(NULL, spec),
+    class = "artoo_error_input"
+  )
+  expect_snapshot(artoo:::.dx_target_version(NULL, spec), error = TRUE)
 })

@@ -255,7 +255,7 @@ test_that("Define-XML to P21 is one read_spec |> write_spec composition", {
   skip_if_not_installed("xml2")
   define <- test_path("fixtures", "define21-sdtm.xml")
   skip_if_not(file.exists(define))
-  spec <- read_spec(define)
+  spec <- suppressWarnings(read_spec(define))
   p <- withr::local_tempfile(fileext = ".xlsx")
   # The workbook has no sheet for the structural slots, so this composition
   # legitimately drops them -- and must say so rather than truncating in

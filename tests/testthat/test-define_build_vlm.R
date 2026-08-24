@@ -138,14 +138,12 @@ test_that("a where clause resolves its target from itemoid when it has one", {
 test_that("the where-clause key is read from where_clause when the id is blank", {
   skip_if_not_installed("xml2")
   # The workbook readers converge on `where_clause` holding the foreign key;
-  # the Define-XML reader fills `where_clause_id`. The writer accepts both,
-  # but only when the value names a DEFINED clause -- rendered display text
-  # must never become a dangling reference.
+  # the Define-XML reader fills `where_clause_id`. The writer accepts both.
   spec <- vlm_spec(
     values = data.frame(
       dataset = "VS",
       variable = "VSORRES",
-      where_clause = c("WC.1", "VSTESTCD EQ (WEIGHT)"),
+      where_clause = "WC.1",
       data_type = "float",
       stringsAsFactors = FALSE
     ),
@@ -162,16 +160,103 @@ test_that("the where-clause key is read from where_clause when the id is blank",
   )
   path <- file.path(withr::local_tempdir(), "d.xml")
   write_spec(spec, path, created = "2020-01-01 00:00:00")
+  ref <- xml2::xml_find_first(
+    xml2::read_xml(path),
+    "//*[local-name()='ValueListDef']/*[local-name()='ItemRef']/*[local-name()='WhereClauseRef']"
+  )
+  expect_identical(xml2::xml_attr(ref, "WhereClauseOID"), "WC.1")
+})
+
+test_that("a where clause the spec does not define is refused, never dropped", {
+  skip_if_not_installed("xml2")
+  # Writing the row without a def:WhereClauseRef would make the definition
+  # apply to EVERY row of its parent variable, which is a different claim.
+  spec <- vlm_spec(
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      where_clause = "VSTESTCD EQ (WEIGHT)",
+      data_type = "float",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = "2020-01-01 00:00:00"),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    write_spec(spec, path, created = "2020-01-01 00:00:00"),
+    error = TRUE
+  )
+})
+
+test_that("a pooled ItemDef keeps its def:ValueListRef (#p4-review)", {
+  skip_if_not_installed("xml2")
+  # Two ItemGroupDefs referencing one ItemDef that carries a def:ValueListRef.
+  # Deriving the parent's value list from the value-level rows gave one of the
+  # two variable rows the OID and the other NA, and the ItemDef pool then saw
+  # two definitions of one OID.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = c("SUPPAE", "SUPPDM"),
+      structure = "One record per subject per qualifier",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = c("SUPPAE", "SUPPDM"),
+      variable = "QVAL",
+      itemoid = "IT.QVAL",
+      data_type = "string",
+      value_list_id = "VL.QVAL",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "SUPPDM",
+      variable = "QVAL",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  write_spec(spec, path, created = "2020-01-01 00:00:00")
+  doc <- xml2::read_xml(path)
+  item <- xml2::xml_find_all(doc, "//*[local-name()='ItemDef'][@OID='IT.QVAL']")
+  expect_length(item, 1L)
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(item[[1]], "./*[local-name()='ValueListRef']"),
+      "ValueListOID"
+    ),
+    "VL.QVAL"
+  )
+  # No dangling or orphaned reference: the pooled ItemDef, its value list and
+  # the value-level item all agree.
+  checks <- define_lint(path)@findings$check
+  expect_false(any(grepl("dangling|orphan", checks)))
+})
+
+test_that("value-level rows emit in the order column's order (#p4-review)", {
+  skip_if_not_installed("xml2")
+  # .dx_row_order() returns a permutation; wrapping it in order() inverted it,
+  # invisible on any table whose physical order already matches.
+  spec <- vlm_spec(
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      label = c("second", "third", "first"),
+      order = c(2L, 3L, 1L),
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  write_spec(spec, path, created = "2020-01-01 00:00:00")
   refs <- xml2::xml_find_all(
     xml2::read_xml(path),
     "//*[local-name()='ValueListDef']/*[local-name()='ItemRef']"
   )
-  expect_length(refs, 2L)
-  wc <- lapply(refs, function(r) {
-    xml2::xml_find_first(r, "./*[local-name()='WhereClauseRef']")
-  })
-  expect_identical(xml2::xml_attr(wc[[1]], "WhereClauseOID"), "WC.1")
-  expect_true(is.na(wc[[2]]))
+  expect_identical(xml2::xml_attr(refs, "OrderNumber"), c("1", "2", "3"))
 })
 
 test_that("a multi-value IN keeps every CheckValue, in value order", {

@@ -368,7 +368,9 @@ test_that("writing xlsx warns when it drops a populated structural slot", {
   # Silence here would be exactly the silent truncation the project forbids.
   skip_if_not_installed("writexl")
   skip_if_not_installed("xml2")
-  spec <- read_spec(testthat::test_path("fixtures", "define21-sdtm.xml"))
+  spec <- suppressWarnings(
+    read_spec(testthat::test_path("fixtures", "define21-sdtm.xml"))
+  )
   out <- file.path(withr::local_tempdir(), "dropped.xlsx")
   expect_warning(write_spec(spec, out), class = "artoo_warning_spec")
 })

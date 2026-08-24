@@ -12,7 +12,7 @@
         <def:Standard OID="STD.1" Name="SDTMIG" Type="IG" Version="3.4" Status="Final"/>
       </def:Standards>
       <def:ValueListDef OID="VL.VS.VSORRES">
-        <ItemRef ItemOID="IT.VS.VSORRES.1" OrderNumber="1" Mandatory="Yes">
+        <ItemRef ItemOID="IT.VS.VSORRES.WC.VS.HEIGHT.CM" OrderNumber="1" Mandatory="Yes">
           <def:WhereClauseRef WhereClauseOID="WC.VS.HEIGHT.CM"/>
         </ItemRef>
       </def:ValueListDef>
@@ -24,7 +24,7 @@
           <CheckValue>cm</CheckValue>
         </RangeCheck>
       </def:WhereClauseDef>
-      <ItemGroupDef OID="IG.DM" Name="DM" Domain="DM" Repeating="No" IsReferenceData="No" SASDatasetName="DM" Purpose="Tabulation" def:Structure="One record per subject" def:ArchiveLocationID="LF.dm" def:StandardOID="STD.1">
+      <ItemGroupDef OID="IG.DM" Name="DM" Domain="DM" Repeating="No" SASDatasetName="DM" Purpose="Tabulation" def:Structure="One record per subject" def:ArchiveLocationID="LF.dm" def:StandardOID="STD.1">
         <Description>
           <TranslatedText xml:lang="en">Demographics</TranslatedText>
         </Description>
@@ -38,7 +38,7 @@
           <def:title>dm.xpt</def:title>
         </def:leaf>
       </ItemGroupDef>
-      <ItemGroupDef OID="IG.VS" Name="VS" Domain="VS" Repeating="Yes" IsReferenceData="No" SASDatasetName="VS" Purpose="Tabulation" def:Structure="One record per STUDYID, USUBJID, VSTESTCD, VSSEQ" def:StandardOID="STD.1">
+      <ItemGroupDef OID="IG.VS" Name="VS" Domain="VS" Repeating="Yes" SASDatasetName="VS" Purpose="Tabulation" def:Structure="One record per STUDYID, USUBJID, VSTESTCD, VSSEQ" def:StandardOID="STD.1">
         <Description>
           <TranslatedText xml:lang="en">Vital Signs</TranslatedText>
         </Description>
@@ -125,7 +125,7 @@
         </Description>
         <def:Origin Type="Collected" Source="Investigator"/>
       </ItemDef>
-      <ItemDef OID="IT.VS.VSORRES.1" Name="VSORRES" DataType="float" Length="5" SignificantDigits="1">
+      <ItemDef OID="IT.VS.VSORRES.WC.VS.HEIGHT.CM" Name="VSORRES" DataType="float" Length="5" SignificantDigits="1">
         <Description>
           <TranslatedText xml:lang="en">Height in centimetres</TranslatedText>
         </Description>

@@ -62,7 +62,7 @@
   )
 
   if (isTRUE(stylesheet)) {
-    .dx_copy_stylesheet(path, p)
+    .dx_copy_stylesheet(path, p, call)
   }
   invisible(path)
 }
@@ -83,14 +83,23 @@
     .dx_attrs(
       ODMVersion = p$odm_version,
       FileType = "Snapshot",
-      FileOID = paste0(oids$study, ".Define-XML_", p$define_version),
+      FileOID = .dx_file_oid(spec, oids, p),
       CreationDateTime = stamp
     ),
-    .dx_context("Submission", p, call)
+    # The document's own context, not an assumption. Asserting "Submission"
+    # on a file the sponsor marked otherwise is a claim artoo has no standing
+    # to make.
+    .dx_context(.dx_context_value(spec), p, call)
   )
   doc <- do.call(xml2::xml_new_root, c(list("ODM"), root_attrs))
   .dx_emit(doc, .dx_study_node(spec, p, oids, call), p, call)
   doc
+}
+
+#' @noRd
+.dx_context_value <- function(spec) {
+  v <- .dx_study_field(spec, "odm_context")
+  if (is.na(v)) "Submission" else v
 }
 
 # ISO 8601, UTC, second precision. `created` accepts anything as.POSIXct
@@ -131,7 +140,7 @@
   groups <- lapply(.dx_row_order(ds), function(i) {
     name <- ds$dataset[[i]]
     rows <- which(as.character(var$dataset) == name)
-    rows <- rows[order(.dx_row_order(var[rows, , drop = FALSE]))]
+    rows <- rows[.dx_row_order(var[rows, , drop = FALSE])]
     refs <- lapply(rows, function(j) {
       .dx_itemref(
         var,
@@ -235,6 +244,17 @@
   if (!is.na(dv) && startsWith(dv, prefix)) dv else p$define_version
 }
 
+# The document's own FileOID wins: it is how a prior submission, a reviewer's
+# note, or a tracking system names this file.
+#' @noRd
+.dx_file_oid <- function(spec, oids, p) {
+  supplied <- .dx_study_field(spec, "file_oid")
+  if (!is.na(supplied)) {
+    return(supplied)
+  }
+  paste0(oids$study, ".Define-XML_", p$define_version)
+}
+
 #' @noRd
 .dx_mdv_name <- function(spec) {
   supplied <- .dx_study_field(spec, "metadata_version_name")
@@ -285,16 +305,26 @@
 }
 
 #' @noRd
-.dx_copy_stylesheet <- function(path, p) {
+.dx_copy_stylesheet <- function(path, p, call = rlang::caller_env()) {
   src <- .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
-  if (!nzchar(src)) {
-    return(invisible(FALSE))
+  ok <- nzchar(src) &&
+    file.copy(src, file.path(dirname(path), p$stylesheet), overwrite = TRUE)
+  if (!ok) {
+    # The document already names the stylesheet in its processing
+    # instruction, and a PI naming an absent file is itself a conformance
+    # finding, so a silent failure here hands the user a defect to discover
+    # in a validation report.
+    sheet <- p$stylesheet
+    .artoo_warn(
+      c(
+        "The Define-XML stylesheet was not copied next to {.path {path}}.",
+        "i" = "The document references {.file {sheet}}; put a copy beside it, or pass {.code stylesheet = FALSE}."
+      ),
+      kind = "define",
+      call = call
+    )
   }
-  invisible(file.copy(
-    src,
-    file.path(dirname(path), p$stylesheet),
-    overwrite = TRUE
-  ))
+  invisible(ok)
 }
 
 # ---- validation gate ------------------------------------------------------

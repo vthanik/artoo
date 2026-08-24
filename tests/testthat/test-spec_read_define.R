@@ -10,8 +10,15 @@ skip_if_not_installed("xml2")
   p
 }
 
+# The fixture carries an external codelist, and reading one warns that it was
+# dropped. That warning is asserted in test-spec_read_define_columns.R; here
+# it would bury the warnings these tests are actually about.
+.read_define_fixture <- function(...) {
+  suppressWarnings(read_spec(.define_fixture(), ...))
+}
+
 test_that("read_spec parses the CDISC 2.1 example into a artoo_spec", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   expect_true(is_artoo_spec(spec))
   ds <- spec@datasets
   expect_true(all(c("TS", "DM", "LB") %in% ds$dataset))
@@ -20,7 +27,7 @@ test_that("read_spec parses the CDISC 2.1 example into a artoo_spec", {
 })
 
 test_that("variables carry the Define attributes", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   v <- spec_variables(spec, "DM")
   age <- v[v$variable == "AGE", ]
   expect_identical(age$label, "Age")
@@ -40,7 +47,7 @@ test_that("variables carry the Define attributes", {
 })
 
 test_that("codelists carry terms, decodes, order, and extensibility", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   cl <- spec@codelists
   armcd <- cl[cl$codelist_id == "CL.ARMCD", ]
   expect_identical(
@@ -59,7 +66,7 @@ test_that("codelists carry terms, decodes, order, and extensibility", {
 })
 
 test_that("an external-dictionary codelist is dropped from variable refs", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   # CL.ISO.COUNTRY is an ExternalCodeList (ISO-3166): not an enumerable
   # membership list, so it appears nowhere in the spec's codelists and no
   # variable references it.
@@ -71,7 +78,7 @@ test_that("an external-dictionary codelist is dropped from variable refs", {
 })
 
 test_that("methods, comments, and documents are carried", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   m <- spec@methods
   age <- m[m$method_id == "MT.AGE", ]
   expect_identical(age$type, "Computation")
@@ -90,7 +97,7 @@ test_that("methods, comments, and documents are carried", {
 })
 
 test_that("value-level metadata lands in @values with where clauses", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   vl <- spec@values
   expect_s3_class(vl, "data.frame")
   lb <- vl[vl$dataset == "LB" & vl$variable == "LBORRES", ]
@@ -100,7 +107,7 @@ test_that("value-level metadata lands in @values with where clauses", {
 })
 
 test_that("the study block carries the name; the standard rides @standard", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   st <- spec@study
   expect_identical(st$study_name, "CDISC01_1")
   # GlobalVariables carries all three ODM fields; StudyDescription must not
@@ -117,7 +124,7 @@ test_that("the study block carries the name; the standard rides @standard", {
 })
 
 test_that("the parsed spec validates", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   chk <- validate_spec(spec)
   # Findings are fine (the example exercises edge features); a hard failure
   # in validation is not.

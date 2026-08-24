@@ -14,9 +14,16 @@
 # Two further guards fall out of the same design:
 #   * a child name the sequence does not mention ABORTS, so a 2.1-only element
 #     cannot leak into a 2.0 document.
-#   * an attribute outside the element's legal set ABORTS, for the same reason.
-# Both fire at build time, naming the element, rather than surfacing later as
+#   * NA text ABORTS. R writes NA into a string as the literal "NA", so an
+#     unguarded node would put the three characters N, A into a submission
+#     document as if a sponsor had asserted them.
+# Both fire while emitting, naming the element, rather than surfacing later as
 # a schema error against a line number.
+#
+# There is NO equivalent guard on ATTRIBUTES: the profile carries no legal
+# attribute set, so a 2.1-only attribute on a 2.0 document would only be
+# caught by the schema gate at the end. Closing that is part of the 2.0
+# writer, which is the first thing that can exercise it.
 
 # One node in the tree. `kids` is a NAMED list; a name may hold one node or a
 # list of nodes (repeated elements).
@@ -65,6 +72,17 @@
   args <- c(list(parent, node$name), node$attrs)
   el <- do.call(xml2::xml_add_child, args)
   if (!is.null(node$text)) {
+    if (is.na(node$text)) {
+      .artoo_abort(
+        c(
+          "{.val {node$name}} has no text to write.",
+          "x" = "Its content is {.val NA}, which would be written as the literal string {.val NA}.",
+          "i" = "Fill the source column, or drop the element."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
     xml2::xml_text(el) <- node$text
   }
 

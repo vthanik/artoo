@@ -115,7 +115,7 @@ test_that("def:Standards is 2.1-only and absent when the spec has none", {
   )
   expect_null(artoo:::.dx_standards(spec, p21()))
   # ...and never emitted for 2.0, whatever the spec carries.
-  with_std <- read_spec(test_path("fixtures", "define21-sdtm.xml"))
+  with_std <- read_define("define21-sdtm.xml")
   expect_null(artoo:::.dx_standards(with_std, p20()))
   expect_false(is.null(artoo:::.dx_standards(with_std, p21())))
 })

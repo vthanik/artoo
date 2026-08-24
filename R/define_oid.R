@@ -84,10 +84,14 @@
   val <- spec@values
 
   study_name <- .dx_study_field(spec, "study_name")
-  study_oid <- if (is.na(study_name)) {
-    "STDY.1"
-  } else {
-    paste0("STDY.", .dx_slug(study_name))
+  # The document's own Study/@OID wins, as every supplied identifier does.
+  study_oid <- .dx_study_field(spec, "study_oid")
+  if (is.na(study_oid)) {
+    study_oid <- if (is.na(study_name)) {
+      "STDY.1"
+    } else {
+      paste0("STDY.", .dx_slug(study_name))
+    }
   }
 
   dataset_oid <- .dx_map(
@@ -140,17 +144,28 @@
         paste0("VL.", sub("^IT[.]", "", value_parent))
       )
     )
-    # The ordinal is per parent ItemDef, so filtering one variable's rows
-    # does not renumber another's.
+    # A minted value-level OID is content-addressed on the where clause that
+    # selects the row, because that is what distinguishes one value-level
+    # item from another. An ordinal is the fallback, and only the fallback:
+    # it renumbers the moment rows are filtered or reordered, which is the
+    # positional-identifier failure this file exists to avoid.
     ordinal <- integer(nrow(val))
     for (k in unique(value_parent)) {
       hit <- which(value_parent == k)
       ordinal[hit] <- seq_along(hit)
     }
-    value_item <- .dx_fill(
-      val$itemoid,
-      sprintf("%s.%d", value_parent, ordinal)
+    fallback <- sprintf("%s.%d", value_parent, ordinal)
+    wc <- .dx_value_where_key(val)
+    minted <- ifelse(
+      is.na(wc),
+      fallback,
+      sprintf("%s.%s", value_parent, .dx_slug(wc))
     )
+    # Two rows of one variable behind the same clause would collide, so
+    # anything not unique drops back to the ordinal.
+    clash <- duplicated(minted) | duplicated(minted, fromLast = TRUE)
+    minted[clash] <- fallback[clash]
+    value_item <- .dx_fill(val$itemoid, minted)
   }
 
   list(
@@ -162,6 +177,21 @@
     value_list = value_list,
     value_item = value_item
   )
+}
+
+# The where-clause identifier a value-level row names, from either column the
+# readers fill. Unlike .dx_where_key() this does not check the clause is
+# defined and never aborts: it is only a naming hint, and the real check runs
+# when the def:WhereClauseRef is built.
+#' @noRd
+.dx_value_where_key <- function(val) {
+  id <- .dx_chr(val, "where_clause_id")
+  txt <- .dx_chr(val, "where_clause")
+  out <- trimws(ifelse(is.na(id) | !nzchar(trimws(id)), txt, id))
+  # Free text is not an identifier; only an OID-shaped value is a useful
+  # fragment, and anything else falls through to the ordinal.
+  out[is.na(out) | !grepl("^[A-Za-z0-9_.-]+$", out)] <- NA_character_
+  out
 }
 
 # A scalar field off the single-row study frame, NA when absent.

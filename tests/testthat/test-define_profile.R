@@ -2,13 +2,13 @@
 # vocabulary is enforced.
 
 test_that("an explicit version wins over the spec's own", {
-  spec <- read_spec(test_path("fixtures", "define20-sdtm.xml"))
+  spec <- read_define("define20-sdtm.xml")
   expect_identical(artoo:::.dx_target_version("2.1", spec), "2.1")
 })
 
 test_that("the spec's define_version picks the target when none is given", {
-  v20 <- read_spec(test_path("fixtures", "define20-sdtm.xml"))
-  v21 <- read_spec(test_path("fixtures", "define21-sdtm.xml"))
+  v20 <- read_define("define20-sdtm.xml")
+  v21 <- read_define("define21-sdtm.xml")
   expect_identical(artoo:::.dx_target_version(NULL, v20), "2.0")
   expect_identical(artoo:::.dx_target_version(NULL, v21), "2.1")
 })

@@ -69,12 +69,18 @@
     page_type = .dx_chr(var, "page_type"),
     alias_context = .dx_chr(var, "alias_context"),
     alias_name = .dx_chr(var, "alias_name"),
-    # A parent variable points at its value list only when rows exist for it,
-    # and the lookup is by the variable's OWN OID: two datasets sharing one
-    # ItemDef share its value list.
-    value_list_id = .dx_get(
-      oids$value_list,
-      .dx_get(oids$variable, .dx_key(var$dataset, var$variable))
+    # The variable's OWN def:ValueListRef wins; the derived map fills in for
+    # a spec that never carried one. Deriving it first breaks a POOLED
+    # ItemDef: two ItemGroupDefs referencing one ItemDef produce one row with
+    # the OID and one without, and the pool then sees two definitions of the
+    # same OID. The lookup is by the variable's OID, not its name, for the
+    # same reason.
+    value_list_id = .dx_fill(
+      .dx_chr(var, "value_list_id"),
+      .dx_get(
+        oids$value_list,
+        .dx_get(oids$variable, .dx_key(var$dataset, var$variable))
+      )
     ),
     stringsAsFactors = FALSE
   )
@@ -177,16 +183,34 @@
 # Only a value that names a DEFINED clause is treated as a key, so rendered
 # display text is never emitted as a dangling reference.
 #' @noRd
-.dx_where_key <- function(val, i, known) {
+.dx_where_key <- function(val, i, known, call = rlang::caller_env()) {
   id <- .dx_chr(val, "where_clause_id")[[i]]
-  if (!.dx_blank(id) && trimws(id) %in% known) {
-    return(trimws(id))
-  }
   txt <- .dx_chr(val, "where_clause")[[i]]
-  if (!.dx_blank(txt) && trimws(txt) %in% known) {
-    return(trimws(txt))
+  for (candidate in c(id, txt)) {
+    if (!.dx_blank(candidate) && trimws(candidate) %in% known) {
+      return(trimws(candidate))
+    }
   }
-  NA_character_
+  if (.dx_blank(id) && .dx_blank(txt)) {
+    return(NA_character_)
+  }
+  # A row that names a condition artoo cannot resolve must NOT be written
+  # without one: a value-level definition with no def:WhereClauseRef applies
+  # to every row of its parent variable, which is a different claim from the
+  # one the spec made.
+  named <- c(id, txt)
+  named <- named[!.dx_blank(named)][[1]]
+  ds <- .dx_chr(val, "dataset")[[i]]
+  vr <- .dx_chr(val, "variable")[[i]]
+  .artoo_abort(
+    c(
+      "Value-level row {i} ({.val {ds}}.{.val {vr}}) names a where clause the spec does not define.",
+      "x" = "{.val {named}}.",
+      "i" = "Add it to the {.code where_clauses} table, or clear the row's where clause."
+    ),
+    kind = "define",
+    call = call
+  )
 }
 
 #' @noRd
@@ -202,13 +226,13 @@
   groups <- unique(vkey)
   lapply(groups, function(g) {
     rows <- which(vkey == g)
-    rows <- rows[order(.dx_row_order(val[rows, , drop = FALSE]))]
+    rows <- rows[.dx_row_order(val[rows, , drop = FALSE])]
     .dx_node(
       "def:ValueListDef",
       attrs = .dx_attrs(OID = .dx_get(oids$value_list, g)),
       kids = list(
         ItemRef = lapply(rows, function(i) {
-          wc <- .dx_where_key(val, i, known)
+          wc <- .dx_where_key(val, i, known, call)
           .dx_node(
             "ItemRef",
             attrs = .dx_attrs(

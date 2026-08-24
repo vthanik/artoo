@@ -118,6 +118,7 @@
       standard_type = c("CT", "IG"),
       standard_status = c("Draft", "Final", "Provisional"),
       purpose = c("Tabulation", "Analysis"),
+      method_type = c("Computation", "Imputation"),
       comparator = .wc_comparators,
       soft_hard = c("Soft", "Hard"),
       cl_data_type = c("integer", "float", "text", "string"),
@@ -204,6 +205,7 @@
       standard_type = NULL,
       standard_status = NULL,
       purpose = c("Tabulation", "Analysis"),
+      method_type = c("Computation", "Imputation"),
       comparator = .wc_comparators,
       soft_hard = c("Soft", "Hard"),
       cl_data_type = c("integer", "float", "text", "string"),
@@ -258,6 +260,18 @@
       if (startsWith(dv, "2.0")) {
         return("2.0")
       }
+      # Silently writing a 1.0 spec as 2.1 would produce a document claiming
+      # to be a version of something the source never was.
+      known <- .define_profile_versions
+      .artoo_abort(
+        c(
+          "The spec declares Define-XML version {.val {dv}}.",
+          "x" = "artoo writes {.val {known}}.",
+          "i" = "Pass {.arg version} to write it as one of those anyway."
+        ),
+        kind = "input",
+        call = call
+      )
     }
   }
   "2.1"

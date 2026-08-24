@@ -14,6 +14,22 @@
   `created`, `stylesheet`, and `validate`. Freeze `created` for a
   byte-reproducible submission build.
 
+* `read_spec()` on a Define-XML document now keeps the document's own
+  identity: `Study/@OID`, `FileOID`, the MetaDataVersion's OID, name and
+  description, and the ODM `@Context`. `write_spec()` writes them back, so a
+  document read and written keeps every identifier an external reference may
+  already name, rather than having fresh ones minted from the study name.
+
+* `read_spec()` on a Define-XML document now reports what it drops. An
+  external codelist (`MedDRA`, WHODrug, ISO 3166) and every reference to it
+  are still dropped, and an `ItemDef` carrying more than one `def:Origin`
+  still keeps only the first, but both now warn: a loss that reader and
+  writer share is invisible to a round trip, and one nothing reports is worse
+  than one that fails. A value-level item selected by more than one
+  `def:WhereClauseRef` is now refused outright, because those are combined
+  with OR and keeping the first silently narrows which rows the definition
+  applies to.
+
 * `read_spec()` on a Define-XML document now carries a value-level row's whole
   `ItemDef`: its origin, comment, display format, significant digits, and SAS
   field name, alongside the `def:WhereClauseRef` it names. Previously only the
