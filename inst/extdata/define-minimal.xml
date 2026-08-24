@@ -9,7 +9,7 @@
   It deliberately carries NO xml-stylesheet processing instruction. A real
   submission does, naming a define2-1.xsl that sits beside it, but nothing
   sits beside this file in inst/extdata/, and a PI naming an absent
-  stylesheet is the defect Pinnacle 21 reports as DD0085. artoo's writer
+  stylesheet is itself a conformance finding. artoo's writer
   emits the PI and copies the stylesheet alongside its output.
 -->
 <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"

@@ -35,6 +35,17 @@
 # document. On the tabular path a SCALAR value keeps its parentheses, since a
 # value there may legitimately contain them; a set value is still unwrapped,
 # because "(A, B)" is how workbooks write a list.
+# Strip one balanced pair of double quotes. The pair delimits a value that
+# contains a space or a comma; the value itself never carries them.
+#' @noRd
+.wc_unquote <- function(x) {
+  if (nchar(x) >= 2L && startsWith(x, "\"") && endsWith(x, "\"")) {
+    substr(x, 2L, nchar(x) - 1L)
+  } else {
+    x
+  }
+}
+
 #' @noRd
 .wc_split_values <- function(
   value,
@@ -56,7 +67,11 @@
     v <- trimws(substr(v, 2L, nchar(v) - 1L))
   }
   if (!is_set) {
-    return(v)
+    # A quote pair DELIMITS a value containing spaces, it is not part of the
+    # value: the workbook format documents `AVISIT EQ "Week 24"`. The set
+    # path has always stripped these; the scalar path kept them, so the
+    # CheckValue read "\"Week 24\"" and the slice matched no record.
+    return(.wc_unquote(v))
   }
   if (.wc_unbalanced_quotes(v)) {
     .artoo_abort(
@@ -71,18 +86,7 @@
   }
   parts <- .wc_split_outside_quotes(v)
   parts <- trimws(parts)
-  parts <- vapply(
-    parts,
-    function(x) {
-      if (nchar(x) >= 2L && startsWith(x, "\"") && endsWith(x, "\"")) {
-        substr(x, 2L, nchar(x) - 1L)
-      } else {
-        x
-      }
-    },
-    character(1),
-    USE.NAMES = FALSE
-  )
+  parts <- vapply(parts, .wc_unquote, character(1), USE.NAMES = FALSE)
   kept <- parts[nzchar(parts)]
   if (anyDuplicated(kept)) {
     dup <- unique(kept[duplicated(kept)])
@@ -303,11 +307,20 @@
   rows <- list()
   for (k in seq_along(conditions)) {
     cond <- conditions[[k]]
+    # A check on a variable in ANOTHER dataset qualifies it -- a VS value
+    # conditioned on DM.COUNTRY. Unqualified names belong to the dataset
+    # that owns the clause, and the caller fills that in.
+    qualified <- regmatches(
+      cond$variable,
+      regexec("^([A-Za-z_][A-Za-z0-9_]*)[.](.+)$", cond$variable)
+    )[[1L]]
+    owner <- if (length(qualified) == 3L) qualified[[2L]] else NA_character_
+    name <- if (length(qualified) == 3L) qualified[[3L]] else cond$variable
     rows[[length(rows) + 1L]] <- data.frame(
       where_clause_id = id,
       check_order = k,
-      dataset = NA_character_,
-      variable = cond$variable,
+      dataset = owner,
+      variable = name,
       itemoid = NA_character_,
       comparator = cond$comparator,
       soft_hard = "Soft",
@@ -446,4 +459,174 @@
     comparator = "IN",
     values = unique(values)
   ))
+}
+
+# Render a where clause back into the single-cell expression the current
+# workbook generation carries on the ValueLevel sheet.
+#
+# The exact inverse of .wc_from_values(): scalar operands bare, a set in
+# parentheses comma-separated, conditions joined by lowercase " and ", and a
+# value quoted only when it contains a space or a comma -- because that is
+# the one thing the reader needs the quotes for.
+#
+# artoo used to emit a where-clause ID here and a separate WhereClauses
+# sheet beside it. That sheet belongs to the RETIRED workbook generation,
+# whose ValueLevel sheet named its label column differently; pairing it with
+# current-generation headers produced a workbook of no generation at all.
+#' @noRd
+.wc_render <- function(wc) {
+  if (is.null(wc) || !nrow(wc)) {
+    return(character(0))
+  }
+  quote_if_needed <- function(x) {
+    ifelse(grepl("[ ,]", x), paste0('"', x, '"'), x)
+  }
+  # Which dataset owns each clause: the one its first check names. A check
+  # on any other dataset is qualified below, because the cell has no other
+  # way to say so and dropping the qualifier changes what the clause
+  # selects.
+  owners <- vapply(
+    split(as.character(wc$dataset), factor(wc$where_clause_id)),
+    function(x) {
+      x <- x[!is.na(x)]
+      if (length(x)) x[[1L]] else NA_character_
+    },
+    character(1)
+  )
+  check <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
+  by_check <- vapply(
+    split(seq_len(nrow(wc)), factor(check, levels = unique(check))),
+    function(rows) {
+      row <- wc[rows[[1L]], , drop = FALSE]
+      values <- quote_if_needed(as.character(wc$value[rows]))
+      values <- values[!is.na(values) & nzchar(values)]
+      operand <- if (length(values) > 1L) {
+        paste0("(", paste(values, collapse = ", "), ")")
+      } else if (length(values)) {
+        values
+      } else {
+        ""
+      }
+      trimws(paste(.wc_qualify(row, owners), row$comparator, operand))
+    },
+    character(1)
+  )
+  ids <- vapply(
+    strsplit(names(by_check), "\r", fixed = TRUE),
+    function(x) x[[1L]],
+    character(1)
+  )
+  vapply(
+    split(unname(by_check), factor(ids, levels = unique(ids))),
+    paste,
+    character(1),
+    collapse = " and "
+  )
+}
+
+# ---- Analysis-results selection criteria ---------------------------------
+#
+# The Analysis Results sheet packs, into one cell, what artoo holds as one
+# row per result x analysis dataset: a bracket group per dataset,
+# `ADQSADAS[EFFFL EQ Y and PARAMCD EQ ACTOT]`, with `ADXX[]` meaning every
+# record. Groups for one result sit side by side in the same cell.
+#
+# Reading it is how a workbook's analysis results reach `arm:AnalysisDataset`
+# at all: without it a vendor-authored workbook has no `@ItemGroupOID` and
+# the define write refuses the result outright.
+
+# Render one result's rows back into a single cell.
+#' @noRd
+.arm_render_criteria <- function(rows, rendered) {
+  groups <- vapply(
+    seq_len(nrow(rows)),
+    function(i) {
+      ds <- as.character(rows$dataset[[i]])
+      if (is.na(ds) || !nzchar(ds)) {
+        return(NA_character_)
+      }
+      id <- as.character(rows$where_clause_id[[i]])
+      cond <- if (!is.na(id) && id %in% names(rendered)) rendered[[id]] else ""
+      paste0(ds, "[", cond, "]")
+    },
+    character(1)
+  )
+  groups <- groups[!is.na(groups)]
+  if (!length(groups)) {
+    return(NA_character_)
+  }
+  paste(groups, collapse = " ")
+}
+
+# Split a cell into its bracket groups: dataset name, then the condition.
+# Bracket-aware rather than a split on "]", so a condition is never cut.
+#' @noRd
+.arm_split_criteria <- function(text) {
+  if (is.na(text) || !nzchar(trimws(text))) {
+    return(NULL)
+  }
+  chars <- strsplit(text, "", fixed = TRUE)[[1L]]
+  out <- list()
+  name <- character(0)
+  cond <- character(0)
+  depth <- 0L
+  for (ch in chars) {
+    if (identical(ch, "[") && depth == 0L) {
+      depth <- 1L
+      next
+    }
+    if (identical(ch, "]") && depth == 1L) {
+      out[[length(out) + 1L]] <- list(
+        dataset = trimws(paste(name, collapse = "")),
+        condition = trimws(paste(cond, collapse = ""))
+      )
+      name <- character(0)
+      cond <- character(0)
+      depth <- 0L
+      next
+    }
+    if (depth == 1L) {
+      cond <- c(cond, ch)
+    } else {
+      name <- c(name, ch)
+    }
+  }
+  leftover <- trimws(paste(name, collapse = ""))
+  if (depth == 1L || nzchar(leftover)) {
+    return(NULL)
+  }
+  out
+}
+
+# Variable names from an analysis-variable cell: comma- or space-separated,
+# each optionally qualified by its dataset, which is dropped because the row
+# already names it.
+#' @noRd
+.arm_variable_names <- function(x, dataset = NULL) {
+  if (is.null(x) || length(x) != 1L || is.na(x) || !nzchar(trimws(x))) {
+    return(character(0))
+  }
+  v <- strsplit(trimws(x), "[[:space:],]+")[[1L]]
+  v <- v[nzchar(v)]
+  # Strip a qualifier only when it names THIS row's dataset. Stripping any
+  # leading dot-segment would eat the first component of an ItemOID given
+  # verbatim, which is a legal way to name an analysis variable.
+  if (!is.null(dataset) && !is.na(dataset) && nzchar(dataset)) {
+    at <- startsWith(v, paste0(dataset, "."))
+    v[at] <- substring(v[at], nchar(dataset) + 2L)
+  }
+  v
+}
+
+# A variable name for the cell: qualified when the check leaves the dataset
+# that owns its clause.
+#' @noRd
+.wc_qualify <- function(row, owners) {
+  ds <- as.character(row$dataset)
+  own <- owners[[as.character(row$where_clause_id)]]
+  if (is.na(ds) || is.na(own) || identical(ds, own)) {
+    as.character(row$variable)
+  } else {
+    paste0(ds, ".", row$variable)
+  }
 }

@@ -349,7 +349,7 @@ artoo_spec <- function(
     )
   }
 
-  .spec_check_refs(datasets, variables, codelists, call)
+  .spec_check_refs(datasets, variables, codelists, dictionaries, call)
 
   artoo_spec_class(
     standard = standard,
@@ -478,7 +478,13 @@ artoo_spec <- function(
 # last line of defence). Each message carries a single varying quantity so
 # cli pluralisation is unambiguous.
 #' @noRd
-.spec_check_refs <- function(datasets, variables, codelists, call) {
+.spec_check_refs <- function(
+  datasets,
+  variables,
+  codelists,
+  dictionaries,
+  call
+) {
   if (nrow(variables)) {
     # Duplicate (dataset, variable) definitions make every downstream step
     # ambiguous (which label? which type?). Fail at construction, with the
@@ -527,18 +533,25 @@ artoo_spec <- function(
     used <- unique(variables$codelist_id[
       !is.na(variables$codelist_id) & nzchar(variables$codelist_id)
     ])
-    known <- if ("codelist_id" %in% names(codelists)) {
-      unique(codelists$codelist_id)
-    } else {
-      character(0)
-    }
+    # A variable names its terminology in ONE column whichever kind it is,
+    # because that is the only column a workbook has: an enumerated codelist
+    # and an external dictionary (MedDRA, WHODrug, ISO 3166) both land in
+    # `codelist_id`. Checking only `codelists` aborted every AE, CM and MH
+    # spec ever written, telling the author to add terms for a dictionary
+    # that by definition has none.
+    known <- c(
+      if ("codelist_id" %in% names(codelists)) unique(codelists$codelist_id),
+      if ("dictionary_id" %in% names(dictionaries)) {
+        unique(dictionaries$dictionary_id)
+      }
+    )
     unresolved <- setdiff(used, known)
     if (length(unresolved)) {
       .artoo_abort(
         c(
           "Some variables reference a codelist not in {.arg codelists}.",
           "x" = "Unresolved codelist_id{?s}: {.val {unresolved}}.",
-          "i" = "Add the codelist's terms to {.arg codelists}."
+          "i" = "Add the codelist's terms to {.arg codelists}, or the external dictionary to {.arg dictionaries}."
         ),
         kind = "spec",
         call = call

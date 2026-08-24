@@ -31,7 +31,6 @@ test_that("every header the template offers is one the reader maps", {
     Datasets = artoo:::.p21_ds_map,
     Variables = artoo:::.p21_var_map,
     ValueLevel = artoo:::.p21_value_map,
-    WhereClauses = artoo:::.p21_where_map,
     Codelists = artoo:::.p21_codelist_map,
     Dictionaries = artoo:::.p21_dictionary_map,
     Methods = artoo:::.p21_method_map,

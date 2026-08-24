@@ -120,13 +120,13 @@
       List of 2
        $ elements:List of 32
         ..$ Alias           : int 108
-        ..$ CheckValue      : int 29
+        ..$ CheckValue      : int 41
         ..$ CodeList        : int 21
         ..$ CodeListItem    : int 57
         ..$ CodeListRef     : int 27
         ..$ CommentDef      : int 21
         ..$ Decode          : int 57
-        ..$ Description     : int 128
+        ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
         ..$ GlobalVariables : int 1
@@ -139,21 +139,21 @@
         ..$ Origin          : int 72
         ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 27
+        ..$ RangeCheck      : int 39
         ..$ Study           : int 1
         ..$ StudyDescription: int 1
         ..$ StudyName       : int 1
         ..$ SupplementalDoc : int 1
-        ..$ TranslatedText  : int 185
+        ..$ TranslatedText  : int 184
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 23
+        ..$ WhereClauseDef  : int 35
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
        $ lint    :List of 3
         ..$ define_missing_origin: int 2
-        ..$ define_orphan_comment: int 8
+        ..$ define_orphan_comment: int 9
         ..$ define_orphan_leaf   : int 9
 
 ---
@@ -168,14 +168,14 @@
       List of 2
        $ elements:List of 35
         ..$ Alias           : int 108
-        ..$ CheckValue      : int 29
+        ..$ CheckValue      : int 41
         ..$ Class           : int 4
         ..$ CodeList        : int 21
         ..$ CodeListItem    : int 57
         ..$ CodeListRef     : int 27
         ..$ CommentDef      : int 21
         ..$ Decode          : int 57
-        ..$ Description     : int 128
+        ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
         ..$ GlobalVariables : int 1
@@ -188,23 +188,23 @@
         ..$ Origin          : int 72
         ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 27
+        ..$ RangeCheck      : int 39
         ..$ Standard        : int 6
         ..$ Standards       : int 1
         ..$ Study           : int 1
         ..$ StudyDescription: int 1
         ..$ StudyName       : int 1
         ..$ SupplementalDoc : int 1
-        ..$ TranslatedText  : int 185
+        ..$ TranslatedText  : int 184
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 23
+        ..$ WhereClauseDef  : int 35
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
        $ lint    :List of 4
+        ..$ define_orphan_comment : int 1
         ..$ define_missing_origin : int 2
-        ..$ define_orphan_comment : int 2
         ..$ define_orphan_standard: int 6
         ..$ define_orphan_leaf    : int 9
 

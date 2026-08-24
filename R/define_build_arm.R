@@ -286,7 +286,7 @@
       call = call
     )
   }
-  analysis_vars <- .dx_arm_variables(.dx_chr(rows, "variables")[[j]])
+  analysis_vars <- .dx_arm_variables(.dx_chr(rows, "variables")[[j]], dataset)
   wc <- .dx_chr(rows, "where_clause_id")[[j]]
   .dx_node(
     "arm:AnalysisDataset",
@@ -308,14 +308,16 @@
   )
 }
 
-# The analysis variables of one dataset, from the space-separated column.
+# The analysis variables of one dataset.
+#
+# Separated by commas or whitespace, and each may be qualified by its own
+# dataset (`ADTTE.AVAL, ADTTE.CNSR`) because one cell can span several. The
+# splitter took whitespace only and kept the qualifier, so the comma-and-
+# prefix form the workbook format documents produced `ItemOID="ADAE.AEBODSYS,"`
+# -- schema-valid, dangling, and flagged by artoo's own linter.
 #' @noRd
-.dx_arm_variables <- function(x) {
-  if (.dx_blank(x)) {
-    return(character(0))
-  }
-  v <- strsplit(trimws(x), "[[:space:]]+")[[1]]
-  v[nzchar(v)]
+.dx_arm_variables <- function(x, dataset = NULL) {
+  .arm_variable_names(x, dataset)
 }
 
 #' @noRd

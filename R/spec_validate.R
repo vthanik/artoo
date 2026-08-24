@@ -112,6 +112,7 @@
   vars <- self@variables
   dsets <- self@datasets
   clists <- self@codelists
+  dicts <- self@dictionaries
 
   # Variable data types must be canonical CDISC dataTypes.
   if ("data_type" %in% names(vars) && nrow(vars)) {
@@ -188,16 +189,18 @@
     }
   }
 
-  # Cross-slot: every codelist_id used must resolve in codelists.
+  # Cross-slot: every codelist_id used must resolve in codelists -- or in
+  # dictionaries. A variable names its terminology in one column whichever
+  # kind it is, because that is the only column a workbook has, so an
+  # external dictionary lands in `codelist_id` too.
   if ("codelist_id" %in% names(vars) && nrow(vars)) {
     used <- unique(vars$codelist_id[
       !is.na(vars$codelist_id) & nzchar(vars$codelist_id)
     ])
-    known <- if ("codelist_id" %in% names(clists)) {
-      unique(clists$codelist_id)
-    } else {
-      character(0)
-    }
+    known <- c(
+      if ("codelist_id" %in% names(clists)) unique(clists$codelist_id),
+      if ("dictionary_id" %in% names(dicts)) unique(dicts$dictionary_id)
+    )
     unresolved <- setdiff(used, known)
     if (length(unresolved)) {
       issues <- c(

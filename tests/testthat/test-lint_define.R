@@ -63,7 +63,7 @@ test_that("both official Define-XML 2.0 examples are clean", {
 test_that("the official 2.1 examples report only their one real defect", {
   # Not zero: both 2.1 examples define six def:Standard entries and reference
   # only five, so STD.5 is genuinely unreferenced. This is a true positive in
-  # CDISC's own published example -- Pinnacle 21's DD0139 flags it too -- so
+  # CDISC's own published example -- Pinnacle 21's the unreferenced-definition rule flags it too -- so
   # the expectation pins it rather than suppressing it. If this count ever
   # moves, either the fixture changed or the lint gained a false positive.
   for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
@@ -79,7 +79,7 @@ test_that("the official 2.1 examples report only their one real defect", {
   }
   # The SDTM example carries a second true positive of its own: SUPPVS is
   # flagged def:HasNoData with no comment explaining it, which is what
-  # Pinnacle 21 DD0133 asks for. Pinned rather than suppressed, for the same
+  # Pinnacle 21 the empty-dataset comment rule asks for. Pinned rather than suppressed, for the same
   # reason as the orphan standard.
   sdtm <- lint_define(fixture("define21-sdtm.xml"))@findings
   expect_setequal(

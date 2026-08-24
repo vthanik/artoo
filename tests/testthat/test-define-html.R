@@ -3,7 +3,7 @@
 # A define.xml is not read as XML by the people it is written for. It is read
 # through an XSLT stylesheet, and the document names one in a processing
 # instruction. Two things follow, and both are tested here: the file the PI
-# names must actually be there (Pinnacle 21 raises DD0085 when it is not), and
+# names must actually be there (Pinnacle 21 raises the stylesheet-exists rule when it is not), and
 # the rendering must not depend on a browser -- Chrome removes XSLT support in
 # Chrome 158, on 2026-11-17.
 
@@ -25,7 +25,7 @@ html_case <- function(fixture, version) {
 
 test_that("the processing instruction names a file that is actually there", {
   skip_if_not_installed("xml2")
-  # Pinnacle 21 rule DD0085. A PI pointing at a stylesheet nobody shipped is
+  # Pinnacle 21 rule the stylesheet-exists rule. A PI pointing at a stylesheet nobody shipped is
   # the commonest way a define.xml arrives unrenderable.
   for (version in c("2.0", "2.1")) {
     path <- html_case("define21-sdtm.xml", version)

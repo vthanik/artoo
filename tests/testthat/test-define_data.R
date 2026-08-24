@@ -302,7 +302,7 @@ test_that("too many distinct key values stops rather than guessing", {
 
 test_that("an empty dataset is flagged only when it explains itself", {
   skip_if_not_installed("xml2")
-  # def:HasNoData needs a def:CommentOID (Pinnacle 21 DD0133): a dataset that
+  # def:HasNoData needs a def:CommentOID (Pinnacle 21 the empty-dataset comment rule): a dataset that
   # is empty needs an explanation, and artoo will not write one.
   build <- function(comment_id) {
     artoo_spec(

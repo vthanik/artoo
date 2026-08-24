@@ -1,5 +1,31 @@
 # artoo 0.2.0.9000
 
+* `read_spec()` and `write_spec()` now use the current Pinnacle 21 workbook
+  shape for conditions. A value-level row states its condition as an
+  expression in the `ValueLevel` sheet's `Where Clause` cell, and an analysis
+  result states one bracket group per analysis dataset in `Selection
+  Criteria`; the separate `WhereClauses` sheet, which that generation
+  dropped, is still read but no longer written.
+
+* `read_spec()` on a workbook no longer loses a value-level row's
+  `Assigned Value`, `Source`, `Pages` or `Predecessor`. All four are
+  columns of the sheet, and all four were mapped for `Variables` and not for
+  `ValueLevel`, so a value-level `Origin = Predecessor` wrote an origin
+  describing nothing.
+
+* `read_spec()` on a workbook no longer keeps the quote characters that
+  delimit a where-clause value. `AVISIT EQ "Week 24"` selected records whose
+  AVISIT was the eight characters `"Week 24"` rather than the seven.
+
+* `read_spec()` on a workbook reads a codelist's `Comment` as the comment
+  reference it is, and a variable may name an external dictionary in its
+  `Codelist` column, which is where a workbook puts it. Reading an adverse
+  events spec aborted asking for terms a dictionary does not have.
+
+* `read_spec()` and `write_spec()` keep an analysis variable's dataset
+  qualifier straight, and a where-clause check that leaves its own dataset
+  now says so.
+
 * `define_lint()` is now `lint_define()`, matching the verb-first grammar of
   every other export. The function is new in this development version and has
   never been released, so nothing that ran before breaks.

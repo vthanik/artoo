@@ -220,17 +220,44 @@ test_that("a date variable carries no Length cell (Define length rule)", {
   expect_true(is.na(vars[["Length"]][vars$Variable == "RFSTDTC"]))
 })
 
-test_that("a codelist comment_id is never emitted into the Codelists sheet", {
-  # The P21 Codelists "Comment" column is free text, not a reference; the
-  # writer must not exteriorise comment_id there, and a round-trip must not
-  # resurrect it.
-  spec <- .xlsx_spec()
+test_that("a codelist comment_id round-trips through the Comment column", {
+  # The Codelists "Comment" column is a Comment-ID reference, like the ones
+  # on Variables and Datasets: the workbook format documents it as an id
+  # matching a row on the Comments sheet, and it becomes
+  # `CodeList/@def:CommentOID`. artoo read it as free text and left the
+  # column unmapped, which produced a codelist with no comment and a
+  # CommentDef with nothing pointing at it.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      codelist_id = "CL.SEX",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.SEX",
+      name = "Sex",
+      data_type = "text",
+      term = c("F", "M"),
+      decode = c("Female", "Male"),
+      comment_id = "COM.SEX",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "COM.SEX",
+      description = "Collected on the demography page.",
+      stringsAsFactors = FALSE
+    )
+  )
   p <- withr::local_tempfile(fileext = ".xlsx")
-  write_spec(spec, p)
+  suppressWarnings(write_spec(spec, p))
   cl_sheet <- as.data.frame(readxl::read_excel(p, sheet = "Codelists"))
-  expect_false("Comment" %in% names(cl_sheet))
-  back <- read_spec(p)
-  expect_true(all(is.na(back@codelists$comment_id)))
+  expect_true("Comment" %in% names(cl_sheet))
+  expect_identical(unique(cl_sheet[["Comment"]]), "COM.SEX")
+  back <- suppressWarnings(read_spec(p))
+  expect_identical(unique(back@codelists$comment_id), "COM.SEX")
 })
 
 test_that("empty optional slots omit their sheets", {

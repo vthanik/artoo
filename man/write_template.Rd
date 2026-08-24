@@ -39,10 +39,20 @@ Variables) are omitted from a 2.0 template, because a column no 2.0
 document can carry is one an author fills for nothing.
 
 \strong{Only Datasets and Variables are required.} Every other sheet may be
-left empty; \code{\link[=read_spec]{read_spec()}} omits what it finds nothing in. The
-\code{WhereClauses}, \code{Standards}, \code{Dictionaries} and analysis-results sheets
-belong to newer workbook generations, and an older workbook simply carries
-its value-level conditions as free text in \code{ValueLevel}.
+left empty; \code{\link[=read_spec]{read_spec()}} omits what it finds nothing in.
+
+\strong{Conditions are expressions, not a sheet.} A value-level row states its
+condition in the \code{ValueLevel} sheet's \verb{Where Clause} cell:
+\verb{PARAMCD EQ ACTOT and AVISIT EQ "Week 24"}, a set as
+\verb{PARAMCD IN (ACITM01, ACITM02)}, and a value quoted only when it contains
+a space or a comma. An analysis result states one bracket group per
+analysis dataset in \verb{Selection Criteria}, as
+\verb{ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]}. \code{\link[=read_spec]{read_spec()}} still reads the
+retired shape that put those conditions on their own sheet.
+
+\strong{\code{Standards} is an artoo extension.} Define-XML 2.1 carries a
+\code{def:Standards} block that the workbook format has no sheet for, so
+artoo offers one rather than lose it.
 }
 \examples{
 # ---- Example 1: a blank workbook, and what it offers ----

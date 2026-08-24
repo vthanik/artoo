@@ -12,7 +12,7 @@
 #
 # OPT-IN, and it never contradicts the spec silently. A stated Length is
 # widened when the data overflows it, because a Length below the real maximum
-# is a conformance finding (Pinnacle 21 OD0070 / DD0068) and the document
+# is a conformance finding, and the document
 # would be wrong; it is never NARROWED, because a spec that declares 200 for
 # a column whose current extract reaches 12 is making a claim about the
 # domain, not about this extract, and one snapshot of data is no reason to
@@ -499,7 +499,7 @@
 
 # def:HasNoData on an ItemGroupDef whose dataset has no records.
 #
-# 2.1 only, and Pinnacle 21 DD0133 requires a def:CommentOID alongside it --
+# 2.1 only, and a conformance check requires a def:CommentOID alongside it --
 # a dataset that is empty needs an explanation, and artoo will not write one.
 # A dataset with no comment is therefore left unflagged, and said so.
 #' @noRd

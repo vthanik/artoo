@@ -69,10 +69,16 @@
 )
 
 #' @noRd
-# Note: the P21 Codelists "Comment" column is conventionally inline free
-# text (a description of the codelist), NOT a Comment-ID reference like the
-# Variables/Datasets "Comment" columns — so it is deliberately NOT mapped
-# to `comment_id` (which would yield false "unresolved comment" findings).
+# The Codelists "Comment" column is a Comment-ID reference, exactly like the
+# Variables and Datasets ones: the workbook format documents it as an id
+# that must match a row on the Comments sheet, and it becomes
+# `CodeList/@def:CommentOID` in Define-XML 2.1.
+#
+# artoo read it as inline free text and left it unmapped, on the theory that
+# mapping it would raise false unresolved-comment findings. It cannot: the
+# id resolves against the same Comments sheet every other reference does.
+# What the theory actually produced was a codelist with no comment and a
+# CommentDef with nothing pointing at it -- an orphan artoo emitted itself.
 .p21_codelist_map <- c(
   "ID" = "codelist_id",
   "Order" = "order",
@@ -86,6 +92,7 @@
   "Data Type" = "data_type",
   "NCI Codelist Code" = "nci_code",
   "SAS Format Name" = "sas_format_name",
+  "Comment" = "comment_id",
   # ---- term-level ----
   "NCI Term Code" = "term_nci_code",
   "Rank" = "rank"
@@ -106,7 +113,19 @@
   "Codelist" = "codelist_id",
   "Origin" = "origin",
   "Method" = "method_id",
-  "Comment" = "comment_id"
+  "Comment" = "comment_id",
+  # The origin-support columns the current workbook generation carries on
+  # ValueLevel exactly as it does on Variables. artoo mapped them for
+  # Variables and not here, so an `Origin = Predecessor` value-level row
+  # read back with no predecessor and wrote an origin describing nothing.
+  "Assigned Value" = "assigned_value",
+  "Source" = "source",
+  "Pages" = "pages",
+  "Predecessor" = "predecessor",
+  # artoo's own column, matching the one it adds to Variables: a page number
+  # says nothing about which document it is a page of, and mapping the pages
+  # without it left every value-level page reference dangling.
+  "Origin Document" = "origin_document_id"
 )
 
 #' @noRd
@@ -232,6 +251,11 @@
   "Variables" = "variables",
   "Parameter" = "parameter_id",
   "Where Clause" = "where_clause_id",
+  # The current generation carries the analysis datasets, their conditions
+  # and (through PARAMCD) the parameter in ONE cell. artoo's Dataset /
+  # Parameter / Where Clause columns are its decomposition; a workbook
+  # authored in the standard shape has only this one.
+  "Selection Criteria" = "selection_criteria",
   "Join Comment" = "datasets_comment_id",
   "Documentation" = "documentation",
   "Documentation Refs" = "documentation_document_id",
@@ -887,6 +911,14 @@ read_spec <- function(
     )
   )
 
+  # Analysis results authored in the standard shape carry their datasets,
+  # conditions and parameter packed into one Selection Criteria cell. Expand
+  # it into artoo's grain and mint the clauses it names, reusing the same
+  # parser the ValueLevel column goes through so the two cannot diverge.
+  expanded <- .arm_from_criteria(arm_results, where_clauses, call)
+  arm_results <- expanded$arm_results
+  where_clauses <- expanded$where_clauses
+
   # A SECOND scoping pass. The tables above are built after the first one --
   # the where clauses are derived from the ValueLevel sheet, the analysis
   # results read from their own sheets -- so scoping only the first three
@@ -1005,7 +1037,9 @@ read_spec <- function(
     if (is.null(rows)) {
       next
     }
-    rows$dataset <- ds[[i]]
+    # Only the unqualified checks belong to this value's dataset; a check
+    # written `DM.COUNTRY EQ USA` named its own and the parser kept it.
+    rows$dataset[is.na(rows$dataset)] <- ds[[i]]
     assign(id, TRUE, envir = taken)
     assign(key, id, envir = by_content)
     ids[[i]] <- id
@@ -1384,4 +1418,121 @@ read_spec <- function(
   )
   names(out) <- attr_col
   out
+}
+
+# Expand a Selection Criteria cell into one row per analysis dataset, and
+# mint the where clauses it names.
+#
+# The standard sheet is one row per analysis result and packs the datasets
+# into that one cell, a bracket group each; artoo holds one row per result x
+# dataset because each dataset carries its own condition and variable list.
+# Without this the cell stayed opaque text, `dataset` and `where_clause_id`
+# stayed NA, and the define write refused the result for naming no analysis
+# dataset -- so the whole read-a-workbook-write-a-define path was dead for
+# any spec with analysis results.
+#
+# Rows that already carry a dataset are left alone: those came from artoo's
+# own decomposed columns, which say the same thing more precisely.
+#' @noRd
+.arm_from_criteria <- function(arm_results, where_clauses, call) {
+  out <- list(arm_results = arm_results, where_clauses = where_clauses)
+  if (
+    is.null(arm_results) ||
+      !nrow(arm_results) ||
+      !"selection_criteria" %in% names(arm_results)
+  ) {
+    return(out)
+  }
+  text <- as.character(arm_results$selection_criteria)
+  todo <- !is.na(text) & nzchar(trimws(text))
+  if ("dataset" %in% names(arm_results)) {
+    todo <- todo & .dx_blank(as.character(arm_results$dataset))
+  }
+  if (!any(todo)) {
+    return(out)
+  }
+  rows <- list()
+  pseudo <- list()
+  at <- integer(0)
+  for (i in seq_len(nrow(arm_results))) {
+    if (!todo[[i]]) {
+      rows[[length(rows) + 1L]] <- arm_results[i, , drop = FALSE]
+      next
+    }
+    groups <- .arm_split_criteria(text[[i]])
+    if (is.null(groups)) {
+      .artoo_abort(
+        c(
+          "Analysis result {.val {arm_results$result_id[[i]]}} has selection criteria artoo cannot read.",
+          "x" = "{.val {text[[i]]}}",
+          "i" = "Expected one bracket group per analysis dataset, as {.code ADSL[SAFFL EQ Y]}."
+        ),
+        kind = "spec",
+        call = call
+      )
+    }
+    for (g in groups) {
+      row <- arm_results[i, , drop = FALSE]
+      row$dataset <- g$dataset
+      # The variables cell spans every dataset of the result, each name
+      # qualified by its own; give each group only its own. Unqualified
+      # names belong to the group only when there is just one.
+      if ("variables" %in% names(row)) {
+        row$variables <- .arm_group_variables(
+          arm_results$variables[[i]],
+          g$dataset,
+          length(groups)
+        )
+      }
+      rows[[length(rows) + 1L]] <- row
+      at <- c(at, length(rows))
+      pseudo[[length(pseudo) + 1L]] <- data.frame(
+        dataset = g$dataset,
+        variable = as.character(arm_results$result_id[[i]]),
+        where_clause = if (nzchar(g$condition)) g$condition else NA_character_,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  expanded <- do.call(rbind, rows)
+  if (!length(pseudo)) {
+    out$arm_results <- expanded
+    return(out)
+  }
+  derived <- .wc_from_values(do.call(rbind, pseudo), call)
+  # The parser replaces the expression in `where_clause` with the id it
+  # minted, which is where the value-level path reads it from too.
+  ids <- if ("where_clause" %in% names(derived$values)) {
+    as.character(derived$values$where_clause)
+  } else {
+    rep(NA_character_, length(at))
+  }
+  if (!"where_clause_id" %in% names(expanded)) {
+    expanded$where_clause_id <- NA_character_
+  }
+  # `at` indexes the expanded rows that produced a bracket group, in the
+  # order the pseudo-frame was built, so the ids land back positionally.
+  expanded$where_clause_id[at] <- ids
+  out$arm_results <- expanded
+  out$where_clauses <- if (is.null(where_clauses)) {
+    derived$where_clauses
+  } else {
+    .dx_stack(where_clauses, derived$where_clauses)
+  }
+  out
+}
+
+# The analysis variables belonging to one dataset of a multi-dataset result.
+#' @noRd
+.arm_group_variables <- function(cell, dataset, n_groups) {
+  if (is.null(cell) || is.na(cell) || !nzchar(trimws(cell))) {
+    return(NA_character_)
+  }
+  tokens <- strsplit(trimws(as.character(cell)), "[[:space:],]+")[[1L]]
+  tokens <- tokens[nzchar(tokens)]
+  qualified <- grepl("[.]", tokens, fixed = FALSE)
+  mine <- (qualified & startsWith(tokens, paste0(dataset, "."))) |
+    (!qualified & n_groups == 1L)
+  kept <- sub("^[^.]+[.]", "", tokens[mine])
+  if (!length(kept)) NA_character_ else paste(kept, collapse = " ")
 }

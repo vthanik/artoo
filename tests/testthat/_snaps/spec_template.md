@@ -14,5 +14,5 @@
     Condition
       Error:
       ! Required sheet "Datasets" is missing or has no data rows.
-      i Available sheets: "Define", "Datasets", "Variables", "ValueLevel", "WhereClauses", "Codelists", "Dictionaries", "Methods", "Comments", "Documents", "Standards", "Analysis Displays", and "Analysis Results".
+      i Available sheets: "Define", "Datasets", "Variables", "ValueLevel", "Codelists", "Dictionaries", "Methods", "Comments", "Documents", "Standards", "Analysis Displays", and "Analysis Results".
 

@@ -18,7 +18,6 @@
   datasets = "Datasets",
   variables = "Variables",
   valuelevel = "ValueLevel",
-  whereclauses = "WhereClauses",
   codelists = "Codelists",
   dictionaries = "Dictionaries",
   methods = "Methods",
@@ -86,10 +85,20 @@
 #' document can carry is one an author fills for nothing.
 #'
 #' **Only Datasets and Variables are required.** Every other sheet may be
-#' left empty; [read_spec()] omits what it finds nothing in. The
-#' `WhereClauses`, `Standards`, `Dictionaries` and analysis-results sheets
-#' belong to newer workbook generations, and an older workbook simply carries
-#' its value-level conditions as free text in `ValueLevel`.
+#' left empty; [read_spec()] omits what it finds nothing in.
+#'
+#' **Conditions are expressions, not a sheet.** A value-level row states its
+#' condition in the `ValueLevel` sheet's `Where Clause` cell:
+#' `PARAMCD EQ ACTOT and AVISIT EQ "Week 24"`, a set as
+#' `PARAMCD IN (ACITM01, ACITM02)`, and a value quoted only when it contains
+#' a space or a comma. An analysis result states one bracket group per
+#' analysis dataset in `Selection Criteria`, as
+#' `ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]`. [read_spec()] still reads the
+#' retired shape that put those conditions on their own sheet.
+#'
+#' **`Standards` is an artoo extension.** Define-XML 2.1 carries a
+#' `def:Standards` block that the workbook format has no sheet for, so
+#' artoo offers one rather than lose it.
 #'
 #' @param path *Destination workbook.* `<character(1)>: required`. An
 #'   `.xlsx` path. Needs the `writexl` package.
@@ -161,7 +170,6 @@ write_template <- function(path, version = "2.1") {
     datasets = .p21_ds_map,
     variables = .p21_var_map,
     valuelevel = .p21_value_map,
-    whereclauses = .p21_where_map,
     codelists = .p21_codelist_map,
     dictionaries = .p21_dictionary_map,
     methods = .p21_method_map,

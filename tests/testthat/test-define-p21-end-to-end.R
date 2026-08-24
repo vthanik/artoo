@@ -157,7 +157,7 @@ test_that("a complete spec draws no incompleteness warning", {
   # nobody reads.
   out <- file.path(withr::local_tempdir(), "define.xml")
   # Scoped to the completeness notice: this fixture also draws a genuine
-  # DD0133 warning of its own (SUPPVS is flagged as empty with no comment),
+  # the empty-dataset comment rule warning of its own (SUPPVS is flagged as empty with no comment),
   # which is a property of CDISC's example rather than of the notice.
   expect_no_condition(
     suppressWarnings(
@@ -182,14 +182,17 @@ test_that("a where clause may qualify a variable in another dataset", {
   workbook <- p21_workbooks()[["sdtm"]]
   skip_if(!nzchar(workbook) || !file.exists(workbook), "workbook not bundled")
   spec <- suppressWarnings(read_spec(workbook))
+  # Found by what it selects, not by its id: the ids are minted from the
+  # expression on each read, so they no longer spell out every variable.
   cross <- spec@where_clauses[
-    grepl("COUNTRY", spec@where_clauses$where_clause_id, fixed = TRUE),
+    !is.na(spec@where_clauses$variable) &
+      spec@where_clauses$variable == "COUNTRY",
     ,
     drop = FALSE
   ]
   expect_gt(nrow(cross), 0L)
   expect_true("COUNTRY" %in% cross$variable)
-  expect_setequal(unique(cross$dataset), c("VS", "DM"))
+  expect_setequal(unique(cross$dataset), "DM")
 
   out <- file.path(withr::local_tempdir(), "define.xml")
   suppressMessages(suppressWarnings(write_spec(
@@ -791,6 +794,11 @@ test_that("every populated column of the newer sheets round-trips (#p10-review-Q
     b <- S7::prop(back, slot)
     expect_identical(nrow(b), nrow(a), info = slot)
     mapped <- unname(artoo:::.p21_slot_maps[[slot]][[2]])
+    # A where-clause id is minted from the expression on each read, because
+    # the workbook format has no sheet to carry the author's own. What the
+    # clause SELECTS is compared above; the name it selects under is not a
+    # fact the format preserves.
+    mapped <- setdiff(mapped, "where_clause_id")
     for (cl in intersect(mapped, names(a))) {
       if (all(is.na(a[[cl]]))) {
         next
@@ -804,25 +812,36 @@ test_that("every populated column of the newer sheets round-trips (#p10-review-Q
   }
 })
 
-test_that("value-level rows resolve to the WhereClauses sheet (#p10-review)", {
+test_that("a value-level condition survives as a condition (#p12-review)", {
   skip_if_not_installed("readxl")
   skip_if_not_installed("writexl")
   skip_if_not_installed("xml2")
-  # A workbook carrying a WhereClauses sheet keys its ValueLevel rows to it
-  # by ID. Writing the rendered expression there instead left all 32
-  # value-level rows of the SDTM example naming a clause the same workbook
-  # did not define -- a dangling reference artoo warns about on its own
-  # output.
+  # The workbook format carries the condition as an expression in the
+  # ValueLevel cell and has no where-clause sheet, so the ids are minted
+  # afresh on each read. What has to survive is what the clause SELECTS,
+  # not the name it was selected under.
   spec <- read_define("define21-sdtm.xml")
   book <- file.path(withr::local_tempdir(), "round.xlsx")
   suppressWarnings(write_spec(spec, book))
   expect_no_warning(back <- read_spec(book))
   expect_identical(nrow(back@values), nrow(spec@values))
+  # Every row still names a clause the same workbook defines.
   expect_true(all(
     back@values$where_clause %in% back@where_clauses$where_clause_id
   ))
-  # ...and the clause each row lands on is the one it started from.
-  expect_identical(back@values$where_clause, spec@values$where_clause_id)
+  condition <- function(sp, id) {
+    rows <- sp@where_clauses[sp@where_clauses$where_clause_id == id, ]
+    rows <- rows[order(rows$check_order, rows$value_order), ]
+    paste(rows$variable, rows$comparator, rows$value, collapse = " and ")
+  }
+  before <- vapply(
+    spec@values$where_clause_id,
+    condition,
+    character(1),
+    sp = spec
+  )
+  after <- vapply(back@values$where_clause, condition, character(1), sp = back)
+  expect_identical(unname(after), unname(before))
 })
 
 test_that("a where clause survives as one range check per row (#p11-review-M2)", {
@@ -838,27 +857,22 @@ test_that("a where clause survives as one range check per row (#p11-review-M2)",
   book <- file.path(withr::local_tempdir(), "round.xlsx")
   suppressWarnings(write_spec(spec, book))
   back <- suppressWarnings(read_spec(book))
-  expect_identical(
-    back@where_clauses$check_order,
-    spec@where_clauses$check_order
-  )
-  expect_identical(
-    back@where_clauses$value_order,
-    spec@where_clauses$value_order
-  )
-  # The set comparator that motivated it: one check, fourteen values.
+  # The set comparator that motivated it: one check, fourteen values, which
+  # a row-for-row projection turns into fourteen ANDed one-value checks.
   wide <- spec@where_clauses[
     spec@where_clauses$where_clause_id == "WC.ADQSADAS.AVAL.ACITM01-ACITM14",
   ]
   skip_if(!nrow(wide), "fixture lost its multi-value clause")
   expect_gt(nrow(wide), 1L)
   expect_identical(length(unique(wide$check_order)), 1L)
+  # The ids are minted afresh, so find it again by what it selects.
   back_wide <- back@where_clauses[
-    back@where_clauses$where_clause_id == "WC.ADQSADAS.AVAL.ACITM01-ACITM14",
+    back@where_clauses$value %in% wide$value,
   ]
   expect_identical(nrow(back_wide), nrow(wide))
   expect_identical(length(unique(back_wide$check_order)), 1L)
   expect_setequal(back_wide$value, wide$value)
+  expect_identical(sort(back_wide$value_order), sort(wide$value_order))
 })
 
 test_that("a clause with ten range checks keeps its order (#p11-review-B)", {

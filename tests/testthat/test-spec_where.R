@@ -443,3 +443,101 @@ test_that("a case-only near-miss is called out by name", {
     "only by case"
   )
 })
+
+test_that("a quoted value keeps its quotes out of the data (#p12-p21)", {
+  # A quote pair DELIMITS a value containing a space or a comma; it is not
+  # part of the value. The set path always stripped it and the scalar path
+  # did not, so `AVISIT EQ "Week 24"` produced a CheckValue of
+  # "\"Week 24\"" -- a slice matching no record, silently.
+  values <- data.frame(
+    dataset = "ADQS",
+    variable = "AVAL",
+    where_clause = 'PARAMCD EQ ACTOT and AVISIT EQ "Week 24"',
+    stringsAsFactors = FALSE
+  )
+  out <- artoo:::.wc_from_values(values)
+  expect_identical(out$where_clauses$value, c("ACTOT", "Week 24"))
+  # ...and a comma inside a quoted scalar survives as one value.
+  comma <- data.frame(
+    dataset = "LB",
+    variable = "LBORRES",
+    where_clause = 'LBCAT EQ "CHEMISTRY, LOCAL"',
+    stringsAsFactors = FALSE
+  )
+  expect_identical(
+    artoo:::.wc_from_values(comma)$where_clauses$value,
+    "CHEMISTRY, LOCAL"
+  )
+})
+
+test_that("a rendered clause is what the reader parses back (#p12-p21)", {
+  # The ValueLevel cell IS the clause in the current workbook format, so the
+  # renderer has to be the parser's exact inverse: bare scalars, a set in
+  # parentheses, conditions joined by lowercase " and ", and a quote only
+  # where the value needs protecting.
+  clauses <- data.frame(
+    where_clause_id = c("WC.1", "WC.1", "WC.2", "WC.2"),
+    check_order = c(1L, 2L, 1L, 1L),
+    dataset = "ADQS",
+    variable = c("PARAMCD", "AVISIT", "PARAMCD", "PARAMCD"),
+    comparator = c("EQ", "EQ", "IN", "IN"),
+    value = c("ACTOT", "Week 24", "ACITM01", "ACITM02"),
+    value_order = c(1L, 1L, 1L, 2L),
+    stringsAsFactors = FALSE
+  )
+  rendered <- artoo:::.wc_render(clauses)
+  expect_identical(
+    unname(rendered[["WC.1"]]),
+    'PARAMCD EQ ACTOT and AVISIT EQ "Week 24"'
+  )
+  expect_identical(
+    unname(rendered[["WC.2"]]),
+    "PARAMCD IN (ACITM01, ACITM02)"
+  )
+  # Round trip: parse what was rendered, and the conditions come back whole.
+  values <- data.frame(
+    dataset = "ADQS",
+    variable = "AVAL",
+    where_clause = unname(rendered),
+    stringsAsFactors = FALSE
+  )
+  back <- artoo:::.wc_from_values(values)$where_clauses
+  expect_setequal(
+    paste(back$variable, back$comparator, back$value),
+    paste(clauses$variable, clauses$comparator, clauses$value)
+  )
+})
+
+test_that("selection criteria split into one group per dataset (#p12-p21)", {
+  # An analysis result names its datasets, and each one's condition, in a
+  # single cell. Without splitting it the result reached the writer with no
+  # analysis dataset at all and the write refused it.
+  groups <- artoo:::.arm_split_criteria(
+    "ADAE[AESER EQ Y and TRTEMFL EQ Y] ADSL[SAFFL EQ Y]"
+  )
+  expect_length(groups, 2L)
+  expect_identical(groups[[1]]$dataset, "ADAE")
+  expect_identical(groups[[1]]$condition, "AESER EQ Y and TRTEMFL EQ Y")
+  expect_identical(groups[[2]]$dataset, "ADSL")
+  # Every record, no condition.
+  every <- artoo:::.arm_split_criteria("ADXX[]")
+  expect_identical(every[[1]]$condition, "")
+  # A cell artoo cannot read is NULL, not a half-parsed guess.
+  expect_null(artoo:::.arm_split_criteria("ADAE[oops"))
+  expect_null(artoo:::.arm_split_criteria("ADAE[a] trailing"))
+})
+
+test_that("an analysis variable keeps its own dataset's qualifier (#p12-p21)", {
+  # Names may be comma- or space-separated and qualified by the dataset they
+  # belong to, because one cell spans several. Stripping any leading
+  # dot-segment ate the first component of an ItemOID given verbatim.
+  expect_identical(
+    artoo:::.arm_variable_names("ADAE.AEBODSYS, ADAE.AEDECOD", "ADAE"),
+    c("AEBODSYS", "AEDECOD")
+  )
+  expect_identical(
+    artoo:::.arm_variable_names("IT.SOMEWHERE.ELSE", "ADAE"),
+    "IT.SOMEWHERE.ELSE"
+  )
+  expect_identical(artoo:::.arm_variable_names("AVAL CNSR"), c("AVAL", "CNSR"))
+})
