@@ -132,9 +132,10 @@
 #'   `display_id` and `result_id`. One row per result and analysis dataset,
 #'   since each analysis dataset carries its own where-clause reference.
 #' @param dictionaries *External codelists.* `<data.frame> | NULL`. Must carry
-#'   `dictionary_id`. **Note:** reserved and not yet populated by any reader.
-#'   It exists now because adding an S7 property later strands every spec
-#'   saved in the meantime.
+#'   `dictionary_id`. A terminology too large to enumerate, named rather than
+#'   listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and a
+#'   variable points at one from the same `codelist_id` column it would use
+#'   for an enumerated list.
 #'
 #' @return *A validated `artoo_spec` object.* Inspect it with
 #'   [spec_datasets()] / [spec_variables()], or check it with

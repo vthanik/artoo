@@ -305,10 +305,11 @@
 #' in the value-level slot with their where-clauses rendered as readable
 #' text.
 #'
-#'   **Note:** an `ExternalCodeList` (MedDRA, ISO-3166) names a dictionary,
-#'   not an enumerable membership list; it is dropped, and variables that
-#'   referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
-#'   refused with guidance.
+#'   **Note:** an `ExternalCodeList` (MedDRA, ISO-3166) names a dictionary
+#'   rather than an enumerable membership list, so it lands in
+#'   `dictionaries` rather than `codelists`; a variable that references one
+#'   keeps the reference, because a workbook has one column for both.
+#'   Define-XML v1.0 (the 2005 model) is refused with guidance.
 #'
 #' **P21 ingestion.** Sheets are located by a tolerant alias match
 #' (case-, space-, and spelling-variant insensitive). Datasets and
@@ -804,8 +805,6 @@ read_spec <- function(
   # Mapping both onto `label` yields two columns of the same name, so only
   # Label is mapped -- but a workbook that carries Description ALONE would
   # then read no label at all. Fall back only when Label mapped nothing.
-  datasets <- .p21_description_fallback(datasets)
-  variables <- .p21_description_fallback(variables)
 
   # Required sheets must be present AND carry rows (H7).
   .require_p21_sheet(datasets, ds_sheet, "Datasets", sheets, call)
@@ -815,6 +814,14 @@ read_spec <- function(
   variables <- .normalise_p21_cols(variables, .p21_var_map)
   codelists <- .normalise_p21_cols(codelists, .p21_codelist_map)
   values <- .normalise_p21_cols(values, .p21_value_map)
+  # AFTER normalisation, and on all three sheets that carry a label. The
+  # two workbook generations spell the header differently -- `Description`
+  # in the older, `Label` in the newer -- and running this beforehand
+  # guarded on a column name that did not exist yet, so a sheet carrying
+  # both minted a ghost `label.1`, then a `label.2`, one per round trip.
+  datasets <- .p21_description_fallback(datasets)
+  variables <- .p21_description_fallback(variables)
+  values <- .p21_description_fallback(values)
   methods <- .normalise_p21_cols(methods, .p21_method_map)
   comments <- .normalise_p21_cols(comments, .p21_comment_map)
   documents <- .normalise_p21_cols(documents, .p21_document_map)
@@ -1471,6 +1478,11 @@ read_spec <- function(
   if (!"label" %in% names(df) || all(is.na(df$label))) {
     df$label <- df[["Description"]]
   }
+  # CONSUMED, so removed. The two spellings name one fact, and leaving the
+  # raw column behind meant the writer emitted it beside the one it derives
+  # from `label` -- two columns of the same name, and one more of them on
+  # every pass.
+  df[["Description"]] <- NULL
   df
 }
 

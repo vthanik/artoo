@@ -44,9 +44,9 @@ test_that("every header the template offers is one the reader maps", {
     headers <- names(readxl::read_excel(path, sheet = sheet))
     expect_identical(headers, names(maps[[sheet]]), info = sheet)
   }
-  # The Define sheet is Attribute/Value, and seeds the three study fields
+  # The Study sheet is Attribute/Value, and seeds the three study fields
   # the reader canonicalises.
-  define <- readxl::read_excel(path, sheet = "Define")
+  define <- readxl::read_excel(path, sheet = "Study")
   expect_identical(names(define), c("Attribute", "Value"))
   expect_identical(define$Attribute, unname(artoo:::.p21_study_attr))
 })
@@ -80,7 +80,7 @@ test_that("a template filled with a spec reads back as that spec", {
     expect_true(sheet %in% readxl::excel_sheets(template), info = sheet)
     filled <- names(readxl::read_excel(written, sheet = sheet))
     offered <- names(readxl::read_excel(template, sheet = sheet))
-    if (identical(sheet, "Define")) {
+    if (identical(sheet, "Study")) {
       expect_identical(filled, offered)
       next
     }

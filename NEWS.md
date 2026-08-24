@@ -1,5 +1,37 @@
 # artoo 0.2.0
 
+* `write_spec()` to `.xlsx` writes the workbook shape that the widest range
+  of tooling imports. The study sheet is named `Study`, a value-level row
+  names its condition by ID and a `WhereClauses` sheet defines it, an
+  analysis result's datasets sit on an `Analysis Criteria` sheet, and a
+  label is carried under both `Label` and `Description`. Measured against
+  the importer that the open-source edition of the reference tooling ships:
+  it makes the study sheet its initialising sheet and therefore required, so
+  a workbook naming it `Define` was refused before a row was read, and it
+  treats the value-level cell as a foreign key, so a condition written there
+  as an expression cost every value-level row.
+
+* `read_spec()` reads a value-level label from a `Description` column, which
+  is how the older workbook generation spells it. Reading one used to give
+  every value-level row no label, and artoo's own submission-grade notice
+  then reported the absence, on a workbook that had them.
+
+* `read_spec()` and `write_spec()` round-trip a workbook artoo wrote. A
+  workbook-sourced spec carries its value-level link in a different column
+  from a define-sourced one, and the writer only understood the second, so
+  its own output could not be read back. No test covered it; one does now.
+
+* `read_spec()` on a define.xml keeps a variable's reference to an external
+  dictionary. The referential scrub predates dictionaries being modelled and
+  stripped every such binding, so an adverse-events define came back with
+  `AEDECOD` naming no terminology at all while the dictionary it named was
+  written out beside it.
+
+* `check_spec()` no longer aborts on a variable whose terminology is an
+  external dictionary. A dictionary enumerates nothing, so there is no
+  membership to check; checking anyway stopped the conformance run on every
+  adverse-events dataset.
+
 * `write_spec()` writes an external dictionary as the `ExternalCodeList` it
   is, and `read_spec()` on a define.xml reads one back. A variable naming
   MedDRA or WHODrug used to write a `CodeListRef` pointing at nothing --

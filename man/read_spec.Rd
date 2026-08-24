@@ -58,10 +58,11 @@ CommentDefs / leaves become the supporting slots, and ValueListDefs land
 in the value-level slot with their where-clauses rendered as readable
 text.
 
-\strong{Note:} an \code{ExternalCodeList} (MedDRA, ISO-3166) names a dictionary,
-not an enumerable membership list; it is dropped, and variables that
-referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
-refused with guidance.
+\strong{Note:} an \code{ExternalCodeList} (MedDRA, ISO-3166) names a dictionary
+rather than an enumerable membership list, so it lands in
+\code{dictionaries} rather than \code{codelists}; a variable that references one
+keeps the reference, because a workbook has one column for both.
+Define-XML v1.0 (the 2005 model) is refused with guidance.
 
 \strong{P21 ingestion.} Sheets are located by a tolerant alias match
 (case-, space-, and spelling-variant insensitive). Datasets and

@@ -664,15 +664,20 @@
     )
   }
   codelists <- if (length(cl_rows)) do.call(rbind, cl_rows) else NULL
-  # Keep referential integrity: a variable whose codelist carries no
-  # enumerable terms (and so was dropped) loses the reference.
-  if (!is.null(codelists)) {
-    gone <- !is.na(variables$codelist_id) &
-      !(variables$codelist_id %in% codelists$codelist_id)
-    variables$codelist_id[gone] <- NA_character_
-  } else {
-    variables$codelist_id <- NA_character_
-  }
+  # Keep referential integrity: a variable whose codelist resolves to
+  # nothing loses the reference.
+  #
+  # A DICTIONARY counts as resolving. This scrub was written when an
+  # external codelist was dropped on read, and it silently stripped the
+  # binding from every variable that named one -- so an AE define's
+  # AEDECOD came back with no terminology at all, and writing it out lost
+  # the MedDRA reference while dutifully emitting the MedDRA definition.
+  known <- c(
+    if (!is.null(codelists)) as.character(codelists$codelist_id),
+    if (!is.null(dictionaries)) as.character(dictionaries$dictionary_id)
+  )
+  gone <- !is.na(variables$codelist_id) & !(variables$codelist_id %in% known)
+  variables$codelist_id[gone] <- NA_character_
 
   # ---- methods / comments / documents ------------------------------------
   doc_ref <- function(n) {

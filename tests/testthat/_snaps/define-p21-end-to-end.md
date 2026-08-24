@@ -8,7 +8,7 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 38
+       $ elements:List of 39
         ..$ Alias                 : int 44
         ..$ AnalysisDataset       : int 2
         ..$ AnalysisDatasets      : int 1
@@ -16,15 +16,16 @@
         ..$ AnalysisResultDisplays: int 1
         ..$ AnalysisVariable      : int 2
         ..$ CheckValue            : int 3
-        ..$ CodeList              : int 20
+        ..$ CodeList              : int 22
         ..$ CodeListItem          : int 25
-        ..$ CodeListRef           : int 54
+        ..$ CodeListRef           : int 65
         ..$ CommentDef            : int 11
         ..$ Decode                : int 25
         ..$ Description           : int 165
         ..$ DocumentRef           : int 6
         ..$ Documentation         : int 1
         ..$ EnumeratedItem        : int 43
+        ..$ ExternalCodeList      : int 2
         ..$ GlobalVariables       : int 1
         ..$ ItemDef               : int 104
         ..$ ItemGroupDef          : int 2
@@ -61,7 +62,7 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 42
+       $ elements:List of 43
         ..$ Alias                 : int 44
         ..$ AnalysisDataset       : int 2
         ..$ AnalysisDatasets      : int 1
@@ -70,15 +71,16 @@
         ..$ AnalysisVariable      : int 2
         ..$ CheckValue            : int 3
         ..$ Class                 : int 2
-        ..$ CodeList              : int 20
+        ..$ CodeList              : int 22
         ..$ CodeListItem          : int 25
-        ..$ CodeListRef           : int 54
+        ..$ CodeListRef           : int 65
         ..$ CommentDef            : int 11
         ..$ Decode                : int 25
         ..$ Description           : int 165
         ..$ DocumentRef           : int 6
         ..$ Documentation         : int 1
         ..$ EnumeratedItem        : int 43
+        ..$ ExternalCodeList      : int 2
         ..$ GlobalVariables       : int 1
         ..$ ItemDef               : int 104
         ..$ ItemGroupDef          : int 2
@@ -118,17 +120,18 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 33
+       $ elements:List of 34
         ..$ Alias           : int 108
-        ..$ CheckValue      : int 41
-        ..$ CodeList        : int 21
+        ..$ CheckValue      : int 29
+        ..$ CodeList        : int 22
         ..$ CodeListItem    : int 57
-        ..$ CodeListRef     : int 27
+        ..$ CodeListRef     : int 28
         ..$ CommentDef      : int 21
         ..$ Decode          : int 57
         ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
+        ..$ ExternalCodeList: int 1
         ..$ FormalExpression: int 2
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
@@ -140,7 +143,7 @@
         ..$ Origin          : int 72
         ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 39
+        ..$ RangeCheck      : int 27
         ..$ Study           : int 1
         ..$ StudyDescription: int 1
         ..$ StudyName       : int 1
@@ -148,13 +151,13 @@
         ..$ TranslatedText  : int 184
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 35
+        ..$ WhereClauseDef  : int 23
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
        $ lint    :List of 3
         ..$ define_missing_origin: int 2
-        ..$ define_orphan_comment: int 9
+        ..$ define_orphan_comment: int 8
         ..$ define_orphan_leaf   : int 9
 
 ---
@@ -167,18 +170,19 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 36
+       $ elements:List of 37
         ..$ Alias           : int 108
-        ..$ CheckValue      : int 41
+        ..$ CheckValue      : int 29
         ..$ Class           : int 4
-        ..$ CodeList        : int 21
+        ..$ CodeList        : int 22
         ..$ CodeListItem    : int 57
-        ..$ CodeListRef     : int 27
+        ..$ CodeListRef     : int 28
         ..$ CommentDef      : int 21
         ..$ Decode          : int 57
         ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
+        ..$ ExternalCodeList: int 1
         ..$ FormalExpression: int 2
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
@@ -190,7 +194,7 @@
         ..$ Origin          : int 72
         ..$ PDFPageRef      : int 29
         ..$ ProtocolName    : int 1
-        ..$ RangeCheck      : int 39
+        ..$ RangeCheck      : int 27
         ..$ Standard        : int 6
         ..$ Standards       : int 1
         ..$ Study           : int 1
@@ -200,12 +204,11 @@
         ..$ TranslatedText  : int 184
         ..$ ValueListDef    : int 6
         ..$ ValueListRef    : int 6
-        ..$ WhereClauseDef  : int 35
+        ..$ WhereClauseDef  : int 23
         ..$ WhereClauseRef  : int 35
         ..$ leaf            : int 12
         ..$ title           : int 12
-       $ lint    :List of 4
-        ..$ define_orphan_comment : int 1
+       $ lint    :List of 3
         ..$ define_missing_origin : int 2
         ..$ define_orphan_standard: int 6
         ..$ define_orphan_leaf    : int 9

@@ -14,10 +14,11 @@
 # in: study first, then the structure, then the metadata it references.
 #' @noRd
 .p21_template_sheets <- c(
-  study = "Define",
+  study = "Study",
   datasets = "Datasets",
   variables = "Variables",
   valuelevel = "ValueLevel",
+  whereclauses = "WhereClauses",
   codelists = "Codelists",
   dictionaries = "Dictionaries",
   methods = "Methods",
@@ -25,7 +26,8 @@
   documents = "Documents",
   standards = "Standards",
   arm_displays = "Analysis Displays",
-  arm_results = "Analysis Results"
+  arm_results = "Analysis Results",
+  arm_criteria = "Analysis Criteria"
 )
 
 # Headers Define-XML 2.1 introduced. A 2.0 template omits them, because a
@@ -87,14 +89,12 @@
 #' **Only Datasets and Variables are required.** Every other sheet may be
 #' left empty; [read_spec()] omits what it finds nothing in.
 #'
-#' **Conditions are expressions, not a sheet.** A value-level row states its
-#' condition in the `ValueLevel` sheet's `Where Clause` cell:
-#' `PARAMCD EQ ACTOT and AVISIT EQ "Week 24"`, a set as
-#' `PARAMCD IN (ACITM01, ACITM02)`, and a value quoted only when it contains
-#' a space or a comma. An analysis result states one bracket group per
-#' analysis dataset in `Selection Criteria`, as
-#' `ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]`. [read_spec()] still reads the
-#' retired shape that put those conditions on their own sheet.
+#' **Conditions live on the `WhereClauses` sheet.** A value-level row names
+#' a condition by its `ID` and the `WhereClauses` sheet defines it, one row
+#' per comparison, rows sharing an `ID` being ANDed together. This is the
+#' shape the widest range of tools import. [read_spec()] also reads the
+#' newer shape, which drops that sheet and writes the condition into the
+#' `Where Clause` cell as an expression.
 #'
 #' **`Standards` is an artoo extension.** Define-XML 2.1 carries a
 #' `def:Standards` block that the workbook format has no sheet for, so
@@ -170,6 +170,7 @@ write_template <- function(path, version = "2.1") {
     datasets = .p21_ds_map,
     variables = .p21_var_map,
     valuelevel = .p21_value_map,
+    whereclauses = .p21_where_map,
     codelists = .p21_codelist_map,
     dictionaries = .p21_dictionary_map,
     methods = .p21_method_map,
@@ -177,9 +178,10 @@ write_template <- function(path, version = "2.1") {
     documents = .p21_document_map,
     standards = .p21_standard_map,
     arm_displays = .p21_arm_display_map,
-    arm_results = .p21_arm_result_map
+    arm_results = .p21_arm_result_map,
+    arm_criteria = .p21_arm_criteria_map
   )
-  sheets <- list(Define = .p21_template_define())
+  sheets <- list(Study = .p21_template_define())
   for (slot in names(maps)) {
     sheet <- unname(.p21_template_sheets[[slot]])
     sheets[[sheet]] <- .p21_template_frame(maps[[slot]], sheet, target)

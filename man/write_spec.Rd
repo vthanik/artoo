@@ -119,9 +119,6 @@ records is flagged \code{def:HasNoData} when it also carries a comment
 explaining the absence, and left unflagged with a warning when it does
 not.
 
-External dictionaries (\code{MedDRA}, ISO 3166) are not written yet: a
-populated \code{dictionaries} table is reported rather than emitted.
-
 Fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;
 persist to JSON when you need the spec back exactly. The \verb{Data Type}

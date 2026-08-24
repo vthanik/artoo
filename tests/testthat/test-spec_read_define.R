@@ -65,14 +65,18 @@ test_that("codelists carry terms, decodes, order, and extensibility", {
   expect_true(is.na(ageu$decode[ageu$term == "YEARS"]))
 })
 
-test_that("an external-dictionary codelist is dropped from variable refs", {
+test_that("an external-dictionary codelist lands in dictionaries, refs intact", {
   spec <- .read_define_fixture()
-  # CL.ISO.COUNTRY is an ExternalCodeList (ISO-3166): not an enumerable
-  # membership list, so it appears nowhere in the spec's codelists and no
-  # variable references it.
+  # CL.ISO.COUNTRY is an ExternalCodeList (ISO-3166): a terminology named
+  # rather than enumerated, so it is a dictionary rather than a codelist --
+  # and the variable that names it KEEPS the reference. It used to be
+  # stripped, which silently unbound every coded term in an adverse-events
+  # define from the dictionary that defines it.
   expect_false("CL.ISO.COUNTRY" %in% spec@codelists$codelist_id)
-  expect_false(any(
-    spec@variables$codelist_id %in% "CL.ISO.COUNTRY",
+  expect_true("CL.ISO.COUNTRY" %in% spec@dictionaries$dictionary_id)
+  expect_true(any(
+    c(spec@variables$codelist_id, spec@values$codelist_id) %in%
+      "CL.ISO.COUNTRY",
     na.rm = TRUE
   ))
 })

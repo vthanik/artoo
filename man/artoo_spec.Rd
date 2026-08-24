@@ -95,9 +95,10 @@ the vocabulary is identical for Define-XML 2.0 and 2.1.}
 since each analysis dataset carries its own where-clause reference.}
 
 \item{dictionaries}{\emph{External codelists.} \verb{<data.frame> | NULL}. Must carry
-\code{dictionary_id}. \strong{Note:} reserved and not yet populated by any reader.
-It exists now because adding an S7 property later strands every spec
-saved in the meantime.}
+\code{dictionary_id}. A terminology too large to enumerate, named rather than
+listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and a
+variable points at one from the same \code{codelist_id} column it would use
+for an enumerated list.}
 }
 \value{
 \emph{A validated \code{artoo_spec} object.} Inspect it with

@@ -153,12 +153,12 @@
   if ("data_type" %in% names(values) && nrow(values)) {
     values$data_type <- .to_define_datatype(values$data_type)
   }
-  # The ValueLevel "Where Clause" cell holds the RENDERED EXPRESSION, and
-  # there is no separate where-clause sheet. That sheet belongs to a retired
-  # workbook generation whose ValueLevel named its label column differently,
-  # so emitting it beside current-generation headers produced a workbook of
-  # no generation at all; emitting the expression beside it left every
-  # value-level row naming a clause the same workbook did not define.
+  # The ValueLevel "Where Clause" cell holds the clause's ID, and the
+  # WhereClauses sheet below defines it. The importer treats the cell as a
+  # foreign key -- it looks the id up and raises a per-row reference error
+  # when it does not resolve -- so a rendered condition there is not a
+  # condition to it, it is a name for a clause that does not exist.
+  # `.wc_render()` is kept for the newer shape, which has no such sheet.
   clauses <- spec@where_clauses
   has_rows <- function(x) !is.null(x) && is.data.frame(x) && nrow(x) > 0L
   if (
@@ -173,13 +173,17 @@
       as.character(values$where_clause_id)
     )
     owner <- owner[!duplicated(names(owner))]
-    rendered <- .wc_render(clauses, owner)
-    at <- match(values$where_clause_id, names(rendered))
-    values$where_clause[!is.na(at)] <- unname(rendered[at[!is.na(at)]])
+    known <- values$where_clause_id %in% clauses$where_clause_id
+    values$where_clause[known] <- values$where_clause_id[known]
   }
 
   sheets <- list(
-    Define = .p21_study_sheet(spec@study, spec@standard),
+    # `Study`, not `Define`. The importer that the open-source edition ships
+    # makes this sheet its initialising one and therefore REQUIRED, so a
+    # workbook naming it `Define` does not import at all -- the whole file
+    # is refused before a row is read. The other edition reads both names.
+    # One shape both editions accept beats two shapes that each work once.
+    Study = .p21_study_sheet(spec@study, spec@standard),
     Datasets = .p21_sheet_frame(
       datasets,
       .p21_ds_map,
@@ -194,10 +198,11 @@
     # column as foreign, so the sheet carried fourteen empty snake_case
     # ghost headers, and after reading a workbook it carried both `Source`
     # and `source`.
-    ValueLevel = .p21_sheet_frame(
-      values,
-      .p21_value_map,
-      names(.spec_cols_values)
+    # `Description` beside `Label`: the older reader looks for the first and
+    # the newer for the second, and an unknown column is ignored by both, so
+    # one sheet satisfies each.
+    ValueLevel = .p21_dual_label(
+      .p21_sheet_frame(values, .p21_value_map, names(.spec_cols_values))
     ),
     Codelists = .p21_sheet_frame(
       spec@codelists,
@@ -219,9 +224,12 @@
       .p21_document_map,
       names(.spec_cols_documents)
     ),
-    # No WhereClauses sheet: the current generation dropped it and carries
-    # the condition as an expression in the ValueLevel cell above. artoo
-    # still READS the retired two-sheet shape.
+    # The WhereClauses sheet, and the ValueLevel cell holding an ID that
+    # points into it. Measured against the importer's source: it treats
+    # that cell as a foreign key and raises a reference error per row when
+    # the sheet is absent, so writing the condition inline lost every
+    # value-level row. artoo reads both shapes; it writes this one.
+    WhereClauses = .p21_where_sheet(spec@where_clauses),
     Dictionaries = .p21_sheet_frame(
       spec@dictionaries,
       .p21_dictionary_map,
@@ -237,7 +245,8 @@
       .p21_arm_display_map,
       names(.spec_cols_arm_displays)
     ),
-    `Analysis Results` = .p21_arm_result_sheet(spec@arm_results, clauses)
+    `Analysis Results` = .p21_arm_result_sheet(spec@arm_results, clauses),
+    `Analysis Criteria` = .p21_arm_criteria_sheet(spec@arm_results)
   )
   # Datasets and Variables are the sheets the reader requires; the optional
   # ones are omitted when empty.
@@ -266,20 +275,6 @@
 }
 
 
-# What a rendered where-clause expression carries. Shaped like a reader map
-# (header -> column) so the drop warning treats it the same way; the names
-# are the parts of the expression rather than sheet headers.
-#' @noRd
-.p21_where_expression <- c(
-  "id" = "where_clause_id",
-  "order" = "check_order",
-  "dataset" = "dataset",
-  "variable" = "variable",
-  "comparator" = "comparator",
-  "value" = "value",
-  "value order" = "value_order"
-)
-
 # Every slot that HAS a sheet, paired with the reader map that defines what
 # that sheet can carry. One list, used by both the writer and the drop
 # warning, so a map gaining a header teaches both at once.
@@ -287,11 +282,7 @@
 .p21_slot_maps <- list(
   datasets = list(.spec_cols_datasets, .p21_ds_map),
   variables = list(.spec_cols_variables, .p21_var_map),
-  # A where clause has no sheet: it rides in the ValueLevel expression, which
-  # carries the variable, the comparator and the values (in order) and
-  # nothing else. So the pairing is against what the EXPRESSION expresses,
-  # not against a sheet's headers.
-  where_clauses = list(.spec_cols_where_clauses, .p21_where_expression),
+  where_clauses = list(.spec_cols_where_clauses, .p21_where_map),
   codelists = list(.spec_cols_codelists, .p21_codelist_map),
   dictionaries = list(.spec_cols_dictionaries, .p21_dictionary_map),
   methods = list(.spec_cols_methods, .p21_method_map),
@@ -359,49 +350,50 @@
   if (is.null(ar) || !nrow(ar)) {
     return(NULL)
   }
-  owner <- stats::setNames(
-    as.character(ar$dataset),
-    as.character(ar$where_clause_id)
-  )
-  rendered <- .wc_render(clauses, owner[!duplicated(names(owner))])
   key <- paste(ar$display_id, ar$result_id, sep = "\r")
   first <- ar[!duplicated(key), , drop = FALSE]
   parts <- split(seq_len(nrow(ar)), factor(key, levels = unique(key)))
-  first$selection_criteria <- vapply(
-    parts,
-    function(rows) .arm_render_criteria(ar[rows, , drop = FALSE], rendered),
-    character(1)
-  )
-  # Variables are dataset-qualified so one cell can span several datasets.
-  first$variables <- vapply(
-    parts,
-    function(rows) {
-      qualified <- unlist(lapply(rows, function(i) {
-        vars <- .arm_variable_names(ar$variables[[i]])
-        if (!length(vars)) {
-          return(NULL)
-        }
-        paste0(ar$dataset[[i]], ".", vars)
-      }))
-      if (!length(qualified)) {
-        NA_character_
-      } else {
-        paste(qualified, collapse = ", ")
-      }
-    },
-    character(1)
-  )
-  # Where the criteria say it all, the decomposition must go: it describes
-  # only the FIRST analysis dataset of the result, and a reader that trusts
-  # it silently drops every other group. One statement per fact.
-  said <- !is.na(first$selection_criteria)
-  first$dataset[said] <- NA_character_
-  first$where_clause_id[said] <- NA_character_
+  # The per-dataset facts belong on the Analysis Criteria sheet, one row
+  # each, so they are cleared here rather than collapsed onto the result.
+  # Collapsing them wrote one result's variables qualified by another
+  # dataset's name, and the reference then pointed at a variable that
+  # dataset does not have.
+  first$selection_criteria <- NA_character_
+  first$dataset <- NA_character_
+  first$variables <- NA_character_
+  first$where_clause_id <- NA_character_
   .p21_sheet_frame(
     first,
     .p21_arm_result_map,
     c(names(.spec_cols_arm_results), "selection_criteria")
   )
+}
+
+# The Analysis Criteria sheet: one row per analysis dataset of a result.
+#
+# The result's datasets ride on their own sheet, keyed back by Display and
+# Result, each naming its dataset, its variables and its where clause BY ID
+# -- the same foreign key the ValueLevel cell uses. Packing them into one
+# rendered cell instead loses every dataset after the first to a reader that
+# has no such column.
+#' @noRd
+.p21_arm_criteria_sheet <- function(ar) {
+  if (is.null(ar) || !nrow(ar) || !("dataset" %in% names(ar))) {
+    return(NULL)
+  }
+  rows <- ar[!.dx_blank(as.character(ar$dataset)), , drop = FALSE]
+  if (!nrow(rows)) {
+    return(NULL)
+  }
+  out <- data.frame(
+    display_id = as.character(rows$display_id),
+    result_id = as.character(rows$result_id),
+    dataset = as.character(rows$dataset),
+    variables = .dx_chr(rows, "variables"),
+    where_clause_id = .dx_chr(rows, "where_clause_id"),
+    stringsAsFactors = FALSE
+  )
+  .p21_sheet_frame(out, .p21_arm_criteria_map, names(out))
 }
 
 # Name what a Pinnacle 21 workbook cannot carry: the one slot with no sheet
@@ -526,4 +518,75 @@
   study$standard_name <- name
   study$standard_version <- utils::tail(parts, 1L)
   study
+}
+
+# The WhereClauses sheet, as the TRUE INVERSE of .wc_from_sheet().
+#
+# The slot is one row per CheckValue; the sheet is one row per RangeCheck,
+# with a set comparator's values in one cell. Projecting the slot row for row
+# -- which is what the generic sheet builder does -- makes the reader see
+# each value as its own RangeCheck, so `PARAMCD IN (ACITM01, ..., ACITM14)`
+# came back as fourteen ANDed one-value checks and selected nothing.
+#
+# Values are joined the way .wc_split_values() parses them: comma-separated,
+# and quoted when the value itself contains a comma, which is the whole
+# reason that splitter is quote-aware.
+#' @noRd
+.p21_where_sheet <- function(wc) {
+  if (is.null(wc) || !nrow(wc)) {
+    return(NULL)
+  }
+  key <- paste(wc$where_clause_id, wc$check_order, sep = "\r")
+  first <- !duplicated(key)
+  collapse <- function(values) {
+    values <- as.character(values)
+    values <- values[!is.na(values)]
+    if (!length(values)) {
+      return(NA_character_)
+    }
+    quoted <- ifelse(
+      grepl(",", values, fixed = TRUE),
+      paste0('"', values, '"'),
+      values
+    )
+    if (length(quoted) == 1L) {
+      quoted
+    } else {
+      paste0("(", paste(quoted, collapse = ", "), ")")
+    }
+  }
+  # Ordered NUMERICALLY on both counters, not by the composite string key:
+  # a clause with ten or more range checks sorts "10" before "2" as text, and
+  # the sheet's row order is the only place the reader can recover
+  # check_order from.
+  ordered <- order(
+    wc$where_clause_id,
+    suppressWarnings(as.integer(wc$check_order)),
+    suppressWarnings(as.integer(wc$value_order))
+  )
+  wc <- wc[ordered, , drop = FALSE]
+  key <- key[ordered]
+  first <- !duplicated(key)
+  out <- wc[first, , drop = FALSE]
+  out$value <- vapply(
+    split(wc$value, factor(key, levels = unique(key))),
+    collapse,
+    character(1)
+  )[unique(key)]
+  .p21_sheet_frame(out, .p21_where_map, names(.spec_cols_where_clauses))
+}
+
+# Carry a label under both spellings.
+#
+# The two workbook generations disagree on the header: the older sheet says
+# `Description`, the newer says `Label`. Both readers ignore a column they
+# do not know, so emitting both is what makes one file readable by each --
+# and it costs a duplicated column rather than a choice between them.
+#' @noRd
+.p21_dual_label <- function(df) {
+  if (is.null(df) || !nrow(df) || !("Label" %in% names(df))) {
+    return(df)
+  }
+  df$Description <- df[["Label"]]
+  df
 }

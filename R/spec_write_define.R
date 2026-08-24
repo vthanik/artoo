@@ -279,12 +279,6 @@
   ) {
     lost <- c(lost, "Collected origins, rewritten as CRF")
   }
-  if (nrow(spec@dictionaries)) {
-    # No version of Define-XML is the problem here: artoo has no
-    # ExternalCodeList emitter, so a dictionary the spec carries is lost on
-    # every path. Silence would make it look carried.
-    lost <- c(lost, "external dictionaries (not written by artoo yet)")
-  }
   lost <- unique(lost)
   if (!length(lost)) {
     return(invisible(character(0)))

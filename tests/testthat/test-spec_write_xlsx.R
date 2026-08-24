@@ -351,7 +351,7 @@ test_that("the study table round-trips through the P21 Define sheet", {
   )
   p <- withr::local_tempfile(fileext = ".xlsx")
   write_spec(spec, p)
-  expect_true("Define" %in% readxl::excel_sheets(p))
+  expect_true("Study" %in% readxl::excel_sheets(p))
   back <- read_spec(p)
   expect_identical(spec_study(back, "study_name"), "CDISC-Sample")
   expect_identical(
@@ -368,7 +368,7 @@ test_that("a spec with no study row writes no Define sheet", {
   )
   p <- withr::local_tempfile(fileext = ".xlsx")
   write_spec(spec, p)
-  expect_false("Define" %in% readxl::excel_sheets(p))
+  expect_false("Study" %in% readxl::excel_sheets(p))
 })
 
 test_that("a method's formal expression survives a workbook (#p12-p21)", {
@@ -475,7 +475,7 @@ test_that("the study sheet speaks the format's vocabulary (#p12-define-sheet)", 
   # column names on a surface a person reads and another tool imports.
   path <- withr::local_tempfile(fileext = ".xlsx")
   suppressWarnings(write_spec(adam_spec, path))
-  sheet <- as.data.frame(readxl::read_excel(path, sheet = "Define"))
+  sheet <- as.data.frame(readxl::read_excel(path, sheet = "Study"))
   expect_false(any(grepl("_", sheet$Attribute)))
   expect_true(all(
     c("DefineVersion", "StudyOID", "MetaDataVersionOID", "Context") %in%
@@ -496,6 +496,62 @@ test_that("the study sheet speaks the format's vocabulary (#p12-define-sheet)", 
   expect_identical(spec_standard(back), spec_standard(adam_spec))
   again <- withr::local_tempfile(fileext = ".xlsx")
   suppressWarnings(write_spec(back, again))
-  twice <- readxl::read_excel(again, sheet = "Define")
+  twice <- readxl::read_excel(again, sheet = "Study")
   expect_false(any(duplicated(twice$Attribute)))
+})
+
+test_that("artoo can read a workbook it wrote, value level and all (#p12-interchange)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # No test did this. The one round-trip test with value-level rows starts
+  # from a Define-XML source, where the reader fills `where_clause_id`; a
+  # WORKBOOK source leaves that column empty and carries the link in
+  # `where_clause`, so the writer's render was dead code for every
+  # workbook-sourced spec and its output could not be read back at all.
+  source <- system.file("extdata", "sdtm-spec.xlsx", package = "artoo")
+  skip_if(!nzchar(source), "demo workbook not bundled")
+  spec <- suppressWarnings(read_spec(source))
+  expect_gt(nrow(spec@values), 0L)
+  expect_gt(nrow(spec@where_clauses), 0L)
+
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, path))
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(nrow(back@values), nrow(spec@values))
+  expect_identical(nrow(back@where_clauses), nrow(spec@where_clauses))
+  # Every value-level row still names a condition the same workbook defines.
+  expect_true(all(
+    back@values$where_clause %in% back@where_clauses$where_clause_id
+  ))
+  # ...and it is a fixed point: writing what came back changes nothing.
+  again <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(back, again))
+  expect_equal(suppressWarnings(read_spec(again)), back)
+})
+
+test_that("the workbook is the shape the widest tooling imports (#p12-interchange)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # Measured against the importer that the open-source edition ships: the
+  # study sheet must be called `Study` (it is that parser's initialising
+  # sheet, and therefore required -- a workbook naming it `Define` is
+  # refused before a row is read), and a value-level row names its
+  # condition by ID with a `WhereClauses` sheet defining it, because that
+  # parser treats the cell as a foreign key.
+  spec <- suppressWarnings(read_spec(
+    system.file("extdata", "sdtm-spec.xlsx", package = "artoo")
+  ))
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, path))
+  sheets <- readxl::excel_sheets(path)
+  expect_true("Study" %in% sheets)
+  expect_false("Define" %in% sheets)
+  expect_true("WhereClauses" %in% sheets)
+  values <- readxl::read_excel(path, sheet = "ValueLevel")
+  clauses <- readxl::read_excel(path, sheet = "WhereClauses")
+  cells <- values[["Where Clause"]]
+  expect_true(all(cells[!is.na(cells)] %in% clauses[["ID"]]))
+  # The label is carried under both spellings, so a reader looking for
+  # either finds it.
+  expect_true(all(c("Label", "Description") %in% names(values)))
 })
