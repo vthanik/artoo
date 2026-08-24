@@ -254,3 +254,119 @@
   }
   if (is.na(study_name)) "MDV.1" else paste0("MDV.", .dx_slug(study_name))
 }
+
+# Namespace an id that is a NAME by the kind of thing it names.
+#
+# Define-XML gives every definition an OID that is unique across the whole
+# MetaDataVersion, and the common tooling gets there by prefixing the name a
+# spec author wrote: a method called `AEENDY` is emitted as `MT.AEENDY`, a
+# comment called `ARM` as `COM.ARM`. Emitting the bare names collides the
+# moment two kinds share one -- a reference workbook with a method `EXTRT`
+# and a comment `ARM` failed the schema's OID uniqueness constraint, with a
+# message that blamed artoo for the author's file.
+#
+# This runs on the way OUT, on a copy of the spec, so the ids the author
+# reads and types are the ones they wrote: `spec_codelists(spec, "C66731")`
+# keeps working while the document says `CL.C66731`.
+#
+# Definitions and every reference to them move together, found by column
+# SUFFIX for the same reason the scoping prune uses one: a comment is
+# reachable through eight columns across seven slots, and any hand-written
+# list of them is one omission away from a dangling reference.
+#
+# An id that already carries its prefix is left alone, so a spec read from a
+# define.xml -- which carries the sponsor's real OIDs -- is untouched.
+#' @noRd
+.dx_id_prefixes <- list(
+  methods = list(prefix = "MT.", id = "method_id", refs = "(^|_)method_id$"),
+  comments = list(
+    prefix = "COM.",
+    id = "comment_id",
+    refs = "(^|_)comment_id$"
+  ),
+  codelists = list(
+    prefix = "CL.",
+    id = "codelist_id",
+    refs = "(^|_)codelist_id$"
+  ),
+  # Dictionaries share the codelist namespace: both are a CodeList in the
+  # document, and a variable names either in one column.
+  dictionaries = list(
+    prefix = "CL.",
+    id = "dictionary_id",
+    refs = "(^|_)dictionary_id$|(^|_)codelist_id$"
+  ),
+  documents = list(
+    prefix = "LF.",
+    id = "document_id",
+    refs = "(^|_)document_id$|(^|_)archive_location_id$"
+  ),
+  standards = list(
+    prefix = "STD.",
+    id = "standard_id",
+    refs = "(^|_)standard_id$"
+  )
+)
+
+#' @noRd
+.dx_namespace_ids <- function(tables) {
+  for (slot in names(.dx_id_prefixes)) {
+    rule <- .dx_id_prefixes[[slot]]
+    df <- tables[[slot]]
+    if (!is.data.frame(df) || !nrow(df) || !(rule$id %in% names(df))) {
+      next
+    }
+    ids <- as.character(df[[rule$id]])
+    move <- !is.na(ids) & nzchar(ids) & !startsWith(ids, rule$prefix)
+    if (!any(move)) {
+      next
+    }
+    renamed <- stats::setNames(paste0(rule$prefix, ids[move]), ids[move])
+    tables <- lapply(tables, function(target) {
+      if (!is.data.frame(target) || !nrow(target)) {
+        return(target)
+      }
+      for (column in grep(rule$refs, names(target), value = TRUE)) {
+        at <- match(as.character(target[[column]]), names(renamed))
+        hit <- !is.na(at)
+        target[[column]][hit] <- unname(renamed[at[hit]])
+      }
+      target
+    })
+  }
+  tables
+}
+
+# Apply the namespacing to every slot of a spec, for the write only.
+#' @noRd
+.dx_namespace_spec <- function(spec) {
+  slots <- c(
+    "datasets",
+    "variables",
+    "values",
+    "codelists",
+    "dictionaries",
+    "methods",
+    "method_expressions",
+    "comments",
+    "documents",
+    "standards",
+    "where_clauses",
+    "arm_displays",
+    "arm_results"
+  )
+  tables <- lapply(slots, function(nm) S7::prop(spec, nm))
+  names(tables) <- slots
+  out <- .dx_namespace_ids(tables)
+  changed <- slots[
+    !vapply(
+      slots,
+      function(nm) identical(out[[nm]], tables[[nm]]),
+      logical(1)
+    )
+  ]
+  if (!length(changed)) {
+    return(spec)
+  }
+  do.call(S7::set_props, c(list(spec), out[changed]))
+}

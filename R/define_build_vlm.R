@@ -165,13 +165,13 @@
   .dx_pool_itemdefs(pool, call)
 }
 
-# The leaf a collected page reference belongs to: the one the spec marks as
-# the annotated CRF, or -- failing that -- the spec's only document.
+# The one leaf the spec marks as the annotated CRF, or NA.
 #
-# The workbook format has no column designating a role, so a spec read from
-# one never marks anything, and every collected page reference in it then
-# aborted for naming no document. One document is not a guess: there is
-# nothing else it could be. Two are, so two stay an abort.
+# The workbook reader fills the role from the href when the sheet has no
+# Role column, so a workbook-sourced spec arrives here already marked. An
+# earlier version of this function fell back to the spec's only document
+# when nothing was marked; that was a guess, and reading the href is the
+# rule the format's own tooling uses.
 #' @noRd
 .dx_annotated_crf <- function(spec) {
   docs <- spec@documents
@@ -179,13 +179,10 @@
     return(NA_character_)
   }
   hit <- which(.dx_chr(docs, "role") == "annotated_crf")
-  if (length(hit) == 1L) {
-    return(as.character(docs$document_id[[hit]]))
+  if (length(hit) != 1L) {
+    return(NA_character_)
   }
-  if (length(hit) == 0L && nrow(docs) == 1L) {
-    return(as.character(docs$document_id[[1L]]))
-  }
-  NA_character_
+  as.character(docs$document_id[[hit]])
 }
 
 # Only a COLLECTED origin's pages are CRF pages. A derived variable

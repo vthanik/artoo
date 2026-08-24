@@ -329,8 +329,10 @@ artoo_spec <- function(
   variables <- .derive_key_sequence(datasets, variables)
 
   # Resolve the one CDISC standard from every place a source can carry it
-  # (explicit argument, P21 datasets column, Define-XML study field), then
-  # strip those columns — @standard is the single home.
+  # (explicit argument, P21 datasets column, Define-XML study field, and the
+  # workbook Study sheet's StandardName/StandardVersion pair), then strip
+  # those columns — @standard is the single home.
+  study <- .study_standard_pair(study)
   standard <- .resolve_standard(standard, datasets, study, call)
   datasets$standard <- NULL
   study$standard <- NULL
@@ -636,4 +638,87 @@ is_artoo_spec <- function(x) {
     return(inline)
   }
   .dx_stack(expressions, inline)
+}
+
+# The workbook Study sheet states the standard as two attributes, a name and
+# a version, rather than as one string. Fold them into the `standard` field
+# every other source uses, so the resolver has one vocabulary to reason
+# about, and apply the same hyphen renames the Define-XML writer does --
+# a sheet saying "SDTM-IG" means the standard artoo calls "SDTMIG".
+#
+# Without this the two attributes rode through as unmodelled study fields
+# and `@standard` stayed NA, so the most complete real workbook available to
+# this project could not be written to Define-XML at all: 2.0 refuses to
+# write without a standard name and version.
+#' @noRd
+.study_standard_pair <- function(study) {
+  if (is.null(study) || !nrow(study) || "standard" %in% names(study)) {
+    return(study)
+  }
+  norm <- gsub("[^a-z0-9]", "", tolower(names(study)))
+  name <- .study_field(study, norm, "standardname")
+  version <- .study_field(study, norm, "standardversion")
+  if (is.na(name)) {
+    return(study)
+  }
+  renamed <- unname(.dx_standard_renames[name])
+  if (!is.na(renamed)) {
+    name <- renamed
+  }
+  study$standard <- trimws(paste(name, if (!is.na(version)) version))
+  study
+}
+
+#' @noRd
+.study_field <- function(study, norm, want) {
+  hit <- which(norm == want)
+  if (!length(hit)) {
+    return(NA_character_)
+  }
+  value <- trimws(as.character(study[[hit[[1L]]]])[[1L]])
+  if (is.na(value) || !nzchar(value)) NA_character_ else value
+}
+
+# Define-XML 2.1 wants a def:Standards block, not just a standard name, so a
+# spec that knows its standard and carries no standards table writes 2.1
+# with a warning that the block was not written. One primary row costs
+# nothing and fixes both versions in one place.
+#
+# Called from the WORKBOOK READER, not the constructor. A workbook's Study
+# sheet asserting a name and a version is an author saying "this is the
+# standard", which is enough to state as a standards row. Minting in the
+# constructor instead made every construction do it, so a spec with no
+# standards table gained one on a JSON round trip and stopped being equal to
+# itself -- and it would have put a Status of "Final" into specs whose
+# author never claimed one.
+#
+# The type is read off the name rather than assumed: a name ending in IG is
+# an implementation guide, anything else is left for the writer to refuse
+# rather than guessed at.
+#' @noRd
+.mint_primary_standard <- function(standards, standard) {
+  if (!is.null(standards) && nrow(standards)) {
+    return(standards)
+  }
+  if (is.na(standard) || !nzchar(standard)) {
+    return(standards)
+  }
+  parts <- strsplit(trimws(standard), "[[:space:]]+")[[1L]]
+  if (length(parts) < 2L) {
+    return(standards)
+  }
+  name <- paste(utils::head(parts, -1L), collapse = " ")
+  if (!grepl("IG$", name)) {
+    return(standards)
+  }
+  data.frame(
+    standard_id = "STD.1",
+    name = name,
+    type = "IG",
+    version = utils::tail(parts, 1L),
+    status = "Final",
+    is_primary = TRUE,
+    order = 1L,
+    stringsAsFactors = FALSE
+  )
 }

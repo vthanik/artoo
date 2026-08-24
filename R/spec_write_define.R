@@ -41,6 +41,10 @@
   # notice, the OID table, the builders -- sees one spec and cannot tell a
   # data-informed one from a hand-written one.
   spec <- .dx_apply_data(spec, data, p, call)
+  # Names become OIDs here, on a copy: a spec author writes `AEENDY` on a
+  # Methods sheet, and the document says `MT.AEENDY`, because an OID must be
+  # unique across the whole MetaDataVersion and a bare name is not.
+  spec <- .dx_namespace_spec(spec)
   .dx_incomplete_notice(spec, call)
   .dx_downgrade_notice(spec, p, call)
 

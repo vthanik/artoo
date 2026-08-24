@@ -843,8 +843,8 @@ read_spec <- function(
   codelists <- .scope_codelists(codelists, call)
   methods <- .drop_blank_key(methods, "method_id")
   comments <- .drop_blank_key(comments, "comment_id")
-  documents <- .normalise_document_roles(
-    .drop_blank_key(documents, "document_id")
+  documents <- .role_from_href(
+    .normalise_document_roles(.drop_blank_key(documents, "document_id"))
   )
 
   # ---- where clauses, from whichever shape the workbook uses -------------
@@ -908,6 +908,21 @@ read_spec <- function(
         "result_id"
       ),
       .normalise_p21_cols(ar_raw, .p21_arm_result_map)
+    )
+  )
+
+  # A Study sheet that states a standard name and version has said enough to
+  # be a standards row, which is what Define-XML 2.1 needs and a bare name
+  # is not.
+  standards <- .mint_primary_standard(
+    standards,
+    .resolve_standard(
+      NULL,
+      datasets,
+      .study_standard_pair(.p21_study(
+        .nullify_empty(study_raw)
+      )),
+      call
     )
   )
 
@@ -1302,6 +1317,37 @@ read_spec <- function(
   )
   hit <- unname(canonical[key])
   df$role <- ifelse(is.na(hit), as.character(df$role), hit)
+  df
+}
+
+# The document role a workbook does not state, from the href it does.
+#
+# The workbook format has no Role column -- that one is artoo's -- so the
+# tooling that owns the format classifies by filename: lowercase the
+# basename, and a name ENDING IN "crf" is the annotated CRF, anything else
+# is a supplemental document, and a blank href is neither (a leaf that
+# belongs to no container). `oncology-crf.pdf` is an annotated CRF;
+# `acrf.pdf` is the usual spelling but not the rule.
+#
+# An explicit Role always wins: it is the only way to say something the
+# filename cannot.
+#' @noRd
+.role_from_href <- function(df) {
+  if (is.null(df) || !nrow(df) || !("href" %in% names(df))) {
+    return(df)
+  }
+  if (!("role" %in% names(df))) {
+    df$role <- NA_character_
+  }
+  href <- trimws(as.character(df$href))
+  base <- tolower(sub("[.][^.]*$", "", basename(href)))
+  derived <- ifelse(
+    is.na(href) | !nzchar(href),
+    NA_character_,
+    ifelse(endsWith(base, "crf"), "annotated_crf", "supplemental")
+  )
+  blank <- is.na(df$role) | !nzchar(trimws(as.character(df$role)))
+  df$role[blank] <- derived[blank]
   df
 }
 

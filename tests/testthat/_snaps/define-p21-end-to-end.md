@@ -215,8 +215,8 @@
     Condition
       Warning:
       The spec is not submission-grade.
-      x Nothing fills "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "codelists$name", "codelists$nci_code", "comments$description", and "the CDISC standard".
-      i A conformance report will raise 8 findings; fill them in the source spec.
+      x Nothing fills "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "codelists$name", "codelists$nci_code", and "comments$description".
+      i A conformance report will raise 6 findings; fill them in the source spec.
 
 # a variable named by two datasets is refused, not guessed
 

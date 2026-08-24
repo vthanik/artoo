@@ -50,17 +50,11 @@ test_that("every workbook writes a valid Define-XML with no dangling reference",
     for (version in c("2.0", "2.1")) {
       label <- paste(name, version)
       out <- file.path(withr::local_tempdir(), "define.xml")
-      # The one refusal the schema forces: Define-XML 2.0 requires a standard
-      # name and version on MetaDataVersion, and the partial workbook names
-      # none. There is nothing to derive it from, so artoo refuses rather
-      # than inventing a standard the sponsor never claimed.
-      if (identical(name, "partial") && identical(version, "2.0")) {
-        expect_error(
-          write_spec(spec, out, version = version, created = FROZEN_P21),
-          class = "artoo_error_define"
-        )
-        next
-      }
+      # Every bundled workbook now names a standard, including the partial
+      # one: its Study sheet states a name and a version, which is what
+      # Define-XML 2.0 requires on MetaDataVersion, and the reader resolves
+      # the pair rather than leaving it as two unmodelled study fields.
+      expect_false(is.na(spec_standard(spec)), info = label)
       suppressWarnings(
         write_spec(spec, out, version = version, created = FROZEN_P21)
       )

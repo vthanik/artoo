@@ -1,5 +1,23 @@
 # artoo 0.2.0.9000
 
+* `read_spec()` on a workbook resolves the standard its Study sheet states.
+  The sheet carries a name and a version as two attributes; artoo kept both
+  as unmodelled study fields, so `spec_standard()` was `NA` and writing
+  Define-XML 2.0 refused for want of the standard the sheet had named. A
+  Study sheet that names one now also yields the `def:Standards` row
+  Define-XML 2.1 asks for.
+
+* `read_spec()` on a workbook works out which documents are the annotated
+  CRF from their filenames, since the sheet has no column for it. A
+  document whose name ends in `crf` is the annotated CRF, one with no
+  filename belongs to no category, and an explicit `Role` still wins.
+
+* `write_spec()` to `.xml` gives a method, comment, codelist, document or
+  standard named on a workbook sheet an OID of its own kind, so a method
+  called `EXTRT` is written as `MT.EXTRT`. Names taken straight from the
+  sheet collided across kinds and the document failed its own schema. The
+  spec keeps the names the author wrote.
+
 * `read_spec()` on a workbook reads a method's formal expression. The
   `Methods` sheet carries one, in its expression context and code columns,
   and artoo read those into the spec and then used them nowhere: a method
