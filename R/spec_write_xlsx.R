@@ -106,10 +106,9 @@
     reason = "to write a Pinnacle 21 Excel spec."
   )
 
-  # The workbook has no sheet for the structural slots, so writing xlsx DROPS
-  # them. Silence would be exactly the silent truncation this project
-  # forbids: a Define-XML document read and written to xlsx would lose its
-  # standards, where clauses and formal expressions without a word.
+  # One slot still has no sheet -- a workbook has no column for a method's
+  # formal expressions -- so writing xlsx drops it. Silence would be exactly
+  # the silent truncation this project forbids.
   .p21_warn_dropped(spec, call)
 
   datasets <- spec@datasets
@@ -170,6 +169,35 @@
       spec@documents,
       .p21_document_map,
       names(.spec_cols_documents)
+    ),
+    # The sheets newer workbook generations carry. The READER learned these
+    # when the Define-XML work landed, and write_template() offers them, so a
+    # writer that still emitted only the eight classic sheets would lose on
+    # its own round trip exactly what artoo had just taught itself to read.
+    WhereClauses = .p21_sheet_frame(
+      spec@where_clauses,
+      .p21_where_map,
+      names(.spec_cols_where_clauses)
+    ),
+    Dictionaries = .p21_sheet_frame(
+      spec@dictionaries,
+      .p21_dictionary_map,
+      names(.spec_cols_dictionaries)
+    ),
+    Standards = .p21_sheet_frame(
+      spec@standards,
+      .p21_standard_map,
+      names(.spec_cols_standards)
+    ),
+    `Analysis Displays` = .p21_sheet_frame(
+      spec@arm_displays,
+      .p21_arm_display_map,
+      names(.spec_cols_arm_displays)
+    ),
+    `Analysis Results` = .p21_sheet_frame(
+      spec@arm_results,
+      .p21_arm_result_map,
+      names(.spec_cols_arm_results)
     )
   )
   # Datasets and Variables are the sheets the reader requires; the optional
@@ -201,14 +229,9 @@
 # Name the populated slots a Pinnacle 21 workbook cannot carry.
 #' @noRd
 .p21_warn_dropped <- function(spec, call = rlang::caller_env()) {
-  slots <- c(
-    standards = "standards",
-    where_clauses = "where clauses",
-    method_expressions = "formal expressions",
-    arm_displays = "analysis displays",
-    arm_results = "analysis results",
-    dictionaries = "dictionaries"
-  )
+  # Only what a workbook genuinely has no column for. The other five slots
+  # got sheets when the reader learned to read them.
+  slots <- c(method_expressions = "formal expressions")
   filled <- vapply(
     names(slots),
     function(nm) {

@@ -178,8 +178,15 @@ test_that("a missing bundled stylesheet is an install error, not a render error"
   # the user's document.
   dir <- withr::local_tempdir()
   path <- file.path(dir, "define.xml")
+  # stylesheet = FALSE so none is copied beside the output: the renderer
+  # prefers a sheet sitting next to the document, and would find that one.
   suppressWarnings(
-    write_spec(read_define("define21-sdtm.xml"), path, created = FROZEN_HTML)
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      created = FROZEN_HTML,
+      stylesheet = FALSE
+    )
   )
   testthat::local_mocked_bindings(.artoo_extdata = function(...) "")
   expect_error(
@@ -199,7 +206,12 @@ test_that("a stylesheet that cannot render says so as a codec error", {
   dir <- withr::local_tempdir()
   path <- file.path(dir, "define.xml")
   suppressWarnings(
-    write_spec(read_define("define21-sdtm.xml"), path, created = FROZEN_HTML)
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      created = FROZEN_HTML,
+      stylesheet = FALSE
+    )
   )
   # Point the renderer at something that is not a stylesheet.
   broken <- file.path(dir, "broken.xsl")
@@ -211,4 +223,64 @@ test_that("a stylesheet that cannot render says so as a codec error", {
   )
   # ...and the failed render leaves no half-written HTML behind.
   expect_false(file.exists(file.path(dir, "define.html")))
+})
+
+test_that("the stylesheet the document names is the one it renders through", {
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("xslt")
+  skip_if_not_installed("callr")
+  # Keeping a sponsor's stylesheet and then rendering through the bundled one
+  # would give a browser and artoo two different renderings of one document
+  # -- in exactly the case the keep-it rule exists for.
+  dir <- withr::local_tempdir()
+  writeLines(
+    c(
+      "<?xml version=\"1.0\"?>",
+      "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">",
+      "<xsl:template match=\"/\"><html><body>SPONSOR RENDERING</body></html></xsl:template>",
+      "</xsl:stylesheet>"
+    ),
+    file.path(dir, "define2-1.xsl")
+  )
+  suppressWarnings(
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      file.path(dir, "define.xml"),
+      created = FROZEN_HTML,
+      html = TRUE
+    )
+  )
+  expect_match(
+    paste(
+      readLines(file.path(dir, "define.html"), warn = FALSE),
+      collapse = ""
+    ),
+    "SPONSOR RENDERING"
+  )
+})
+
+test_that("rendered text is not glued together by whitespace stripping (#p8-review-1)", {
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("xslt")
+  skip_if_not_installed("callr")
+  # xml2::read_xml() strips whitespace-only text nodes by default, and the
+  # stylesheets take string-values that span them -- so a method description
+  # rendered as "...and SUBJIDcatx(...)" with the space gone. A derivation
+  # silently altered in the reviewer-facing deliverable.
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "define.xml")
+  suppressWarnings(
+    write_spec(
+      read_define("define20-sdtm.xml"),
+      path,
+      created = FROZEN_HTML,
+      html = TRUE
+    )
+  )
+  rendered <- paste(
+    readLines(file.path(dir, "define.html"), warn = FALSE),
+    collapse = "\n"
+  )
+  expect_false(grepl("SUBJIDcatx", rendered, fixed = TRUE))
+  expect_match(rendered, "catx", fixed = TRUE)
 })

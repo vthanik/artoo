@@ -10,6 +10,43 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `write_spec()` now emits a variable's predecessor and assigned value.
+  Define-XML has no attribute for either, so both go in the origin's
+  description, which is where the CDISC stylesheet renders them; artoo read
+  them and wrote an empty origin, so an ADaM define lost its traceability.
+
+* `write_spec()` now emits CRF page references from a workbook. A page number
+  with no document defaults to the annotated CRF when the spec names one, and
+  is refused rather than dropped when it does not. `read_spec()` on a
+  Pinnacle 21 workbook reads a `Role` column on the Documents sheet, so an
+  author can designate which document is the annotated CRF.
+
+* `write_spec()` refuses a value-level row with no where clause. Written out
+  it was an `ItemRef` with no children: schema-valid, nothing dangling, and
+  asserting that the definition applies to every row of its parent.
+
+* `define_lint()` gains `define_unconditional_value` and
+  `define_no_data_uncommented`. Both catch things the schema cannot see (a
+  well-formed element, an optional attribute) and the reference checks cannot
+  see (nothing to dangle).
+
+* `write_spec()` on a `.xlsx` path now writes the `WhereClauses`,
+  `Dictionaries`, `Standards` and analysis-results sheets. `read_spec()`
+  learned them when the Define-XML work landed, so a workbook round trip was
+  losing exactly what artoo had just taught itself to read.
+
+* `write_spec()` gains `data`, which lets the datasets a define describes
+  inform what it says. A blank `length` is filled from the real maximum byte
+  width and a stated one shorter than the data is widened, because a length
+  below the real maximum is a conformance finding; a length longer than the
+  data is left alone, because it is a claim about the domain rather than about
+  one extract. Value-level metadata is derived for the standard findings shapes
+  (a result keyed by its test code, `TSVAL` by `TSPARMCD`, `QVAL` by `QNAM`,
+  `AVAL` and `AVALC` by `PARAMCD`), each derived row carrying the type and width
+  of the rows it covers, and a variable the spec already describes is never
+  touched. A dataset with no records is flagged `def:HasNoData` when it carries
+  a comment explaining the absence.
+
 * `write_template()` writes a blank Pinnacle 21 workbook with the sheets and
   headers `read_spec()` recognises, so a specification can be authored from the
   shape the reader wants rather than guessed at. Every header comes from the

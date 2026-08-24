@@ -342,6 +342,17 @@ test_that("a pooled ItemDef keeps its def:ValueListRef (#p4-review)", {
       dataset = "SUPPDM",
       variable = "QVAL",
       data_type = "string",
+      where_clause_id = "WC.QVAL",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.QVAL",
+      check_order = 1L,
+      dataset = "SUPPDM",
+      variable = "QVAL",
+      comparator = "EQ",
+      value = "X",
+      value_order = 1L,
       stringsAsFactors = FALSE
     )
   )
@@ -374,6 +385,17 @@ test_that("value-level rows emit in the order column's order (#p4-review)", {
       data_type = "float",
       label = c("second", "third", "first"),
       order = c(2L, 3L, 1L),
+      where_clause_id = c("WC.B", "WC.C", "WC.A"),
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = c("WC.A", "WC.B", "WC.C"),
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSTESTCD",
+      comparator = "EQ",
+      value = c("A", "B", "C"),
+      value_order = 1L,
       stringsAsFactors = FALSE
     )
   )

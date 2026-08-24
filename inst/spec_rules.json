@@ -900,5 +900,27 @@
     "description": "Neither the variable nor any of its value-level items carries an Origin.",
     "reason": null,
     "engine": "define"
+  },
+  {
+    "id": "define_unconditional_value",
+    "dimension": "schema",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A value-level item carries no where clause, so it applies to every row of its parent variable.",
+    "reason": "Invisible to both other gates: an ItemRef with no children satisfies the schema, and a condition that was never written cannot dangle.",
+    "engine": "define"
+  },
+  {
+    "id": "define_no_data_uncommented",
+    "dimension": "schema",
+    "severity": "warning",
+    "requires_data": false,
+    "scope": "whole-spec",
+    "status": "implemented",
+    "description": "A dataset flagged as having no data carries no comment explaining the absence.",
+    "reason": "The attribute is independently optional in the schema, and a missing attribute references nothing, so neither the schema gate nor the reference checks can see it.",
+    "engine": "define"
   }
 ]

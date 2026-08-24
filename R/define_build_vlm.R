@@ -35,6 +35,8 @@
   "source",
   "origin_description",
   "origin_document_id",
+  "predecessor",
+  "assigned_value",
   "pages",
   "page_type",
   "page_title",
@@ -50,6 +52,12 @@
   var <- spec@variables
   val <- spec@values
   types <- .dx_resolve_datatypes(spec, oids)
+  # A Pages value with no document is the commonest workbook shape: the
+  # Variables sheet has a Pages column and no document column. The annotated
+  # CRF is what those pages are pages OF, so it is the default -- but only
+  # when the spec names exactly one, because guessing between two would put a
+  # reference in the document that nobody wrote.
+  crf <- .dx_annotated_crf(spec)
 
   parent <- data.frame(
     oid = .dx_get(oids$variable, .dx_key(var$dataset, var$variable)),
@@ -65,7 +73,13 @@
     origin = .dx_chr(var, "origin"),
     source = .dx_chr(var, "source"),
     origin_description = .dx_chr(var, "origin_description"),
-    origin_document_id = .dx_chr(var, "origin_document_id"),
+    origin_document_id = .dx_default_document(
+      .dx_chr(var, "origin_document_id"),
+      .dx_chr(var, "pages"),
+      crf
+    ),
+    predecessor = .dx_chr(var, "predecessor"),
+    assigned_value = .dx_chr(var, "assigned_value"),
     pages = .dx_chr(var, "pages"),
     page_type = .dx_chr(var, "page_type"),
     page_title = .dx_chr(var, "page_title"),
@@ -107,7 +121,13 @@
       origin = .dx_chr(val, "origin"),
       source = .dx_chr(val, "source"),
       origin_description = .dx_chr(val, "origin_description"),
-      origin_document_id = .dx_chr(val, "origin_document_id"),
+      origin_document_id = .dx_default_document(
+        .dx_chr(val, "origin_document_id"),
+        .dx_chr(val, "pages"),
+        crf
+      ),
+      predecessor = .dx_chr(val, "predecessor"),
+      assigned_value = .dx_chr(val, "assigned_value"),
       pages = .dx_chr(val, "pages"),
       page_type = .dx_chr(val, "page_type"),
       page_title = .dx_chr(val, "page_title"),
@@ -141,6 +161,27 @@
 
   pool <- rbind(parent, child)
   .dx_pool_itemdefs(pool, call)
+}
+
+# The one leaf the spec marks as the annotated CRF, or NA.
+#' @noRd
+.dx_annotated_crf <- function(spec) {
+  docs <- spec@documents
+  if (is.null(docs) || !nrow(docs)) {
+    return(NA_character_)
+  }
+  hit <- which(.dx_chr(docs, "role") == "annotated_crf")
+  if (length(hit) != 1L) {
+    return(NA_character_)
+  }
+  as.character(docs$document_id[[hit]])
+}
+
+#' @noRd
+.dx_default_document <- function(document_id, pages, crf) {
+  blank <- .dx_blank(document_id) & !.dx_blank(pages)
+  document_id[blank] <- crf
+  document_id
 }
 
 # One ItemDef per distinct OID. Two rows may share an OID only when they say
@@ -216,7 +257,22 @@
     }
   }
   if (.dx_blank(id) && .dx_blank(txt)) {
-    return(NA_character_)
+    # A value-level definition with NO condition applies to every row of its
+    # parent variable, which is a different claim from the one a value-level
+    # row is for -- and the schema gate cannot see it, because an ItemRef
+    # with no children is well-formed. Refusing here is the only place it
+    # can be caught.
+    ds <- .dx_chr(val, "dataset")[[i]]
+    vr <- .dx_chr(val, "variable")[[i]]
+    .artoo_abort(
+      c(
+        "Value-level row {i} ({.val {ds}}.{.val {vr}}) names no where clause.",
+        "x" = "A value-level definition with no condition applies to every row of its parent.",
+        "i" = "Give the row a {.code where_clause_id}, or move it to the variable itself."
+      ),
+      kind = "define",
+      call = call
+    )
   }
   # A row that names a condition artoo cannot resolve must NOT be written
   # without one: a value-level definition with no def:WhereClauseRef applies

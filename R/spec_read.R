@@ -129,7 +129,11 @@
 .p21_document_map <- c(
   "ID" = "document_id",
   "Title" = "title",
-  "Href" = "href"
+  "Href" = "href",
+  # Which MetaDataVersion container owns the leaf. Without a column for it a
+  # workbook author cannot designate the annotated CRF, and every collected
+  # variable in the resulting define has no page link at all.
+  "Role" = "role"
 )
 
 # Per-logical-sheet name alias sets (normalised-exact match against any
@@ -733,7 +737,8 @@ read_spec <- function(
           "display_id"
         ),
         "result_id"
-      )
+      ),
+      .normalise_p21_cols(ar_raw, .p21_arm_result_map)
     )
   )
 
@@ -1004,7 +1009,13 @@ read_spec <- function(
   if (!anyDuplicated(ids)) {
     return(df)
   }
-  columns <- setdiff(names(df), "display_id")
+  # MAPPED columns only. A foreign column artoo neither models nor emits is
+  # no reason to refuse a workbook, and def:DocumentRef is maxOccurs
+  # "unbounded" on arm:ResultDisplay -- a display citing two documents is
+  # legal, and artoo carrying only the first is artoo's limit, not the
+  # author's error.
+  modelled <- intersect(unname(.p21_arm_display_map), names(df))
+  columns <- setdiff(modelled, c("display_id", "document_id", "pages"))
   keep <- !duplicated(ids)
   out <- df[keep, , drop = FALSE]
   for (id in unique(ids[duplicated(ids)])) {
@@ -1037,23 +1048,32 @@ read_spec <- function(
 # so every row below the first has one. What marks a real row is the payload
 # that varies per analysis dataset.
 #' @noRd
-.drop_blank_arm_result <- function(df) {
+.drop_blank_arm_result <- function(df, raw) {
   if (is.null(df) || !nrow(df)) {
     return(df)
   }
-  payload <- c("dataset", "variables", "where_clause_id")
-  present <- intersect(payload, names(df))
-  if (!length(present)) {
+  # A row that named its OWN result id is not a continuation, whatever else
+  # it carries -- its Dataset cell may simply have been merged with the row
+  # above. Only rows the fill gave an id to are candidates for dropping, so
+  # blankness is judged against the sheet as it was read.
+  own_id <- if (is.null(raw) || !("result_id" %in% names(raw))) {
+    rep(TRUE, nrow(df))
+  } else {
+    v <- as.character(raw$result_id)
+    !is.na(v) & nzchar(trimws(v))
+  }
+  payload <- intersect(c("dataset", "variables", "where_clause_id"), names(df))
+  if (!length(payload)) {
     return(.drop_blank_key(df, "result_id"))
   }
   filled <- Reduce(
     `|`,
-    lapply(present, function(column) {
+    lapply(payload, function(column) {
       v <- as.character(df[[column]])
       !is.na(v) & nzchar(trimws(v))
     })
   )
-  df[filled, , drop = FALSE]
+  df[own_id | filled, , drop = FALSE]
 }
 
 #' @noRd

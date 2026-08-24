@@ -288,7 +288,7 @@ test_that("CreationDateTime is UTC and comes from `created`", {
   doc <- xml2::read_xml(path)
   expect_identical(
     xml2::xml_attr(xml2::xml_root(doc), "CreationDateTime"),
-    "2020-01-01T00:00:00"
+    "2020-01-01T00:00:00Z"
   )
 })
 
@@ -445,6 +445,17 @@ test_that("a value-level row with no data type inherits the parent's", {
       dataset = "VS",
       variable = "VSORRES",
       data_type = NA_character_,
+      where_clause_id = "WC.1",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSORRES",
+      comparator = "EQ",
+      value = "X",
+      value_order = 1L,
       stringsAsFactors = FALSE
     )
   )
@@ -1233,6 +1244,17 @@ test_that("a value-level row's origin source counts as a downgrade loss", {
       data_type = "float",
       origin = "Collected",
       source = "Investigator",
+      where_clause_id = "WC.1",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSORRES",
+      comparator = "EQ",
+      value = "X",
+      value_order = 1L,
       stringsAsFactors = FALSE
     )
   )
@@ -1300,6 +1322,17 @@ test_that("a value-level page title counts as a downgrade loss (#p6-review-6)", 
       pages = "11",
       page_type = "PhysicalRef",
       page_title = "Vital Signs page",
+      where_clause_id = "WC.1",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSORRES",
+      comparator = "EQ",
+      value = "X",
+      value_order = 1L,
       stringsAsFactors = FALSE
     ),
     documents = data.frame(
@@ -1322,4 +1355,183 @@ test_that("a value-level page title counts as a downgrade loss (#p6-review-6)", 
     }
   )
   expect_match(lost, "def:PDFPageRef/@Title", fixed = TRUE)
+})
+
+# ---- phase 9 review ------------------------------------------------------
+
+test_that("a predecessor reaches the document (#p9-review-1)", {
+  skip_if_not_installed("xml2")
+  # Define-XML has no attribute for a predecessor: it goes in the Origin's
+  # Description, and the official stylesheet renders exactly that after
+  # "Predecessor:". artoo read it, stored it, and emitted an EMPTY def:Origin
+  # -- so every ADaM define lost its traceability and the reviewer's
+  # define.html showed a blank where the source variable belongs.
+  spec <- artoo_spec(
+    standard = "ADaMIG 1.1",
+    datasets = data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "ADSL",
+      variable = c("ARM", "AGEGR1"),
+      data_type = "string",
+      length = 20L,
+      origin = c("Predecessor", "Assigned"),
+      predecessor = c("DM.ARM", NA),
+      assigned_value = c(NA, "<65"),
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, path, created = FROZEN))
+  doc <- xml2::read_xml(path)
+  text <- function(name) {
+    xml2::xml_text(xml2::xml_find_first(
+      doc,
+      sprintf(
+        "//*[local-name()='ItemDef'][@Name='%s']//*[local-name()='Origin']//*[local-name()='TranslatedText']",
+        name
+      )
+    ))
+  }
+  expect_identical(text("ARM"), "DM.ARM")
+  expect_identical(text("AGEGR1"), "<65")
+  expect_true(validate_define(path)@summary$valid)
+})
+
+test_that("a predecessor that contradicts the origin description is refused", {
+  skip_if_not_installed("xml2")
+  spec <- artoo_spec(
+    standard = "ADaMIG 1.1",
+    datasets = data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "ADSL",
+      variable = "ARM",
+      data_type = "string",
+      origin = "Predecessor",
+      predecessor = "DM.ARM",
+      origin_description = "Taken from AE.AETERM",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
+})
+
+test_that("CRF pages reach the document via the annotated CRF (#p9-review-3)", {
+  skip_if_not_installed("xml2")
+  # The Variables sheet has a Pages column and no document column, so a page
+  # number arrives with nothing to attach it to. The annotated CRF is what
+  # those pages are pages OF.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      origin = "Collected",
+      pages = "12",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.acrf",
+      title = "Annotated CRF",
+      href = "acrf.pdf",
+      role = "annotated_crf",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, path, created = FROZEN))
+  doc <- xml2::read_xml(path)
+  page <- xml2::xml_find_first(doc, "//*[local-name()='PDFPageRef']")
+  expect_identical(xml2::xml_attr(page, "PageRefs"), "12")
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_first(doc, "//*[local-name()='DocumentRef']"),
+      "leafID"
+    ),
+    "LF.acrf"
+  )
+  expect_true(validate_define(path)@summary$valid)
+  # ...and the container the leaf belongs in is emitted.
+  expect_length(
+    xml2::xml_find_all(doc, "//*[local-name()='AnnotatedCRF']"),
+    1L
+  )
+})
+
+test_that("pages with no annotated CRF are refused, not dropped", {
+  skip_if_not_installed("xml2")
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      origin = "Collected",
+      pages = "12",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
+})
+
+test_that("a value-level row with no condition is refused (#p9-review-2)", {
+  skip_if_not_installed("xml2")
+  # Neither other gate can see this: the schema is satisfied (an ItemRef with
+  # no children is well-formed) and nothing dangles, because there is no
+  # reference to dangle. But the definition then applies to every row of its
+  # parent, which is a different claim.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, path, created = FROZEN), error = TRUE)
 })

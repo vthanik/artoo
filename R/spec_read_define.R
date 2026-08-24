@@ -803,9 +803,10 @@
 
 # arm:AnalysisResultDisplays -> arm_displays + arm_results.
 #
-# The two tables have different grains, and both are forced by the schema:
-# one row per arm:ResultDisplay (which carries at most one display-level
-# def:DocumentRef), and one row per arm:AnalysisResult x arm:AnalysisDataset,
+# The two tables have different grains. One row per arm:ResultDisplay --
+# which MAY cite several documents, def:DocumentRef being maxOccurs
+# "unbounded", though artoo models one and warns about the rest -- and one
+# row per arm:AnalysisResult x arm:AnalysisDataset,
 # because each analysis dataset carries its own def:WhereClauseRef and its own
 # list of analysis variables. A delimited string cannot express that.
 #

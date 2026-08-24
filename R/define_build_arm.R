@@ -6,9 +6,11 @@
 # def:WhereClauseRef, def:CommentOID) resolve against whichever namespace the
 # document root declared.
 #
-# Two grains, both forced by the schema. An arm:ResultDisplay carries at most
-# one display-level def:DocumentRef, so `arm_displays` is one row per
-# display. An arm:AnalysisResult carries one or more arm:AnalysisDataset,
+# Two grains. An arm:ResultDisplay may cite SEVERAL documents -- its
+# def:DocumentRef is maxOccurs="unbounded" -- but artoo models one, so
+# `arm_displays` is one row per display and a second reference is dropped
+# with a warning like every other one-of-many. An arm:AnalysisResult carries
+# one or more arm:AnalysisDataset,
 # each with its OWN def:WhereClauseRef and its own analysis variables, so
 # `arm_results` is one row per result x dataset and the result-level fields
 # repeat across them -- the same shape `codelists` uses for its list-level

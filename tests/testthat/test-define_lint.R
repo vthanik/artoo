@@ -68,10 +68,32 @@ test_that("the official 2.1 examples report only their one real defect", {
   # moves, either the fixture changed or the lint gained a false positive.
   for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
     report <- define_lint(fixture(f))
-    expect_identical(nrow(report@findings), 1L, info = f)
-    expect_identical(report@findings$check, "define_orphan_standard", info = f)
-    expect_match(report@findings$message, "STD\\.5", info = f)
+    expect_true("define_orphan_standard" %in% report@findings$check, info = f)
+    expect_match(
+      report@findings$message[
+        report@findings$check == "define_orphan_standard"
+      ],
+      "STD\\.5",
+      info = f
+    )
   }
+  # The SDTM example carries a second true positive of its own: SUPPVS is
+  # flagged def:HasNoData with no comment explaining it, which is what
+  # Pinnacle 21 DD0133 asks for. Pinned rather than suppressed, for the same
+  # reason as the orphan standard.
+  sdtm <- define_lint(fixture("define21-sdtm.xml"))@findings
+  expect_setequal(
+    sdtm$check,
+    c("define_orphan_standard", "define_no_data_uncommented")
+  )
+  expect_match(
+    sdtm$message[sdtm$check == "define_no_data_uncommented"],
+    "SUPPVS"
+  )
+  expect_identical(
+    nrow(define_lint(fixture("define21-adam.xml"))@findings),
+    1L
+  )
 })
 
 # ---- dangling references ------------------------------------------------
@@ -442,4 +464,39 @@ test_that("a dangling comment reference on MetaDataVersion is caught", {
   writeLines(txt, out)
 
   expect_true("define_dangling_comment" %in% checks_of(define_lint(out)))
+})
+
+test_that("the two gates that only lint can see (#p9-review)", {
+  skip_if_not_installed("xml2")
+  # An unconditional value-level item and an uncommented empty dataset are
+  # both invisible to the schema (well-formed, and an optional attribute) and
+  # to the reference checks (nothing to dangle). Without these rules, phase
+  # 10's acceptance gate would certify the exact artefacts it exists to catch.
+  path <- withr::local_tempfile(fileext = ".xml")
+  writeLines(
+    c(
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"',
+      '     xmlns:def="http://www.cdisc.org/ns/def/v2.1"',
+      '     ODMVersion="1.3.2" FileType="Snapshot" FileOID="F"',
+      '     CreationDateTime="2020-01-01T00:00:00">',
+      '  <Study OID="S"><GlobalVariables>',
+      "    <StudyName>S</StudyName><StudyDescription>S</StudyDescription>",
+      "    <ProtocolName>S</ProtocolName></GlobalVariables>",
+      '    <MetaDataVersion OID="M" def:DefineVersion="2.1.0">',
+      '      <def:ValueListDef OID="VL.1">',
+      '        <ItemRef ItemOID="IT.1" Mandatory="No"/>',
+      "      </def:ValueListDef>",
+      '      <ItemGroupDef OID="IG.1" Name="VS" Repeating="No" Purpose="Tabulation"',
+      '                    def:Structure="x" def:HasNoData="Yes">',
+      '        <ItemRef ItemOID="IT.1" Mandatory="No"/>',
+      "      </ItemGroupDef>",
+      '      <ItemDef OID="IT.1" Name="V" DataType="text"/>',
+      "    </MetaDataVersion></Study></ODM>"
+    ),
+    path
+  )
+  checks <- define_lint(path)@findings$check
+  expect_true("define_unconditional_value" %in% checks)
+  expect_true("define_no_data_uncommented" %in% checks)
 })

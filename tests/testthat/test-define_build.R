@@ -96,7 +96,14 @@ test_that("a page reference with no type gets the schema-required default", {
   # A document with no pages carries no page reference at all.
   bare <- artoo:::.dx_docref("LF.acrf", NA, NA, p21())
   expect_null(bare$kids[["def:PDFPageRef"]])
-  expect_null(artoo:::.dx_docref(NA, "11", "PhysicalRef", p21()))
+  # ...and a page number with NO document is refused rather than dropped: it
+  # is the commonest workbook shape, and losing it left every collected
+  # variable with no CRF link at all.
+  expect_null(artoo:::.dx_docref(NA, NA, "PhysicalRef", p21()))
+  expect_error(
+    artoo:::.dx_docref(NA, "11", "PhysicalRef", p21()),
+    class = "artoo_error_define"
+  )
 })
 
 test_that("def:Standards is 2.1-only and absent when the spec has none", {

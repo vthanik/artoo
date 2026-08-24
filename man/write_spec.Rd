@@ -27,6 +27,9 @@ for a reproducible submission build; the default is the current time.
 writes the \code{xml-stylesheet} processing instruction and copies the
 bundled CDISC stylesheet beside the output; a string names a
 stylesheet without copying one; \code{FALSE} writes neither.
+\item \code{data} -- \verb{<list of <data.frame>> | NULL}. The datasets the define
+describes, named for their dataset. artoo reads them and fills what
+the spec leaves blank; see \strong{Data-aware writing}.
 \item \code{html} -- \verb{<logical(1)> | <character(1)>: default FALSE}. \code{TRUE} also
 renders the document through its stylesheet into a sibling \code{.html}; a
 string renders it to that path. Needs the \code{xslt} and \code{callr} packages.
@@ -100,7 +103,23 @@ overwritten, so a customised rendering survives. Pass \code{html = TRUE} to also
 materialise the rendered HTML: browsers are removing XSLT support, and a
 reviewer working from a submission archive should not need one.
 
-External dictionaries (\code{MedDRA}, ISO 3166) are not written yet.
+\strong{Data-aware writing.} Pass \code{data} and artoo reads the datasets the
+define describes, which a spec-only tool cannot. A blank \code{length} is
+filled from the real maximum byte width; a stated one shorter than the
+data is widened, because a length below the real maximum is a conformance
+finding, and the write says which variables it widened. A stated length
+LONGER than the data is left alone: a length is a claim about the domain,
+not about one extract. Value-level metadata is derived for the standard
+findings shapes -- a result keyed by its test code, \code{TSVAL} by \code{TSPARMCD},
+\code{QVAL} by \code{QNAM}, \code{AVAL} and \code{AVALC} by \code{PARAMCD} -- with each derived row
+carrying the type and width of the rows it covers. A variable the spec
+already gives value-level rows to is never touched. A dataset with no
+records is flagged \code{def:HasNoData} when it also carries a comment
+explaining the absence, and left unflagged with a warning when it does
+not.
+
+External dictionaries (\code{MedDRA}, ISO 3166) are not written yet: a
+populated \code{dictionaries} table is reported rather than emitted.
 
 Fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;

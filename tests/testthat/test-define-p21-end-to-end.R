@@ -156,13 +156,19 @@ test_that("a complete spec draws no incompleteness warning", {
   # The notice has to be silent on a submission-grade source, or it is noise
   # nobody reads.
   out <- file.path(withr::local_tempdir(), "define.xml")
-  expect_no_warning(
-    write_spec(
-      read_define("define21-sdtm.xml"),
-      out,
-      version = "2.1",
-      created = FROZEN_P21
-    )
+  # Scoped to the completeness notice: this fixture also draws a genuine
+  # DD0133 warning of its own (SUPPVS is flagged as empty with no comment),
+  # which is a property of CDISC's example rather than of the notice.
+  expect_no_condition(
+    suppressWarnings(
+      write_spec(
+        read_define("define21-sdtm.xml"),
+        out,
+        version = "2.1",
+        created = FROZEN_P21
+      )
+    ),
+    class = "artoo_warning_spec_incomplete"
   )
 })
 
@@ -365,10 +371,13 @@ test_that("a merged display id does not become two displays (#p7-review-1)", {
         check.names = FALSE,
         stringsAsFactors = FALSE
       ),
+      # The continuation row carries a value, so writexl and readxl cannot
+      # erase it before the collapse sees it -- an all-NA row is trimmed on
+      # write, which is how the first version of this test could not fail.
       `Analysis Displays` = data.frame(
         ID = c("RD.T1", NA),
         Name = c("Table 1", NA),
-        Title = c("Demographics", NA),
+        Title = c(NA, "Demographics"),
         stringsAsFactors = FALSE
       ),
       `Analysis Results` = data.frame(
@@ -563,6 +572,17 @@ test_that("the incompleteness notice covers value-level rows (#p7-review-4)", {
       dataset = "VS",
       variable = "VSORRES",
       data_type = "float",
+      where_clause_id = "WC.1",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "VS",
+      variable = "VSORRES",
+      comparator = "EQ",
+      value = "X",
+      value_order = 1L,
       stringsAsFactors = FALSE
     )
   )
@@ -579,4 +599,124 @@ test_that("the incompleteness notice covers value-level rows (#p7-review-4)", {
   )
   expect_match(gaps, "values$origin", fixed = TRUE)
   expect_match(gaps, "values$length", fixed = TRUE)
+})
+
+test_that("a result with its own id survives a merged Dataset cell (#p8-review-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # The payload columns are exactly the mergeable ones, so judging blankness
+  # AFTER the fill deleted a whole result that named itself.
+  book <- file.path(withr::local_tempdir(), "merged-dataset.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.T1",
+        Name = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = c("RD.T1", NA),
+        ID = c("AR.R1", "AR.R2"),
+        Description = c("First", "Second"),
+        Reason = c("SPECIFIED IN SAP", "DATA DRIVEN"),
+        Purpose = c("PRIMARY OUTCOME MEASURE", "SECONDARY OUTCOME MEASURE"),
+        # Merged in the source: only the first row names the dataset.
+        Dataset = c("ADSL", NA),
+        Variables = c("USUBJID", NA),
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_results), 2L)
+  expect_identical(spec@arm_results$result_id, c("AR.R1", "AR.R2"))
+})
+
+test_that("a display citing two documents is not refused (#p8-review-4)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # def:DocumentRef is maxOccurs="unbounded" on arm:ResultDisplay. artoo
+  # models one, which is artoo's limit, not the author's error -- and a
+  # foreign column artoo does not model is no reason to refuse at all.
+  book <- file.path(withr::local_tempdir(), "two-docs.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = c("RD.T1", NA),
+        Name = c("Table 1", NA),
+        Document = c("LF.CSR", "LF.SAP"),
+        `Reviewer Notes` = c("checked", "re-checked"),
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.T1",
+        ID = "AR.R1",
+        Description = "First",
+        Reason = "SPECIFIED IN SAP",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        Dataset = "ADSL",
+        Variables = "USUBJID",
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_displays), 1L)
+  expect_identical(spec@arm_displays$display_id, "RD.T1")
+})
+
+test_that("the newer sheets survive an xlsx round trip (#p8-review-q5)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # The reader learned WhereClauses, Standards and the analysis-results
+  # sheets when the Define-XML work landed, and write_template() offers them.
+  # A writer that still emitted only the eight classic sheets would lose on
+  # its own round trip exactly what artoo had just taught itself to read.
+  spec <- read_define("define21-adam.xml")
+  book <- file.path(withr::local_tempdir(), "round.xlsx")
+  suppressWarnings(write_spec(spec, book))
+  back <- suppressWarnings(read_spec(book))
+  for (slot in c("standards", "where_clauses", "arm_displays", "arm_results")) {
+    expect_identical(
+      nrow(S7::prop(back, slot)),
+      nrow(S7::prop(spec, slot)),
+      info = slot
+    )
+  }
+  # ...and every sheet it writes is one the template offers.
+  template <- file.path(withr::local_tempdir(), "template.xlsx")
+  write_template(template)
+  expect_true(all(
+    readxl::excel_sheets(book) %in% readxl::excel_sheets(template)
+  ))
 })

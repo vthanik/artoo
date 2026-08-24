@@ -72,7 +72,7 @@ test_that("a template filled with a spec reads back as that spec", {
   template <- file.path(dir, "template.xlsx")
   write_template(template)
   written <- file.path(dir, "written.xlsx")
-  suppressWarnings(write_spec(spec, written, version = "2.1"))
+  suppressWarnings(write_spec(spec, written))
 
   # Every sheet the writer emits is a sheet the template offers, with headers
   # the template offers -- so filling the template can only produce something

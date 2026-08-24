@@ -152,6 +152,22 @@
   title = NA_character_
 ) {
   if (.dx_blank(document_id)) {
+    if (!.dx_blank(pages)) {
+      # A page number with no document is the commonest workbook shape --
+      # the Variables sheet has a Pages column and no document column -- and
+      # dropping it left every collected variable with no CRF link at all.
+      # The caller resolves the annotated CRF and passes it in; reaching here
+      # with pages and no document means there is none to point at.
+      .artoo_abort(
+        c(
+          "A page reference names no document.",
+          "x" = "Pages {.val {pages}} cannot be written without one.",
+          "i" = "Give the spec an annotated CRF, or set the row's document."
+        ),
+        kind = "define",
+        call = call
+      )
+    }
     return(NULL)
   }
   pg <- if (.dx_blank(pages)) {
@@ -531,7 +547,7 @@
         "ItemGroupDef",
         "def:StandardOID" = .dx_chr(ds, "standard_id")[[i]],
         "def:IsNonStandard" = .dx_yesonly(.dx_lgl(ds, "is_non_standard")[[i]]),
-        "def:HasNoData" = .dx_yesonly(.dx_lgl(ds, "has_no_data")[[i]])
+        "def:HasNoData" = .dx_has_no_data(ds, i, name, call)
       )
     ),
     kids = list(
@@ -545,6 +561,27 @@
       `def:leaf` = archive_leaf
     )
   )
+}
+
+# def:HasNoData needs a def:CommentOID beside it: a dataset that is empty
+# needs an explanation, and artoo will not write one.
+#' @noRd
+.dx_has_no_data <- function(ds, i, name, call = rlang::caller_env()) {
+  flag <- .dx_yesonly(.dx_lgl(ds, "has_no_data")[[i]])
+  if (is.na(flag)) {
+    return(flag)
+  }
+  if (.dx_blank(.dx_chr(ds, "comment_id")[[i]])) {
+    .artoo_warn(
+      c(
+        "Dataset {.val {name}} is flagged as having no data, with no comment.",
+        "i" = "{.code def:HasNoData} wants a {.code def:CommentOID} explaining the absence; set {.code comment_id}."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  flag
 }
 
 #' @noRd
@@ -614,9 +651,47 @@
 # def:Origin. Type is required in 2.1, so an origin description or CRF page
 # with no type is refused rather than emitted as an untyped origin that no
 # reviewer tool can interpret.
+# The text a def:Origin carries.
+#
+# Define-XML has no attribute for a predecessor or an assigned value: both go
+# in the Origin's Description, and the official stylesheet renders exactly
+# that after "Predecessor:". artoo read them, stored them, and emitted an
+# EMPTY def:Origin -- so an ADaM define lost its traceability and the
+# reviewer's define.html showed a blank where the source variable belongs.
+#' @noRd
+.dx_origin_text <- function(row, label, call = rlang::caller_env()) {
+  stated <- row$origin_description
+  origin <- as.character(row$origin)
+  implied <- if (identical(origin, "Predecessor")) {
+    row$predecessor
+  } else if (identical(origin, "Assigned")) {
+    row$assigned_value
+  } else {
+    NULL
+  }
+  if (is.null(implied) || .dx_blank(implied)) {
+    return(stated)
+  }
+  if (!.dx_blank(stated) && !identical(trimws(stated), trimws(implied))) {
+    # Two different answers to "where did this come from" cannot both be
+    # written, and choosing one would be artoo deciding which the sponsor
+    # meant.
+    .artoo_abort(
+      c(
+        "{label} describes its origin two ways.",
+        "x" = "{.code origin_description} says {.val {stated}}; the origin implies {.val {implied}}.",
+        "i" = "Clear one of them."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+  implied
+}
+
 #' @noRd
 .dx_origin <- function(row, p, label, call = rlang::caller_env()) {
-  desc <- .dx_desc(row$origin_description)
+  desc <- .dx_desc(.dx_origin_text(row, label, call))
   ref <- .dx_docref(
     row$origin_document_id,
     row$pages,

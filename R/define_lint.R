@@ -353,7 +353,9 @@ define_lint <- function(path) {
   parts <- list(
     .define_dangling(defs, refs),
     .define_orphans(defs, refs, external),
-    .define_origin_findings(mdv)
+    .define_origin_findings(mdv),
+    .define_unconditional_values(mdv),
+    .define_uncommented_empty(mdv)
   )
 
   artoo_check_class(
@@ -535,6 +537,78 @@ define_lint <- function(path) {
     variable = NA_character_,
     message = sprintf(
       "Variable %s carries no Origin, and neither do its value-level items.",
+      flagged
+    )
+  )
+}
+
+# A value-level item with no def:WhereClauseRef.
+#
+# Neither of the other gates can see this. The schema is satisfied -- an
+# ItemRef with no children is well-formed -- and nothing dangles, because
+# there is no reference to dangle. But a value-level definition with no
+# condition applies to EVERY row of its parent variable, which is a different
+# claim from the one value-level metadata exists to make.
+#' @noRd
+.define_unconditional_values <- function(mdv) {
+  lists <- .dx_find_all(mdv, "ValueListDef")
+  if (!length(lists)) {
+    return(NULL)
+  }
+  flagged <- character(0)
+  for (vl in lists) {
+    oid <- .dx_attr(vl, "OID")
+    refs <- xml2::xml_find_all(vl, "./*[local-name()='ItemRef']")
+    for (ref in refs) {
+      wc <- xml2::xml_find_all(ref, "./*[local-name()='WhereClauseRef']")
+      if (!length(wc)) {
+        flagged <- c(flagged, paste0(oid, " / ", .dx_attr(ref, "ItemOID")))
+      }
+    }
+  }
+  if (!length(flagged)) {
+    return(NULL)
+  }
+  .finding(
+    "define_unconditional_value",
+    dataset = NA_character_,
+    variable = NA_character_,
+    message = sprintf(
+      "Value-level item %s has no where clause, so it applies to every row of its parent.",
+      flagged
+    )
+  )
+}
+
+# def:HasNoData with no def:CommentOID.
+#
+# A dataset asserted to have no records needs to say why. Invisible to the
+# schema (the attribute is independently optional) and to the reference
+# checks (a missing attribute references nothing).
+#' @noRd
+.define_uncommented_empty <- function(mdv) {
+  groups <- .dx_find_all(mdv, "ItemGroupDef")
+  if (!length(groups)) {
+    return(NULL)
+  }
+  flagged <- character(0)
+  for (g in groups) {
+    if (is.na(.dx_attr(g, "HasNoData"))) {
+      next
+    }
+    if (is.na(.dx_attr(g, "CommentOID"))) {
+      flagged <- c(flagged, .dx_attr(g, "Name"))
+    }
+  }
+  if (!length(flagged)) {
+    return(NULL)
+  }
+  .finding(
+    "define_no_data_uncommented",
+    dataset = flagged,
+    variable = NA_character_,
+    message = sprintf(
+      "Dataset %s is flagged as having no data but carries no comment explaining it.",
       flagged
     )
   )

@@ -21,6 +21,7 @@
   path,
   version = NULL,
   created = NULL,
+  data = NULL,
   stylesheet = TRUE,
   html = FALSE,
   validate = TRUE,
@@ -36,6 +37,10 @@
   target <- .dx_target_version(version, spec, call)
   p <- .define_profile(target, call)
 
+  # Let the data speak first, so everything downstream -- the completeness
+  # notice, the OID table, the builders -- sees one spec and cannot tell a
+  # data-informed one from a hand-written one.
+  spec <- .dx_apply_data(spec, data, p, call)
   .dx_incomplete_notice(spec, call)
   .dx_downgrade_notice(spec, p, call)
 
@@ -240,6 +245,12 @@
   ) {
     lost <- c(lost, "Collected origins, rewritten as CRF")
   }
+  if (nrow(spec@dictionaries)) {
+    # No version of Define-XML is the problem here: artoo has no
+    # ExternalCodeList emitter, so a dictionary the spec carries is lost on
+    # every path. Silence would make it look carried.
+    lost <- c(lost, "external dictionaries (not written by artoo yet)")
+  }
   lost <- unique(lost)
   if (!length(lost)) {
     return(invisible(character(0)))
@@ -310,7 +321,10 @@
 #' @noRd
 .dx_timestamp <- function(created) {
   when <- if (is.null(created)) Sys.time() else as.POSIXct(created, tz = "UTC")
-  format(when, "%Y-%m-%dT%H:%M:%S", tz = "UTC")
+  # With the Z. ISO 8601 reads a zone-less time as local, so a submission
+  # built in two timezones would carry two different-looking stamps for the
+  # same instant.
+  format(when, "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 }
 
 #' @noRd
@@ -635,7 +649,18 @@
     c("xslt", "callr"),
     reason = "to render a define.xml as HTML."
   )
-  sheet <- .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
+  # Render through the stylesheet the DOCUMENT names, when that file is
+  # actually beside it. Otherwise a sponsor who replaced the stylesheet gets
+  # a browser rendering and an artoo rendering that disagree -- and keeping
+  # their file is exactly what .dx_copy_stylesheet() goes out of its way to
+  # do. Reading it by path keeps its base URI, so a relative xsl:import in a
+  # sponsor's sheet still resolves.
+  beside <- file.path(dirname(path), p$stylesheet)
+  sheet <- if (file.exists(beside)) {
+    beside
+  } else {
+    .artoo_extdata(p$asset_dir, "cdisc-xsl", p$stylesheet)
+  }
   if (!nzchar(sheet)) {
     stylesheet <- p$stylesheet
     .artoo_abort(
@@ -666,10 +691,17 @@
   rendered <- tryCatch(
     callr::r(
       function(source_path, sheet_path) {
+        # KEEP THE WHITESPACE. xml2::read_xml() strips whitespace-only text
+        # nodes by default, and the stylesheets take string-values that span
+        # them -- so a method description rendered as
+        # "Concatenation of STUDYID and SUBJIDcatx(...)" instead of leaving a
+        # space between the sentence and the code. libxslt applies the XSLT
+        # whitespace rules itself; stripping first is not a shortcut to them.
+        keep <- c("RECOVER", "NOERROR")
         as.character(
           xslt::xml_xslt(
-            xml2::read_xml(source_path),
-            xml2::read_xml(sheet_path)
+            xml2::read_xml(source_path, options = keep),
+            xml2::read_xml(sheet_path, options = keep)
           )
         )
       },

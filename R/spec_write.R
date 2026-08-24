@@ -95,7 +95,23 @@
 #' materialise the rendered HTML: browsers are removing XSLT support, and a
 #' reviewer working from a submission archive should not need one.
 #'
-#' External dictionaries (`MedDRA`, ISO 3166) are not written yet.
+#' **Data-aware writing.** Pass `data` and artoo reads the datasets the
+#' define describes, which a spec-only tool cannot. A blank `length` is
+#' filled from the real maximum byte width; a stated one shorter than the
+#' data is widened, because a length below the real maximum is a conformance
+#' finding, and the write says which variables it widened. A stated length
+#' LONGER than the data is left alone: a length is a claim about the domain,
+#' not about one extract. Value-level metadata is derived for the standard
+#' findings shapes -- a result keyed by its test code, `TSVAL` by `TSPARMCD`,
+#' `QVAL` by `QNAM`, `AVAL` and `AVALC` by `PARAMCD` -- with each derived row
+#' carrying the type and width of the rows it covers. A variable the spec
+#' already gives value-level rows to is never touched. A dataset with no
+#' records is flagged `def:HasNoData` when it also carries a comment
+#' explaining the absence, and left unflagged with a warning when it does
+#' not.
+#'
+#' External dictionaries (`MedDRA`, ISO 3166) are not written yet: a
+#' populated `dictionaries` table is reported rather than emitted.
 #'
 #' Fields with no P21 column (`itemoid`, `target_data_type`,
 #' per-variable `key_sequence`) likewise do not survive an xlsx round-trip;
@@ -124,6 +140,9 @@
 #'     writes the `xml-stylesheet` processing instruction and copies the
 #'     bundled CDISC stylesheet beside the output; a string names a
 #'     stylesheet without copying one; `FALSE` writes neither.
+#'   * `data` -- `<list of <data.frame>> | NULL`. The datasets the define
+#'     describes, named for their dataset. artoo reads them and fills what
+#'     the spec leaves blank; see **Data-aware writing**.
 #'   * `html` -- `<logical(1)> | <character(1)>: default FALSE`. `TRUE` also
 #'     renders the document through its stylesheet into a sibling `.html`; a
 #'     string renders it to that path. Needs the `xslt` and `callr` packages.
@@ -189,8 +208,16 @@ write_spec <- function(spec, path, ...) {
   ext <- tolower(tools::file_ext(path))
   switch(
     ext,
-    json = .write_spec_json(spec, path, call),
-    xlsx = .write_spec_xlsx(spec, path, call),
+    json = {
+      # Silently ignoring `data =` or `version =` on a .json path makes a
+      # mistyped extension look like it worked.
+      rlang::check_dots_empty0(..., call = call)
+      .write_spec_json(spec, path, call)
+    },
+    xlsx = {
+      rlang::check_dots_empty0(..., call = call)
+      .write_spec_xlsx(spec, path, call)
+    },
     xml = .write_spec_define(spec, path, ..., call = call),
     .artoo_abort(
       c(
