@@ -25,3 +25,16 @@ skip_if_no_reference <- function(name) {
     paste0("reference fixture not present: ", name)
   )
 }
+
+# Is xslt installed, WITHOUT loading it.
+#
+# `skip_if_not_installed()` calls `requireNamespace()`, which loads the
+# package and its DLL -- and holding libxslt beside libxml2's XSD validator
+# in one process is what the render subprocess exists to prevent. A test
+# that skips unless xslt is present must not be the thing that loads it.
+skip_if_no_xslt <- function() {
+  testthat::skip_if(
+    !nzchar(system.file(package = "xslt")),
+    "xslt is not installed"
+  )
+}

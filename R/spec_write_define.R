@@ -29,10 +29,7 @@
 ) {
   rlang::check_installed("xml2", reason = "to write Define-XML specs.")
   if (!isFALSE(html)) {
-    rlang::check_installed(
-      c("xslt", "callr"),
-      reason = "to render a define.xml as HTML."
-    )
+    .dx_check_render_deps()
   }
   target <- .dx_target_version(version, spec, call)
   p <- .define_profile(target, call)
@@ -761,10 +758,7 @@
 }
 
 .dx_render_html <- function(path, html, p, call = rlang::caller_env()) {
-  rlang::check_installed(
-    c("xslt", "callr"),
-    reason = "to render a define.xml as HTML."
-  )
+  .dx_check_render_deps()
   # Render through the stylesheet the DOCUMENT names, when that file is
   # actually beside it. Otherwise a sponsor who replaced the stylesheet gets
   # a browser rendering and an artoo rendering that disagree -- and keeping
@@ -887,4 +881,37 @@
     kind = "define",
     call = call
   )
+}
+
+# Is the rendering toolchain present -- WITHOUT loading libxslt here.
+#
+# `rlang::check_installed()` calls `requireNamespace()`, which loads the
+# package and its DLL. Loading libxslt beside libxml2's XSD validator in
+# one process is precisely what `.dx_render_html()`'s subprocess exists to
+# avoid: the two share libxml2's global state, and once both are resident,
+# reading any XML can abort the session outright -- "Start tag expected"
+# and a core dump, not an R error a caller could catch.
+#
+# So checking for xslt the friendly way defeated the isolation before the
+# subprocess ever started. macOS tolerated the pair; Linux and Windows did
+# not, which is why every CI runner failed on a suite that passed here.
+#
+# `system.file()` answers "is it installed" without loading anything. The
+# friendly check runs only when the answer is no, and there loading is
+# moot because there is nothing to load. callr is pure R and safe either
+# way.
+#' @noRd
+.dx_check_render_deps <- function() {
+  rlang::check_installed("callr", reason = "to render a define.xml as HTML.")
+  if (!.dx_have_xslt()) {
+    rlang::check_installed("xslt", reason = "to render a define.xml as HTML.")
+  }
+  invisible(TRUE)
+}
+
+# Its own function so a test can say "pretend xslt is missing" without
+# mocking the availability check into something that loads it.
+#' @noRd
+.dx_have_xslt <- function() {
+  nzchar(system.file(package = "xslt"))
 }

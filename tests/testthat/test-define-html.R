@@ -59,7 +59,7 @@ test_that("a stylesheet already beside the output is never overwritten", {
 
 test_that("html = TRUE renders the document through its own stylesheet", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # Deliberately NOT skip_on_cran(): this is the only test that exercises the
   # renderer, and skipping it there would leave the whole path uncovered by
@@ -89,7 +89,7 @@ test_that("html = TRUE renders the document through its own stylesheet", {
 
 test_that("html = <path> renders to that path", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   dir <- withr::local_tempdir()
   elsewhere <- file.path(dir, "review", "rendering.html")
@@ -110,6 +110,12 @@ test_that("html = TRUE without xslt names the package rather than skipping", {
   skip_if_not_installed("xml2")
   # Silently writing no HTML when it was asked for is the failure mode this
   # guards: the user finds out when a reviewer cannot open the file.
+  # Pretend it is absent, in both halves. The availability check
+  # deliberately does NOT use `requireNamespace()` -- that would load
+  # libxslt into this process, the very thing the render subprocess exists
+  # to prevent -- so the absence has to be faked at the check, and then
+  # `check_installed()` has to react to it as it would in reality.
+  testthat::local_mocked_bindings(.dx_have_xslt = function() FALSE)
   testthat::local_mocked_bindings(
     check_installed = function(pkg, ...) {
       if ("xslt" %in% pkg) {
@@ -133,7 +139,7 @@ test_that("html = TRUE without xslt names the package rather than skipping", {
 
 test_that("rendering does not destabilise the session (#p8)", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   skip_on_cran()
   # libxslt and libxml2's XSD validator share global state, and driving both
@@ -172,7 +178,7 @@ test_that("stylesheet = FALSE writes neither a PI nor a stylesheet", {
 
 test_that("a missing bundled stylesheet is an install error, not a render error", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # An artoo packaging fault, catchable separately from anything wrong with
   # the user's document.
@@ -201,7 +207,7 @@ test_that("a missing bundled stylesheet is an install error, not a render error"
 
 test_that("a stylesheet that cannot render says so as a codec error", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   dir <- withr::local_tempdir()
   path <- file.path(dir, "define.xml")
@@ -227,7 +233,7 @@ test_that("a stylesheet that cannot render says so as a codec error", {
 
 test_that("the stylesheet the document names is the one it renders through", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # Keeping a sponsor's stylesheet and then rendering through the bundled one
   # would give a browser and artoo two different renderings of one document
@@ -261,7 +267,7 @@ test_that("the stylesheet the document names is the one it renders through", {
 
 test_that("rendered text is not glued together by whitespace stripping (#p8-review-1)", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # xml2::read_xml() strips whitespace-only text nodes by default, and the
   # stylesheets take string-values that span them -- so a method description
@@ -287,7 +293,7 @@ test_that("rendered text is not glued together by whitespace stripping (#p8-revi
 
 test_that("a renamed stylesheet is the one rendered through (#p10-review-m1)", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # `stylesheet = "acme.xsl"` names acme.xsl in the processing instruction
   # and leaves the file to the sponsor. Rendering through the bundled sheet
@@ -324,7 +330,7 @@ test_that("a renamed stylesheet is the one rendered through (#p10-review-m1)", {
 
 test_that("a malformed document is a render error, not partial HTML (#p10-review-m2)", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # What this pins: a document that will not parse is a codec error and
   # leaves no half-written HTML behind. It is NOT a probe of the options
@@ -354,7 +360,7 @@ test_that("a malformed document is a render error, not partial HTML (#p10-review
 
 test_that("a PI naming an absent stylesheet is not rendered in silence (#p11-review)", {
   skip_if_not_installed("xml2")
-  skip_if_not_installed("xslt")
+  skip_if_no_xslt()
   skip_if_not_installed("callr")
   # `stylesheet = "acme.xsl"` names a file the sponsor supplies. Before they
   # do, artoo can only render through the bundled sheet -- which is the same
@@ -374,4 +380,44 @@ test_that("a PI naming an absent stylesheet is not rendered in silence (#p11-rev
     class = "artoo_warning_define"
   )
   expect_true(file.exists(file.path(dir, "define.html")))
+})
+
+test_that("rendering never loads libxslt into this process (#p12-ci)", {
+  skip_if_not_installed("xml2")
+  skip_if_no_xslt()
+  skip_if_not_installed("callr")
+  # The whole reason the render runs in a subprocess is that libxslt and
+  # libxml2's XSD validator share global state: with both resident, reading
+  # any XML afterwards can abort the session outright -- "Start tag
+  # expected" and a core dump, not an R error a caller could catch.
+  #
+  # That isolation was defeated for a while by the availability check
+  # itself. `rlang::check_installed()` calls `requireNamespace()`, which
+  # loads the package and its DLL, so the parent held both libraries before
+  # the subprocess ever started. macOS tolerated the pair; every Linux and
+  # Windows runner aborted, which is why only CI saw it.
+  #
+  # This asserts the property directly, because the symptom is a crash --
+  # a crashed process cannot report its own failure, so no ordinary test
+  # can catch the regression.
+  skip_if(
+    "xslt" %in% loadedNamespaces(),
+    "xslt already loaded by something else in this session"
+  )
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(
+      read_define("define21-sdtm.xml"),
+      path,
+      created = FROZEN_HTML,
+      html = TRUE
+    )
+  ))
+  expect_true(file.exists(file.path(dir, "define.html")))
+  expect_false("xslt" %in% loadedNamespaces())
+  expect_false("xslt" %in% names(getLoadedDLLs()))
+  # ...and the thing the crash actually broke still works.
+  expect_s3_class(xml2::read_xml(path), "xml_document")
+  expect_true(validate_define(path)@summary$valid)
 })
