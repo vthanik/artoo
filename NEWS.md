@@ -10,6 +10,21 @@
   output, analysis-results metadata, and external dictionaries are not written
   yet. Needs the `xml2` package.
 
+* `read_spec()` on a Define-XML 2.0 document now reads its standard as a
+  `standards` row rather than one concatenated string. A version containing a
+  space (`3.1.2 Amendment 1` is a real one) used to have half of it moved into
+  the standard's name on the way back out, and a document naming no standard
+  at all used to be written back asserting the standard was `NA`.
+
+* `read_spec()` on a Define-XML document now reports every place it reads one
+  of several: a second `def:DocumentRef`, `def:PDFPageRef`, or
+  `TranslatedText`. All four bundled CDISC examples lose a `def:DocumentRef`
+  this way, and the loss was invisible because the writer dropped it too.
+
+* `read_spec()` and `write_spec()` now carry the document's build provenance
+  (`Originator`, `SourceSystem`, `SourceSystemVersion`) and the
+  MetaDataVersion's own comment.
+
 * Analysis Results Metadata (ARM v1.0) is read and written, in both
   Define-XML versions. `read_spec()` fills `arm_displays` and `arm_results`
   from `arm:AnalysisResultDisplays`, and `write_spec()` emits them back. One

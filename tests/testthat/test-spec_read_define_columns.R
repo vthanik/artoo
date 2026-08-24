@@ -166,3 +166,22 @@ test_that("dropping a second def:Origin is reported, not silent (#p4-review)", {
     transform = function(x) sub("'.*/(two-origins.xml)'", "'\\1'", x)
   )
 })
+
+test_that("a second def:DocumentRef is reported, not silent (#p5-review-4)", {
+  skip_if_not_installed("xml2")
+  # Verified against the bundled CDISC ADaM example, whose COM.ADQSADAS
+  # points at both a program and the analysis data reviewer's guide. The
+  # drop is symmetric with the writer, so no round-trip test can see it.
+  expect_warning(
+    read_spec(test_path("fixtures", "define21-adam.xml")),
+    "more than one .*DocumentRef"
+  )
+  # Every bundled example loses at least one.
+  for (f in c("define20-sdtm.xml", "define20-adam.xml", "define21-sdtm.xml")) {
+    expect_warning(
+      read_spec(test_path("fixtures", f)),
+      "more than one .*DocumentRef",
+      info = f
+    )
+  }
+})

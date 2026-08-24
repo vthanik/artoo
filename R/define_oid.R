@@ -168,10 +168,31 @@
     # pool refuses the document with a message about identifiers the user
     # never supplied.
     value_item <- .dx_fill(val$itemoid, minted)
+    supplied <- as.character(val$itemoid)
+    supplied <- supplied[!is.na(supplied) & nzchar(trimws(supplied))]
     for (k in unique(value_parent)) {
       hit <- which(value_parent == k)
-      if (anyDuplicated(value_item[hit])) {
-        value_item[hit] <- .dx_fill(val$itemoid[hit], fallback[hit])
+      if (!anyDuplicated(value_item[hit])) {
+        next
+      }
+      # Reset the whole parent to ordinals, then step ordinals that a
+      # SUPPLIED OID already occupies. Without that second step the reset
+      # itself can collide -- a row minted "...1" against a sibling whose
+      # spec-given itemoid is "...1" -- and the ItemDef pool then refuses the
+      # document, blaming identifiers the user never chose.
+      n <- 0L
+      for (i in hit) {
+        if (!.dx_blank(val$itemoid[[i]])) {
+          next
+        }
+        repeat {
+          n <- n + 1L
+          candidate <- sprintf("%s.%d", k, n)
+          if (!(candidate %in% supplied)) {
+            break
+          }
+        }
+        value_item[[i]] <- candidate
       }
     }
   }

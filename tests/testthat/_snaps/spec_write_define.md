@@ -66,7 +66,7 @@
     Condition
       Warning:
       Define-XML 2.0 cannot carry everything this spec holds.
-      x Dropped: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:IsNonStandard", "def:HasNoData", and "def:Origin/@Source".
+      x Dropped or rewritten: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:IsNonStandard", "def:HasNoData", "def:Origin/@Source", "ODM/@def:Context", and "Collected origins, rewritten as CRF".
       i Write the spec as "2.1", or to native JSON, to keep it whole.
 
 # 2.0 refuses a spec that names no standard at all
@@ -76,6 +76,26 @@
     Condition
       Error in `.dx_metadata_version()`:
       ! Define-XML 2.0 needs a standard name and version.
-      x `def:StandardName` and `def:StandardVersion` are required on MetaDataVersion.
-      i Set `standard` on the spec, or flag a `standards` row `is_primary`.
+      x The spec names no standard.
+      i Set `standard` to a name and a version, or flag a `standards` row `is_primary`.
+
+# a one-token standard is refused, not blamed on artoo (#p5-review-2)
+
+    Code
+      write_spec(spec, path, version = "2.0", created = FROZEN)
+    Condition
+      Error in `.dx_metadata_version()`:
+      ! Define-XML 2.0 needs a standard name and version.
+      x `standard` is "SDTMIG", which names no version.
+      i Set `standard` to a name and a version, or flag a `standards` row `is_primary`.
+
+# a value-level row's origin source counts as a downgrade loss
+
+    Code
+      spec <- write_spec(spec, path, version = "2.0", created = FROZEN)
+    Condition
+      Warning:
+      Define-XML 2.0 cannot carry everything this spec holds.
+      x Dropped or rewritten: "def:Origin/@Source" and "Collected origins, rewritten as CRF".
+      i Write the spec as "2.1", or to native JSON, to keep it whole.
 

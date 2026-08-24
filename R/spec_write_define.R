@@ -97,17 +97,69 @@
       }
     }
   }
-  if (is.null(p$enum$origin_source) && any_value(spec@variables, "source")) {
+  if (
+    is.null(p$enum$origin_source) &&
+      (any_value(spec@variables, "source") || any_value(spec@values, "source"))
+  ) {
     lost <- c(lost, "def:Origin/@Source")
   }
-  if (!nrow(spec@datasets) || !length(lost)) {
+  if (!has("def:CommentOID") || is.null(p$order[["def:Class"]])) {
+    # 2.0 has no def:SubClass element, and no CodeList/CodeListItem
+    # Description, so those go without a place to put them.
+    if (any_value(spec@datasets, "subclass")) {
+      lost <- c(lost, "def:SubClass")
+    }
+    if (any_value(spec@codelists, "term_description")) {
+      lost <- c(lost, "CodeListItem/Description")
+    }
+  }
+  if (is.null(p$enum$context) && !is.na(.dx_study_field(spec, "odm_context"))) {
+    lost <- c(lost, "ODM/@def:Context")
+  }
+  if (!("def:CommentOID" %in% p$def_attrs$MetaDataVersion)) {
+    if (!is.na(.dx_study_field(spec, "metadata_version_comment_id"))) {
+      lost <- c(lost, "MetaDataVersion/@def:CommentOID")
+    }
+  }
+  if (nrow(spec@standards) == 1L && !has("def:StandardOID")) {
+    # 2.0 keeps a name and a version and nothing else about the standard.
+    extra <- c("status", "publishing_set", "comment_id")
+    if (
+      any(vapply(extra, function(k) any_value(spec@standards, k), logical(1)))
+    ) {
+      lost <- c(lost, "def:Standard status, publishing set and comment")
+    }
+  }
+  if (
+    !("Title" %in% p$local_attrs[["def:PDFPageRef"]]) &&
+      (any_value(spec@arm_displays, "page_title") ||
+        any_value(spec@variables, "page_title") ||
+        any_value(spec@methods, "page_title") ||
+        any_value(spec@comments, "page_title"))
+  ) {
+    lost <- c(lost, "def:PDFPageRef/@Title")
+  }
+  # The origin vocabulary is TRANSLATED rather than dropped, and a
+  # translation is a change to what the document asserts: a variable the
+  # spec says was "Collected" is written as CRF-collected, because CRF is
+  # 2.0's only spelling for it.
+  if (
+    !is.null(p$enum$origin_type) &&
+      !("Collected" %in% p$enum$origin_type) &&
+      (any(.dx_chr(spec@variables, "origin") == "Collected", na.rm = TRUE) ||
+        any(.dx_chr(spec@values, "origin") == "Collected", na.rm = TRUE))
+  ) {
+    lost <- c(lost, "Collected origins, rewritten as CRF")
+  }
+  lost <- unique(lost)
+  if (!length(lost)) {
     return(invisible(character(0)))
   }
   version <- p$version
   .artoo_warn(
     c(
       "Define-XML {version} cannot carry everything this spec holds.",
-      "x" = "Dropped: {.val {lost}}.",
+      "x" = "Dropped or rewritten: {.val {lost}}.",
       "i" = "Write the spec as {.val 2.1}, or to native JSON, to keep it whole."
     ),
     kind = "define",
@@ -141,7 +193,12 @@
       ODMVersion = p$odm_version,
       FileType = "Snapshot",
       FileOID = .dx_file_oid(spec, oids, p),
-      CreationDateTime = stamp
+      CreationDateTime = stamp,
+      # Who built the document and with what. Optional, and sponsor-authored:
+      # artoo never invents them, but a document that carried them keeps them.
+      Originator = .dx_study_field(spec, "originator"),
+      SourceSystem = .dx_study_field(spec, "source_system"),
+      SourceSystemVersion = .dx_study_field(spec, "source_system_version")
     ),
     # The document's own context, not an assumption. Asserting "Submission"
     # on a file the sponsor marked otherwise is a claim artoo has no standing
@@ -260,7 +317,8 @@
         OID = oids$mdv,
         Name = .dx_mdv_name(spec),
         Description = .dx_study_field(spec, "metadata_version_description"),
-        "def:DefineVersion" = .dx_define_version(spec, p)
+        "def:DefineVersion" = .dx_define_version(spec, p),
+        "def:CommentOID" = .dx_mdv_comment(spec, p)
       ),
       .dx_standard_attrs(spec, p)
     ),
@@ -324,20 +382,33 @@
   pick <- if (nrow(std)) which(.dx_lgl(std, "is_primary")) else integer(0)
   if (!length(pick)) {
     # Fall back to the scalar @standard, which is where a spec built from a
-    # workbook carries it: "SDTMIG 3.4" splits into a name and a version.
+    # WORKBOOK carries it: "SDTMIG 3.4" splits into a name and a version.
+    #
+    # The split is a guess, and it is only ever reached for a source that
+    # never had the two fields apart. A Define-XML read fills the standards
+    # table instead, precisely so a version containing a space
+    # ("3.1.2 Amendment 1") is not silently cut in half here.
     scalar <- spec@standard
-    if (is.na(scalar)) {
+    parts <- if (is.na(scalar)) {
+      character(0)
+    } else {
+      strsplit(trimws(scalar), "[[:space:]]+")[[1]]
+    }
+    if (length(parts) < 2L) {
       .artoo_abort(
         c(
           "Define-XML 2.0 needs a standard name and version.",
-          "x" = "{.code def:StandardName} and {.code def:StandardVersion} are required on MetaDataVersion.",
-          "i" = "Set {.arg standard} on the spec, or flag a {.code standards} row {.code is_primary}."
+          "x" = if (length(parts)) {
+            "{.arg standard} is {.val {scalar}}, which names no version."
+          } else {
+            "The spec names no standard."
+          },
+          "i" = "Set {.arg standard} to a name and a version, or flag a {.code standards} row {.code is_primary}."
         ),
         kind = "define",
         call = call
       )
     }
-    parts <- strsplit(trimws(scalar), "[[:space:]]+")[[1]]
     return(.dx_attrs(
       "def:StandardName" = paste(utils::head(parts, -1L), collapse = " "),
       "def:StandardVersion" = utils::tail(parts, 1L)
@@ -359,6 +430,16 @@
     return(supplied)
   }
   paste0(oids$study, ".Define-XML_", p$define_version)
+}
+
+# MetaDataVersion/@def:CommentOID is 2.1-only. Dropping it left the comment
+# it names defined but unreferenced, which define_lint() reports as an orphan.
+#' @noRd
+.dx_mdv_comment <- function(spec, p) {
+  if (!("def:CommentOID" %in% p$def_attrs$MetaDataVersion)) {
+    return(NA_character_)
+  }
+  .dx_study_field(spec, "metadata_version_comment_id")
 }
 
 #' @noRd

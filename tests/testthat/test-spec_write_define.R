@@ -1064,3 +1064,182 @@ test_that("2.0 refuses a spec that names no standard at all", {
     error = TRUE
   )
 })
+
+# ---- phase 5 review ------------------------------------------------------
+
+test_that("a define naming no standard never writes StandardName=\"NA\" (#p5-review-1)", {
+  skip_if_not_installed("xml2")
+  # def:Standards is minOccurs="0", so a 2.1 document may name no standard.
+  # Pasting its two absent halves into one scalar produced "NA NA", which the
+  # 2.0 writer then split back into two attributes reading "NA" -- valid
+  # against the schema, and asserting to a reviewer that the standard is
+  # literally NA.
+  src <- file.path(withr::local_tempdir(), "nostd.xml")
+  base <- readLines(
+    system.file("extdata", "define-minimal.xml", package = "artoo"),
+    warn = FALSE
+  )
+  from <- grep("<def:Standards>", base, fixed = TRUE)
+  to <- grep("</def:Standards>", base, fixed = TRUE)
+  expect_length(from, 1L)
+  writeLines(base[-(from:to)], src)
+
+  spec <- read_define_path(src)
+  expect_true(is.na(spec@standard))
+  expect_identical(nrow(spec@standards), 0L)
+
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, out, version = "2.0", created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_false(file.exists(out))
+})
+
+test_that("a standard version containing a space survives (#p5-review-2)", {
+  skip_if_not_installed("xml2")
+  # "3.1.2 Amendment 1" is a real published IG version. Concatenating the
+  # name and version into one scalar and splitting it back on whitespace
+  # moved half the version into the name.
+  src <- file.path(withr::local_tempdir(), "amended.xml")
+  base <- readLines(test_path("fixtures", "define20-sdtm.xml"), warn = FALSE)
+  hit <- grep('def:StandardVersion="3.1.2"', base, fixed = TRUE)
+  expect_length(hit, 1L)
+  base[[hit]] <- sub(
+    'def:StandardVersion="3.1.2"',
+    'def:StandardVersion="3.1.2 Amendment 1"',
+    base[[hit]],
+    fixed = TRUE
+  )
+  writeLines(base, src)
+
+  spec <- read_define_path(src)
+  expect_identical(spec@standards$name, "SDTM-IG")
+  expect_identical(spec@standards$version, "3.1.2 Amendment 1")
+
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN))
+  mdv <- xml2::xml_find_first(
+    xml2::read_xml(out),
+    "//*[local-name()='MetaDataVersion']"
+  )
+  expect_identical(xml2::xml_attr(mdv, "StandardName"), "SDTM-IG")
+  expect_identical(xml2::xml_attr(mdv, "StandardVersion"), "3.1.2 Amendment 1")
+})
+
+test_that("a one-token standard is refused, not blamed on artoo (#p5-review-2)", {
+  skip_if_not_installed("xml2")
+  # The scalar split is only ever reached for a source that never had the two
+  # fields apart. One token used to slip through and fail at the schema gate,
+  # whose message blames artoo for a defect the input caused.
+  spec <- artoo_spec(
+    standard = "SDTMIG",
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    error = TRUE
+  )
+})
+
+test_that("a def:Standards block that cannot be made valid is omitted", {
+  skip_if_not_installed("xml2")
+  # 2.1 requires a Name from a closed list, a Version, a Type and a Status.
+  # A 2.0 document carries only a free-text name and a version, so promoting
+  # it wholesale produces an invalid document; omitting it is valid, and the
+  # write says so rather than leaving the user to find out from a validator.
+  spec <- read_define("define20-sdtm.xml")
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    write_spec(spec, path, version = "2.1", created = FROZEN),
+    class = "artoo_warning_define"
+  )
+  expect_true(validate_define(path)@summary$valid)
+  expect_length(
+    xml2::xml_find_all(
+      xml2::read_xml(path),
+      "//*[local-name()='Standards']"
+    ),
+    0L
+  )
+})
+
+test_that("2.0's standard spellings are normalised to 2.1's", {
+  # 2.0's name is free text and 2.1 closed the list, renaming several. That
+  # is the same standard under a new spelling, not a different claim.
+  p21 <- artoo:::.define_profile("2.1")
+  expect_identical(artoo:::.dx_standard_names("SDTM-IG"), "SDTMIG")
+  expect_identical(artoo:::.dx_standard_names("ADaM-IG"), "ADaMIG")
+  expect_identical(artoo:::.dx_standard_names("SDTMIG"), "SDTMIG")
+  expect_identical(artoo:::.dx_standard_name("SDTM-IG", p21), "SDTMIG")
+  expect_error(
+    artoo:::.dx_standard_name("Something Else", p21),
+    class = "artoo_error_define"
+  )
+})
+
+test_that("the document's build provenance survives a round trip", {
+  skip_if_not_installed("xml2")
+  spec <- read_define("define21-sdtm.xml")
+  expect_identical(spec@study$originator, "CDISC Data Exchange Standards Team")
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN))
+  root <- xml2::xml_root(xml2::read_xml(out))
+  expect_identical(
+    xml2::xml_attr(root, "Originator"),
+    "CDISC Data Exchange Standards Team"
+  )
+  expect_identical(xml2::xml_attr(root, "SourceSystem"), "M.Hungria-System")
+  expect_identical(xml2::xml_attr(root, "SourceSystemVersion"), "2.1-A1")
+})
+
+test_that("a value-level row's origin source counts as a downgrade loss", {
+  skip_if_not_installed("xml2")
+  # The notice checked `variables` only, so a spec whose @Source lives only
+  # on value-level rows was downgraded silently.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      origin = "Collected",
+      source = "Investigator",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    class = "artoo_warning_define"
+  )
+  expect_snapshot(
+    spec <- write_spec(spec, path, version = "2.0", created = FROZEN)
+  )
+})

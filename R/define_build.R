@@ -270,6 +270,16 @@
 
 # def:Standards (2.1). NULL when the spec carries no standards table, which
 # is legal: the element is optional.
+# The spellings Define-XML 2.0 used for standards 2.1 renamed. 2.0's name is
+# free text, so this is a normalisation of the same standard rather than a
+# claim about a different one.
+.dx_standard_renames <- c(
+  "SDTM-IG" = "SDTMIG",
+  "ADaM-IG" = "ADaMIG",
+  "SEND-IG" = "SENDIG",
+  "CDISC-NCI" = "CDISC/NCI"
+)
+
 #' @noRd
 .dx_standards <- function(spec, p, call = rlang::caller_env()) {
   if (is.null(p$order[["def:Standards"]])) {
@@ -277,6 +287,24 @@
   }
   std <- spec@standards
   if (!nrow(std)) {
+    return(NULL)
+  }
+  # def:Standard requires a Name from a CLOSED list, a Version, a Type and a
+  # Status. A spec read from a Define-XML 2.0 document carries only a free
+  # text name and a version -- 2.0 has no def:Standard element at all -- so
+  # it cannot always be promoted. Emitting a partial one produces an invalid
+  # document; emitting none is valid and honest, and this says which.
+  missing <- .dx_standards_gaps(std, p)
+  if (length(missing)) {
+    .artoo_warn(
+      c(
+        "The {.code def:Standards} block was not written.",
+        "x" = "Define-XML {p$version} requires {.val {missing}} on every standard, and the spec does not supply {?it/them}.",
+        "i" = "Fill the {.code standards} table to describe the standards this study follows."
+      ),
+      kind = "define",
+      call = call
+    )
     return(NULL)
   }
   ord <- .dx_row_order(std)
@@ -288,7 +316,7 @@
           "def:Standard",
           attrs = .dx_attrs(
             OID = std$standard_id[[i]],
-            Name = std$name[[i]],
+            Name = .dx_standard_name(std$name[[i]], p, call),
             Type = .dx_enum(
               .dx_chr(std, "type")[[i]],
               p$enum$standard_type,
@@ -308,6 +336,44 @@
         )
       })
     )
+  )
+}
+
+# What every def:Standard row would still be missing, as field names.
+#' @noRd
+.dx_standards_gaps <- function(std, p) {
+  need <- c(
+    Name = "name",
+    Version = "version",
+    Type = "type",
+    Status = "status"
+  )
+  gaps <- vapply(
+    need,
+    function(col) any(.dx_blank(.dx_chr(std, col))),
+    logical(1)
+  )
+  bad_name <- !all(
+    .dx_standard_names(.dx_chr(std, "name")) %in% p$enum$standard_name
+  )
+  c(names(need)[gaps], if (bad_name && !gaps[["Name"]]) "a recognised Name")
+}
+
+#' @noRd
+.dx_standard_names <- function(x) {
+  v <- trimws(as.character(x))
+  hit <- unname(.dx_standard_renames[v])
+  # ifelse() inherits names from its condition, so unname BOTH sides.
+  unname(ifelse(is.na(hit), v, hit))
+}
+
+#' @noRd
+.dx_standard_name <- function(x, p, call = rlang::caller_env()) {
+  .dx_enum(
+    .dx_standard_names(x),
+    p$enum$standard_name,
+    "def:Standard Name",
+    call
   )
 }
 

@@ -64,6 +64,35 @@
 # unambiguous where it matters: a range is only legal for Type="PhysicalRef",
 # whose @PageRefs is a space-separated list of integers and so can never
 # contain a hyphen. A lone @FirstPage with no @LastPage is read as that page.
+# Warn when a node carries more than one of a child artoo models as one.
+#
+# Every such drop is SYMMETRIC -- the reader takes the first and the writer
+# emits one -- so no round-trip test can see it. The bundled CDISC ADaM
+# example loses a def:DocumentRef this way, on a comment that points at both
+# a program and the analysis data reviewer's guide.
+#' @noRd
+.dx_warn_dropped <- function(mdv, local, label, path, call) {
+  parents <- xml2::xml_find_all(
+    mdv,
+    sprintf(".//*[count(*[local-name()='%s']) > 1]", local)
+  )
+  if (!length(parents)) {
+    return(invisible(NULL))
+  }
+  where <- unique(vapply(parents, xml2::xml_name, character(1)))
+  n <- length(parents)
+  .artoo_warn(
+    c(
+      "{n} element{?s} carr{?ies/y} more than one {.code {label}}.",
+      "x" = "In {.path {path}}, only the first is read, on: {.val {where}}.",
+      "i" = "Writing this spec back will not reproduce the others."
+    ),
+    kind = "spec",
+    call = call
+  )
+  invisible(NULL)
+}
+
 #' @noRd
 .dx_page_refs <- function(pg) {
   refs <- .dx_attr(pg, "PageRefs")
@@ -172,11 +201,20 @@
       xml2::xml_attr(standards[[pick]], "Version")
     )
   } else {
-    # Define 2.0 records the standard on the MetaDataVersion itself.
-    paste(
-      .dx_attr(mdv, "StandardName"),
-      .dx_attr(mdv, "StandardVersion")
-    )
+    # Define-XML 2.0 records the standard on the MetaDataVersion itself, as a
+    # name/version pair. Pasting them into one scalar is lossy: a real
+    # version can contain a space ("3.1.2 Amendment 1"), and splitting that
+    # back on whitespace silently moves half of it into the name. The pair is
+    # read into the standards TABLE below instead; this scalar stays for
+    # display, and is NA when the document names no standard at all.
+    mdv_name <- .dx_attr(mdv, "StandardName")
+    mdv_version <- .dx_attr(mdv, "StandardVersion")
+    if (is.na(mdv_name) && is.na(mdv_version)) {
+      NA_character_
+    } else {
+      halves <- c(mdv_name, mdv_version)
+      paste(halves[!is.na(halves)], collapse = " ")
+    }
   }
   # The document's OWN identifiers, so a read and a write back keep every
   # name a reviewer, a prior submission, or a tracking system may already
@@ -194,6 +232,13 @@
     metadata_version_oid = .dx_attr(mdv, "OID"),
     metadata_version_name = .dx_attr(mdv, "Name"),
     metadata_version_description = .dx_attr(mdv, "Description"),
+    metadata_version_comment_id = .dx_attr(mdv, "CommentOID"),
+    originator = .dx_attr(xml2::xml_root(doc), "Originator"),
+    source_system = .dx_attr(xml2::xml_root(doc), "SourceSystem"),
+    source_system_version = .dx_attr(
+      xml2::xml_root(doc),
+      "SourceSystemVersion"
+    ),
     stringsAsFactors = FALSE
   )
 
@@ -252,11 +297,20 @@
     )],
     "OID"
   )
+  .dx_warn_dropped(
+    mdv,
+    "DocumentRef",
+    "def:DocumentRef",
+    path,
+    call
+  )
+  .dx_warn_dropped(mdv, "PDFPageRef", "def:PDFPageRef", path, call)
+  .dx_warn_dropped(mdv, "TranslatedText", "TranslatedText", path, call)
   if (length(multi_origin)) {
     .artoo_warn(
       c(
-        "{length(multi_origin)} ItemDef{?s} in {.path {path}} carr{?ies/y} more than one {.code def:Origin}.",
-        "x" = "Only the first is read: {.val {multi_origin}}.",
+        "{length(multi_origin)} ItemDef{?s} carr{?ies/y} more than one {.code def:Origin}.",
+        "x" = "In {.path {path}}, only the first is read: {.val {multi_origin}}.",
         "i" = "Writing this spec back will not reproduce the others."
       ),
       kind = "spec",
@@ -634,7 +688,31 @@
   # back-references. Collapsing it to one scalar, as the reader used to, loses
   # which standard each dataset and codelist actually claims.
   std_nodes <- .dx_find_all(mdv, "Standard")
-  standards <- if (length(std_nodes)) {
+  standards_from_mdv <- NULL
+  if (!length(std_nodes)) {
+    # 2.0's single pair, read as the one standard it is. The writer then
+    # reads a table on both paths and never has to reconstruct a version
+    # from a string it once concatenated.
+    mdv_name <- .dx_attr(mdv, "StandardName")
+    mdv_version <- .dx_attr(mdv, "StandardVersion")
+    if (!is.na(mdv_name) || !is.na(mdv_version)) {
+      standards_from_mdv <- data.frame(
+        standard_id = "STD.1",
+        name = mdv_name,
+        type = "IG",
+        version = mdv_version,
+        status = NA_character_,
+        publishing_set = NA_character_,
+        comment_id = NA_character_,
+        is_primary = TRUE,
+        order = 1L,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  standards <- if (!is.null(standards_from_mdv)) {
+    standards_from_mdv
+  } else if (length(std_nodes)) {
     # A def:Standard missing @Type is invalid but readable, and a read never
     # schema-validates. Left as NA it poisons the cumsum below and every
     # subsequent row, so the primary flag silently becomes NA.

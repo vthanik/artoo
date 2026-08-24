@@ -178,6 +178,22 @@
       origin_source = c("Investigator", "Sponsor", "Subject", "Vendor"),
       standard_type = c("CT", "IG"),
       standard_status = c("Draft", "Final", "Provisional"),
+      # 2.1 closes def:Standard/@Name to this list. 2.0 has no def:Standard
+      # at all -- it carries a free-text name on MetaDataVersion -- so a 2.0
+      # document read and written as 2.1 has to be reconciled against it.
+      standard_name = c(
+        "ADaMIG",
+        "ADaMIG-MD",
+        "BIMO",
+        "CDISC/NCI",
+        "SDTMIG",
+        "SDTMIG-AP",
+        "SDTMIG-MD",
+        "SENDIG",
+        "SENDIG-AR",
+        "SENDIG-DART",
+        "SENDIG-GENETOX"
+      ),
       purpose = c("Tabulation", "Analysis"),
       method_type = c("Computation", "Imputation"),
       comparator = .wc_comparators,
