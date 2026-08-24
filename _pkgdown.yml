@@ -160,6 +160,7 @@ articles:
   navbar: ~
   contents:
   - articles/specs
+  - articles/workbook
   - articles/conform
   - articles/convert
   - articles/migrate-encoding

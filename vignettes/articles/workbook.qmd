@@ -1,0 +1,284 @@
+---
+title: "Authoring a specification workbook"
+---
+
+```{r}
+#| include: false
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(artoo)
+```
+
+Most specifications are written in Excel, in a workbook of one sheet per
+kind of metadata. artoo reads that workbook and writes the submission's
+define.xml from it. This article is the reference for filling one in: what
+each sheet is for, which cells artoo actually reads, and the handful of
+places where a plausible-looking entry produces a document that is not what
+you meant.
+
+It is written for the person holding the workbook. If you want the R side —
+inspecting a spec, repairing it, writing the define.xml — that is
+[Specifications](specs.html).
+
+## Start from a blank one
+
+`write_template()` writes an empty workbook whose sheets and headers are
+artoo's own reader, so nothing you fill in can be silently ignored:
+
+```{r}
+book <- tempfile(fileext = ".xlsx")
+write_template(book)
+readxl::excel_sheets(book)
+```
+
+Only **Datasets** and **Variables** are required. Every other sheet may be
+left empty and artoo omits what it finds nothing in.
+
+## Two shapes, and how to tell them apart
+
+Workbooks come in two generations, and artoo reads both. You will recognise
+which one you have from three things:
+
+| | Older | Newer |
+|---|---|---|
+| The study sheet is called | `Study` | `Define` |
+| Conditions live | on a `WhereClauses` sheet | in the `ValueLevel` cell |
+| The label column is called | `Description` | `Label` |
+
+If your workbook came out of a validation tool, it is whichever that tool
+writes. If you are starting fresh, use the template above — it is the newer
+shape — and read on; anywhere the two differ, this article says so.
+
+## Define / Study — the study sheet
+
+Two columns, `Attribute` and `Value`, one row per attribute.
+
+| Attribute | Why it matters |
+|---|---|
+| `StudyName` | The study's short name. |
+| `StudyDescription` | One line describing the study. |
+| `ProtocolName` | The protocol identifier. |
+| `StandardName` | `SDTMIG`, `ADaMIG`, `SENDIG`. Hyphenated spellings are understood. |
+| `StandardVersion` | `3.4`, `1.1`, and so on. |
+
+**`StandardName` and `StandardVersion` are the two that bite.** Define-XML
+2.0 refuses to be written without them, and until artoo learned to read the
+pair, a workbook that named its standard perfectly clearly still could not
+produce a define.xml. Fill them in.
+
+Anything else you put on this sheet is kept and written back out, so a
+sponsor field of your own survives a round trip.
+
+## Datasets — one row per dataset
+
+`Dataset` and one of `Description` / `Label` are the minimum.
+
+| Column | Notes |
+|---|---|
+| `Dataset` | The name, `DM`, `ADSL`. |
+| `Description` or `Label` | The dataset label. |
+| `Class` | `EVENTS`, `FINDINGS`, `BASIC DATA STRUCTURE`, ... |
+| `Structure` | Prose: "One record per subject". **Required** — Define-XML has no default for it. |
+| `Key Variables` | Space- or comma-separated. This is where a variable's key sequence comes from, so you do not fill that in twice. |
+| `Purpose` | `Tabulation` or `Analysis`. Derived from the standard when blank. |
+| `Repeating`, `Reference Data` | `Yes` / `No`. |
+| `Comment` | A **Comment ID**, matching a row on the Comments sheet — not free text. |
+
+## Variables — one row per variable per dataset
+
+| Column | Notes |
+|---|---|
+| `Order` | Position within the dataset. |
+| `Dataset`, `Variable` | Together they identify the row. |
+| `Label` | The variable label. |
+| `Data Type` | `text`, `integer`, `float`, `date`, `datetime`, `time`. |
+| `Length` | Expected on text, integer and float; **leave it blank on dates and times**, where it is a conformance finding. |
+| `Significant Digits` | Only with `float`. |
+| `Format` | The display format. |
+| `Mandatory` | `Yes` / `No`. |
+| `Codelist` | A Codelist ID **or a Dictionary ID** — one column serves both. |
+| `Origin` | `Collected`, `Derived`, `Assigned`, `Protocol`, `Predecessor`. |
+| `Pages` | CRF page numbers. See *Pages* below. |
+| `Method` | A Method ID, for a derived variable. |
+| `Predecessor` | Where an ADaM variable came from, e.g. `DM.AGE`. |
+| `Role` | `Identifier`, `Topic`, `Timing`, ... |
+| `Comment` | A Comment ID. |
+
+**Origin decides what else you must fill.** `Derived` wants a `Method`;
+`Predecessor` wants a `Predecessor`; `Collected` wants `Pages`. artoo writes
+what you give it, and a reviewer opening the define.html sees a blank where
+you left one.
+
+## ValueLevel — when one variable means several things
+
+A `QVAL` in a SUPP dataset, or an `AVAL` that is a different measurement per
+`PARAMCD`, needs one row per meaning. The columns are the Variables ones,
+plus the one that matters most:
+
+`Where Clause` says **which records this row describes**. In the newer
+shape you write the condition itself; in the older shape you write an ID
+and define the condition on the WhereClauses sheet.
+
+The condition grammar, written out:
+
+```
+PARAMCD EQ ACTOT                              a single value
+PARAMCD IN (ACITM01, ACITM02, ACITM03)        a set, in parentheses
+LBTESTCD EQ HCT and LBSPEC EQ BLOOD           several conditions, ANDed
+AVISIT EQ "Week 24"                           quote a value with a space
+LBCAT EQ "CHEMISTRY, LOCAL"                   or with a comma
+DM.COUNTRY EQ USA                             a variable in another dataset
+```
+
+Three rules worth knowing, because each has bitten someone:
+
+- **Quotes are delimiters, not part of the value.** `AVISIT EQ "Week 24"`
+  selects records whose AVISIT is the seven characters `Week 24`. You only
+  need them when the value contains a space or a comma.
+- **`IN` takes parentheses; `EQ` does not.** A comma inside an `EQ` value is
+  part of the value.
+- **Qualify a variable from another dataset**, as `DM.COUNTRY`. Without the
+  prefix, the condition is read as naming a variable in the row's own
+  dataset — a different question with a different answer.
+
+## WhereClauses — the older shape only
+
+One row per comparison; several rows sharing an `ID` are ANDed together.
+
+| Column | Notes |
+|---|---|
+| `ID` | Referenced from the ValueLevel `Where Clause` cell. |
+| `Dataset`, `Variable` | What is being tested. |
+| `Comparator` | `EQ`, `NE`, `IN`, `NOTIN`, `LT`, `LE`, `GT`, `GE`. |
+| `Value` | One value, or a comma-separated list for `IN` / `NOTIN`. |
+
+If your workbook has no such sheet, write the condition in the ValueLevel
+cell instead; artoo works out which shape you used from whether the sheet
+is there.
+
+## Codelists — one row per term
+
+The list-level columns repeat on every term row. That looks redundant and is
+how the format works.
+
+| Column | Notes |
+|---|---|
+| `ID` | The codelist identifier, referenced from `Variables.Codelist`. |
+| `Name` | The codelist name. **Required** by the schema. |
+| `Data Type` | `text`, `integer`, `float`. Must match the variables that use it. |
+| `NCI Codelist Code` | The C-code for the list, e.g. `C66731`. |
+| `Order` | Position of the term. |
+| `Term` | The submitted value. |
+| `Decoded Value` | What it means. |
+| `NCI Term Code` | The C-code for the term. |
+| `Comment` | A **Comment ID**. |
+
+## Dictionaries — MedDRA, WHODrug, ISO 3166
+
+An external dictionary has no terms to list, so it gets its own sheet: `ID`,
+`Name`, `Data Type`, `Dictionary`, `Version`. A variable points at one from
+its **`Codelist`** column, exactly as it would an enumerated codelist —
+there is one column for both, and artoo resolves against both.
+
+## Methods, Comments, Documents
+
+**Methods** — `ID`, `Name`, `Type` (`Computation`, `Imputation`), and
+`Description`, the prose a reviewer reads. `Expression Context` and
+`Expression Code` carry one formal expression: the language, and the code.
+
+**Comments** — `ID` and `Description`. Every `Comment` cell elsewhere in the
+workbook is an ID matching a row here. This is the single most common
+workbook mistake: writing the comment text into the `Comment` cell of the
+Variables sheet, where an ID belongs.
+
+**Documents** — `ID`, `Title`, `Href`. The `Href` is a filename, and it is
+also how artoo knows which document is the annotated CRF: **a filename
+ending in `crf`** (`acrf.pdf`, `blankcrf.pdf`, `oncology-crf.pdf`) is the
+annotated CRF, and everything else is a supplemental document. If your CRF
+is called something else, say so with a `Role` column of `Annotated CRF`.
+
+## Pages
+
+A page reference means nothing without a document, so `Pages` is read
+together with the annotated CRF above. Write them as `4 5`, `4, 5`, or a
+range `4-5` — all three are understood, and a range is written out as a
+first and last page rather than a list.
+
+## Analysis Displays and Analysis Results
+
+For ADaM specifications with analysis results metadata.
+
+**Analysis Displays** — `ID`, `Title`, and the `Document` and `Pages` where
+the display appears.
+
+**Analysis Results** — `Display`, `ID`, `Description`, `Reason`, `Purpose`,
+the documentation and the programming code. The column that carries the
+selection is:
+
+- newer shape: `Selection Criteria`, one bracket group per analysis
+  dataset — `ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]`, and `ADSL[]` for every
+  record;
+- older shape: an `Analysis Criteria` sheet, one row per analysis dataset
+  with its own `Variables` and `Where Clause`.
+
+`Variables` names the analysis variables, qualified by dataset when the
+result spans more than one: `ADAE.AEBODSYS, ADAE.AEDECOD`.
+
+## Fill it in, then check it
+
+Reading tells you what artoo understood. Read the workbook back and look at
+the slots before you write anything:
+
+```{r}
+spec <- read_spec(system.file("extdata", "adam-spec.xlsx", package = "artoo"))
+spec
+```
+
+`validate_spec()` checks the spec against itself — every reference resolving,
+every key sequence contiguous — without needing the data:
+
+```{r}
+validate_spec(spec)
+```
+
+Then write the define.xml. artoo validates the document against the CDISC
+schemas before the file reaches its destination, so an invalid one never
+overwrites a good file:
+
+```{r}
+define <- tempfile(fileext = ".xml")
+write_spec(spec, define)
+validate_define(define)
+```
+
+And `lint_define()` walks the reference graph the schema cannot see — an OID
+in Define-XML is a plain string as far as the schema is concerned, so a
+reference pointing at nothing is schema-valid:
+
+```{r}
+lint_define(define)
+```
+
+## What a workbook cannot carry
+
+A workbook is an interchange format, not a lossless one. A spec that came
+from a define.xml knows things no sheet has a column for — the OIDs the
+sponsor chose, which standard each dataset follows, whether a codelist was
+extended. artoo names them rather than dropping them quietly:
+
+```{r}
+#| warning: true
+book2 <- tempfile(fileext = ".xlsx")
+write_spec(adam_spec, book2)
+```
+
+Each line names the columns that sheet has no place for. Write a `.json`
+path instead when you need the spec back exactly — that format is lossless
+by construction, and it is the one to archive.
+
+## Where to next
+
+- [Specifications](specs.html) — the same workbook from the R side: read,
+  inspect, repair, and write.
+- [Conform & validate](conform.html) — apply the spec to data and see every
+  finding.
+- [Get started](artoo.html) — the whole round trip.
