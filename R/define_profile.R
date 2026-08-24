@@ -37,7 +37,16 @@
     "def:Origin",
     "def:ValueListRef"
   ),
-  CodeList = c("Description", "CodeListItem", "EnumeratedItem", "Alias"),
+  # ODM's CodeList offers a CHOICE of CodeListItem+, EnumeratedItem+ or a
+  # single ExternalCodeList, then Alias*. The order below is the sequence,
+  # and which of the three appears is the emitter's business.
+  CodeList = c(
+    "Description",
+    "CodeListItem",
+    "ExternalCodeList",
+    "EnumeratedItem",
+    "Alias"
+  ),
   MethodDef = c("Description", "FormalExpression", "Alias", "def:DocumentRef"),
   `def:CommentDef` = c("Description", "def:DocumentRef"),
   `def:WhereClauseDef` = c("RangeCheck"),

@@ -356,30 +356,28 @@
     logical(1)
   )
   external_oids <- cl_oids[external]
-  if (length(external_oids)) {
-    # An ExternalCodeList names a dictionary (MedDRA, WHODrug, ISO 3166)
-    # rather than an enumerable membership list, and artoo has no model for
-    # one yet. Both the list AND every reference to it are dropped, so a
-    # document written back from this spec loses the dictionary silently and
-    # lint_define() sees nothing dangling: the loss is undetectable unless
-    # the read says so.
-    dicts <- vapply(
-      cl_nodes[external],
-      function(n) {
+  # An ExternalCodeList names a dictionary (MedDRA, WHODrug, ISO 3166)
+  # rather than an enumerable membership list, so it becomes a
+  # `dictionaries` row. It used to be dropped along with every reference to
+  # it, which no round trip could see -- the writer dropped it too.
+  dictionaries <- if (!length(external_oids)) {
+    NULL
+  } else {
+    do.call(
+      rbind,
+      lapply(cl_nodes[external], function(n) {
         ext <- .dx_child(n, "ExternalCodeList")
-        d <- .dx_attr(ext, "Dictionary")
-        if (is.na(d)) .dx_attr(n, "Name") else d
-      },
-      character(1)
-    )
-    .artoo_warn(
-      c(
-        "{length(external_oids)} external codelist{?s} in {.path {path}} dropped.",
-        "x" = "{.val {dicts}}: artoo does not model external dictionaries yet.",
-        "i" = "Their references are dropped too, so writing this spec back will not reproduce them."
-      ),
-      kind = "spec",
-      call = call
+        data.frame(
+          dictionary_id = .dx_attr(n, "OID"),
+          name = .dx_attr(n, "Name"),
+          data_type = .dx_attr(n, "DataType"),
+          dictionary = .dx_attr(ext, "Dictionary"),
+          version = .dx_attr(ext, "Version"),
+          ref = .dx_attr(ext, "ref"),
+          href = .dx_attr(ext, "href"),
+          stringsAsFactors = FALSE
+        )
+      })
     )
   }
 
@@ -430,9 +428,6 @@
       NA_character_
     } else {
       xml2::xml_attr(clref, "CodeListOID")
-    }
-    if (!is.na(clid) && clid %in% external_oids) {
-      clid <- NA_character_ # dictionaries are not membership lists
     }
     origin <- .dx_child(n, "Origin")
     vlref <- .dx_child(n, "ValueListRef")
@@ -911,6 +906,7 @@
     datasets = scoped$datasets,
     variables = variables,
     codelists = scoped$codelists,
+    dictionaries = dictionaries,
     study = study,
     values = scoped$values,
     methods = scoped$methods,

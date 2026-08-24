@@ -132,19 +132,41 @@ test_that("codelist list-level attributes must agree within a codelist", {
   expect_match(issues, "disagrees within codelist CL.A")
 })
 
-test_that("dropping an external codelist is reported, not silent (#p4-review)", {
+test_that("an external codelist is read as a dictionary (#p12-P4)", {
   skip_if_not_installed("xml2")
-  # artoo has no dictionary model yet, so the list AND every reference to it
-  # are dropped. lint_define() then sees nothing dangling in a document
-  # written back, which makes the loss undetectable unless the read says so.
-  expect_warning(
-    read_spec(test_path("fixtures", "define20-sdtm.xml")),
-    class = "artoo_warning_spec"
+  # It used to be dropped, along with every reference to it, and the writer
+  # dropped it too -- so no round trip could see the loss. Now the list
+  # becomes a `dictionaries` row and the references to it stand.
+  spec <- suppressWarnings(read_spec(test_path(
+    "fixtures",
+    "define20-sdtm.xml"
+  )))
+  expect_gt(nrow(spec@dictionaries), 0L)
+  expect_true(all(c("dictionary", "version") %in% names(spec@dictionaries)))
+  expect_true(any(!is.na(spec@dictionaries$dictionary)))
+  # Whatever names one keeps the reference; the two kinds of terminology
+  # share the column because a workbook has only one. In this document it
+  # is the value-level rows that point at the dictionaries.
+  named <- c(spec@variables$codelist_id, spec@values$codelist_id)
+  expect_true(any(named %in% spec@dictionaries$dictionary_id))
+  # ...and writing it back emits the ExternalCodeList the reference needs,
+  # so artoo's own check finds nothing dangling.
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  expect_length(
+    xml2::xml_find_all(
+      xml2::read_xml(path),
+      "//*[local-name()='ExternalCodeList']",
+      ns = character()
+    ),
+    nrow(spec@dictionaries)
   )
-  expect_snapshot(
-    spec <- read_spec(test_path("fixtures", "define20-sdtm.xml")),
-    transform = function(x) sub("'.*/(define20-sdtm.xml)'", "'\\1'", x)
-  )
+  expect_false(any(grepl(
+    "^define_dangling",
+    lint_define(path)@findings$check
+  )))
 })
 
 test_that("dropping a second def:Origin is reported, not silent (#p4-review)", {

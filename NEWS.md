@@ -1,4 +1,10 @@
-# artoo 0.2.0.9000
+# artoo 0.2.0
+
+* `write_spec()` writes an external dictionary as the `ExternalCodeList` it
+  is, and `read_spec()` on a define.xml reads one back. A variable naming
+  MedDRA or WHODrug used to write a `CodeListRef` pointing at nothing --
+  schema-valid, and rejected by artoo's own reference check -- while a
+  document carrying one lost it and every reference to it on the way in.
 
 * `read_spec()` on a workbook reads the `Analysis Criteria` sheet, which is
   where the older workbook generation keeps an analysis result's datasets.

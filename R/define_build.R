@@ -789,6 +789,46 @@
 
 # ---- codelists ------------------------------------------------------------
 
+# An external dictionary, as the CodeList that references it.
+#
+# MedDRA, WHODrug, ISO 3166: terminologies too large to enumerate, so the
+# document names the dictionary and its version instead of its terms. ODM
+# models that as a CodeList whose single child is an ExternalCodeList, and
+# a variable points at it with the same CodeListRef it would use for an
+# enumerated list -- which is why one workbook column serves both.
+#' @noRd
+.dx_dictionaries <- function(dict, p, call = rlang::caller_env()) {
+  if (is.null(dict) || !nrow(dict)) {
+    return(list())
+  }
+  lapply(.dx_row_order(dict), function(i) {
+    id <- as.character(dict$dictionary_id[[i]])
+    name <- .dx_chr(dict, "name")[[i]]
+    dtype <- .dx_chr(dict, "data_type")[[i]]
+    .dx_node(
+      "CodeList",
+      attrs = .dx_attrs(
+        OID = id,
+        # Name is schema-required and the dictionary's own name is the
+        # obvious one; the id is the last resort, never a blank.
+        Name = if (.dx_blank(name)) id else name,
+        DataType = if (.dx_blank(dtype)) "text" else .to_define_datatype(dtype)
+      ),
+      kids = list(
+        ExternalCodeList = .dx_node(
+          "ExternalCodeList",
+          attrs = .dx_attrs(
+            Dictionary = .dx_chr(dict, "dictionary")[[i]],
+            Version = .dx_chr(dict, "version")[[i]],
+            ref = .dx_chr(dict, "ref")[[i]],
+            href = .dx_chr(dict, "href")[[i]]
+          )
+        )
+      )
+    )
+  })
+}
+
 #' @noRd
 .dx_codelist <- function(cl, p, call = rlang::caller_env()) {
   id <- .dx_one(cl$codelist_id)

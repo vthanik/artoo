@@ -437,6 +437,11 @@
       )
     })
   }
+  # An external dictionary is a CodeList too -- one with no terms to list
+  # and an ExternalCodeList saying where the terms live. Until it was
+  # emitted, a variable naming MedDRA wrote a CodeListRef pointing at
+  # nothing: schema-valid, and rejected by artoo's own reference check.
+  codelists <- c(codelists, .dx_dictionaries(spec@dictionaries, p, call))
 
   md <- spec@methods
   fes <- spec@method_expressions

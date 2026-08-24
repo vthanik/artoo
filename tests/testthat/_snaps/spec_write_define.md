@@ -78,7 +78,7 @@
     Condition
       Warning:
       Define-XML 2.0 cannot carry everything this spec holds.
-      x Dropped or rewritten: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:CommentOID on a CodeList", "def:IsNonStandard", "def:HasNoData", "def:Origin/@Source", "ODM/@def:Context", and "Collected origins, rewritten as CRF".
+      x Dropped or rewritten: "def:Standards (only the primary standard survives)", "def:StandardOID", "def:CommentOID on a CodeList", "def:IsNonStandard", "def:HasNoData", "def:Origin/@Source", "ODM/@def:Context", "Collected origins, rewritten as CRF", and "external dictionaries (not written by artoo yet)".
       i Write the spec as "2.1", or to native JSON, to keep it whole.
       Warning:
       Dataset "SUPPVS" is flagged as having no data, with no comment.
