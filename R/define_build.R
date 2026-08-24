@@ -200,7 +200,21 @@
 }
 
 #' @noRd
-.dx_leaf <- function(document_id, href, title) {
+.dx_leaf <- function(document_id, href, title, call = rlang::caller_env()) {
+  if (.dx_blank(href)) {
+    # xlink:href is required on def:leaf. Dropping a blank one produced a
+    # document the schema gate refused with a message blaming artoo for a
+    # defect the source caused.
+    .artoo_abort(
+      c(
+        "Document {.val {document_id}} has no location.",
+        "x" = "{.code def:leaf/@xlink:href} is required by Define-XML.",
+        "i" = "Set {.code href} on the documents table."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
   .dx_node(
     "def:leaf",
     attrs = .dx_attrs(ID = document_id, "xlink:href" = href),

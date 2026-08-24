@@ -709,24 +709,31 @@ read_spec <- function(
   # the continuation rows arrive with a blank key and .drop_blank_key()
   # deletes them -- silently, and most of the ARM with them.
   arm_displays <- .nullify_empty(
-    .drop_blank_key(
-      .fill_down(
-        .normalise_p21_cols(ad_raw, .p21_arm_display_map),
+    .collapse_arm_displays(
+      .drop_blank_key(
+        .fill_down(
+          .normalise_p21_cols(ad_raw, .p21_arm_display_map),
+          "display_id"
+        ),
         "display_id"
       ),
-      "display_id"
+      call
     )
   )
+  # Fill BOTH keys, then drop on the per-dataset payload rather than on the
+  # key: filling `result_id` and dropping on a blank `result_id` makes the
+  # drop unreachable for every row below the first, so a trailing "Note: see
+  # SAP section 9.1" row is absorbed as a continuation of the last result.
+  # This mirrors codelists, which fill `codelist_id` and drop on `term`.
   arm_results <- .nullify_empty(
-    .drop_blank_key(
+    .drop_blank_arm_result(
       .fill_down(
         .fill_down(
           .normalise_p21_cols(ar_raw, .p21_arm_result_map),
           "display_id"
         ),
         "result_id"
-      ),
-      "result_id"
+      )
     )
   )
 
@@ -979,6 +986,76 @@ read_spec <- function(
 
 # Forward-fill NA (and blank) cells in one column from the last non-blank
 # value above. Recovers merged cells in P21 spreadsheets.
+# One row per display, after the merged-cell fill has given every
+# continuation row the same id.
+#
+# A merged ID cell spanning a two-line description reads back as two rows
+# naming one display. Emitting both writes two arm:ResultDisplay elements
+# with the same OID -- schema-valid, because an OID is odm:oidref rather
+# than xs:ID, and invisible to define_lint(). Rows that disagree on a
+# non-blank value are refused rather than merged, the same policy the
+# analysis-result headers follow.
+#' @noRd
+.collapse_arm_displays <- function(df, call = rlang::caller_env()) {
+  if (is.null(df) || nrow(df) < 2L) {
+    return(df)
+  }
+  ids <- as.character(df$display_id)
+  if (!anyDuplicated(ids)) {
+    return(df)
+  }
+  columns <- setdiff(names(df), "display_id")
+  keep <- !duplicated(ids)
+  out <- df[keep, , drop = FALSE]
+  for (id in unique(ids[duplicated(ids)])) {
+    rows <- df[ids == id, , drop = FALSE]
+    for (column in columns) {
+      values <- unique(as.character(rows[[column]]))
+      values <- values[!is.na(values) & nzchar(trimws(values))]
+      if (length(values) > 1L) {
+        .artoo_abort(
+          c(
+            "Analysis display {.val {id}} is described two ways.",
+            "x" = "Its rows disagree on {.field {column}}: {.val {values}}.",
+            "i" = "One display is one row; a merged id cell may not span differing values."
+          ),
+          kind = "p21_sheet",
+          call = call
+        )
+      }
+      if (length(values)) {
+        out[[column]][as.character(out$display_id) == id] <- values[[1]]
+      }
+    }
+  }
+  out
+}
+
+# Drop an analysis-result row that carries no analysis dataset of its own.
+#
+# The key cannot be the test here: `result_id` has just been forward-filled,
+# so every row below the first has one. What marks a real row is the payload
+# that varies per analysis dataset.
+#' @noRd
+.drop_blank_arm_result <- function(df) {
+  if (is.null(df) || !nrow(df)) {
+    return(df)
+  }
+  payload <- c("dataset", "variables", "where_clause_id")
+  present <- intersect(payload, names(df))
+  if (!length(present)) {
+    return(.drop_blank_key(df, "result_id"))
+  }
+  filled <- Reduce(
+    `|`,
+    lapply(present, function(column) {
+      v <- as.character(df[[column]])
+      !is.na(v) & nzchar(trimws(v))
+    })
+  )
+  df[filled, , drop = FALSE]
+}
+
 #' @noRd
 .fill_down <- function(df, col) {
   if (is.null(df) || !(col %in% names(df)) || !nrow(df)) {

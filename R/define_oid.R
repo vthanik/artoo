@@ -175,7 +175,13 @@
     supplied <- supplied[!is.na(supplied) & nzchar(trimws(supplied))]
     for (k in unique(value_parent)) {
       hit <- which(value_parent == k)
-      if (!anyDuplicated(value_item[hit])) {
+      minted_here <- hit[.dx_blank(val$itemoid[hit])]
+      # Two ways a mint goes wrong: it repeats another mint, or it lands on
+      # an OID the spec supplied elsewhere. Both end at the ItemDef pool
+      # blaming the user for an identifier artoo chose.
+      clash <- anyDuplicated(value_item[hit]) > 0L ||
+        any(value_item[minted_here] %in% supplied)
+      if (!clash) {
         next
       }
       # Reset the whole parent to ordinals, then step ordinals that a

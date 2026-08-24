@@ -57,9 +57,8 @@
       call = call
     )
   }
-  shared <- unique(results$result_id[duplicated(
-    unique(results[c("display_id", "result_id")])$result_id
-  )])
+  pairs <- unique(results[c("display_id", "result_id")])
+  shared <- unique(pairs$result_id[duplicated(pairs$result_id)])
   if (length(shared)) {
     .artoo_abort(
       c(

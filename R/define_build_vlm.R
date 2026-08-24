@@ -336,9 +336,9 @@
     owners <- sub("\r.*$", "", names(map)[hit])
     .artoo_abort(
       c(
-        "Where clause {.val {id}} names {.val {variable}} without a dataset.",
+        "Where clause {.val {id}} does not say which {.val {variable}} it means.",
         "x" = "{length(owners)} datasets define it: {.val {owners}}.",
-        "i" = "Set {.code dataset} on the where-clause row to say which."
+        "i" = "Point the where-clause row's {.code dataset} at one of them."
       ),
       kind = "define",
       call = call

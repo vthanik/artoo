@@ -86,6 +86,8 @@
     "archive_location_id"
   ),
   variables = c("label", "origin", "length"),
+  values = c("label", "origin", "length"),
+  documents = c("href", "title"),
   codelists = c("name", "nci_code"),
   methods = c("description"),
   comments = c("description")
@@ -125,7 +127,7 @@
   }
   .artoo_warn(
     c(
-      "The define.xml is valid but not submission-grade.",
+      "The spec is not submission-grade.",
       "x" = "Nothing fills {.val {gaps}}.",
       "i" = "A conformance report will raise {length(gaps)} finding{?s}; fill them in the source spec."
     ),
@@ -467,6 +469,14 @@
   }
   std <- spec@standards
   pick <- if (nrow(std)) which(.dx_lgl(std, "is_primary")) else integer(0)
+  # A primary row that names neither a standard nor a version is no better
+  # than no row at all, and taking it short-circuits the fallback below into
+  # emitting a MetaDataVersion the schema refuses.
+  if (length(pick)) {
+    usable <- !.dx_blank(.dx_chr(std, "name")[pick]) &
+      !.dx_blank(.dx_chr(std, "version")[pick])
+    pick <- pick[usable]
+  }
   if (!length(pick)) {
     # Fall back to the scalar @standard, which is where a spec built from a
     # WORKBOOK carries it: "SDTMIG 3.4" splits into a name and a version.

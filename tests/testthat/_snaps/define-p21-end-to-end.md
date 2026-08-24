@@ -184,7 +184,7 @@
       spec <- write_spec(spec, out, version = "2.1", created = FROZEN_P21)
     Condition
       Warning:
-      The define.xml is valid but not submission-grade.
+      The spec is not submission-grade.
       x Nothing fills "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "codelists$name", "codelists$nci_code", "comments$description", and "the CDISC standard".
       i A conformance report will raise 8 findings; fill them in the source spec.
 
@@ -194,15 +194,39 @@
       write_spec(spec, out, created = FROZEN_P21)
     Condition
       Warning:
-      The define.xml is valid but not submission-grade.
-      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", and "variables$length".
-      i A conformance report will raise 9 findings; fill them in the source spec.
+      The spec is not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "datasets$archive_location_id", "variables$label", "variables$origin", "variables$length", "values$label", "values$origin", and "values$length".
+      i A conformance report will raise 12 findings; fill them in the source spec.
       Warning:
       The `def:Standards` block was not written.
       x The spec names "SDTMIG 3.4" but carries no `standards` table.
       i Define-XML 2.1 needs a name, version, type and status for each standard.
       Error:
-      ! Where clause "WC.1" names "USUBJID" without a dataset.
+      ! Where clause "WC.1" does not say which "USUBJID" it means.
       x 2 datasets define it: "VS" and "LB".
-      i Set `dataset` on the where-clause row to say which.
+      i Point the where-clause row's `dataset` at one of them.
+
+# a display described two ways is refused (#p7-review-1)
+
+    Code
+      read_spec(book)
+    Condition
+      Error:
+      ! Analysis display "RD.T1" is described two ways.
+      x Its rows disagree on name: "Table 1" and "Table 1 (draft)".
+      i One display is one row; a merged id cell may not span differing values.
+
+# a document with no location is refused, not blamed on artoo (#p7-review-3)
+
+    Code
+      write_spec(spec, out, created = FROZEN_P21)
+    Condition
+      Warning:
+      The spec is not submission-grade.
+      x Nothing fills "datasets$label", "datasets$class", "datasets$domain", "datasets$purpose", "datasets$repeating", "variables$label", "variables$origin", "variables$length", and "documents$href".
+      i A conformance report will raise 9 findings; fill them in the source spec.
+      Error in `.dx_archive_leaf()`:
+      ! Document "LF.dm" has no location.
+      x `def:leaf/@xlink:href` is required by Define-XML.
+      i Set `href` on the documents table.
 

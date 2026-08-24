@@ -537,3 +537,75 @@ test_that("an analysis variable in another dataset is not repointed (#p6-review-
   )
   expect_true(validate_define(out)@summary$valid)
 })
+
+test_that("the duplicate-result refusal names the id that is shared (#p7-review-5)", {
+  skip_if_not_installed("xml2")
+  # The check indexed the full results column with a logical vector the
+  # length of the deduplicated pairs frame, so R recycled it and the message
+  # named a result that was not the problem -- renaming it as instructed did
+  # not clear the error.
+  spec <- arm_spec(
+    displays = data.frame(
+      display_id = c("D1", "D2"),
+      name = c("One", "Two"),
+      order = 1:2,
+      stringsAsFactors = FALSE
+    ),
+    results = data.frame(
+      display_id = c("D1", "D2", "D2", "D2"),
+      result_id = c("R1", "R2", "R2", "R1"),
+      description = "x",
+      reason = "DATA DRIVEN",
+      purpose = "EXPLORATORY OUTCOME MEASURE",
+      dataset = c("ADSL", "ADSL", "ADQSADAS", "ADSL"),
+      order = 1:4,
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_error(
+    write_spec(spec, path, created = FROZEN_ARM),
+    "\"R1\""
+  )
+})
+
+test_that("an analysis result orders its rows across the whole display (#p6-review-8)", {
+  skip_if_not_installed("xml2")
+  # Stamping every dataset row of one result with the result ordinal gave
+  # .dx_row_order() duplicated values, which it discards -- so the column
+  # could not order anything.
+  spec <- read_define("define21-adam.xml")
+  expect_identical(
+    anyDuplicated(spec@arm_results$order[
+      spec@arm_results$display_id == "RD.Table_14-5.02"
+    ]),
+    0L
+  )
+})
+
+test_that("a minted value-level OID steps over one the spec supplies (#p6-review-10)", {
+  # A supplied VARIABLE itemoid shaped like "<parent>.1" occupies the same
+  # namespace a minted ordinal draws from, so the mint could collide with an
+  # OID the user chose and the pool would then blame them for it.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = c("VSORRES", "VSORRESU"),
+      itemoid = c(NA, "IT.VS.VSORRES.1"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_identical(artoo:::.dx_oids(spec)$value_item, "IT.VS.VSORRES.2")
+})

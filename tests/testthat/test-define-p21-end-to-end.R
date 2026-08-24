@@ -340,3 +340,243 @@ test_that("merged ARM cells are filled down like every other sheet (#p6-review)"
     3L
   )
 })
+
+test_that("a merged display id does not become two displays (#p7-review-1)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # Forward-filling the display id gave every continuation row the same id,
+  # and the writer emitted one arm:ResultDisplay per ROW -- two elements with
+  # one OID. Schema-valid, because an OID is odm:oidref rather than xs:ID,
+  # and invisible to define_lint().
+  book <- file.path(withr::local_tempdir(), "merged.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = c("RD.T1", NA),
+        Name = c("Table 1", NA),
+        Title = c("Demographics", NA),
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.T1",
+        ID = "AR.R1",
+        Description = "First",
+        Reason = "SPECIFIED IN SAP",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        Dataset = "ADSL",
+        Variables = "USUBJID",
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_displays), 1L)
+  out <- file.path(withr::local_tempdir(), "define.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN_P21))
+  doc <- xml2::read_xml(out)
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_all(doc, "//*[local-name()='ResultDisplay']"),
+      "OID"
+    ),
+    "RD.T1"
+  )
+  expect_identical(
+    xml2::xml_attr(
+      xml2::xml_find_all(doc, "//*[local-name()='AnalysisResult']"),
+      "OID"
+    ),
+    "AR.R1"
+  )
+})
+
+test_that("a trailing note row is dropped, not absorbed (#p7-review-2)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  skip_if_not_installed("xml2")
+  # Filling `result_id` and then dropping on a blank `result_id` makes the
+  # drop unreachable for every row below the first, so a "Note: see SAP" row
+  # was absorbed as a continuation of the last result and then refused.
+  book <- file.path(withr::local_tempdir(), "note.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = "RD.T1",
+        Name = "Table 1",
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = c("RD.T1", NA),
+        ID = c("AR.R1", NA),
+        Description = c("First", "Note: see SAP section 9.1"),
+        Reason = c("SPECIFIED IN SAP", NA),
+        Purpose = c("PRIMARY OUTCOME MEASURE", NA),
+        Dataset = c("ADSL", NA),
+        Variables = c("USUBJID", NA),
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(spec@arm_results), 1L)
+  out <- file.path(withr::local_tempdir(), "define.xml")
+  suppressWarnings(write_spec(spec, out, created = FROZEN_P21))
+  expect_true(validate_define(out)@summary$valid)
+})
+
+test_that("a display described two ways is refused (#p7-review-1)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  book <- file.path(withr::local_tempdir(), "split.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "x",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Displays` = data.frame(
+        ID = c("RD.T1", NA),
+        Name = c("Table 1", "Table 1 (draft)"),
+        stringsAsFactors = FALSE
+      ),
+      `Analysis Results` = data.frame(
+        Display = "RD.T1",
+        ID = "AR.R1",
+        Description = "First",
+        Reason = "SPECIFIED IN SAP",
+        Purpose = "PRIMARY OUTCOME MEASURE",
+        Dataset = "ADSL",
+        Variables = "USUBJID",
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  expect_error(read_spec(book), class = "artoo_error_p21_sheet")
+  expect_snapshot(read_spec(book), error = TRUE)
+})
+
+test_that("a document with no location is refused, not blamed on artoo (#p7-review-3)", {
+  skip_if_not_installed("xml2")
+  # xlink:href is required on def:leaf; a blank one was dropped and the
+  # schema gate then reported "This is an artoo defect".
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "DM",
+      structure = "One record per subject",
+      archive_location_id = "LF.dm",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.dm",
+      title = "dm.xpt",
+      href = NA_character_,
+      role = "archive",
+      stringsAsFactors = FALSE
+    )
+  )
+  out <- file.path(withr::local_tempdir(), "define.xml")
+  expect_error(
+    write_spec(spec, out, created = FROZEN_P21),
+    class = "artoo_error_define"
+  )
+  expect_snapshot(write_spec(spec, out, created = FROZEN_P21), error = TRUE)
+})
+
+test_that("the incompleteness notice covers value-level rows (#p7-review-4)", {
+  skip_if_not_installed("xml2")
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      label = "Vital Signs",
+      class = "FINDINGS",
+      domain = "VS",
+      purpose = "Tabulation",
+      repeating = TRUE,
+      archive_location_id = "LF.vs",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.vs",
+      title = "vs.xpt",
+      href = "vs.xpt",
+      role = "archive",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      label = "Result",
+      data_type = "string",
+      length = 20L,
+      origin = "Collected",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "float",
+      stringsAsFactors = FALSE
+    )
+  )
+  out <- file.path(withr::local_tempdir(), "define.xml")
+  gaps <- NULL
+  withCallingHandlers(
+    write_spec(spec, out, created = FROZEN_P21),
+    warning = function(w) {
+      if (inherits(w, "artoo_warning_spec_incomplete")) {
+        gaps <<- conditionMessage(w)
+      }
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_match(gaps, "values$origin", fixed = TRUE)
+  expect_match(gaps, "values$length", fixed = TRUE)
+})
