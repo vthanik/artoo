@@ -118,7 +118,7 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 32
+       $ elements:List of 33
         ..$ Alias           : int 108
         ..$ CheckValue      : int 41
         ..$ CodeList        : int 21
@@ -129,6 +129,7 @@
         ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
+        ..$ FormalExpression: int 2
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
         ..$ ItemGroupDef    : int 4
@@ -166,7 +167,7 @@
       str(define_digest(out), max.level = 2)
     Output
       List of 2
-       $ elements:List of 35
+       $ elements:List of 36
         ..$ Alias           : int 108
         ..$ CheckValue      : int 41
         ..$ Class           : int 4
@@ -178,6 +179,7 @@
         ..$ Description     : int 127
         ..$ DocumentRef     : int 32
         ..$ EnumeratedItem  : int 46
+        ..$ FormalExpression: int 2
         ..$ GlobalVariables : int 1
         ..$ ItemDef         : int 87
         ..$ ItemGroupDef    : int 4

@@ -78,11 +78,30 @@
 .p21_study_attr <- c(
   study_name = "StudyName",
   study_description = "StudyDescription",
-  protocol_name = "ProtocolName"
+  protocol_name = "ProtocolName",
+  # The document identifiers a Define-XML read carries. Without spellings
+  # of their own they went onto the sheet under artoo's INTERNAL column
+  # names -- a Define sheet reading `metadata_version_oid`, `odm_context`,
+  # `study_oid` -- which is artoo's private vocabulary leaking onto a
+  # surface a person reads and another tool imports.
+  define_version = "DefineVersion",
+  study_oid = "StudyOID",
+  file_oid = "FileOID",
+  odm_context = "Context",
+  metadata_version_oid = "MetaDataVersionOID",
+  metadata_version_name = "MetaDataVersionName",
+  metadata_version_description = "MetaDataVersionDescription",
+  originator = "Originator",
+  source_system = "SourceSystem",
+  source_system_version = "SourceSystemVersion",
+  language = "Language",
+  standard_name = "StandardName",
+  standard_version = "StandardVersion"
 )
 
 #' @noRd
-.p21_study_sheet <- function(study) {
+.p21_study_sheet <- function(study, standard = NA_character_) {
+  study <- .p21_study_standard_rows(study, standard)
   if (is.null(study) || !is.data.frame(study) || !nrow(study)) {
     return(NULL)
   }
@@ -153,7 +172,7 @@
   }
 
   sheets <- list(
-    Define = .p21_study_sheet(spec@study),
+    Define = .p21_study_sheet(spec@study, spec@standard),
     Datasets = .p21_sheet_frame(
       datasets,
       .p21_ds_map,
@@ -464,4 +483,36 @@
   methods$expression_context[found] <- as.character(first$context)[at[found]]
   methods$expression_code[found] <- as.character(first$code)[at[found]]
   methods
+}
+
+# State the standard on the study sheet, the way the format does.
+#
+# The sheet carries a standard as two attributes, a name and a version, and
+# artoo reads that pair into `@standard`. It never wrote it back, so a
+# workbook artoo produced could not say which standard it described -- the
+# fact survived only in the Datasets sheet's repeated column, and a reader
+# looking where the format puts it found nothing.
+#' @noRd
+.p21_study_standard_rows <- function(study, standard) {
+  if (is.na(standard) || !nzchar(standard)) {
+    return(study)
+  }
+  parts <- strsplit(trimws(standard), "[[:space:]]+")[[1L]]
+  if (length(parts) < 2L) {
+    return(study)
+  }
+  name <- paste(utils::head(parts, -1L), collapse = " ")
+  # Written in the spelling the format uses, which is the hyphenated one
+  # the reader already renames on the way in.
+  back <- .dx_standard_renames
+  hit <- match(name, unname(back))
+  if (!is.na(hit)) {
+    name <- names(back)[[hit]]
+  }
+  if (is.null(study) || !is.data.frame(study) || !nrow(study)) {
+    study <- data.frame(row.names = 1L)
+  }
+  study$standard_name <- name
+  study$standard_version <- utils::tail(parts, 1L)
+  study
 }

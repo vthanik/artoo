@@ -175,9 +175,12 @@ test_that("artoo_spec() canonicalises study fields to the ODM vocabulary", {
   expect_identical(st$study_name, "CDISC01")
   expect_identical(st$study_description, "A study")
   expect_identical(st$protocol_name, "CDISC01-01")
-  expect_identical(st$Language, "en")
+  # Language is canonicalised too now, along with the rest of the document
+  # identifiers a study sheet carries.
+  expect_identical(st$language, "en")
   expect_false(any(
-    c("StudyName", "StudyDescription", "ProtocolName") %in% names(st)
+    c("StudyName", "StudyDescription", "ProtocolName", "Language") %in%
+      names(st)
   ))
 })
 

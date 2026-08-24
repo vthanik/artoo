@@ -408,7 +408,22 @@ artoo_spec <- function(
 .study_field_aliases <- list(
   study_name = c("studyname", "studyid"),
   study_description = c("studydescription"),
-  protocol_name = c("protocolname")
+  protocol_name = c("protocolname"),
+  # The document identifiers, under the spellings a workbook's study sheet
+  # uses. Without these a workbook artoo wrote came back with columns named
+  # `DefineVersion` and `MetaDataVersionOID`, which no consumer looks for --
+  # the write knew the vocabulary and the read did not.
+  define_version = c("defineversion"),
+  study_oid = c("studyoid"),
+  file_oid = c("fileoid"),
+  odm_context = c("context", "odmcontext"),
+  metadata_version_oid = c("metadataversionoid"),
+  metadata_version_name = c("metadataversionname"),
+  metadata_version_description = c("metadataversiondescription"),
+  originator = c("originator"),
+  source_system = c("sourcesystem"),
+  source_system_version = c("sourcesystemversion"),
+  language = c("language")
 )
 
 # Canonicalise the study frame's well-known fields so every consumer
@@ -666,6 +681,10 @@ is_artoo_spec <- function(x) {
     name <- renamed
   }
   study$standard <- trimws(paste(name, if (!is.na(version)) version))
+  # Consumed, so drop them: `@standard` is the single home, and leaving the
+  # pair behind means the next write emits the standard twice, once from
+  # the leftovers and once from the resolved scalar.
+  study[which(norm %in% c("standardname", "standardversion"))] <- NULL
   study
 }
 

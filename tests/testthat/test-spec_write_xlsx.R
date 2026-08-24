@@ -465,3 +465,37 @@ test_that("a method with two expressions loses the second, loudly (#p12-p21)", {
   expect_identical(nrow(back@method_expressions), 1L)
   expect_identical(back@method_expressions$context, "SAS 9.4")
 })
+
+test_that("the study sheet speaks the format's vocabulary (#p12-define-sheet)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # A Define-XML read carries the document's identifiers, and none of them
+  # had a workbook spelling -- so the study sheet went out reading
+  # `metadata_version_oid`, `odm_context`, `study_oid`: artoo's private
+  # column names on a surface a person reads and another tool imports.
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(adam_spec, path))
+  sheet <- as.data.frame(readxl::read_excel(path, sheet = "Define"))
+  expect_false(any(grepl("_", sheet$Attribute)))
+  expect_true(all(
+    c("DefineVersion", "StudyOID", "MetaDataVersionOID", "Context") %in%
+      sheet$Attribute
+  ))
+  # ...and it states the standard the way the format does, which artoo read
+  # and never wrote back, so a workbook it produced could not say which
+  # standard it described.
+  expect_true(all(c("StandardName", "StandardVersion") %in% sheet$Attribute))
+  expect_identical(sheet$Value[sheet$Attribute == "StandardVersion"], "1.1")
+  expect_identical(sheet$Value[sheet$Attribute == "StandardName"], "ADaM-IG")
+
+  # The read understands every spelling the write emits, and one attribute
+  # is emitted once.
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(back@study$define_version, adam_spec@study$define_version)
+  expect_identical(back@study$odm_context, adam_spec@study$odm_context)
+  expect_identical(spec_standard(back), spec_standard(adam_spec))
+  again <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(back, again))
+  twice <- readxl::read_excel(again, sheet = "Define")
+  expect_false(any(duplicated(twice$Attribute)))
+})

@@ -52,18 +52,32 @@ shape — and read on; anywhere the two differ, this article says so.
 
 Two columns, `Attribute` and `Value`, one row per attribute.
 
+These five are the ones to fill in:
+
 | Attribute | Why it matters |
 |---|---|
 | `StudyName` | The study's short name. |
 | `StudyDescription` | One line describing the study. |
 | `ProtocolName` | The protocol identifier. |
-| `StandardName` | `SDTMIG`, `ADaMIG`, `SENDIG`. Hyphenated spellings are understood. |
+| `StandardName` | `SDTM-IG`, `ADaM-IG`, `SEND-IG`. Unhyphenated spellings are understood too. |
 | `StandardVersion` | `3.4`, `1.1`, and so on. |
 
 **`StandardName` and `StandardVersion` are the two that bite.** Define-XML
 2.0 refuses to be written without them, and until artoo learned to read the
 pair, a workbook that named its standard perfectly clearly still could not
 produce a define.xml. Fill them in.
+
+A workbook artoo wrote from an existing define.xml carries more, because
+that document had identifiers this sheet is where to keep:
+
+```{r}
+book3 <- tempfile(fileext = ".xlsx")
+suppressWarnings(write_spec(adam_spec, book3))
+readxl::read_excel(book3, sheet = "Define")
+```
+
+You do not have to supply any of those; artoo mints what a new document
+needs. Leave them alone if they are there.
 
 Anything else you put on this sheet is kept and written back out, so a
 sponsor field of your own survives a round trip.

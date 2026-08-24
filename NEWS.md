@@ -1,5 +1,14 @@
 # artoo 0.2.0.9000
 
+* `write_spec()` to `.xlsx` writes the study sheet in the format's own
+  vocabulary. A spec read from a define.xml carries the document's
+  identifiers, and none of them had a workbook spelling, so the sheet went
+  out reading `define_version`, `study_oid` and `metadata_version_oid` --
+  artoo's internal column names on a sheet a person reads and another tool
+  imports. It also states `StandardName` and `StandardVersion`, which artoo
+  read and never wrote back, so a workbook it produced could not say which
+  standard it described.
+
 * `read_spec()` on a workbook resolves the standard its Study sheet states.
   The sheet carries a name and a version as two attributes; artoo kept both
   as unmodelled study fields, so `spec_standard()` was `NA` and writing
