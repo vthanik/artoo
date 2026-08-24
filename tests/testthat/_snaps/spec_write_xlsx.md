@@ -5,7 +5,7 @@
     Condition
       Error:
       ! Unsupported spec file type "csv".
-      i write_spec() writes native ".json" (lossless) and Pinnacle 21 ".xlsx" (interchange).
+      i write_spec() writes native ".json" (lossless), Pinnacle 21 ".xlsx" (interchange), and Define-XML ".xml" (submission).
 
 # an empty spec cannot become a P21 workbook
 

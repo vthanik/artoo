@@ -734,6 +734,10 @@
       rows[[length(rows) + 1L]] <- data.frame(
         dataset = owner[1],
         variable = owner[2],
+        # The FOREIGN KEY, which is what a writer needs; `where_clause` below
+        # keeps the rendered display text. Leaving this NA made every
+        # value-level row unwritable without re-joining on prose.
+        where_clause_id = wcid,
         where_clause = if (!is.na(wcid)) {
           unname(wc_text[wcid]) %||% NA_character_
         } else {
@@ -744,6 +748,32 @@
         data_type = if (is.null(it)) NA_character_ else it$data_type,
         length = if (is.null(it)) NA_integer_ else it$length,
         codelist_id = if (is.null(it)) NA_character_ else it$codelist_id,
+        # A value-level row IS an ItemDef, so it carries the whole ItemDef
+        # surface. Reading only label/type/length made every value-level
+        # origin, comment and display format vanish on a round trip, which
+        # define_lint() then reported as a missing Origin.
+        significant_digits = if (is.null(it)) {
+          NA_integer_
+        } else {
+          it$significant_digits
+        },
+        display_format = if (is.null(it)) NA_character_ else it$display_format,
+        sas_field_name = if (is.null(it)) NA_character_ else it$sas_field_name,
+        comment_id = if (is.null(it)) NA_character_ else it$comment_id,
+        origin = if (is.null(it)) NA_character_ else it$origin,
+        source = if (is.null(it)) NA_character_ else it$source,
+        origin_description = if (is.null(it)) {
+          NA_character_
+        } else {
+          it$origin_description
+        },
+        origin_document_id = if (is.null(it)) {
+          NA_character_
+        } else {
+          it$origin_document_id
+        },
+        pages = if (is.null(it)) NA_character_ else it$pages,
+        page_type = if (is.null(it)) NA_character_ else it$page_type,
         method_id = xml2::xml_attr(r, "MethodOID"),
         order = .dx_int(xml2::xml_attr(r, "OrderNumber")),
         mandatory = identical(xml2::xml_attr(r, "Mandatory"), "Yes"),

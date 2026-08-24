@@ -31,14 +31,15 @@
 #' @noRd
 .spec_json_version <- "2"
 
-#' Write a specification to native JSON or a P21 Excel workbook
+#' Write a specification to JSON, an Excel workbook, or Define-XML
 #'
 #' Serialise a `artoo_spec`, dispatching on the file extension: a `.json`
 #' path writes artoo's native, lossless JSON; a `.xlsx` path writes a
-#' Pinnacle 21 (P21) style Excel workbook. Both are inverses of
-#' [read_spec()] on their format, which makes the spec converters free
-#' compositions: `read_spec("define.xml") |> write_spec("spec.xlsx")` is a
-#' Define-XML to P21 bridge in one line.
+#' Pinnacle 21 (P21) style Excel workbook; a `.xml` path writes a
+#' submission-grade Define-XML 2.1 document. Each is the inverse of
+#' [read_spec()] on its format, which makes the spec converters free
+#' compositions: `read_spec("spec.xlsx") |> write_spec("define.xml")` turns
+#' a workbook into a define.xml in one line.
 #'
 #' @details
 #' **Native JSON is the lossless format.** Each slot is written as an array
@@ -70,6 +71,25 @@
 #' `def:Standards` block, its structured where clauses and its formal
 #' expressions. Write JSON when you need the spec back whole.
 #'
+#' **Define-XML is the submission format.** The `.xml` path emits
+#' Define-XML 2.1 (needs the `xml2` package) and SCHEMA-VALIDATES what it
+#' built before the file reaches its destination, so an invalid document
+#' never overwrites a good one. Value-level metadata is emitted whole: the
+#' parent variable's `def:ValueListRef`, the `def:ValueListDef`, a real
+#' `ItemDef` per value-level row, and the `def:WhereClauseRef` and
+#' `def:WhereClauseDef` that say which rows it applies to.
+#'
+#' Identifiers already on the spec are reused verbatim, so a document read
+#' and written back keeps every OID a reviewer may have bookmarked; the rest
+#' are minted readably (`IG.DM`, `IT.DM.USUBJID`, `VL.VS.VSORRES`). Two
+#' schema-required attributes are derived rather than demanded:
+#' `def:Structure` falls back to the dataset keys, and `Purpose` follows the
+#' CDISC standard. A dataset with neither a structure nor keys aborts with
+#' `artoo_error_define` rather than being given an invented one.
+#'
+#' Define-XML 2.0 output, Analysis Results Metadata, and external
+#' dictionaries (`MedDRA`, ISO 3166) are not written yet.
+#'
 #' Fields with no P21 column (`itemoid`, `target_data_type`,
 #' per-variable `key_sequence`) likewise do not survive an xlsx round-trip;
 #' persist to JSON when you need the spec back exactly. The `Data Type`
@@ -82,9 +102,23 @@
 #' @param spec *The specification to serialise.* `<artoo_spec>: required`.
 #'   Build one with [artoo_spec()] or [read_spec()].
 #' @param path *Destination file.* `<character(1)>: required`. The extension
-#'   picks the format: `.json` (native, lossless) or `.xlsx` (P21
-#'   interchange; needs the `writexl` package). Any other extension aborts
-#'   with `artoo_error_input`.
+#'   picks the format: `.json` (native, lossless), `.xlsx` (P21
+#'   interchange; needs the `writexl` package), or `.xml` (Define-XML 2.1;
+#'   needs the `xml2` package). Any other extension aborts with
+#'   `artoo_error_input`.
+#' @param ... *Format-specific options.* Ignored by the JSON and xlsx paths.
+#'   Define-XML accepts:
+#'
+#'   * `version` -- `<character(1)> | NULL`. `"2.1"` (default), resolved from
+#'     the spec's own `define_version` when unset. `"2.0"` is not written yet.
+#'   * `created` -- the `CreationDateTime` stamp, formatted as UTC. Freeze it
+#'     for a reproducible submission build; the default is the current time.
+#'   * `stylesheet` -- `<logical(1)> | <character(1)>: default TRUE`. `TRUE`
+#'     writes the `xml-stylesheet` processing instruction and copies the
+#'     bundled CDISC stylesheet beside the output; a string names a
+#'     stylesheet without copying one; `FALSE` writes neither.
+#'   * `validate` -- `<logical(1)>: default TRUE`. Schema-validate before the
+#'     file is put in place.
 #'
 #' @return *The output `path`, invisibly.* Read it back with [read_spec()].
 #'
@@ -111,14 +145,31 @@
 #'   spec_datasets(read_spec(xlsx))
 #' }
 #'
+#' # ---- Example 3: the same spec as a submission-grade define.xml ----
+#' #
+#' # Read the bundled minimal Define-XML, write it back with a frozen
+#' # timestamp, and confirm the result is schema-valid. The write itself
+#' # validates, so reaching this line already proves it.
+#' if (requireNamespace("xml2", quietly = TRUE)) {
+#'   dm <- read_spec(
+#'     system.file("extdata", "define-minimal.xml", package = "artoo")
+#'   )
+#'   xml <- file.path(tempdir(), "define.xml")
+#'   write_spec(dm, xml, created = "2020-01-01 00:00:00")
+#'   validate_define(xml)
+#' }
+#'
 #' @seealso
 #' **Inverse:** [read_spec()] reads native JSON, a P21 Excel workbook, or
 #' Define-XML back into a `artoo_spec`.
 #'
+#' **Check the Define-XML written:** [validate_define()] schema-validates it,
+#' [define_lint()] checks its reference integrity.
+#'
 #' **Build / inspect:** [artoo_spec()], [spec_datasets()],
 #' [spec_variables()], [spec_standard()].
 #' @export
-write_spec <- function(spec, path) {
+write_spec <- function(spec, path, ...) {
   call <- rlang::caller_env()
   .check_path(path, call = call)
   # Route through the shared guard rather than a bare predicate: is_artoo_spec()
@@ -130,10 +181,11 @@ write_spec <- function(spec, path) {
     ext,
     json = .write_spec_json(spec, path, call),
     xlsx = .write_spec_xlsx(spec, path, call),
+    xml = .write_spec_define(spec, path, ..., call = call),
     .artoo_abort(
       c(
         "Unsupported spec file type {.val {ext}}.",
-        "i" = "write_spec() writes native {.val .json} (lossless) and Pinnacle 21 {.val .xlsx} (interchange)."
+        "i" = "write_spec() writes native {.val .json} (lossless), Pinnacle 21 {.val .xlsx} (interchange), and Define-XML {.val .xml} (submission)."
       ),
       kind = "input",
       call = call

@@ -301,6 +301,12 @@
   mandatory = "logical",
   origin = "character",
   source = "character",
+  # A value-level def:Origin carries the same Description and annotated-CRF
+  # page reference a variable-level one does, and dropping them loses the CRF
+  # annotation the FDA expects on every collected item.
+  origin_description = "character", # def:Origin/Description
+  origin_document_id = "character", # def:Origin//def:DocumentRef@leafID
+  page_type = "character", # def:PDFPageRef/@Type
   predecessor = "character",
   assigned_value = "character",
   pages = "character",

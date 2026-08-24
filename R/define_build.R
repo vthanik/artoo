@@ -1,0 +1,674 @@
+# define_build.R — structural builders: study, standards, datasets,
+# variables, codelists, methods, comments, documents.
+#
+# Every function here returns a .dx_node() spec with a NAMED child list and
+# never touches xml2. Element ORDER is the version profile's job (see
+# define_profile.R), so a builder that assigns its children in the wrong
+# order still emits a schema-valid document. Version branches live only in
+# the small functions named after the feature that differs: .dx_context(),
+# .dx_class(), .dx_origin().
+#
+# Schema-required attributes that a spec may legitimately not carry are
+# DERIVED from the spec where a derivation exists (def:Structure from the
+# dataset keys, Purpose from the CDISC standard) and defaulted only where the
+# common case is unambiguous (Repeating = "No"). Where neither holds, the
+# write ABORTS naming the column to fill, rather than inventing a value that
+# a reviewer would read as a sponsor's assertion.
+
+# A column as character, tolerating an absent column or a NULL table.
+#' @noRd
+.dx_chr <- function(df, name) {
+  n <- if (is.null(df)) 0L else nrow(df)
+  if (!n || !(name %in% names(df))) {
+    return(rep(NA_character_, n))
+  }
+  as.character(df[[name]])
+}
+
+# A column as logical, same tolerance.
+#' @noRd
+.dx_lgl <- function(df, name) {
+  n <- if (is.null(df)) 0L else nrow(df)
+  if (!n || !(name %in% names(df))) {
+    return(rep(NA, n))
+  }
+  as.logical(df[[name]])
+}
+
+#' @noRd
+.dx_blank <- function(x) {
+  x <- as.character(x)
+  is.na(x) | !nzchar(trimws(x))
+}
+
+# The one non-blank value in a repeated list-level column, or NA. The
+# codelist slot repeats its list-level fields on every term row and a source
+# workbook commonly fills only the first, so "the first row" loses the value
+# whenever the first row is blank.
+#' @noRd
+.dx_one <- function(x) {
+  v <- unique(as.character(x)[!.dx_blank(x)])
+  if (!length(v)) NA_character_ else v[[1]]
+}
+
+# An ODM Yes/No attribute from a logical, with a default when unset.
+#' @noRd
+.dx_yesno <- function(x, default = NA) {
+  v <- as.logical(x)
+  v[is.na(v)] <- default
+  ifelse(is.na(v), NA_character_, ifelse(v, "Yes", "No"))
+}
+
+# An odm:YesOnly attribute: the ATTRIBUTE'S PRESENCE is the assertion, so
+# FALSE must emit nothing rather than "No", which is not in the type.
+#' @noRd
+.dx_yesonly <- function(x) {
+  if (isTRUE(.dx_any(x))) "Yes" else NA_character_
+}
+
+# TRUE when any element is TRUE. Reducing a repeated list-level flag needs
+# this, not isTRUE(): isTRUE() on a length-3 vector is FALSE whatever it
+# holds, which silently dropped every non-standard codelist flag once.
+#' @noRd
+.dx_any <- function(x) {
+  v <- as.logical(x)
+  length(v) > 0L && any(v, na.rm = TRUE)
+}
+
+# ---- version-branching helpers -------------------------------------------
+
+# def:Context on ODM. 2.1 only; the profile carries NULL for 2.0, which is
+# how a builder learns the attribute does not exist without naming a version.
+#' @noRd
+.dx_context <- function(context, p, call = rlang::caller_env()) {
+  if (is.null(p$enum$context)) {
+    return(list())
+  }
+  .dx_attrs(
+    "def:Context" = .dx_enum(context, p$enum$context, "def:Context", call)
+  )
+}
+
+# def:Class. A child element carrying an optional def:SubClass in 2.1; a
+# plain attribute on ItemGroupDef in 2.0.
+#' @noRd
+.dx_class <- function(class, subclass, p, call = rlang::caller_env()) {
+  if (.dx_blank(class)) {
+    return(NULL)
+  }
+  cls <- .dx_enum(
+    toupper(trimws(class)),
+    p$enum$class,
+    "def:Class Name",
+    call
+  )
+  if (!identical(p$class_slot, "element")) {
+    return(cls)
+  }
+  sub <- if (.dx_blank(subclass)) {
+    NULL
+  } else {
+    .dx_node(
+      "def:SubClass",
+      attrs = .dx_attrs(
+        Name = .dx_enum(
+          toupper(trimws(subclass)),
+          p$enum$subclass,
+          "def:SubClass Name",
+          call
+        )
+      )
+    )
+  }
+  .dx_node(
+    "def:Class",
+    attrs = .dx_attrs(Name = cls),
+    kids = list(`def:SubClass` = sub)
+  )
+}
+
+# ---- shared leaf builders -------------------------------------------------
+
+#' @noRd
+.dx_docref <- function(
+  document_id,
+  pages,
+  page_type,
+  p,
+  call = rlang::caller_env()
+) {
+  if (.dx_blank(document_id)) {
+    return(NULL)
+  }
+  pg <- if (.dx_blank(pages)) {
+    NULL
+  } else {
+    # @Type is required on def:PDFPageRef, and a page list without a type is
+    # the commonest source of a page reference no reader can follow.
+    type <- if (.dx_blank(page_type)) "PhysicalRef" else trimws(page_type)
+    .dx_node(
+      "def:PDFPageRef",
+      attrs = .dx_attrs(
+        PageRefs = trimws(pages),
+        Type = .dx_enum(type, p$enum$page_type, "def:PDFPageRef Type", call)
+      )
+    )
+  }
+  .dx_node(
+    "def:DocumentRef",
+    attrs = .dx_attrs(leafID = trimws(document_id)),
+    kids = list(`def:PDFPageRef` = pg)
+  )
+}
+
+#' @noRd
+.dx_leaf <- function(document_id, href, title) {
+  .dx_node(
+    "def:leaf",
+    attrs = .dx_attrs(ID = document_id, "xlink:href" = href),
+    kids = list(
+      `def:title` = .dx_node(
+        "def:title",
+        text = if (.dx_blank(title)) document_id else trimws(title)
+      )
+    )
+  )
+}
+
+# def:AnnotatedCRF / def:SupplementalDoc: a container of DocumentRefs, one
+# per document carrying that role. Absent when the role has no documents.
+#' @noRd
+.dx_doc_container <- function(documents, role, element, p) {
+  if (is.null(documents) || !nrow(documents)) {
+    return(NULL)
+  }
+  hit <- which(.dx_chr(documents, "role") == role)
+  if (!length(hit)) {
+    return(NULL)
+  }
+  .dx_node(
+    element,
+    kids = list(
+      `def:DocumentRef` = lapply(hit, function(i) {
+        .dx_docref(
+          documents$document_id[[i]],
+          NA_character_,
+          NA_character_,
+          p
+        )
+      })
+    )
+  )
+}
+
+# ---- study / metadata version ---------------------------------------------
+
+#' @noRd
+.dx_global_variables <- function(spec) {
+  name <- .dx_study_field(spec, "study_name")
+  protocol <- .dx_study_field(spec, "protocol_name")
+  desc <- .dx_study_field(spec, "study_description")
+  # All three elements are required by ODM. Fall back along the chain rather
+  # than inventing a third string: a spec that names a protocol but no study
+  # is still describing one study.
+  if (is.na(name)) {
+    name <- if (is.na(protocol)) "Unspecified" else protocol
+  }
+  .dx_node(
+    "GlobalVariables",
+    kids = list(
+      StudyName = .dx_node("StudyName", text = name),
+      StudyDescription = .dx_node(
+        "StudyDescription",
+        text = if (is.na(desc)) name else desc
+      ),
+      ProtocolName = .dx_node(
+        "ProtocolName",
+        text = if (is.na(protocol)) name else protocol
+      )
+    )
+  )
+}
+
+# def:Standards (2.1). NULL when the spec carries no standards table, which
+# is legal: the element is optional.
+#' @noRd
+.dx_standards <- function(spec, p, call = rlang::caller_env()) {
+  if (is.null(p$order[["def:Standards"]])) {
+    return(NULL)
+  }
+  std <- spec@standards
+  if (!nrow(std)) {
+    return(NULL)
+  }
+  ord <- .dx_row_order(std)
+  .dx_node(
+    "def:Standards",
+    kids = list(
+      `def:Standard` = lapply(ord, function(i) {
+        .dx_node(
+          "def:Standard",
+          attrs = .dx_attrs(
+            OID = std$standard_id[[i]],
+            Name = std$name[[i]],
+            Type = .dx_enum(
+              .dx_chr(std, "type")[[i]],
+              p$enum$standard_type,
+              "def:Standard Type",
+              call
+            ),
+            PublishingSet = .dx_chr(std, "publishing_set")[[i]],
+            Version = .dx_chr(std, "version")[[i]],
+            Status = .dx_enum(
+              .dx_chr(std, "status")[[i]],
+              p$enum$standard_status,
+              "def:Standard Status",
+              call
+            ),
+            "def:CommentOID" = .dx_chr(std, "comment_id")[[i]]
+          )
+        )
+      })
+    )
+  )
+}
+
+# Row indices in emission order: the `order` column when it is usable, else
+# source order. Never partially applied -- a table where only some rows carry
+# an order would otherwise interleave unpredictably.
+#' @noRd
+.dx_row_order <- function(df) {
+  n <- if (is.null(df)) 0L else nrow(df)
+  if (!n) {
+    return(integer(0))
+  }
+  if (!("order" %in% names(df))) {
+    return(seq_len(n))
+  }
+  o <- suppressWarnings(as.integer(df$order))
+  if (anyNA(o) || anyDuplicated(o)) {
+    return(seq_len(n))
+  }
+  order(o)
+}
+
+# ---- datasets -------------------------------------------------------------
+
+# def:Structure is schema-required. The dataset keys ARE the structure, said
+# the way CDISC says it, so deriving from them is a restatement rather than
+# an invention; with neither, the write aborts.
+#' @noRd
+.dx_structure <- function(
+  structure,
+  keys,
+  dataset,
+  call = rlang::caller_env()
+) {
+  if (!.dx_blank(structure)) {
+    return(trimws(structure))
+  }
+  if (!.dx_blank(keys)) {
+    return(paste0(
+      "One record per ",
+      gsub("[[:space:]]+", ", ", trimws(keys))
+    ))
+  }
+  .artoo_abort(
+    c(
+      "Dataset {.val {dataset}} has no structure.",
+      "x" = "Define-XML requires {.code def:Structure} on every ItemGroupDef.",
+      "i" = "Set {.code structure} on the datasets table, or give the dataset keys."
+    ),
+    kind = "define",
+    call = call
+  )
+}
+
+# Purpose is schema-required and follows from the standard: ADaM is analysis
+# metadata, SDTM and SEND are tabulation metadata.
+#' @noRd
+.dx_purpose <- function(purpose, standard, p, call = rlang::caller_env()) {
+  if (!.dx_blank(purpose)) {
+    return(.dx_enum(trimws(purpose), p$enum$purpose, "Purpose", call))
+  }
+  if (!is.na(standard) && grepl("adam", standard, ignore.case = TRUE)) {
+    "Analysis"
+  } else {
+    "Tabulation"
+  }
+}
+
+#' @noRd
+.dx_itemgroup <- function(
+  spec,
+  i,
+  refs,
+  archive_leaf,
+  p,
+  oids,
+  call = rlang::caller_env()
+) {
+  ds <- spec@datasets
+  name <- ds$dataset[[i]]
+  cls <- .dx_class(
+    .dx_chr(ds, "class")[[i]],
+    .dx_chr(ds, "subclass")[[i]],
+    p,
+    call
+  )
+  # In 2.0 def:Class is an attribute, so .dx_class() hands back a string.
+  cls_attr <- if (is.character(cls)) cls else NA_character_
+  cls_kid <- if (is.character(cls)) NULL else cls
+  .dx_node(
+    "ItemGroupDef",
+    attrs = .dx_attrs(
+      OID = .dx_get(oids$dataset, name),
+      Name = name,
+      Domain = .dx_chr(ds, "domain")[[i]],
+      Repeating = .dx_yesno(.dx_lgl(ds, "repeating")[[i]], default = FALSE),
+      IsReferenceData = .dx_yesno(
+        .dx_lgl(ds, "reference_data")[[i]],
+        default = FALSE
+      ),
+      SASDatasetName = if (.dx_blank(.dx_chr(ds, "sas_dataset_name")[[i]])) {
+        name
+      } else {
+        .dx_chr(ds, "sas_dataset_name")[[i]]
+      },
+      Purpose = .dx_purpose(
+        .dx_chr(ds, "purpose")[[i]],
+        spec@standard,
+        p,
+        call
+      ),
+      "def:Structure" = .dx_structure(
+        .dx_chr(ds, "structure")[[i]],
+        .dx_chr(ds, "keys")[[i]],
+        name,
+        call
+      ),
+      "def:Class" = cls_attr,
+      "def:ArchiveLocationID" = .dx_chr(ds, "archive_location_id")[[i]],
+      "def:StandardOID" = .dx_chr(ds, "standard_id")[[i]],
+      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(ds, "is_non_standard")[[i]]),
+      "def:HasNoData" = .dx_yesonly(.dx_lgl(ds, "has_no_data")[[i]]),
+      "def:CommentOID" = .dx_chr(ds, "comment_id")[[i]]
+    ),
+    kids = list(
+      Description = .dx_desc(.dx_chr(ds, "label")[[i]]),
+      ItemRef = refs,
+      Alias = .dx_alias_node(
+        .dx_chr(ds, "alias_context")[[i]],
+        .dx_chr(ds, "alias_name")[[i]]
+      ),
+      `def:Class` = cls_kid,
+      `def:leaf` = archive_leaf
+    )
+  )
+}
+
+#' @noRd
+.dx_alias_node <- function(context, name) {
+  if (.dx_blank(name)) {
+    return(NULL)
+  }
+  .dx_node("Alias", attrs = .dx_attrs(Context = context, Name = name))
+}
+
+# ---- variables ------------------------------------------------------------
+
+# The ItemRef inside an ItemGroupDef. Everything here belongs to the
+# REFERENCE, not the definition, which is why two datasets may reference one
+# ItemDef with different roles and key positions.
+#' @noRd
+.dx_itemref <- function(var, i, oid, order_number) {
+  .dx_node(
+    "ItemRef",
+    attrs = .dx_attrs(
+      ItemOID = oid,
+      OrderNumber = order_number,
+      Mandatory = .dx_yesno(.dx_lgl(var, "mandatory")[[i]], default = FALSE),
+      KeySequence = .dx_chr(var, "key_sequence")[[i]],
+      MethodOID = .dx_chr(var, "method_id")[[i]],
+      Role = .dx_chr(var, "role")[[i]],
+      RoleCodeListOID = .dx_chr(var, "role_codelist_id")[[i]],
+      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(var, "is_non_standard")[[i]]),
+      "def:HasNoData" = .dx_yesonly(.dx_lgl(var, "has_no_data")[[i]])
+    )
+  )
+}
+
+# Define-XML 2.0's origin vocabulary, mapped to 2.1's. CDISC renamed the two
+# collection origins between the versions; everything else is spelled the
+# same. Without this an upgrade -- read a 2.0 define, write it as 2.1 -- dies
+# on the first CRF-collected variable, which is most of a study.
+#
+# Only this direction is implemented. The reverse (2.1 -> 2.0) has to decide
+# what a 2.0 document should say for "Not Available" and "Other", which have
+# no 2.0 spelling at all, and that belongs with the rest of the 2.0 writer.
+.dx_origin_upgrade <- c(CRF = "Collected", eDT = "Collected")
+
+#' @noRd
+.dx_origin_type <- function(value, p, call = rlang::caller_env()) {
+  v <- trimws(value)
+  if (!is.null(p$enum$origin_type) && !(v %in% p$enum$origin_type)) {
+    hit <- .dx_origin_upgrade[v]
+    if (!is.na(hit)) {
+      v <- unname(hit)
+    }
+  }
+  .dx_enum(v, p$enum$origin_type, "def:Origin Type", call)
+}
+
+# def:Origin. Type is required in 2.1, so an origin description or CRF page
+# with no type is refused rather than emitted as an untyped origin that no
+# reviewer tool can interpret.
+#' @noRd
+.dx_origin <- function(row, p, label, call = rlang::caller_env()) {
+  desc <- .dx_desc(row$origin_description)
+  ref <- .dx_docref(row$origin_document_id, row$pages, row$page_type, p, call)
+  if (.dx_blank(row$origin)) {
+    if (is.null(desc) && is.null(ref)) {
+      return(NULL)
+    }
+    .artoo_abort(
+      c(
+        "{label} carries origin detail but no origin type.",
+        "x" = "{.code def:Origin/@Type} is required in Define-XML.",
+        "i" = "Set {.code origin} on the row, or clear its origin description and pages."
+      ),
+      kind = "define",
+      call = call
+    )
+  }
+  .dx_node(
+    "def:Origin",
+    attrs = .dx_attrs(
+      Type = .dx_origin_type(row$origin, p, call),
+      Source = .dx_enum(
+        row$source,
+        p$enum$origin_source,
+        "def:Origin Source",
+        call
+      )
+    ),
+    kids = list(Description = desc, `def:DocumentRef` = ref)
+  )
+}
+
+#' @noRd
+.dx_itemdef <- function(row, p, call = rlang::caller_env()) {
+  label <- sprintf("ItemDef %s", row$oid)
+  .dx_node(
+    "ItemDef",
+    attrs = .dx_attrs(
+      OID = row$oid,
+      Name = row$name,
+      DataType = row$data_type,
+      Length = row$length,
+      SignificantDigits = row$significant_digits,
+      SASFieldName = row$sas_field_name,
+      "def:DisplayFormat" = row$display_format,
+      "def:CommentOID" = row$comment_id
+    ),
+    kids = list(
+      Description = .dx_desc(row$label),
+      CodeListRef = if (.dx_blank(row$codelist_id)) {
+        NULL
+      } else {
+        .dx_node(
+          "CodeListRef",
+          attrs = .dx_attrs(CodeListOID = row$codelist_id)
+        )
+      },
+      Alias = .dx_alias_node(row$alias_context, row$alias_name),
+      `def:Origin` = .dx_origin(row, p, label, call),
+      `def:ValueListRef` = if (.dx_blank(row$value_list_id)) {
+        NULL
+      } else {
+        .dx_node(
+          "def:ValueListRef",
+          attrs = .dx_attrs(ValueListOID = row$value_list_id)
+        )
+      }
+    )
+  )
+}
+
+# ---- codelists ------------------------------------------------------------
+
+#' @noRd
+.dx_codelist <- function(cl, p, call = rlang::caller_env()) {
+  id <- .dx_one(cl$codelist_id)
+  name <- .dx_one(.dx_chr(cl, "name"))
+  dtype <- .dx_one(.dx_chr(cl, "data_type"))
+  dtype <- if (.dx_blank(dtype)) "text" else .to_define_datatype(dtype)
+  # A term with a decode is a CodeListItem; one without is an EnumeratedItem.
+  # The schema offers a choice between the two, not a mixture, so the whole
+  # list follows whichever its terms need.
+  decoded <- any(!.dx_blank(.dx_chr(cl, "decode")))
+  ord <- .dx_row_order(cl)
+  terms <- lapply(ord, function(i) .dx_codelist_term(cl, i, decoded, p))
+  kids <- list(
+    Description = NULL,
+    Alias = .dx_alias_node("nci:ExtCodeID", .dx_one(.dx_chr(cl, "nci_code")))
+  )
+  kids[[if (decoded) "CodeListItem" else "EnumeratedItem"]] <- terms
+  .dx_node(
+    "CodeList",
+    attrs = .dx_attrs(
+      OID = id,
+      Name = if (.dx_blank(name)) id else name,
+      DataType = .dx_enum(
+        dtype,
+        p$enum$cl_data_type,
+        "CodeList DataType",
+        call
+      ),
+      SASFormatName = .dx_one(.dx_chr(cl, "sas_format_name")),
+      "def:StandardOID" = .dx_one(.dx_chr(cl, "standard_id")),
+      "def:IsNonStandard" = .dx_yesonly(.dx_lgl(cl, "is_non_standard")),
+      "def:CommentOID" = .dx_one(.dx_chr(cl, "comment_id"))
+    ),
+    kids = kids
+  )
+}
+
+#' @noRd
+.dx_codelist_term <- function(cl, i, decoded, p) {
+  el <- if (decoded) "CodeListItem" else "EnumeratedItem"
+  kids <- list(
+    Alias = .dx_alias_node("nci:ExtCodeID", .dx_chr(cl, "term_nci_code")[[i]])
+  )
+  if (decoded) {
+    kids$Decode <- .dx_node(
+      "Decode",
+      kids = list(
+        TranslatedText = .dx_node(
+          "TranslatedText",
+          attrs = list(`xml:lang` = "en"),
+          text = as.character(.dx_chr(cl, "decode")[[i]])
+        )
+      )
+    )
+  }
+  # 2.1 adds a term-level Description; the 2.0 profile does not list it, so
+  # emitting it there would abort at build time rather than fail validation.
+  if (!is.null(p$order[[el]]) && "Description" %in% p$order[[el]]) {
+    kids$Description <- .dx_desc(.dx_chr(cl, "term_description")[[i]])
+  }
+  .dx_node(
+    el,
+    attrs = .dx_attrs(
+      CodedValue = cl$term[[i]],
+      Rank = .dx_chr(cl, "rank")[[i]],
+      OrderNumber = .dx_chr(cl, "order")[[i]],
+      "def:ExtendedValue" = .dx_yesonly(.dx_lgl(cl, "extended")[[i]])
+    ),
+    kids = kids
+  )
+}
+
+# ---- methods / comments ---------------------------------------------------
+
+#' @noRd
+.dx_method <- function(md, i, expressions, p, call = rlang::caller_env()) {
+  id <- md$method_id[[i]]
+  name <- .dx_chr(md, "name")[[i]]
+  desc <- .dx_chr(md, "description")[[i]]
+  type <- .dx_chr(md, "type")[[i]]
+  fes <- expressions[expressions$method_id == id, , drop = FALSE]
+  .dx_node(
+    "MethodDef",
+    attrs = .dx_attrs(
+      OID = id,
+      Name = if (.dx_blank(name)) id else name,
+      # Type is required and closed to Computation / Imputation; a derivation
+      # is a computation unless the spec says otherwise.
+      Type = if (.dx_blank(type)) "Computation" else trimws(type)
+    ),
+    kids = list(
+      # Description is required on MethodDef, so an undescribed method falls
+      # back to its name rather than emitting an empty element.
+      Description = .dx_desc(
+        if (.dx_blank(desc)) {
+          if (.dx_blank(name)) id else name
+        } else {
+          desc
+        }
+      ),
+      FormalExpression = lapply(.dx_row_order(fes), function(j) {
+        .dx_node(
+          "FormalExpression",
+          attrs = .dx_attrs(Context = fes$context[[j]]),
+          text = as.character(fes$code[[j]])
+        )
+      }),
+      `def:DocumentRef` = .dx_docref(
+        .dx_chr(md, "document_id")[[i]],
+        .dx_chr(md, "pages")[[i]],
+        .dx_chr(md, "page_type")[[i]],
+        p,
+        call
+      )
+    )
+  )
+}
+
+#' @noRd
+.dx_comment <- function(cm, i, p, call = rlang::caller_env()) {
+  .dx_node(
+    "def:CommentDef",
+    attrs = .dx_attrs(OID = cm$comment_id[[i]]),
+    kids = list(
+      Description = .dx_desc(.dx_chr(cm, "description")[[i]]),
+      `def:DocumentRef` = .dx_docref(
+        .dx_chr(cm, "document_id")[[i]],
+        .dx_chr(cm, "pages")[[i]],
+        .dx_chr(cm, "page_type")[[i]],
+        p,
+        call
+      )
+    )
+  )
+}

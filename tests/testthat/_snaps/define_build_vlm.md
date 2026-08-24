@@ -1,0 +1,20 @@
+# two rows sharing an ItemDef OID must agree
+
+    Code
+      write_spec(spec, path, created = "2020-01-01 00:00:00")
+    Condition
+      Error:
+      ! 1 ItemDef OID is defined more than one way.
+      x "IT.SHARED".
+      i Define-XML allows one ItemDef per OID; give the rows distinct `itemoid` values, or make their definitions agree.
+
+# a where clause that names no resolvable variable is refused
+
+    Code
+      write_spec(spec, path, created = "2020-01-01 00:00:00")
+    Condition
+      Error:
+      ! Where clause "WC.1" names no variable.
+      x `RangeCheck/@def:ItemOID` is required, and the clause carries neither `itemoid` nor a dataset and variable that resolve to one.
+      i Set `dataset` and `variable` on the where-clause rows.
+

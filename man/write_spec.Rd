@@ -2,18 +2,34 @@
 % Please edit documentation in R/spec_write.R
 \name{write_spec}
 \alias{write_spec}
-\title{Write a specification to native JSON or a P21 Excel workbook}
+\title{Write a specification to JSON, an Excel workbook, or Define-XML}
 \usage{
-write_spec(spec, path)
+write_spec(spec, path, ...)
 }
 \arguments{
 \item{spec}{\emph{The specification to serialise.} \verb{<artoo_spec>: required}.
 Build one with \code{\link[=artoo_spec]{artoo_spec()}} or \code{\link[=read_spec]{read_spec()}}.}
 
 \item{path}{\emph{Destination file.} \verb{<character(1)>: required}. The extension
-picks the format: \code{.json} (native, lossless) or \code{.xlsx} (P21
-interchange; needs the \code{writexl} package). Any other extension aborts
-with \code{artoo_error_input}.}
+picks the format: \code{.json} (native, lossless), \code{.xlsx} (P21
+interchange; needs the \code{writexl} package), or \code{.xml} (Define-XML 2.1;
+needs the \code{xml2} package). Any other extension aborts with
+\code{artoo_error_input}.}
+
+\item{...}{\emph{Format-specific options.} Ignored by the JSON and xlsx paths.
+Define-XML accepts:
+\itemize{
+\item \code{version} -- \verb{<character(1)> | NULL}. \code{"2.1"} (default), resolved from
+the spec's own \code{define_version} when unset. \code{"2.0"} is not written yet.
+\item \code{created} -- the \code{CreationDateTime} stamp, formatted as UTC. Freeze it
+for a reproducible submission build; the default is the current time.
+\item \code{stylesheet} -- \verb{<logical(1)> | <character(1)>: default TRUE}. \code{TRUE}
+writes the \code{xml-stylesheet} processing instruction and copies the
+bundled CDISC stylesheet beside the output; a string names a
+stylesheet without copying one; \code{FALSE} writes neither.
+\item \code{validate} -- \verb{<logical(1)>: default TRUE}. Schema-validate before the
+file is put in place.
+}}
 }
 \value{
 \emph{The output \code{path}, invisibly.} Read it back with \code{\link[=read_spec]{read_spec()}}.
@@ -21,10 +37,11 @@ with \code{artoo_error_input}.}
 \description{
 Serialise a \code{artoo_spec}, dispatching on the file extension: a \code{.json}
 path writes artoo's native, lossless JSON; a \code{.xlsx} path writes a
-Pinnacle 21 (P21) style Excel workbook. Both are inverses of
-\code{\link[=read_spec]{read_spec()}} on their format, which makes the spec converters free
-compositions: \code{read_spec("define.xml") |> write_spec("spec.xlsx")} is a
-Define-XML to P21 bridge in one line.
+Pinnacle 21 (P21) style Excel workbook; a \code{.xml} path writes a
+submission-grade Define-XML 2.1 document. Each is the inverse of
+\code{\link[=read_spec]{read_spec()}} on its format, which makes the spec converters free
+compositions: \code{read_spec("spec.xlsx") |> write_spec("define.xml")} turns
+a workbook into a define.xml in one line.
 }
 \details{
 \strong{Native JSON is the lossless format.} Each slot is written as an array
@@ -55,6 +72,25 @@ round-trip keeps user columns.
 Define-XML document and writing it to xlsx therefore loses its
 \code{def:Standards} block, its structured where clauses and its formal
 expressions. Write JSON when you need the spec back whole.
+
+\strong{Define-XML is the submission format.} The \code{.xml} path emits
+Define-XML 2.1 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it
+built before the file reaches its destination, so an invalid document
+never overwrites a good one. Value-level metadata is emitted whole: the
+parent variable's \code{def:ValueListRef}, the \code{def:ValueListDef}, a real
+\code{ItemDef} per value-level row, and the \code{def:WhereClauseRef} and
+\code{def:WhereClauseDef} that say which rows it applies to.
+
+Identifiers already on the spec are reused verbatim, so a document read
+and written back keeps every OID a reviewer may have bookmarked; the rest
+are minted readably (\code{IG.DM}, \code{IT.DM.USUBJID}, \code{VL.VS.VSORRES}). Two
+schema-required attributes are derived rather than demanded:
+\code{def:Structure} falls back to the dataset keys, and \code{Purpose} follows the
+CDISC standard. A dataset with neither a structure nor keys aborts with
+\code{artoo_error_define} rather than being given an invented one.
+
+Define-XML 2.0 output, Analysis Results Metadata, and external
+dictionaries (\code{MedDRA}, ISO 3166) are not written yet.
 
 Fields with no P21 column (\code{itemoid}, \code{target_data_type},
 per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;
@@ -88,10 +124,27 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   spec_datasets(read_spec(xlsx))
 }
 
+# ---- Example 3: the same spec as a submission-grade define.xml ----
+#
+# Read the bundled minimal Define-XML, write it back with a frozen
+# timestamp, and confirm the result is schema-valid. The write itself
+# validates, so reaching this line already proves it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  dm <- read_spec(
+    system.file("extdata", "define-minimal.xml", package = "artoo")
+  )
+  xml <- file.path(tempdir(), "define.xml")
+  write_spec(dm, xml, created = "2020-01-01 00:00:00")
+  validate_define(xml)
+}
+
 }
 \seealso{
 \strong{Inverse:} \code{\link[=read_spec]{read_spec()}} reads native JSON, a P21 Excel workbook, or
 Define-XML back into a \code{artoo_spec}.
+
+\strong{Check the Define-XML written:} \code{\link[=validate_define]{validate_define()}} schema-validates it,
+\code{\link[=define_lint]{define_lint()}} checks its reference integrity.
 
 \strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
 \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_standard]{spec_standard()}}.

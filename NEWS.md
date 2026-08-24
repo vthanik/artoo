@@ -1,5 +1,25 @@
 # artoo 0.1.3.9000
 
+* `write_spec()` writes Define-XML 2.1 when given a `.xml` path, so a
+  Pinnacle 21 workbook or a native JSON spec becomes a submission-grade
+  define.xml in one call. The document is schema-validated before it reaches
+  its destination, so an invalid one never overwrites a good file. Value-level
+  metadata is emitted whole: the parent variable's `def:ValueListRef`, the
+  `def:ValueListDef`, an `ItemDef` per value-level row, and the
+  `def:WhereClauseRef` and `def:WhereClauseDef` behind it. Define-XML 2.0
+  output, analysis-results metadata, and external dictionaries are not written
+  yet. Needs the `xml2` package.
+
+* `write_spec()` gains `...`, which the Define-XML path reads for `version`,
+  `created`, `stylesheet`, and `validate`. Freeze `created` for a
+  byte-reproducible submission build.
+
+* `read_spec()` on a Define-XML document now carries a value-level row's whole
+  `ItemDef`: its origin, comment, display format, significant digits, and SAS
+  field name, alongside the `def:WhereClauseRef` it names. Previously only the
+  label, type, length and codelist survived, so a document read and written
+  back lost every value-level origin.
+
 * `read_spec()` on a Pinnacle 21 workbook now reads the `WhereClauses`,
   `Dictionaries`, `Standards`, and analysis-results sheets. A workbook with no
   `WhereClauses` sheet has its value-level conditions parsed from the free-text
