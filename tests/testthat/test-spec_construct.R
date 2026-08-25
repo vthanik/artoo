@@ -321,3 +321,62 @@ test_that("blank and NA standards are ignored during resolution", {
   )
   expect_identical(spec_standard(spec), "SDTMIG 3.2")
 })
+
+test_that("an inline method expression folds in beside the formal ones", {
+  # `.fold_method_expressions()` turns a method's inline `expression_code`
+  # into a method_expressions row. Three of its four exits had no test: no
+  # code at all, code for a method that already has a formal expression, and
+  # stacking onto an existing table.
+  f <- artoo:::.fold_method_expressions
+
+  methods <- data.frame(
+    method_id = c("ME.1", "ME.2"),
+    name = "M",
+    description = "d",
+    expression_context = "SAS",
+    expression_code = c("x = 1;", NA_character_),
+    stringsAsFactors = FALSE
+  )
+
+  # Nothing to fold: no method carries code.
+  blank <- methods
+  blank$expression_code <- NA_character_
+  expect_null(f(blank, NULL))
+
+  # Folded from nothing.
+  out <- f(methods, NULL)
+  expect_identical(out$method_id, "ME.1")
+  expect_identical(out$code, "x = 1;")
+
+  # A method that already has a formal expression is left alone, not doubled.
+  formal <- data.frame(
+    method_id = "ME.1",
+    order = 1L,
+    context = "SAS",
+    code = "formal;",
+    stringsAsFactors = FALSE
+  )
+  expect_identical(f(methods, formal), formal)
+
+  # And an inline one for a DIFFERENT method stacks onto the table.
+  methods2 <- methods
+  methods2$expression_code <- c("x = 1;", "y = 2;")
+  stacked <- f(methods2, formal)
+  expect_identical(nrow(stacked), 2L)
+  expect_setequal(stacked$method_id, c("ME.1", "ME.2"))
+})
+
+test_that("a primary standard is minted only from a versioned IG name", {
+  # Four exits, none tested: no standards table, a blank standard, a standard
+  # with no version, and a name that is not an implementation guide.
+  f <- artoo:::.mint_primary_standard
+  empty <- data.frame(standard_id = character(0), stringsAsFactors = FALSE)
+
+  expect_identical(f(empty, NA_character_), empty)
+  expect_identical(f(empty, ""), empty)
+  expect_identical(f(empty, "SDTMIG"), empty)
+  expect_identical(f(empty, "Something Else 1.0"), empty)
+
+  minted <- f(empty, "SDTMIG 3.4")
+  expect_identical(minted$standard_id, "STD.1")
+})

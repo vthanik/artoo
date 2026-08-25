@@ -355,11 +355,10 @@
   call = rlang::caller_env()
 ) {
   ds <- spec@datasets
-  stated <- if ("archive_location_id" %in% names(ds)) {
-    as.character(ds$archive_location_id)
-  } else {
-    rep(NA_character_, nrow(ds))
-  }
+  # No "does the column exist" guard: `archive_location_id` is in the datasets
+  # schema, so the constructor creates it on every spec including a zero-row
+  # one. A guard for its absence could not be reached or tested.
+  stated <- as.character(ds$archive_location_id)
   names(stated) <- as.character(ds$dataset)
   odd <- character(0)
   for (d in names(matched)) {

@@ -578,3 +578,21 @@ test_that("an absent analysis-criteria cell splits into nothing", {
   expect_null(artoo:::.arm_split_criteria(NA_character_))
   expect_null(artoo:::.arm_split_criteria("   "))
 })
+
+test_that("two value rows on one variable get distinct minted clause ids", {
+  # The id is `WC.<dataset>.<variable>`, so a second value-level row on the
+  # same variable collides. The while-loop that appends `.2` had no test: one
+  # row per variable never reaches it, and a collision would silently give
+  # two different conditions the same id.
+  values <- data.frame(
+    dataset = "VS",
+    variable = "VSORRES",
+    where_clause = c("VSTESTCD EQ HEIGHT", "VSTESTCD EQ WEIGHT"),
+    stringsAsFactors = FALSE
+  )
+  wc <- artoo:::.wc_from_values(values)
+  ids <- unique(wc$where_clauses$where_clause_id)
+  expect_length(ids, 2L)
+  expect_true("WC.VS.VSORRES" %in% ids)
+  expect_true(any(grepl("\\.2$", ids)))
+})

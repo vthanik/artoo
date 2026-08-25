@@ -1431,3 +1431,97 @@ test_that("data_format with no data at all is refused", {
     class = "artoo_error_input"
   )
 })
+
+test_that("more than five ambiguous datasets are counted, not listed", {
+  # The cap keeps a six-dataset collision a message rather than a wall. It
+  # was demonstrated by hand and never asserted, so the branch that appends
+  # "N more datasets not shown" had no test.
+  ds <- paste0("D", 1:7)
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = ds,
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = ds,
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  f <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
+  for (n in tolower(ds)) {
+    write_json(f, file.path(d, paste0(n, ".json")))
+    write_rds(f, file.path(d, paste0(n, ".rds")))
+  }
+  err <- tryCatch(
+    artoo:::.dx_resolve_data_dir(d, spec),
+    artoo_error_input = function(e) conditionMessage(e)
+  )
+  expect_match(err, "7 datasets match more than one file")
+  expect_match(err, "2 more datasets not shown")
+  # Five named, not seven.
+  expect_length(gregexpr("D[0-9]\": ", err)[[1]], 5L)
+})
+
+test_that("a stated archive location is left alone by the shape check", {
+  # The check only speaks about locations artoo would DERIVE. A dataset that
+  # states its own is the author's assertion and is not second-guessed.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      archive_location_id = "LF.MINE",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = "LF.MINE",
+      href = "vs.json",
+      title = "VS",
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  write_json(
+    data.frame(VSORRES = "1", stringsAsFactors = FALSE),
+    file.path(d, "vs.json")
+  )
+  expect_no_warning(suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)))
+})
+
+test_that("a dataset stating no archive location is warned about", {
+  # The complement of the test above: nothing stated, so artoo will derive
+  # `<dataset>.xpt`, and the folder holds json.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  expect_true(all(is.na(spec@datasets$archive_location_id)))
+  d <- withr::local_tempdir()
+  write_json(
+    data.frame(VSORRES = "1", stringsAsFactors = FALSE),
+    file.path(d, "vs.json")
+  )
+  expect_warning(
+    suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)),
+    "does not hold"
+  )
+})
