@@ -1,5 +1,25 @@
 # artoo 0.2.0
 
+* `read_dataset()` and `members()` refuse an empty `format` with a classed
+  condition. `format = ""` reached `base::exists("")`, which throws an
+  unclassed `simpleError`, so it escaped every `artoo_error_*` handler a
+  caller could have written.
+
+* `write_spec()` to Define-XML reports which files informed the document when
+  `data` is a folder, on every call rather than only when something is
+  unmatched. A define is a submission artefact and the files behind it cannot
+  be recovered from it afterwards.
+
+* `write_spec()` to Define-XML warns when a file records a different dataset
+  than the name it was matched by, and when a derived archive location names
+  a file the folder does not hold. Matching is by basename, so `vs.json`
+  copied to `dm.json` used to widen DM's lengths from VS bytes in silence.
+
+* `write_spec()` to `.xlsx` documents what a workbook cannot carry: a method
+  with several formal expressions keeps only the first, because a workbook
+  gives each method one row with one code cell. The write already named the
+  methods it truncated; the help page claimed the table survived whole.
+
 * `read_spec()` reads back a native JSON spec that names no datasets.
   `write_spec()` wrote the file and `read_spec()` refused it, saying to
   "pass at least a `dataset` table" to a caller who had passed a path. A key
