@@ -99,7 +99,13 @@ test_that("format = restricts a mixed directory to the named formats", {
   d <- withr::local_tempdir()
   write_json(dm, file.path(d, "dm.json"))
   write_rds(dm, file.path(d, "dm.rds"))
-  write_xpt(dm, file.path(d, "dm.xpt"))
+  # The bundled pilot spec declares STUDYID length 7 and the data needs 12,
+  # so the writer widens and says so. Pinned, not leaked -- this file's other
+  # xpt test pins the identical call.
+  expect_warning(
+    write_xpt(dm, file.path(d, "dm.xpt")),
+    class = "artoo_warning_encoding"
+  )
 
   expect_identical(nrow(members(d)), 3L)
   expect_identical(members(d, format = "json")$file, "dm.json")
@@ -170,7 +176,13 @@ test_that("format = NULL is the released behaviour, unchanged", {
   d <- withr::local_tempdir()
   write_json(dm, file.path(d, "dm.json"))
   write_rds(dm, file.path(d, "dm.rds"))
-  write_xpt(dm, file.path(d, "dm.xpt"))
+  # The bundled pilot spec declares STUDYID length 7 and the data needs 12,
+  # so the writer widens and says so. Pinned, not leaked -- this file's other
+  # xpt test pins the identical call.
+  expect_warning(
+    write_xpt(dm, file.path(d, "dm.xpt")),
+    class = "artoo_warning_encoding"
+  )
 
   m <- members(d)
   expect_identical(m$file, c("dm.json", "dm.rds", "dm.xpt"))
@@ -195,4 +207,20 @@ test_that("an empty-string format aborts as a condition, not a crash", {
   f <- file.path(d, "dm.json")
   write_json(demo_dm(), f)
   expect_error(read_dataset(f, format = ""), class = "artoo_error_codec")
+})
+
+test_that("the restriction is by resolved format, not merely by extension", {
+  # The directory branch filtered by extension and never re-checked the format
+  # it resolved, so the two branches disagreed about what `format` means. It
+  # is latent while no two codecs claim one extension, and the registry header
+  # says a public register_codec() is anticipated.
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  write_rds(dm, file.path(d, "dm.rds"))
+
+  for (f in c("json", "rds")) {
+    m <- members(d, format = f)
+    expect_true(all(m$format %in% f))
+  }
 })

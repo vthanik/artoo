@@ -92,7 +92,7 @@
   for (f in format) {
     .resolve_codec(f, call = call)
   }
-  unique(format)
+  format
 }
 
 # A directory -> every dataset file it holds (non-recursive), one row per
@@ -117,6 +117,13 @@
     }
   })
   out <- do.call(rbind, rows)
+  # The filter above is by EXTENSION; this is by resolved FORMAT, which is
+  # what the restriction actually means and what the single-file branch
+  # already tests. They agree only while no two codecs claim one extension,
+  # and the registry header says a public register_codec() is anticipated.
+  if (!is.null(formats)) {
+    out <- out[out$format %in% formats, , drop = FALSE]
+  }
   # method = "radix": deterministic C-locale order, independent of LC_COLLATE.
   out <- out[order(out$file, out$member, method = "radix"), , drop = FALSE]
   out
@@ -165,7 +172,8 @@
 #'   file whose extension no codec claims, aborts.
 #'
 #' @param format *Restrict the inventory to these formats.* `<character> |
-#'   NULL: default NULL`. Format names as [artoo_formats()] lists them, not
+#'   NULL`. Defaults to `NULL`, which inventories every format. Format names
+#'   as [artoo_formats()] lists them, not
 #'   file extensions: `"parquet"` claims both `.parquet` and `.pq`. `NULL`
 #'   inventories every format. Several names are a set, not an order, so
 #'   `c("xpt", "json")` lists both and says nothing about which wins.
@@ -184,8 +192,9 @@
 #' @return *A `<artoo_members>` data frame*, one row per dataset, with columns
 #'   `file` (source basename), `member` (dataset name), `label`, `records`
 #'   (row count), `variables` (column count), and `format` (the codec
-#'   format). Empty when a directory holds no dataset files. It is an ordinary
-#'   data frame underneath.
+#'   format). Empty when a directory holds no dataset files, and likewise when
+#'   `format` excludes every one it holds. It is an ordinary data frame
+#'   underneath.
 #'
 #' @examples
 #' dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
