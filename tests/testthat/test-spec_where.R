@@ -541,3 +541,40 @@ test_that("a value containing 'and' survives its own round trip (#p12-review-M1)
   expect_identical(parsed$value, c("Nausea and vomiting", "Y"))
   expect_identical(parsed$variable, c("AEDECOD", "AESER"))
 })
+
+test_that("an extra open bracket is not a balanced group", {
+  # `((A)` opens twice and closes once. It passes the cheap first-and-last
+  # character guard, so only walking the depth catches it -- and a clause
+  # wrongly called balanced loses its outer bracket when the parser strips
+  # what it thinks is a wrapper.
+  expect_false(artoo:::.wc_balanced_parens("((A)"))
+  expect_true(artoo:::.wc_balanced_parens("(A)"))
+})
+
+test_that("a clause of nothing but a conjunction parses to nothing", {
+  # " and " splits into two empty conditions. Each is blank rather than
+  # malformed, so nothing is refused and the clause simply has no conditions
+  # to carry.
+  expect_null(artoo:::.wc_parse_text(" and ", "WC.EMPTY"))
+  expect_null(artoo:::.wc_parse_condition("   ", "WC.EMPTY"))
+})
+
+test_that("an OR clause repeating a value warns and keeps it once", {
+  # Two arms of an OR naming the same value fold into an IN whose value list
+  # would otherwise carry the duplicate through to the define, where it is a
+  # repeated CheckValue.
+  expect_warning(
+    parsed <- artoo:::.wc_parse_text(
+      "AETERM EQ HEADACHE or AETERM EQ HEADACHE",
+      "WC.DUP"
+    ),
+    "repeats"
+  )
+  expect_identical(parsed$value, "HEADACHE")
+  expect_identical(parsed$comparator, "IN")
+})
+
+test_that("an absent analysis-criteria cell splits into nothing", {
+  expect_null(artoo:::.arm_split_criteria(NA_character_))
+  expect_null(artoo:::.arm_split_criteria("   "))
+})

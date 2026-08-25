@@ -1758,3 +1758,81 @@ test_that("a sponsor's repeated coded value and comment write once, out loud (#p
   )
   expect_true(validate_define(path)@summary$valid)
 })
+
+test_that("2.0 names the codelist term description and the version comment it drops", {
+  skip_if_not_installed("xml2")
+  # Two losses the notice knew about but nothing exercised: 2.0 has no
+  # CodeListItem/Description, and its MetaDataVersion carries no
+  # def:CommentOID. Both are silent data loss if the write says nothing.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSPOS",
+      data_type = "string",
+      codelist_id = "CL.POS",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.POS",
+      name = "Position",
+      data_type = "text",
+      term = "SUPINE",
+      decode = "Supine",
+      term_description = "Lying face up",
+      stringsAsFactors = FALSE
+    ),
+    study = list(
+      study_name = "S",
+      metadata_version_comment_id = "COM.MDV"
+    ),
+    comments = data.frame(
+      comment_id = "COM.MDV",
+      description = "Version note",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  expect_warning(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    "CodeListItem/Description"
+  )
+  expect_warning(
+    write_spec(spec, path, version = "2.0", created = FROZEN),
+    "MetaDataVersion/@def:CommentOID",
+    fixed = TRUE
+  )
+})
+
+test_that("a dataset with no name and one with no data get no archive leaf", {
+  # The leaf is derived, so both carve-outs matter: nothing to name it after,
+  # and CDISC's own examples leave a def:HasNoData dataset without a file to
+  # point at.
+  expect_null(artoo:::.dx_default_archive(NA_character_))
+  expect_null(artoo:::.dx_default_archive("DM", empty = TRUE))
+  leaf <- artoo:::.dx_default_archive("DM")
+  expect_identical(leaf$attrs$ID, "LF.DM")
+  expect_identical(leaf$attrs[["xlink:href"]], "dm.xpt")
+})
+
+test_that("an unreadable file and a hrefless instruction name no stylesheet", {
+  # The renderer reads the href back out of the document rather than
+  # rebuilding it, so these two are the paths where there is nothing to read.
+  expect_null(
+    suppressWarnings(
+      artoo:::.dx_pi_href(file.path(tempdir(), "absent-define.xml"))
+    )
+  )
+
+  path <- file.path(withr::local_tempdir(), "d.xml")
+  writeLines(
+    c("<?xml version=\"1.0\"?>", "<?xml-stylesheet ?>", "<ODM/>"),
+    path
+  )
+  expect_null(artoo:::.dx_pi_href(path))
+})

@@ -55,8 +55,19 @@
   if (is.null(data)) {
     return(NULL)
   }
+  # A data frame is a named list, so it reaches the element check below and
+  # is refused there for a column not being a data frame. Catch it here and
+  # say what was actually passed.
   if (is.data.frame(data)) {
-    data <- list(data)
+    .artoo_abort(
+      c(
+        "{.arg data} must be a named list of data frames.",
+        "x" = "You supplied a bare data frame.",
+        "i" = "Name it for the dataset it holds, as {.code list(DM = dm)}."
+      ),
+      kind = "input",
+      call = call
+    )
   }
   if (!is.list(data) || !length(names(data)) || anyNA(names(data))) {
     .artoo_abort(

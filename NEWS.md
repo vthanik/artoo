@@ -188,6 +188,10 @@
 * `write_spec()` to `.xml` no longer reports an ADaM spec as missing
   `datasets$domain`, which is an SDTM concept ADaM leaves blank.
 
+* `write_spec()` to `.xml` says what a bare data frame is when `data =` gets
+  one. A data frame is a named list, so it reached the per-element check and
+  was refused for a column not being a data frame, naming the column.
+
 * The bundled `sdtm-spec.xlsx` and `adam-spec.xlsx` are rebuilt. They were
   written before the where-clause fix below, so reading the package's own
   example workbook warned that 23 value-level rows named a clause it did not

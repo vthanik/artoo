@@ -258,3 +258,38 @@ test_that("scoping drops the metadata it orphans, not the author's (#p12-review-
     )
   )
 })
+
+test_that("a define carrying only the mandatory parts reads back empty, not broken", {
+  skip_if_not_installed("xml2")
+  # A first-draft define has no analysis results, no codelist items, no
+  # document refs and no typed standard. Every reader for those is a guard
+  # over an element that is simply absent, and a guard that aborts instead of
+  # returning nothing turns a sparse document into an unreadable one.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    study = data.frame(study_name = "S", stringsAsFactors = FALSE),
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "minimal.xml")
+  suppressWarnings(write_spec(spec, path, created = "2020-01-01 00:00:00"))
+
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(nrow(back@arm_displays), 0L)
+  expect_identical(nrow(back@arm_results), 0L)
+  expect_identical(nrow(back@codelists), 0L)
+  expect_identical(nrow(back@where_clauses), 0L)
+  expect_identical(nrow(back@dictionaries), 0L)
+  # The one thing that is not empty: the archive leaf the writer derives.
+  expect_identical(back@documents$document_id, "LF.VS")
+  expect_identical(back@variables$variable, "VSORRES")
+})

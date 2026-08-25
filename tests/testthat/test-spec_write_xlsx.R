@@ -748,3 +748,65 @@ test_that("a user's own ValueLevel Description is not clobbered (#p12-final-3)",
   expect_identical(sheet$Label[[1]], "Under 65")
   expect_identical(sheet$Description[[1]], "Sponsor cell kept verbatim")
 })
+
+test_that("a sheet with nothing the workbook knows about is not written", {
+  # Three ways a sheet ends up with nothing to say: no rows, no column the
+  # map recognises, and every recognised column blank. Writing an empty
+  # sheet for any of them puts a header over no data, which reads to a
+  # reviewer as "this metadata is missing" rather than "there is none".
+  expect_null(artoo:::.p21_sheet_frame(NULL, artoo:::.p21_ds_map))
+  expect_null(
+    artoo:::.p21_sheet_frame(data.frame(zzz = 1), artoo:::.p21_ds_map)
+  )
+})
+
+test_that("a study of nothing but blanks writes no Study sheet", {
+  expect_null(
+    artoo:::.p21_study_sheet(
+      data.frame(study_name = "  ", stringsAsFactors = FALSE),
+      NA_character_
+    )
+  )
+})
+
+test_that("analysis criteria with no dataset to scope them write no sheet", {
+  # The sheet exists to say which dataset a result's criteria select from.
+  # Rows that name none have nothing to put in the cell the reader keys on.
+  ar <- data.frame(
+    display_id = "AD.1",
+    result_id = "AR.1",
+    dataset = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  expect_null(artoo:::.p21_arm_criteria_sheet(ar))
+  expect_null(artoo:::.p21_arm_criteria_sheet(ar[0L, ]))
+})
+
+test_that("a one-word standard is left alone rather than split", {
+  # "SDTMIG 3.4" splits into a name and a version. "SDTMIG" has no version to
+  # take, and guessing one would put a fabricated number in the document.
+  study <- list(study_name = "S")
+  expect_identical(artoo:::.p21_study_standard_rows(study, "SDTMIG"), study)
+  expect_identical(
+    artoo:::.p21_study_standard_rows(study, NA_character_),
+    study
+  )
+})
+
+test_that("a condition of no values collapses to nothing", {
+  # An IN whose values are all NA has no cell to write; an EQ with one value
+  # writes it bare rather than bracketed.
+  wc <- data.frame(
+    where_clause_id = c("WC.1", "WC.2"),
+    check_order = 1L,
+    dataset = "VS",
+    variable = "VSTESTCD",
+    comparator = c("IN", "IN"),
+    value = c(NA_character_, "HEIGHT"),
+    value_order = 1L,
+    stringsAsFactors = FALSE
+  )
+  sheet <- artoo:::.p21_where_sheet(wc)
+  expect_true(is.na(sheet$Value[[1]]))
+  expect_identical(sheet$Value[[2]], "HEIGHT")
+})

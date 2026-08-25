@@ -830,3 +830,94 @@ test_that("a pre-existing shared-OID conflict still aborts (#p12-review-B1)", {
     class = "artoo_error_define"
   )
 })
+
+test_that("a bare data frame is refused by what it is, not by its columns", {
+  # A data frame IS a named list, so it reached the per-element check and was
+  # refused for a COLUMN not being a data frame -- the message named "A" and
+  # left the reader hunting a dataset by that name.
+  expect_snapshot(
+    artoo:::.dx_check_data(data.frame(A = 1), NULL),
+    error = TRUE
+  )
+  expect_error(
+    artoo:::.dx_check_data(data.frame(A = 1), NULL),
+    class = "artoo_error_input"
+  )
+})
+
+test_that("nothing to fill leaves the spec alone", {
+  # The three early exits on the data path. Each one is a spec the data
+  # cannot inform, and each has to return the spec untouched rather than
+  # rebuild it -- a rebuild would drop slots the caller still holds.
+  spec <- data_spec(
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      length = 8L,
+      stringsAsFactors = FALSE
+    )
+  )
+  bare <- S7::set_props(spec, variables = spec@variables[0L, ])
+  expect_identical(artoo:::.dx_data_lengths(bare, list(VS = vs_data())), bare)
+
+  # No value-level row's type is blank, so nothing is inferred.
+  expect_identical(artoo:::.dx_data_values(spec, list(VS = vs_data())), spec)
+})
+
+test_that("pooling skips a spec where nothing was touched", {
+  spec <- data_spec(
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      length = 8L,
+      stringsAsFactors = FALSE
+    )
+  )
+  lengths <- 8L
+  expect_identical(
+    artoo:::.dx_pool_lengths(spec, lengths, touched = FALSE),
+    lengths
+  )
+  # And when the OID count and the length vector disagree, which means the
+  # spec changed shape underneath: leave the lengths as they are rather than
+  # pair them up by position.
+  expect_identical(
+    artoo:::.dx_pool_lengths(spec, c(8L, 12L), touched = c(TRUE, TRUE)),
+    c(8L, 12L)
+  )
+})
+
+test_that("a value-level type stays blank when the data cannot answer it", {
+  # Three ways the data declines to fill a blank value-level type: the
+  # dataset is not among the frames, and the where clause selects no rows.
+  # Inferring from an absent or empty selection would invent a type.
+  spec <- data_spec(
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = c("AE", "VS"),
+      variable = c("AEDECOD", "VSORRES"),
+      data_type = NA_character_,
+      where_clause_id = c("WC.1", "WC.2"),
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = c("WC.1", "WC.2"),
+      check_order = 1L,
+      value_order = 1L,
+      dataset = c("AE", "VS"),
+      variable = c("AESER", "VSTESTCD"),
+      comparator = "EQ",
+      value = c("Y", "NOSUCHTEST"),
+      stringsAsFactors = FALSE
+    )
+  )
+  # Same object back: nothing was inferred, so nothing is rebuilt.
+  expect_identical(artoo:::.dx_data_values(spec, list(VS = vs_data())), spec)
+})

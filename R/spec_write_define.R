@@ -819,6 +819,11 @@
   # and never once when the render has a process to itself. A crashed R
   # session is a worse failure than a missing HTML file, so the render is
   # exiled and whatever it damages dies with it.
+  #
+  # A consequence worth writing down: the body below runs in a subprocess
+  # that loads an uninstrumented copy of the package, so coverage reports it
+  # as unhit however thoroughly it is tested. test-define-html.R exercises
+  # it end to end. Do not read the zero as untested code and do not chase it.
   rendered <- tryCatch(
     callr::r(
       function(source_path, sheet_path) {

@@ -513,3 +513,27 @@ test_that("an orphan where clause is still written, since it is still a definiti
     lint_define(path)@findings$check == "define_orphan_where_clause"
   ))
 })
+
+test_that("a where clause naming one dataset's variable resolves to its OID", {
+  # Only the ambiguous case was tested, so the ordinary resolution -- one
+  # dataset defines the variable, use its ItemDef -- was never exercised.
+  map <- c("VS\rVSTESTCD" = "IT.VS.VSTESTCD", "DM\rUSUBJID" = "IT.DM.USUBJID")
+  expect_identical(
+    artoo:::.dx_resolve_by_name(map, "VSTESTCD", "WC.1"),
+    "IT.VS.VSTESTCD"
+  )
+  # Nothing to resolve, and nothing to resolve against.
+  expect_identical(
+    artoo:::.dx_resolve_by_name(map, NA_character_, "WC.1"),
+    NA_character_
+  )
+  expect_identical(
+    artoo:::.dx_resolve_by_name(map, "AETERM", "WC.1"),
+    NA_character_
+  )
+})
+
+test_that("an empty ItemDef pool needs no pooling", {
+  pool <- data.frame(oid = character(0), stringsAsFactors = FALSE)
+  expect_identical(artoo:::.dx_pool_itemdefs(pool), pool)
+})

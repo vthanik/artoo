@@ -151,3 +151,28 @@ test_that("only two LOCAL attributes differ between the versions", {
     }
   }
 })
+
+test_that("a controlled term differing only in case is accepted and respelled", {
+  # The fix this guards shipped without a test: one `COMPUTATION` among 335
+  # `Computation`s refused a whole sponsor specification. A term that differs
+  # only in case is unambiguous, so it is matched and then written in the
+  # spelling the schema uses -- never echoed back in the author's case.
+  expect_identical(
+    artoo:::.dx_enum("COMPUTATION", c("Collected", "Computation"), "Origin"),
+    "Computation"
+  )
+  expect_identical(
+    artoo:::.dx_enum("  computation ", c("Collected", "Computation"), "Origin"),
+    "Computation"
+  )
+  # An exact match is returned untouched, and a term that is not the same
+  # word in any case is still refused.
+  expect_identical(
+    artoo:::.dx_enum("Collected", c("Collected", "Computation"), "Origin"),
+    "Collected"
+  )
+  expect_error(
+    artoo:::.dx_enum("Guessed", c("Collected", "Computation"), "Origin"),
+    class = "artoo_error_define"
+  )
+})
