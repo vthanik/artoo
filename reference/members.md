@@ -94,8 +94,8 @@ p <- tempfile(fileext = ".json")
 write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
-#> file                  member  label         records  variables  format
-#> file1b05678f426.json  DM      Demographics  60       25         json
+#> file                   member  label         records  variables  format
+#> file1a624000fbc8.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #

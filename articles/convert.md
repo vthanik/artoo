@@ -138,7 +138,8 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/Rtmp7ffKpB/file1faa2cb95fe.parquet' as "parquet".
+    ! Could not read '/tmp/Rtmp68mQMq/file1f08743052b8.parquet' as
+      "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
