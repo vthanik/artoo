@@ -131,7 +131,7 @@
   for (f in format) {
     .resolve_codec(f, call = call)
   }
-  unique(format)
+  format
 }
 
 # A directory -> every dataset file it holds (non-recursive), one row per
@@ -157,6 +157,13 @@
     }
   })
   out <- do.call(rbind, rows)
+  # The filter above is by EXTENSION; this is by resolved FORMAT, which is
+  # what the restriction actually means and what the single-file branch
+  # already tests. They agree only while no two codecs claim one extension,
+  # and the registry header says a public register_codec() is anticipated.
+  if (!is.null(formats)) {
+    out <- out[out$format %in% formats, , drop = FALSE]
+  }
   # method = "radix": deterministic C-locale order, independent of LC_COLLATE.
   out <- out[order(out$file, out$member, method = "radix"), , drop = FALSE]
   out
@@ -205,7 +212,8 @@
 #'   file whose extension no codec claims, aborts.
 #'
 #' @param format *Restrict the inventory to these formats.* `<character> |
-#'   NULL: default NULL`. Format names as [artoo_formats()] lists them, not
+#'   NULL`. Defaults to `NULL`, which inventories every format. Format names
+#'   as [artoo_formats()] lists them, not
 #'   file extensions: `"parquet"` claims both `.parquet` and `.pq`. `NULL`
 #'   inventories every format. Several names are a set, not an order, so
 #'   `c("xpt", "json")` lists both and says nothing about which wins.
@@ -214,15 +222,19 @@
 #'   in more than one format, where the full inventory lists `dm.xpt` and
 #'   `dm.json` as two rows.
 #'
-#'   **Note:** it filters a single file too. `members("dm.json", format =
-#'   "xpt")` is an empty inventory, not an error and not the file's row,
-#'   because an argument that cannot apply should not be silently accepted.
+#'   **Restriction:** it filters, it does not override. Unlike
+#'   [read_dataset()]'s `format`, which reads a file AS the named format
+#'   whatever its extension, this narrows which files are inventoried and
+#'   leaves extension resolution alone. Naming one file whose format the
+#'   restriction excludes aborts, rather than returning an empty inventory
+#'   that could not be told apart from an empty directory.
 #'
 #' @return *A `<artoo_members>` data frame*, one row per dataset, with columns
 #'   `file` (source basename), `member` (dataset name), `label`, `records`
 #'   (row count), `variables` (column count), and `format` (the codec
-#'   format). Empty when a directory holds no dataset files. It is an ordinary
-#'   data frame underneath.
+#'   format). Empty when a directory holds no dataset files, and likewise when
+#'   `format` excludes every one it holds. It is an ordinary data frame
+#'   underneath.
 #'
 #' @examples
 #' dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
@@ -273,12 +285,22 @@ members <- function(path, format = NULL) {
       )
     }
     codec <- .codec_for_ext(.effective_ext(path), call = call)
-    # The restriction filters here too, rather than being ignored because the
-    # caller named one file. Silently accepting an argument that cannot apply
-    # is how a mistyped one looks like it worked.
-    out <- if (!is.null(formats) && !(codec$format %in% formats)) {
-      .empty_members()
-    } else if (codec$format == "xpt") {
+    # A named file whose format the restriction excludes is a contradiction in
+    # the call, not a result. Returning an empty inventory would make it
+    # indistinguishable from an empty directory -- one of those is an honest
+    # answer about a folder, the other is two arguments disagreeing.
+    if (!is.null(formats) && !(codec$format %in% formats)) {
+      .artoo_abort(
+        c(
+          "{.arg format} excludes the file {.arg path} names.",
+          "x" = "{.path {basename(path)}} is {.val {codec$format}}; you asked for {.val {formats}}.",
+          "i" = "Drop {.arg format}, or name {.val {codec$format}} in it."
+        ),
+        kind = "input",
+        call = call
+      )
+    }
+    out <- if (codec$format == "xpt") {
       .members_xpt(path)
     } else {
       .members_single(path, codec, call = call)

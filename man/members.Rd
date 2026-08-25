@@ -12,7 +12,8 @@ path to a dataset file (\code{.xpt}, \code{.json}, \code{.ndjson}, \code{.parque
 or to a directory holding such files. A path that does not exist, or a
 file whose extension no codec claims, aborts.}
 
-\item{format}{\emph{Restrict the inventory to these formats.} \verb{<character> | NULL: default NULL}. Format names as \code{\link[=artoo_formats]{artoo_formats()}} lists them, not
+\item{format}{\emph{Restrict the inventory to these formats.} \verb{<character> | NULL}. Defaults to \code{NULL}, which inventories every format. Format names
+as \code{\link[=artoo_formats]{artoo_formats()}} lists them, not
 file extensions: \code{"parquet"} claims both \code{.parquet} and \code{.pq}. \code{NULL}
 inventories every format. Several names are a set, not an order, so
 \code{c("xpt", "json")} lists both and says nothing about which wins.
@@ -21,15 +22,20 @@ inventories every format. Several names are a set, not an order, so
 in more than one format, where the full inventory lists \code{dm.xpt} and
 \code{dm.json} as two rows.
 
-\strong{Note:} it filters a single file too. \code{members("dm.json", format = "xpt")} is an empty inventory, not an error and not the file's row,
-because an argument that cannot apply should not be silently accepted.}
+\strong{Restriction:} it filters, it does not override. Unlike
+\code{\link[=read_dataset]{read_dataset()}}'s \code{format}, which reads a file AS the named format
+whatever its extension, this narrows which files are inventoried and
+leaves extension resolution alone. Naming one file whose format the
+restriction excludes aborts, rather than returning an empty inventory
+that could not be told apart from an empty directory.}
 }
 \value{
 \emph{A \verb{<artoo_members>} data frame}, one row per dataset, with columns
 \code{file} (source basename), \code{member} (dataset name), \code{label}, \code{records}
 (row count), \code{variables} (column count), and \code{format} (the codec
-format). Empty when a directory holds no dataset files. It is an ordinary
-data frame underneath.
+format). Empty when a directory holds no dataset files, and likewise when
+\code{format} excludes every one it holds. It is an ordinary data frame
+underneath.
 }
 \description{
 Inventory the dataset(s) a path contains, one row per dataset, dispatched

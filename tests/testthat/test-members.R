@@ -99,7 +99,13 @@ test_that("format = restricts a mixed directory to the named formats", {
   d <- withr::local_tempdir()
   write_json(dm, file.path(d, "dm.json"))
   write_rds(dm, file.path(d, "dm.rds"))
-  write_xpt(dm, file.path(d, "dm.xpt"))
+  # The bundled pilot spec declares STUDYID length 7 and the data needs 12,
+  # so the writer widens and says so. Pinned, not leaked -- this file's other
+  # xpt test pins the identical call.
+  expect_warning(
+    write_xpt(dm, file.path(d, "dm.xpt")),
+    class = "artoo_warning_encoding"
+  )
 
   expect_identical(nrow(members(d)), 3L)
   expect_identical(members(d, format = "json")$file, "dm.json")
@@ -128,16 +134,25 @@ test_that("format = names a format, not an extension", {
   expect_error(members(d, format = "pq"), class = "artoo_error_codec")
 })
 
-test_that("format = filters a single file rather than being ignored", {
-  # Silently accepting an argument that cannot apply is how a mistyped one
-  # looks like it worked. An empty inventory says the restriction was heard.
+test_that("naming a file the restriction excludes aborts", {
+  # Not an empty inventory: that is indistinguishable from an empty
+  # directory, and the two mean opposite things -- one is an honest answer
+  # about a folder, the other is two arguments contradicting each other.
   dm <- demo_dm()
-  p <- withr::local_tempfile(fileext = ".json")
+  # A stable basename: the message names the file, and a random tempfile name
+  # would churn the snapshot on every run.
+  p <- file.path(withr::local_tempdir(), "dm.json")
   write_json(dm, p)
 
   expect_identical(nrow(members(p, format = "json")), 1L)
-  expect_identical(nrow(members(p, format = "xpt")), 0L)
-  expect_s3_class(members(p, format = "xpt"), "artoo_members")
+  expect_snapshot(members(p, format = "xpt"), error = TRUE)
+  expect_error(members(p, format = "xpt"), class = "artoo_error_input")
+
+  # A DIRECTORY holding nothing of the named format is a real result, and
+  # still returns the empty inventory.
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  expect_identical(nrow(members(d, format = "xpt")), 0L)
 })
 
 test_that("an unusable format restriction aborts", {
@@ -152,10 +167,59 @@ test_that("an unusable format restriction aborts", {
 test_that("format = NULL is the released behaviour, unchanged", {
   # members() shipped in 0.1.3 without this argument. The default must return
   # exactly what it returned then, or every caller on CRAN changes meaning.
+  #
+  # Asserted against the expected CONTENT, not against members(d, format =
+  # NULL): NULL is the default, so comparing the two is identical(f(x), f(x))
+  # and stays green even if NULL stopped meaning "every format".
   dm <- demo_dm()
   d <- withr::local_tempdir()
   write_json(dm, file.path(d, "dm.json"))
   write_rds(dm, file.path(d, "dm.rds"))
-  expect_identical(members(d), members(d, format = NULL))
-  expect_identical(nrow(members(d)), 2L)
+  # The bundled pilot spec declares STUDYID length 7 and the data needs 12,
+  # so the writer widens and says so. Pinned, not leaked -- this file's other
+  # xpt test pins the identical call.
+  expect_warning(
+    write_xpt(dm, file.path(d, "dm.xpt")),
+    class = "artoo_warning_encoding"
+  )
+
+  m <- members(d)
+  expect_identical(m$file, c("dm.json", "dm.rds", "dm.xpt"))
+  expect_identical(m$format, c("json", "rds", "xpt"))
+  expect_identical(nrow(m), 3L)
+  expect_s3_class(m, "artoo_members")
+  expect_identical(
+    names(m),
+    c("file", "member", "label", "records", "variables", "format")
+  )
+})
+
+test_that("an empty-string format aborts as a condition, not a crash", {
+  # base::exists("") throws an unclassed "invalid first argument", which
+  # escapes every artoo_error_* handler a caller could have written.
+  d <- withr::local_tempdir()
+  expect_error(members(d, format = ""), class = "artoo_error_codec")
+
+  # The root cause is in the shared resolver, so the sibling that reaches it
+  # first is fixed too. read_dataset() checks the path before the format, so
+  # the file has to exist to get there.
+  f <- file.path(d, "dm.json")
+  write_json(demo_dm(), f)
+  expect_error(read_dataset(f, format = ""), class = "artoo_error_codec")
+})
+
+test_that("the restriction is by resolved format, not merely by extension", {
+  # The directory branch filtered by extension and never re-checked the format
+  # it resolved, so the two branches disagreed about what `format` means. It
+  # is latent while no two codecs claim one extension, and the registry header
+  # says a public register_codec() is anticipated.
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  write_rds(dm, file.path(d, "dm.rds"))
+
+  for (f in c("json", "rds")) {
+    m <- members(d, format = f)
+    expect_true(all(m$format %in% f))
+  }
 })
