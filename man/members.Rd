@@ -21,8 +21,12 @@ inventories every format. Several names are a set, not an order, so
 in more than one format, where the full inventory lists \code{dm.xpt} and
 \code{dm.json} as two rows.
 
-\strong{Note:} it filters a single file too. \code{members("dm.json", format = "xpt")} is an empty inventory, not an error and not the file's row,
-because an argument that cannot apply should not be silently accepted.}
+\strong{Restriction:} it filters, it does not override. Unlike
+\code{\link[=read_dataset]{read_dataset()}}'s \code{format}, which reads a file AS the named format
+whatever its extension, this narrows which files are inventoried and
+leaves extension resolution alone. Naming one file whose format the
+restriction excludes aborts, rather than returning an empty inventory
+that could not be told apart from an empty directory.}
 }
 \value{
 \emph{A \verb{<artoo_members>} data frame}, one row per dataset, with columns

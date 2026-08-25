@@ -174,9 +174,12 @@
 #'   in more than one format, where the full inventory lists `dm.xpt` and
 #'   `dm.json` as two rows.
 #'
-#'   **Note:** it filters a single file too. `members("dm.json", format =
-#'   "xpt")` is an empty inventory, not an error and not the file's row,
-#'   because an argument that cannot apply should not be silently accepted.
+#'   **Restriction:** it filters, it does not override. Unlike
+#'   [read_dataset()]'s `format`, which reads a file AS the named format
+#'   whatever its extension, this narrows which files are inventoried and
+#'   leaves extension resolution alone. Naming one file whose format the
+#'   restriction excludes aborts, rather than returning an empty inventory
+#'   that could not be told apart from an empty directory.
 #'
 #' @return *A `<artoo_members>` data frame*, one row per dataset, with columns
 #'   `file` (source basename), `member` (dataset name), `label`, `records`
@@ -233,12 +236,22 @@ members <- function(path, format = NULL) {
       )
     }
     codec <- .codec_for_ext(tools::file_ext(path), call = call)
-    # The restriction filters here too, rather than being ignored because the
-    # caller named one file. Silently accepting an argument that cannot apply
-    # is how a mistyped one looks like it worked.
-    out <- if (!is.null(formats) && !(codec$format %in% formats)) {
-      .empty_members()
-    } else if (codec$format == "xpt") {
+    # A named file whose format the restriction excludes is a contradiction in
+    # the call, not a result. Returning an empty inventory would make it
+    # indistinguishable from an empty directory -- one of those is an honest
+    # answer about a folder, the other is two arguments disagreeing.
+    if (!is.null(formats) && !(codec$format %in% formats)) {
+      .artoo_abort(
+        c(
+          "{.arg format} excludes the file {.arg path} names.",
+          "x" = "{.path {basename(path)}} is {.val {codec$format}}; you asked for {.val {formats}}.",
+          "i" = "Drop {.arg format}, or name {.val {codec$format}} in it."
+        ),
+        kind = "input",
+        call = call
+      )
+    }
+    out <- if (codec$format == "xpt") {
       .members_xpt(path)
     } else {
       .members_single(path, codec, call = call)

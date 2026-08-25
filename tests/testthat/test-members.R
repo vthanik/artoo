@@ -129,16 +129,25 @@ test_that("format = names a format, not an extension", {
   expect_error(members(d, format = "pq"), class = "artoo_error_codec")
 })
 
-test_that("format = filters a single file rather than being ignored", {
-  # Silently accepting an argument that cannot apply is how a mistyped one
-  # looks like it worked. An empty inventory says the restriction was heard.
+test_that("naming a file the restriction excludes aborts", {
+  # Not an empty inventory: that is indistinguishable from an empty
+  # directory, and the two mean opposite things -- one is an honest answer
+  # about a folder, the other is two arguments contradicting each other.
   dm <- demo_dm()
-  p <- withr::local_tempfile(fileext = ".json")
+  # A stable basename: the message names the file, and a random tempfile name
+  # would churn the snapshot on every run.
+  p <- file.path(withr::local_tempdir(), "dm.json")
   write_json(dm, p)
 
   expect_identical(nrow(members(p, format = "json")), 1L)
-  expect_identical(nrow(members(p, format = "xpt")), 0L)
-  expect_s3_class(members(p, format = "xpt"), "artoo_members")
+  expect_snapshot(members(p, format = "xpt"), error = TRUE)
+  expect_error(members(p, format = "xpt"), class = "artoo_error_input")
+
+  # A DIRECTORY holding nothing of the named format is a real result, and
+  # still returns the empty inventory.
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  expect_identical(nrow(members(d, format = "xpt")), 0L)
 })
 
 test_that("an unusable format restriction aborts", {
