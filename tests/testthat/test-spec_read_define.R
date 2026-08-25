@@ -293,3 +293,20 @@ test_that("a define carrying only the mandatory parts reads back empty, not brok
   expect_identical(back@documents$document_id, "LF.VS")
   expect_identical(back@variables$variable, "VSORRES")
 })
+
+test_that("an Alias context artoo does not model is reported, not swallowed", {
+  skip_if_not_installed("xml2")
+  # Every bundled fixture raises this, and helper-define-fixtures.R suppresses
+  # it wholesale so it does not bury the warnings other tests assert on. That
+  # suppression is only safe while something pins the warning: without this,
+  # the reader could go silent on an unmodelled Alias and no test would see
+  # it. Only "nci:ExtCodeID" is read, so the others are a real write-back loss.
+  expect_warning(
+    read_spec(test_path("fixtures", "define21-sdtm.xml")),
+    class = "artoo_warning_spec"
+  )
+  expect_warning(
+    read_spec(test_path("fixtures", "define21-sdtm.xml")),
+    "name a context artoo does not model"
+  )
+})
