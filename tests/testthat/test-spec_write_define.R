@@ -1,3 +1,10 @@
+# THE BYTE GOLDENS UNDER _snaps/spec_write_define/ ARE FRAGILE. Their tests
+# carry skip_on_cran(), so ANY run in CRAN mode -- `Sys.unsetenv("NOT_CRAN")`
+# then test_dir(), which is how the Windows check time gets profiled -- leaves
+# testthat with a snapshot file whose test did not run, and it PRUNES it. The
+# files then look like an intentional deletion to `git add -A`, and that is
+# exactly how they were lost once. After any CRAN-mode run, check
+# `git status` before staging.
 # Define-XML 2.1 writing.
 #
 # Four gates, in the order a failure is most useful:
