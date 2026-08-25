@@ -1,3 +1,13 @@
+# artoo 0.2.0.9000
+
+* `members()` gains `format =`, restricting the inventory to the named
+  formats. It takes format names as `artoo_formats()` lists them, not file
+  extensions, so `"parquet"` claims both `.parquet` and `.pq`; several names
+  are a set rather than a precedence order. The default `NULL` inventories
+  every format, which is what `members()` did before. The reason to pass it
+  is a directory holding one dataset in two formats, where the full
+  inventory reports both.
+
 # artoo 0.2.0
 
 * `read_spec()` refuses an `Analysis Criteria` sheet missing `Display`,

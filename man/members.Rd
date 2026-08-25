@@ -4,13 +4,25 @@
 \alias{members}
 \title{List the datasets in a file or directory}
 \usage{
-members(path)
+members(path, format = NULL)
 }
 \arguments{
 \item{path}{\emph{A dataset file or a directory.} \verb{<character(1)>: required}. A
 path to a dataset file (\code{.xpt}, \code{.json}, \code{.ndjson}, \code{.parquet}, \code{.rds})
 or to a directory holding such files. A path that does not exist, or a
 file whose extension no codec claims, aborts.}
+
+\item{format}{\emph{Restrict the inventory to these formats.} \verb{<character> | NULL: default NULL}. Format names as \code{\link[=artoo_formats]{artoo_formats()}} lists them, not
+file extensions: \code{"parquet"} claims both \code{.parquet} and \code{.pq}. \code{NULL}
+inventories every format. Several names are a set, not an order, so
+\code{c("xpt", "json")} lists both and says nothing about which wins.
+
+\strong{Tip:} the reason to pass it is a directory holding the same dataset
+in more than one format, where the full inventory lists \code{dm.xpt} and
+\code{dm.json} as two rows.
+
+\strong{Note:} it filters a single file too. \code{members("dm.json", format = "xpt")} is an empty inventory, not an error and not the file's row,
+because an argument that cannot apply should not be silently accepted.}
 }
 \value{
 \emph{A \verb{<artoo_members>} data frame}, one row per dataset, with columns
@@ -61,6 +73,12 @@ dir.create(dir)
 write_json(dm, file.path(dir, "dm.json"))
 write_rds(dm, file.path(dir, "dm.rds"))
 members(dir)
+
+# ---- Example 3: one dataset, two formats, one of them wanted ----
+#
+# The same dataset stored twice is two rows, because the inventory reports
+# what is on disk. Name the format to see only that half.
+members(dir, format = "json")
 
 }
 \seealso{

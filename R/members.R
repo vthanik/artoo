@@ -58,10 +58,41 @@
 # Every extension any registered codec claims (the membership test for the
 # directory branch -- distinct from .codec_for_ext, which ABORTS on a miss).
 #' @noRd
-.known_extensions <- function() {
-  unique(unlist(lapply(.registered_formats(), function(f) {
+.known_extensions <- function(formats = NULL) {
+  unique(unlist(lapply(formats %||% .registered_formats(), function(f) {
     .artoo_codecs[[f]]$extensions
   })))
+}
+
+# Validate a user-supplied `format` restriction: NULL, or a character vector
+# of registered format NAMES. Each element goes through .resolve_codec(), so
+# an unknown name gets the same message and the same condition class that
+# read_dataset(format = ) already gives -- one vocabulary, not two.
+#
+# Names, not extensions, because the registry maps one name to several
+# extensions: "parquet" claims both .parquet and .pq, so an extension-shaped
+# argument would silently inventory half a directory.
+#' @noRd
+.members_formats <- function(format, call = rlang::caller_env()) {
+  if (is.null(format)) {
+    return(NULL)
+  }
+  if (!is.character(format) || !length(format)) {
+    known <- .registered_formats()
+    .artoo_abort(
+      c(
+        "{.arg format} must name at least one registered format.",
+        "x" = "You supplied {.obj_type_friendly {format}}.",
+        "i" = "Registered formats: {.val {known}}."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
+  for (f in format) {
+    .resolve_codec(f, call = call)
+  }
+  unique(format)
 }
 
 # A directory -> every dataset file it holds (non-recursive), one row per
@@ -69,10 +100,10 @@
 # returns the canonical empty frame (no abort). A malformed dataset file is
 # NOT swallowed: its codec's path-bearing abort names it.
 #' @noRd
-.members_dir <- function(path, call = rlang::caller_env()) {
+.members_dir <- function(path, formats = NULL, call = rlang::caller_env()) {
   files <- list.files(path, full.names = TRUE)
   files <- files[!dir.exists(files)]
-  keep <- tolower(tools::file_ext(files)) %in% .known_extensions()
+  keep <- tolower(tools::file_ext(files)) %in% .known_extensions(formats)
   files <- sort(files[keep])
   if (!length(files)) {
     return(.empty_members())
@@ -133,6 +164,20 @@
 #'   or to a directory holding such files. A path that does not exist, or a
 #'   file whose extension no codec claims, aborts.
 #'
+#' @param format *Restrict the inventory to these formats.* `<character> |
+#'   NULL: default NULL`. Format names as [artoo_formats()] lists them, not
+#'   file extensions: `"parquet"` claims both `.parquet` and `.pq`. `NULL`
+#'   inventories every format. Several names are a set, not an order, so
+#'   `c("xpt", "json")` lists both and says nothing about which wins.
+#'
+#'   **Tip:** the reason to pass it is a directory holding the same dataset
+#'   in more than one format, where the full inventory lists `dm.xpt` and
+#'   `dm.json` as two rows.
+#'
+#'   **Note:** it filters a single file too. `members("dm.json", format =
+#'   "xpt")` is an empty inventory, not an error and not the file's row,
+#'   because an argument that cannot apply should not be silently accepted.
+#'
 #' @return *A `<artoo_members>` data frame*, one row per dataset, with columns
 #'   `file` (source basename), `member` (dataset name), `label`, `records`
 #'   (row count), `variables` (column count), and `format` (the codec
@@ -159,16 +204,23 @@
 #' write_rds(dm, file.path(dir, "dm.rds"))
 #' members(dir)
 #'
+#' # ---- Example 3: one dataset, two formats, one of them wanted ----
+#' #
+#' # The same dataset stored twice is two rows, because the inventory reports
+#' # what is on disk. Name the format to see only that half.
+#' members(dir, format = "json")
+#'
 #' @seealso
 #' **Members of one XPORT file:** [xpt_members()].
 #'
 #' **Per-variable attributes:** [columns()] for one dataset's variable pane.
 #' @export
-members <- function(path) {
+members <- function(path, format = NULL) {
   call <- rlang::caller_env()
   .check_path(path, call)
+  formats <- .members_formats(format, call = call)
   if (dir.exists(path)) {
-    out <- .members_dir(path, call = call)
+    out <- .members_dir(path, formats, call = call)
   } else {
     if (!file.exists(path)) {
       .artoo_abort(
@@ -181,7 +233,12 @@ members <- function(path) {
       )
     }
     codec <- .codec_for_ext(tools::file_ext(path), call = call)
-    out <- if (codec$format == "xpt") {
+    # The restriction filters here too, rather than being ignored because the
+    # caller named one file. Silently accepting an argument that cannot apply
+    # is how a mistyped one looks like it worked.
+    out <- if (!is.null(formats) && !(codec$format %in% formats)) {
+      .empty_members()
+    } else if (codec$format == "xpt") {
       .members_xpt(path)
     } else {
       .members_single(path, codec, call = call)

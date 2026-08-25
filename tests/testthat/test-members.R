@@ -91,3 +91,72 @@ test_that("print is the left-aligned members pane (snapshot)", {
   write_json(dm, file.path(d, "dm.json"))
   expect_snapshot(print(members(d)))
 })
+
+test_that("format = restricts a mixed directory to the named formats", {
+  # The motivating case: one dataset stored twice. The full inventory reports
+  # both, because it reports what is on disk; the restriction picks a half.
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  write_rds(dm, file.path(d, "dm.rds"))
+  write_xpt(dm, file.path(d, "dm.xpt"))
+
+  expect_identical(nrow(members(d)), 3L)
+  expect_identical(members(d, format = "json")$file, "dm.json")
+
+  # Several names are a SET, not a precedence order: both are listed, and
+  # nothing about the call says which one wins.
+  both <- members(d, format = c("json", "rds"))
+  expect_setequal(both$file, c("dm.json", "dm.rds"))
+  expect_setequal(both$format, c("json", "rds"))
+})
+
+test_that("format = names a format, not an extension", {
+  # The registry maps one name to several extensions, so "parquet" must claim
+  # .pq as well. An extension-shaped argument would inventory half a folder.
+  skip_if_not_installed("nanoparquet")
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_parquet(dm, file.path(d, "dm.parquet"))
+  file.copy(file.path(d, "dm.parquet"), file.path(d, "other.pq"))
+
+  expect_setequal(
+    members(d, format = "parquet")$file,
+    c("dm.parquet", "other.pq")
+  )
+  # And the extension spelling is refused, in the same words read_dataset()
+  # uses for it.
+  expect_error(members(d, format = "pq"), class = "artoo_error_codec")
+})
+
+test_that("format = filters a single file rather than being ignored", {
+  # Silently accepting an argument that cannot apply is how a mistyped one
+  # looks like it worked. An empty inventory says the restriction was heard.
+  dm <- demo_dm()
+  p <- withr::local_tempfile(fileext = ".json")
+  write_json(dm, p)
+
+  expect_identical(nrow(members(p, format = "json")), 1L)
+  expect_identical(nrow(members(p, format = "xpt")), 0L)
+  expect_s3_class(members(p, format = "xpt"), "artoo_members")
+})
+
+test_that("an unusable format restriction aborts", {
+  d <- withr::local_tempdir()
+  expect_snapshot(members(d, format = character(0)), error = TRUE)
+  expect_error(members(d, format = character(0)), class = "artoo_error_input")
+  expect_error(members(d, format = 1L), class = "artoo_error_input")
+  expect_error(members(d, format = "nosuch"), class = "artoo_error_codec")
+  expect_error(members(d, format = NA_character_), class = "artoo_error_codec")
+})
+
+test_that("format = NULL is the released behaviour, unchanged", {
+  # members() shipped in 0.1.3 without this argument. The default must return
+  # exactly what it returned then, or every caller on CRAN changes meaning.
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+  write_rds(dm, file.path(d, "dm.rds"))
+  expect_identical(members(d), members(d, format = NULL))
+  expect_identical(nrow(members(d)), 2L)
+})
