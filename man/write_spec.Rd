@@ -77,12 +77,14 @@ Columns the P21 vocabulary does not model are not lost: a foreign column
 carried on a slot is re-emitted verbatim under its own header, so an xlsx
 round-trip keeps user columns.
 
-\strong{Note:} the xlsx writer emits the eight classic P21 sheets, so the
+\strong{Note:} the xlsx writer emits every sheet the spec has content for, so
 \code{standards}, \code{where_clauses}, \code{method_expressions}, \code{arm_displays},
-\code{arm_results} and \code{dictionaries} tables are dropped on that path. Reading a
-Define-XML document and writing it to xlsx therefore loses its
-\code{def:Standards} block, its structured where clauses and its formal
-expressions. Write JSON when you need the spec back whole.
+\code{arm_results} and \code{dictionaries} all survive a round trip; each was
+measured through write-then-read. Reading a Define-XML document and
+writing it to xlsx keeps its \code{def:Standards} block, its where clauses and
+its formal expressions. What a workbook still cannot carry is the OID a
+document chose for each object, so write JSON when you need those back
+unchanged.
 
 \strong{Define-XML is the submission format.} The \code{.xml} path emits
 Define-XML 2.1 or 2.0 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it
@@ -111,8 +113,9 @@ reviewer working from a submission archive should not need one.
 \strong{What a folder measures.} A named list describes the frames in memory; a
 folder describes the bytes on disk. Where the two differ the folder is
 right about what will be submitted -- a transport file pads to fixed width,
-so a value's trailing blanks are part of it there and not in R. Compressed
-\code{.gz} datasets are matched like any other.
+so a value's trailing blanks are part of it there and not in R. A gzipped
+\code{.json} or \code{.ndjson} is matched like any other file; \code{.xpt.gz} is not,
+because \code{\link[=read_dataset]{read_dataset()}} does not read one either.
 
 \strong{A folder instead of a list.} \code{data} also takes one path to the folder
 holding the datasets. Each dataset the spec names is matched to a file
@@ -122,7 +125,8 @@ file is normal and reported, not an error, and a file the spec does not
 name is left alone. A dataset matching MORE than one file aborts rather
 than choosing: two formats can disagree about byte width, so picking one
 silently would change the document. Name the format with \code{data_format} to
-resolve it.
+resolve it. A file that cannot be read aborts too, naming every unreadable
+file at once rather than stopping at the first.
 
 \strong{Data-aware writing.} Pass \code{data} and artoo reads the datasets the
 define describes, which a spec-only tool cannot. A blank \code{length} is
@@ -183,6 +187,25 @@ if (requireNamespace("xml2", quietly = TRUE)) {
   xml <- file.path(tempdir(), "define.xml")
   write_spec(dm, xml, created = "2020-01-01 00:00:00")
   validate_define(xml)
+}
+
+# ---- Example 4: let a folder of datasets fill the blanks ----
+#
+# A spec states a variable's length or leaves it blank. Point `data` at
+# the folder holding the datasets and artoo matches each one the spec
+# names to a file called after it, then fills the blanks from the real
+# maximum byte width. It reports which files it used, because a define is
+# a submission document and that is what a reader cannot recover from it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  folder <- file.path(tempdir(), "datasets")
+  dir.create(folder, showWarnings = FALSE)
+  write_json(
+    apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off"),
+    file.path(folder, "adsl.json")
+  )
+  from_folder <- file.path(tempdir(), "from-folder.xml")
+  write_spec(adam_spec, from_folder, data = folder)
+  lint_define(from_folder)
 }
 
 }

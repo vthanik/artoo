@@ -1,5 +1,11 @@
 # artoo 0.2.0
 
+* `write_spec()` to Define-XML names every unreadable file at once when
+  `data` is a folder, rather than stopping at the first. A folder holding
+  three corrupt datasets took three runs to discover. It still aborts rather
+  than skipping them: a define written from a silently reduced set of files
+  is the wrong document produced without complaint.
+
 * `members()` reads a gzipped dataset. `members("dm.ndjson.gz")` aborted with
   `No codec handles the "gz" extension` on a file `write_ndjson()` produces
   and `read_dataset()` reads. Gzip is peeled for the codecs that support it,
@@ -72,6 +78,8 @@
   codelist seating two terms at one `OrderNumber` is written in source
   order without the attribute. Identical repeated method and comment rows
   collapse the same way; contradictory ones are refused by id.
+
+* `write_spec()` to `.xlsx` writes the one workbook shape both generations
   of tooling imports. The study sheet is named `Study`, a value-level row
   names its condition by ID and a `WhereClauses` sheet defines it, an
   analysis result's datasets sit on an `Analysis Criteria` sheet, and a
@@ -165,12 +173,13 @@
   authored with a formal expression produced a define.xml with none. Writing
   a workbook puts the expression back in the same two columns.
 
-* `read_spec()` and `write_spec()` now use the current Pinnacle 21 workbook
-  shape for conditions. A value-level row states its condition as an
-  expression in the `ValueLevel` sheet's `Where Clause` cell, and an analysis
-  result states one bracket group per analysis dataset in `Selection
-  Criteria`; the separate `WhereClauses` sheet, which that generation
-  dropped, is still read but no longer written.
+* `read_spec()` reads a value-level condition from either carrier: an
+  expression in the `ValueLevel` sheet's `Where Clause` cell, or a clause ID
+  there with a `WhereClauses` sheet defining it. An analysis result's
+  datasets are likewise read from a `Selection Criteria` cell or an
+  `Analysis Criteria` sheet. Which one a workbook uses is a property of the
+  sheet it came from, not of the workbook, so both are read wherever they
+  appear.
 
 * `read_spec()` on a workbook no longer loses a value-level row's
   `Assigned Value`, `Source`, `Pages` or `Predecessor`. All four are
