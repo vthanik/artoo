@@ -26,7 +26,7 @@
       Error:
       ! 1 dataset matches more than one file.
       x "DM": 'dm.json' and 'dm.rds'.
-      i Pass `data_format` to name the format to read.
+      i Pass `data_format` to name one, as `data_format = "json"`.
 
 # partial coverage is reported once, both directions
 
@@ -50,7 +50,7 @@
     Condition
       Error:
       ! `data` must be a directory.
-      x '<path>' is not one.
+      x '<tmp>/dm.json' is not one.
       i Pass the folder holding the datasets, or a named list of frames.
 
 # data_format without a folder is refused, not ignored

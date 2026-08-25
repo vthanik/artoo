@@ -1052,7 +1052,7 @@ test_that("partial coverage is reported once, both directions", {
   # every run and differs across CI runners.
   expect_snapshot(
     resolved <- artoo:::.dx_resolve_data_dir(d, spec),
-    transform = function(x) sub("'/[^']*'", "'<dir>'", x)
+    transform = function(x) gsub("'[^']*[/\\\\][^'/\\\\]*'", "'<dir>'", x)
   )
   expect_identical(names(resolved), "DM")
 })
@@ -1069,12 +1069,14 @@ test_that("a folder is inventoried, not descended", {
 
 test_that("a path that is not a directory is refused by what it is", {
   spec <- folder_spec()
-  f <- withr::local_tempfile(fileext = ".json")
+  # Fixed basename: the scrubber keeps it, and a random one would churn the
+  # snapshot on every run.
+  f <- file.path(withr::local_tempdir(), "dm.json")
   write_json(folder_frames()$DM, f)
   expect_snapshot(
     artoo:::.dx_resolve_data_dir(f, spec),
     error = TRUE,
-    transform = function(x) sub("'/[^']*'", "'<path>'", x)
+    transform = function(x) gsub("'[^']*[/\\\\]([^'/\\\\]+)'", "'<tmp>/\\1'", x)
   )
   expect_error(
     artoo:::.dx_resolve_data_dir(f, spec),
@@ -1178,5 +1180,54 @@ test_that("data_format without a folder is refused, not ignored", {
   expect_error(
     artoo:::.dx_check_data(folder_frames(), spec, data_format = "json"),
     class = "artoo_error_input"
+  )
+})
+
+test_that("data_format reaches the resolver through write_spec()", {
+  skip_if_not_installed("xml2")
+  # Every other test for this argument calls the resolver directly. Severing
+  # the threading in .dx_check_data() left the whole suite green while the
+  # feature's only escape hatch died through the public API -- the same class
+  # of defect as a new formal silently shifting a positional argument.
+  spec <- folder_spec()
+  frames <- folder_frames()
+  d <- withr::local_tempdir()
+  write_json(frames$DM, file.path(d, "dm.json"))
+  write_rds(frames$DM, file.path(d, "dm.rds"))
+  write_json(frames$VS, file.path(d, "vs.json"))
+
+  out <- file.path(withr::local_tempdir(), "d.xml")
+  # Ambiguous without the restriction...
+  expect_error(
+    write_spec(spec, out, data = d, created = FROZEN_DATA),
+    class = "artoo_error_input"
+  )
+  # ...and resolved with it, all the way from the exported function.
+  expect_no_error(
+    suppressMessages(
+      suppressWarnings(
+        write_spec(
+          spec,
+          out,
+          data = d,
+          data_format = "json",
+          created = FROZEN_DATA
+        )
+      )
+    )
+  )
+})
+
+test_that("two extensions of one format do not point at data_format", {
+  # `data_format = "parquet"` cannot separate dm.parquet from dm.pq, so
+  # naming the argument there sends the reader in a circle.
+  skip_if_not_installed("nanoparquet")
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_parquet(folder_frames()$DM, file.path(d, "dm.parquet"))
+  file.copy(file.path(d, "dm.parquet"), file.path(d, "dm.pq"))
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, spec),
+    "remove or rename one"
   )
 })

@@ -73,7 +73,11 @@
 # extensions: "parquet" claims both .parquet and .pq, so an extension-shaped
 # argument would silently inventory half a directory.
 #' @noRd
-.members_formats <- function(format, call = rlang::caller_env()) {
+.members_formats <- function(
+  format,
+  arg = "format",
+  call = rlang::caller_env()
+) {
   if (is.null(format)) {
     return(NULL)
   }
@@ -81,7 +85,7 @@
     known <- .registered_formats()
     .artoo_abort(
       c(
-        "{.arg format} must name at least one registered format.",
+        "{.arg {arg}} must name at least one registered format.",
         "x" = "You supplied {.obj_type_friendly {format}}.",
         "i" = "Registered formats: {.val {known}}."
       ),

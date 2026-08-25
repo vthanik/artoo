@@ -91,7 +91,7 @@
       call = call
     )
   }
-  formats <- .members_formats(data_format, call = call)
+  formats <- .members_formats(data_format, arg = "data_format", call = call)
 
   datasets <- as.character(spec@datasets$dataset)
   datasets <- datasets[!.dx_blank(datasets)]
@@ -116,7 +116,7 @@
   files <- files[
     tolower(tools::file_ext(files)) %in% .known_extensions(formats)
   ]
-  files <- sort(files)
+  files <- files[order(files, method = "radix")]
   stems <- toupper(tools::file_path_sans_ext(basename(files)))
 
   hits <- lapply(toupper(datasets), function(d) files[stems == d])
@@ -128,11 +128,24 @@
   ambiguous <- datasets[lengths(hits) > 1L]
   if (length(ambiguous)) {
     shown <- basename(unlist(hits[ambiguous], use.names = FALSE))
+    fmts <- vapply(
+      tolower(tools::file_ext(shown)),
+      function(e) .codec_for_ext(e, call = call)$format,
+      character(1)
+    )
+    # The remedy is only offered when it can work. Two extensions of the SAME
+    # format (dm.parquet beside dm.pq) survive every restriction, so pointing
+    # at `data_format` there sends the reader in a circle.
+    remedy <- if (length(unique(fmts)) > 1L) {
+      "Pass {.arg data_format} to name one, as {.code data_format = \"{fmts[[1L]]}\"}."
+    } else {
+      "They are all {.val {fmts[[1L]]}}, so remove or rename one."
+    }
     .artoo_abort(
       c(
         "{length(ambiguous)} dataset{?s} match{?es/} more than one file.",
         "x" = "{.val {ambiguous}}: {.file {shown}}.",
-        "i" = "Pass {.arg data_format} to name the format to read."
+        "i" = remedy
       ),
       kind = "input",
       call = call
