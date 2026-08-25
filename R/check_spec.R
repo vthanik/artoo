@@ -105,7 +105,7 @@ check_spec <- function(
       call = call
     )
   }
-  .check_spec_arg(spec, call = call)
+  spec <- .check_spec_arg(spec, call = call)
   .check_dataset_arg(spec, dataset, call = call)
 
   vars <- spec_variables(spec, dataset)
@@ -372,9 +372,17 @@ check_spec <- function(
     }
 
     clid <- vars$codelist_id[i]
+    # A variable may name an external DICTIONARY here rather than a
+    # codelist -- MedDRA, WHODrug, ISO 3166 -- because a workbook has one
+    # column for both. A dictionary enumerates nothing, so there is no
+    # membership to check; checking anyway aborted the whole conformance
+    # run on every adverse-events dataset.
+    dictionary <- !is.na(clid) &&
+      clid %in% as.character(spec@dictionaries$dictionary_id)
     if (
       (checks$codelist_membership || checks$codelist_membership_extensible) &&
-        !is.na(clid)
+        !is.na(clid) &&
+        !dictionary
     ) {
       clrows <- spec_codelists(spec, clid)
       # An extensible codelist (extended = TRUE) enumerates examples, not the

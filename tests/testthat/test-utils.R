@@ -98,3 +98,25 @@ test_that(".with_atomic_write renames the temp file over the target on success",
   expect_identical(res, path)
   expect_length(list.files(dir, pattern = "\\.tmp$"), 0L)
 })
+
+test_that(".double_to_string keeps a decimal exact without inflating it", {
+  # The JSON decimal formatter. as.character() uses R's 15-digit default and
+  # drops the last ulp -- 0.1 + 0.2 came back "0.3" -- so this tries 15
+  # digits, and falls through to 17 (enough to identify any IEEE double)
+  # only for the values that need them.
+  expect_identical(artoo:::.double_to_string(0.1 + 0.2), "0.30000000000000004")
+  # Clean values stay clean rather than acquiring a tail.
+  expect_identical(
+    artoo:::.double_to_string(c(1, 2.5, 162.6)),
+    c("1", "2.5", "162.6")
+  )
+  # A value already carried as an exact string is never reformatted.
+  expect_identical(artoo:::.double_to_string("1.10"), "1.10")
+  # Non-finite screens to NA, so a decimal never formats to "Inf" or "NaN".
+  expect_identical(
+    artoo:::.double_to_string(c(NA, NaN, Inf, -Inf)),
+    rep(NA_character_, 4L)
+  )
+  expect_identical(artoo:::.double_to_string(numeric(0)), character(0))
+  expect_identical(artoo:::.double_to_string(NA_real_), NA_character_)
+})

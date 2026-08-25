@@ -34,7 +34,14 @@
   meta <- if (has_meta) get_meta(x) else NULL
   nm <- if (is.null(meta)) NULL else meta@dataset$name
   member <- if (is.null(nm) || is.na(nm) || !nzchar(nm)) {
-    tools::file_path_sans_ext(basename(path))
+    # WHAT NO TEST HERE CAN SEE: this branch runs only for a file carrying no
+    # artoo metadata, which today means a plain saveRDS() .rds -- and .rds
+    # cannot be gzipped. So .path_stem()'s gz peel is unobservable at this
+    # call site, and swapping it for file_path_sans_ext(basename(.)) passes
+    # every test. It stays because it is correct for the inputs this branch
+    # would see if a gzip-capable codec ever stopped recording a name; the
+    # peel is load-bearing, and tested, in the folder resolver.
+    .path_stem(path)
   } else {
     nm
   }
@@ -57,11 +64,81 @@
 
 # Every extension any registered codec claims (the membership test for the
 # directory branch -- distinct from .codec_for_ext, which ABORTS on a miss).
+# Extensions whose codec can sit behind transparent gzip. read_dataset()
+# peels `.gz` for exactly these (`.resolve_format`, R/io.R), so anything that
+# INVENTORIES files for it must peel the same ones or a readable file becomes
+# invisible -- or worse, aborts, which is what members("dm.ndjson.gz") did on
+# a file write_ndjson()'s own examples produce.
 #' @noRd
-.known_extensions <- function() {
-  unique(unlist(lapply(.registered_formats(), function(f) {
+.gz_extensions <- function() {
+  unique(unlist(lapply(c("json", "ndjson"), function(f) {
     .artoo_codecs[[f]]$extensions
   })))
+}
+
+# The extension that decides the codec, after peeling transparent gzip.
+# `dm.parquet.gz` keeps `gz` and stays unhandled, because read_dataset()
+# refuses it too.
+#' @noRd
+.effective_ext <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  if (!identical(ext, "gz")) {
+    return(ext)
+  }
+  inner <- tolower(tools::file_ext(sub("\\.gz$", "", path, ignore.case = TRUE)))
+  if (inner %in% .gz_extensions()) inner else ext
+}
+
+# The basename with its dataset extension removed, gzip peeled first, so
+# `dm.json.gz` stems to `dm` exactly as `dm.json` does.
+#' @noRd
+.path_stem <- function(path) {
+  base <- basename(path)
+  gz <- tolower(tools::file_ext(base)) == "gz"
+  base[gz] <- sub("\\.gz$", "", base[gz], ignore.case = TRUE)
+  tools::file_path_sans_ext(base)
+}
+
+#' @noRd
+.known_extensions <- function(formats = NULL) {
+  unique(unlist(lapply(formats %||% .registered_formats(), function(f) {
+    .artoo_codecs[[f]]$extensions
+  })))
+}
+
+# Validate a user-supplied `format` restriction: NULL, or a character vector
+# of registered format NAMES. Each element goes through .resolve_codec(), so
+# an unknown name gets the same message and the same condition class that
+# read_dataset(format = ) already gives -- one vocabulary, not two.
+#
+# Names, not extensions, because the registry maps one name to several
+# extensions: "parquet" claims both .parquet and .pq, so an extension-shaped
+# argument would silently inventory half a directory.
+#' @noRd
+.members_formats <- function(
+  format,
+  arg = "format",
+  call = rlang::caller_env()
+) {
+  if (is.null(format)) {
+    return(NULL)
+  }
+  if (!is.character(format) || !length(format)) {
+    known <- .registered_formats()
+    .artoo_abort(
+      c(
+        "{.arg {arg}} must name at least one registered format.",
+        "x" = "You supplied {.obj_type_friendly {format}}.",
+        "i" = "Registered formats: {.val {known}}."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
+  for (f in format) {
+    .resolve_codec(f, call = call)
+  }
+  format
 }
 
 # A directory -> every dataset file it holds (non-recursive), one row per
@@ -69,16 +146,17 @@
 # returns the canonical empty frame (no abort). A malformed dataset file is
 # NOT swallowed: its codec's path-bearing abort names it.
 #' @noRd
-.members_dir <- function(path, call = rlang::caller_env()) {
+.members_dir <- function(path, formats = NULL, call = rlang::caller_env()) {
   files <- list.files(path, full.names = TRUE)
   files <- files[!dir.exists(files)]
-  keep <- tolower(tools::file_ext(files)) %in% .known_extensions()
+  keep <- vapply(files, .effective_ext, character(1), USE.NAMES = FALSE) %in%
+    .known_extensions(formats)
   files <- sort(files[keep])
   if (!length(files)) {
     return(.empty_members())
   }
   rows <- lapply(files, function(f) {
-    codec <- .codec_for_ext(tolower(tools::file_ext(f)), call = call)
+    codec <- .codec_for_ext(.effective_ext(f), call = call)
     if (codec$format == "xpt") {
       .members_xpt(f)
     } else {
@@ -86,6 +164,13 @@
     }
   })
   out <- do.call(rbind, rows)
+  # The filter above is by EXTENSION; this is by resolved FORMAT, which is
+  # what the restriction actually means and what the single-file branch
+  # already tests. They agree only while no two codecs claim one extension,
+  # and the registry header says a public register_codec() is anticipated.
+  if (!is.null(formats)) {
+    out <- out[out$format %in% formats, , drop = FALSE]
+  }
   # method = "radix": deterministic C-locale order, independent of LC_COLLATE.
   out <- out[order(out$file, out$member, method = "radix"), , drop = FALSE]
   out
@@ -133,11 +218,30 @@
 #'   or to a directory holding such files. A path that does not exist, or a
 #'   file whose extension no codec claims, aborts.
 #'
+#' @param format *Restrict the inventory to these formats.* `<character> |
+#'   NULL`. Defaults to `NULL`, which inventories every format. Format names
+#'   as [artoo_formats()] lists them, not
+#'   file extensions: `"parquet"` claims both `.parquet` and `.pq`. `NULL`
+#'   inventories every format. Several names are a set, not an order, so
+#'   `c("xpt", "json")` lists both and says nothing about which wins.
+#'
+#'   **Tip:** the reason to pass it is a directory holding the same dataset
+#'   in more than one format, where the full inventory lists `dm.xpt` and
+#'   `dm.json` as two rows.
+#'
+#'   **Restriction:** it filters, it does not override. Unlike
+#'   [read_dataset()]'s `format`, which reads a file AS the named format
+#'   whatever its extension, this narrows which files are inventoried and
+#'   leaves extension resolution alone. Naming one file whose format the
+#'   restriction excludes aborts, rather than returning an empty inventory
+#'   that could not be told apart from an empty directory.
+#'
 #' @return *A `<artoo_members>` data frame*, one row per dataset, with columns
 #'   `file` (source basename), `member` (dataset name), `label`, `records`
 #'   (row count), `variables` (column count), and `format` (the codec
-#'   format). Empty when a directory holds no dataset files. It is an ordinary
-#'   data frame underneath.
+#'   format). Empty when a directory holds no dataset files, and likewise when
+#'   `format` excludes every one it holds. It is an ordinary data frame
+#'   underneath.
 #'
 #' @examples
 #' dm <- apply_spec(cdisc_dm, sdtm_spec, "DM", conformance = "off")
@@ -159,16 +263,23 @@
 #' write_rds(dm, file.path(dir, "dm.rds"))
 #' members(dir)
 #'
+#' # ---- Example 3: one dataset, two formats, one of them wanted ----
+#' #
+#' # The same dataset stored twice is two rows, because the inventory reports
+#' # what is on disk. Name the format to see only that half.
+#' members(dir, format = "json")
+#'
 #' @seealso
 #' **Members of one XPORT file:** [xpt_members()].
 #'
 #' **Per-variable attributes:** [columns()] for one dataset's variable pane.
 #' @export
-members <- function(path) {
+members <- function(path, format = NULL) {
   call <- rlang::caller_env()
   .check_path(path, call)
+  formats <- .members_formats(format, call = call)
   if (dir.exists(path)) {
-    out <- .members_dir(path, call = call)
+    out <- .members_dir(path, formats, call = call)
   } else {
     if (!file.exists(path)) {
       .artoo_abort(
@@ -180,7 +291,22 @@ members <- function(path) {
         call = call
       )
     }
-    codec <- .codec_for_ext(tools::file_ext(path), call = call)
+    codec <- .codec_for_ext(.effective_ext(path), call = call)
+    # A named file whose format the restriction excludes is a contradiction in
+    # the call, not a result. Returning an empty inventory would make it
+    # indistinguishable from an empty directory -- one of those is an honest
+    # answer about a folder, the other is two arguments disagreeing.
+    if (!is.null(formats) && !(codec$format %in% formats)) {
+      .artoo_abort(
+        c(
+          "{.arg format} excludes the file {.arg path} names.",
+          "x" = "{.path {basename(path)}} is {.val {codec$format}}; you asked for {.val {formats}}.",
+          "i" = "Drop {.arg format}, or name {.val {codec$format}} in it."
+        ),
+        kind = "input",
+        call = call
+      )
+    }
     out <- if (codec$format == "xpt") {
       .members_xpt(path)
     } else {

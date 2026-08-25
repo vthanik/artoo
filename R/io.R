@@ -365,10 +365,12 @@ read_dataset <- function(
 #' Report which formats are available
 #'
 #' List every registered codec and whether it can read and write in this
-#' session. The pure-R formats (xpt, json, rds) are always available;
-#' optional-engine formats (parquet) report `FALSE` until their package is
-#' installed. Purely informational, modelled on the diagnostic helpers in the
-#' wider ecosystem; it never aborts.
+#' session. Every format artoo ships is available: the pure-R codecs need
+#' nothing, and the one engine-backed codec (parquet) names a package artoo
+#' depends on rather than suggests. The columns exist because the registry
+#' supports an engine that may be absent, not because one currently is.
+#' Purely informational, modelled on the diagnostic helpers in the wider
+#' ecosystem; it never aborts.
 #'
 #' @return *A `<data.frame>`* with one row per format and columns `format`,
 #'   `read`, `write` (logical), and `extensions`.

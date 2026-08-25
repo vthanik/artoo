@@ -220,17 +220,44 @@ test_that("a date variable carries no Length cell (Define length rule)", {
   expect_true(is.na(vars[["Length"]][vars$Variable == "RFSTDTC"]))
 })
 
-test_that("a codelist comment_id is never emitted into the Codelists sheet", {
-  # The P21 Codelists "Comment" column is free text, not a reference; the
-  # writer must not exteriorise comment_id there, and a round-trip must not
-  # resurrect it.
-  spec <- .xlsx_spec()
+test_that("a codelist comment_id round-trips through the Comment column", {
+  # The Codelists "Comment" column is a Comment-ID reference, like the ones
+  # on Variables and Datasets: the workbook format documents it as an id
+  # matching a row on the Comments sheet, and it becomes
+  # `CodeList/@def:CommentOID`. artoo read it as free text and left the
+  # column unmapped, which produced a codelist with no comment and a
+  # CommentDef with nothing pointing at it.
+  spec <- artoo_spec(
+    data.frame(dataset = "DM", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "DM",
+      variable = "SEX",
+      data_type = "string",
+      codelist_id = "CL.SEX",
+      stringsAsFactors = FALSE
+    ),
+    codelists = data.frame(
+      codelist_id = "CL.SEX",
+      name = "Sex",
+      data_type = "text",
+      term = c("F", "M"),
+      decode = c("Female", "Male"),
+      comment_id = "COM.SEX",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "COM.SEX",
+      description = "Collected on the demography page.",
+      stringsAsFactors = FALSE
+    )
+  )
   p <- withr::local_tempfile(fileext = ".xlsx")
-  write_spec(spec, p)
+  suppressWarnings(write_spec(spec, p))
   cl_sheet <- as.data.frame(readxl::read_excel(p, sheet = "Codelists"))
-  expect_false("Comment" %in% names(cl_sheet))
-  back <- read_spec(p)
-  expect_true(all(is.na(back@codelists$comment_id)))
+  expect_true("Comment" %in% names(cl_sheet))
+  expect_identical(unique(cl_sheet[["Comment"]]), "COM.SEX")
+  back <- suppressWarnings(read_spec(p))
+  expect_identical(unique(back@codelists$comment_id), "COM.SEX")
 })
 
 test_that("empty optional slots omit their sheets", {
@@ -255,9 +282,12 @@ test_that("Define-XML to P21 is one read_spec |> write_spec composition", {
   skip_if_not_installed("xml2")
   define <- test_path("fixtures", "define21-sdtm.xml")
   skip_if_not(file.exists(define))
-  spec <- read_spec(define)
+  spec <- suppressWarnings(read_spec(define))
   p <- withr::local_tempfile(fileext = ".xlsx")
-  write_spec(spec, p)
+  # The workbook has no sheet for the structural slots, so this composition
+  # legitimately drops them -- and must say so rather than truncating in
+  # silence.
+  expect_warning(write_spec(spec, p), class = "artoo_warning_spec")
   back <- read_spec(p)
   expect_identical(spec_standard(back), spec_standard(spec))
   expect_setequal(spec_datasets(back), spec_datasets(spec))
@@ -321,7 +351,7 @@ test_that("the study table round-trips through the P21 Define sheet", {
   )
   p <- withr::local_tempfile(fileext = ".xlsx")
   write_spec(spec, p)
-  expect_true("Define" %in% readxl::excel_sheets(p))
+  expect_true("Study" %in% readxl::excel_sheets(p))
   back <- read_spec(p)
   expect_identical(spec_study(back, "study_name"), "CDISC-Sample")
   expect_identical(
@@ -338,5 +368,476 @@ test_that("a spec with no study row writes no Define sheet", {
   )
   p <- withr::local_tempfile(fileext = ".xlsx")
   write_spec(spec, p)
-  expect_false("Define" %in% readxl::excel_sheets(p))
+  expect_false("Study" %in% readxl::excel_sheets(p))
+})
+
+test_that("a method's formal expression survives a workbook (#p12-p21)", {
+  # The Methods sheet carries one formal expression per method, in its
+  # context and code columns. artoo read those two columns into the methods
+  # table and then consumed them nowhere -- the Define-XML writer builds
+  # FormalExpression only from the separate expressions table -- so a method
+  # authored with an expression produced a define.xml with none, silently,
+  # while the write in the other direction warned that no sheet could hold
+  # what it was in the middle of writing.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = "ADSL",
+      variable = "AGEGR1",
+      data_type = "string",
+      origin = "Derived",
+      method_id = "MT.AGEGR1",
+      stringsAsFactors = FALSE
+    ),
+    methods = data.frame(
+      method_id = "MT.AGEGR1",
+      name = "Age group",
+      type = "Computation",
+      description = "Banded age",
+      expression_context = "SAS 9.4",
+      expression_code = "if age < 65 then agegr1 = '<65';",
+      stringsAsFactors = FALSE
+    )
+  )
+  # The inline pair is folded into the expressions table at construction, so
+  # every consumer downstream sees one representation.
+  expect_identical(nrow(spec@method_expressions), 1L)
+  expect_identical(spec@method_expressions$context, "SAS 9.4")
+
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  expression <- xml2::xml_find_first(
+    xml2::read_xml(path),
+    "//*[local-name()='FormalExpression']"
+  )
+  expect_identical(xml2::xml_attr(expression, "Context"), "SAS 9.4")
+  expect_match(xml2::xml_text(expression), "agegr1", fixed = TRUE)
+
+  # ...and back out to a workbook, in the two columns it came from.
+  book <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, book))
+  sheet <- readxl::read_excel(book, sheet = "Methods")
+  expect_identical(sheet[["Expression Context"]], "SAS 9.4")
+  expect_match(sheet[["Expression Code"]], "agegr1", fixed = TRUE)
+})
+
+test_that("a method with two expressions loses the second, loudly (#p12-p21)", {
+  # The sheet has one context and one code column, so a method carrying two
+  # formal expressions keeps the first. That is a real loss and it is named.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = "ADSL",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = "ADSL",
+      variable = "BMI",
+      data_type = "float",
+      origin = "Derived",
+      method_id = "MT.BMI",
+      stringsAsFactors = FALSE
+    ),
+    methods = data.frame(
+      method_id = "MT.BMI",
+      name = "BMI",
+      type = "Computation",
+      description = "Body mass index",
+      stringsAsFactors = FALSE
+    ),
+    method_expressions = data.frame(
+      method_id = "MT.BMI",
+      order = 1:2,
+      context = c("SAS 9.4", "R 4.5"),
+      code = c("bmi = wt / ht**2;", "bmi <- wt / ht^2"),
+      stringsAsFactors = FALSE
+    )
+  )
+  book <- withr::local_tempfile(fileext = ".xlsx")
+  expect_warning(write_spec(spec, book), "MT.BMI")
+  back <- suppressWarnings(read_spec(book))
+  expect_identical(nrow(back@method_expressions), 1L)
+  expect_identical(back@method_expressions$context, "SAS 9.4")
+})
+
+test_that("the study sheet speaks the format's vocabulary (#p12-define-sheet)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # A Define-XML read carries the document's identifiers, and none of them
+  # had a workbook spelling -- so the study sheet went out reading
+  # `metadata_version_oid`, `odm_context`, `study_oid`: artoo's private
+  # column names on a surface a person reads and another tool imports.
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(adam_spec, path))
+  sheet <- as.data.frame(readxl::read_excel(path, sheet = "Study"))
+  expect_false(any(grepl("_", sheet$Attribute)))
+  expect_true(all(
+    c("DefineVersion", "StudyOID", "MetaDataVersionOID", "Context") %in%
+      sheet$Attribute
+  ))
+  # ...and it states the standard the way the format does, which artoo read
+  # and never wrote back, so a workbook it produced could not say which
+  # standard it described.
+  expect_true(all(c("StandardName", "StandardVersion") %in% sheet$Attribute))
+  expect_identical(sheet$Value[sheet$Attribute == "StandardVersion"], "1.1")
+  expect_identical(sheet$Value[sheet$Attribute == "StandardName"], "ADaM-IG")
+
+  # The read understands every spelling the write emits, and one attribute
+  # is emitted once.
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(back@study$define_version, adam_spec@study$define_version)
+  expect_identical(back@study$odm_context, adam_spec@study$odm_context)
+  expect_identical(spec_standard(back), spec_standard(adam_spec))
+  again <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(back, again))
+  twice <- readxl::read_excel(again, sheet = "Study")
+  expect_false(any(duplicated(twice$Attribute)))
+})
+
+test_that("artoo can read a workbook it wrote, value level and all (#p12-interchange)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # No test did this. The one round-trip test with value-level rows starts
+  # from a Define-XML source, where the reader fills `where_clause_id`; a
+  # WORKBOOK source leaves that column empty and carries the link in
+  # `where_clause`, so the writer's render was dead code for every
+  # workbook-sourced spec and its output could not be read back at all.
+  source <- system.file("extdata", "sdtm-spec.xlsx", package = "artoo")
+  skip_if(!nzchar(source), "demo workbook not bundled")
+  spec <- suppressWarnings(read_spec(source))
+  expect_gt(nrow(spec@values), 0L)
+  expect_gt(nrow(spec@where_clauses), 0L)
+
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, path))
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(nrow(back@values), nrow(spec@values))
+  expect_identical(nrow(back@where_clauses), nrow(spec@where_clauses))
+  # Every value-level row still names a condition the same workbook defines.
+  expect_true(all(
+    back@values$where_clause %in% back@where_clauses$where_clause_id
+  ))
+  # ...and it is a fixed point: writing what came back changes nothing.
+  again <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(back, again))
+  expect_equal(suppressWarnings(read_spec(again)), back)
+})
+
+test_that("the workbook is the shape the widest tooling imports (#p12-interchange)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # Measured against the importer that the open-source edition ships: the
+  # study sheet must be called `Study` (it is that parser's initialising
+  # sheet, and therefore required -- a workbook naming it `Define` is
+  # refused before a row is read), and a value-level row names its
+  # condition by ID with a `WhereClauses` sheet defining it, because that
+  # parser treats the cell as a foreign key.
+  spec <- suppressWarnings(read_spec(
+    system.file("extdata", "sdtm-spec.xlsx", package = "artoo")
+  ))
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  suppressWarnings(write_spec(spec, path))
+  sheets <- readxl::excel_sheets(path)
+  expect_true("Study" %in% sheets)
+  expect_false("Define" %in% sheets)
+  expect_true("WhereClauses" %in% sheets)
+  values <- readxl::read_excel(path, sheet = "ValueLevel")
+  clauses <- readxl::read_excel(path, sheet = "WhereClauses")
+  cells <- values[["Where Clause"]]
+  expect_true(all(cells[!is.na(cells)] %in% clauses[["ID"]]))
+  # The label is carried under both spellings, so a reader looking for
+  # either finds it.
+  expect_true(all(c("Label", "Description") %in% names(values)))
+})
+
+test_that("a comma in a scalar value is not quoted into it (#p12-final-B1)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # Quotes only mean something inside a SET, where a comma separates
+  # members. On a scalar the reader takes the cell verbatim, so quoting an
+  # `EQ` value whose text contains a comma -- "Nausea, vomiting and
+  # retching" is a real preferred term -- put the quote characters into the
+  # value and changed which records the clause selects. Silently, on
+  # artoo's own round trip.
+  mk <- function(comparator, values) {
+    artoo_spec(
+      data.frame(dataset = "AE", structure = "one", stringsAsFactors = FALSE),
+      data.frame(
+        dataset = "AE",
+        variable = c("AESEV", "AEDECOD"),
+        data_type = "string",
+        stringsAsFactors = FALSE
+      ),
+      values = data.frame(
+        dataset = "AE",
+        variable = "AESEV",
+        where_clause_id = "WC.1",
+        data_type = "text",
+        stringsAsFactors = FALSE
+      ),
+      where_clauses = data.frame(
+        where_clause_id = "WC.1",
+        check_order = 1L,
+        dataset = "AE",
+        variable = "AEDECOD",
+        comparator = comparator,
+        value = values,
+        value_order = seq_along(values),
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+  round_trip <- function(spec) {
+    path <- withr::local_tempfile(fileext = ".xlsx")
+    suppressWarnings(write_spec(spec, path))
+    list(
+      cell = readxl::read_excel(path, sheet = "WhereClauses")[["Value"]][[1]],
+      back = suppressWarnings(read_spec(path))@where_clauses$value
+    )
+  }
+
+  scalar <- round_trip(mk("EQ", "Nausea, vomiting and retching"))
+  expect_identical(scalar$cell, "Nausea, vomiting and retching")
+  expect_identical(scalar$back, "Nausea, vomiting and retching")
+
+  # A set still quotes, because there a comma really does separate.
+  set <- round_trip(mk("IN", c("Nausea, vomiting", "Rash")))
+  expect_identical(set$cell, '("Nausea, vomiting", Rash)')
+  expect_identical(set$back, c("Nausea, vomiting", "Rash"))
+})
+
+test_that("a set value carrying a quote is refused, not mangled (#p12-final-B1)", {
+  skip_if_not_installed("writexl")
+  # A set's values are comma separated and quote delimited, so a value that
+  # contains a quote cannot be written at all. artoo used to write one and
+  # then refuse to read its own file back.
+  spec <- artoo_spec(
+    data.frame(dataset = "AE", structure = "one", stringsAsFactors = FALSE),
+    data.frame(
+      dataset = "AE",
+      variable = c("AESEV", "AEDECOD"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    values = data.frame(
+      dataset = "AE",
+      variable = "AESEV",
+      where_clause_id = "WC.1",
+      data_type = "text",
+      stringsAsFactors = FALSE
+    ),
+    where_clauses = data.frame(
+      where_clause_id = "WC.1",
+      check_order = 1L,
+      dataset = "AE",
+      variable = "AEDECOD",
+      comparator = "IN",
+      value = c('say "ouch"', "Rash"),
+      value_order = 1:2,
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- withr::local_tempfile(fileext = ".xlsx")
+  expect_error(write_spec(spec, path), class = "artoo_error_spec")
+})
+
+test_that("every dataset states where its file is (#p12-location)", {
+  skip_if_not_installed("xml2")
+  # A define whose ItemGroupDefs carry no `def:ArchiveLocationID` renders
+  # every dataset heading as "[Location: ]". CDISC's own published examples
+  # carry it on every dataset that has a file -- always `LF.<NAME>` at
+  # `<name>.xpt` -- so artoo derives the same rather than leaving a blank.
+  spec <- artoo_spec(
+    data.frame(
+      dataset = c("DM", "VS"),
+      structure = "One record per subject",
+      has_no_data = c(FALSE, TRUE),
+      comment_id = c(NA, "COM.EMPTY"),
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      dataset = c("DM", "VS"),
+      variable = c("USUBJID", "VSORRES"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    ),
+    comments = data.frame(
+      comment_id = "COM.EMPTY",
+      description = "Nothing was collected.",
+      stringsAsFactors = FALSE
+    ),
+    standard = "SDTMIG 3.4"
+  )
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(spec, path, created = "2020-01-01 00:00:00", stylesheet = FALSE)
+  ))
+  doc <- xml2::read_xml(path)
+  groups <- xml2::xml_find_all(
+    doc,
+    "//*[local-name()='ItemGroupDef']",
+    ns = character()
+  )
+  located <- stats::setNames(
+    xml2::xml_attr(groups, "ArchiveLocationID"),
+    xml2::xml_attr(groups, "Name")
+  )
+  expect_identical(unname(located[["DM"]]), "LF.DM")
+  leaf <- xml2::xml_find_first(
+    doc,
+    "//*[local-name()='ItemGroupDef'][@Name='DM']/*[local-name()='leaf']",
+    ns = character()
+  )
+  expect_identical(xml2::xml_attr(leaf, "href"), "dm.xpt")
+  # ...except a dataset with no records, which has no file to point at.
+  # That is the carve-out CDISC's own examples make: in the 2.1 SDTM
+  # example the only two datasets without a location are the two flagged
+  # HasNoData.
+  expect_true(is.na(located[["VS"]]))
+  expect_false(any(grepl("dangling", lint_define(path)@findings$check)))
+})
+
+test_that("a user's own ValueLevel Description is not clobbered (#p12-final-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # The dual-spelling convenience writes the label under `Description` for
+  # the older reader -- but only when the sheet does not already carry a
+  # `Description`. When it does, that column is the user's own text that
+  # rode through the read, and overwriting it with the label destroys the
+  # one copy.
+  book <- file.path(withr::local_tempdir(), "vl.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Label = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = c("AGEGR1", "AGEGR1N"),
+        Label = "Age Group",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ),
+      ValueLevel = data.frame(
+        Dataset = "ADSL",
+        Variable = "AGEGR1",
+        `Where Clause` = "AGEGR1N EQ 1",
+        Label = "Under 65",
+        Description = "Sponsor cell kept verbatim",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  out <- file.path(withr::local_tempdir(), "back.xlsx")
+  suppressWarnings(write_spec(spec, out))
+  sheet <- readxl::read_excel(out, sheet = "ValueLevel")
+  expect_identical(sheet$Label[[1]], "Under 65")
+  expect_identical(sheet$Description[[1]], "Sponsor cell kept verbatim")
+})
+
+test_that("a sheet with nothing the workbook knows about is not written", {
+  # Three ways a sheet ends up with nothing to say: no rows, no column the
+  # map recognises, and every recognised column blank. Writing an empty
+  # sheet for any of them puts a header over no data, which reads to a
+  # reviewer as "this metadata is missing" rather than "there is none".
+  expect_null(artoo:::.p21_sheet_frame(NULL, artoo:::.p21_ds_map))
+  expect_null(
+    artoo:::.p21_sheet_frame(data.frame(zzz = 1), artoo:::.p21_ds_map)
+  )
+})
+
+test_that("a study of nothing but blanks writes no Study sheet", {
+  expect_null(
+    artoo:::.p21_study_sheet(
+      data.frame(study_name = "  ", stringsAsFactors = FALSE),
+      NA_character_
+    )
+  )
+})
+
+test_that("analysis criteria with no dataset to scope them write no sheet", {
+  # The sheet exists to say which dataset a result's criteria select from.
+  # Rows that name none have nothing to put in the cell the reader keys on.
+  ar <- data.frame(
+    display_id = "AD.1",
+    result_id = "AR.1",
+    dataset = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  expect_null(artoo:::.p21_arm_criteria_sheet(ar))
+  expect_null(artoo:::.p21_arm_criteria_sheet(ar[0L, ]))
+})
+
+test_that("a one-word standard is left alone rather than split", {
+  # "SDTMIG 3.4" splits into a name and a version. "SDTMIG" has no version to
+  # take, and guessing one would put a fabricated number in the document.
+  study <- list(study_name = "S")
+  expect_identical(artoo:::.p21_study_standard_rows(study, "SDTMIG"), study)
+  expect_identical(
+    artoo:::.p21_study_standard_rows(study, NA_character_),
+    study
+  )
+})
+
+test_that("a condition of no values collapses to nothing", {
+  # An IN whose values are all NA has no cell to write; an EQ with one value
+  # writes it bare rather than bracketed.
+  wc <- data.frame(
+    where_clause_id = c("WC.1", "WC.2"),
+    check_order = 1L,
+    dataset = "VS",
+    variable = "VSTESTCD",
+    comparator = c("IN", "IN"),
+    value = c(NA_character_, "HEIGHT"),
+    value_order = 1L,
+    stringsAsFactors = FALSE
+  )
+  sheet <- artoo:::.p21_where_sheet(wc)
+  expect_true(is.na(sheet$Value[[1]]))
+  expect_identical(sheet$Value[[2]], "HEIGHT")
+})
+
+test_that("a multi-expression method loses all but the first, and says so", {
+  # The help page claimed method_expressions survives an xlsx round trip.
+  # It does not: a workbook gives each method ONE row with ONE code cell.
+  # The claim was "measured" against a hand-built spec carrying a single
+  # expression, which cannot detect a rule about the second one.
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("writexl")
+  spec <- read_define("define21-sdtm.xml")
+  expect_gt(nrow(spec@method_expressions), 2L)
+
+  book <- file.path(withr::local_tempdir(), "spec.xlsx")
+  expect_warning(write_spec(spec, book), "formal expression")
+
+  back <- suppressWarnings(read_spec(book))
+  # One row per method that had any, never more.
+  expect_identical(
+    nrow(back@method_expressions),
+    length(unique(spec@method_expressions$method_id))
+  )
+  expect_lt(nrow(back@method_expressions), nrow(spec@method_expressions))
+
+  # The tables the note DOES promise: measured on the same document.
+  for (slot in c("standards", "where_clauses", "arm_displays", "arm_results")) {
+    expect_identical(
+      nrow(S7::prop(back, slot)),
+      nrow(S7::prop(spec, slot)),
+      info = slot
+    )
+  }
 })

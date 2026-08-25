@@ -116,9 +116,7 @@ test_that("a 0-row conformed frame round-trips every full-metadata format", {
   empty <- .torture_frame()[0, , drop = FALSE]
   empty <- sync_meta(empty, get_meta(.torture_frame()))
   for (ext in c(".json", ".ndjson", ".rds", ".parquet")) {
-    if (ext == ".parquet") {
-      skip_if_not_installed("nanoparquet")
-    }
+    if (ext == ".parquet") {}
     p <- withr::local_tempfile(fileext = ext)
     write_dataset(empty, p)
     back <- read_dataset(p)
@@ -138,9 +136,7 @@ test_that("an all-NA column survives every full-metadata format", {
   attr(df$AVAL, "label") <- "Analysis Value"
   df <- sync_meta(df, get_meta(.torture_frame()))
   for (ext in c(".json", ".ndjson", ".rds", ".parquet", ".xpt")) {
-    if (ext == ".parquet") {
-      skip_if_not_installed("nanoparquet")
-    }
+    if (ext == ".parquet") {}
     p <- withr::local_tempfile(fileext = ext)
     write_dataset(df, p)
     back <- read_dataset(p)

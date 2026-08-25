@@ -152,13 +152,7 @@ leaves a finding. The data-protection conditions carry their evidence as
 data, so a harness asserts on it programmatically:
 
 ```{r}
-vars <- spec_variables(adam_spec)
-vars$data_type[vars$variable == "AGE"] <- "integer"
-strict <- artoo_spec(
-  adam_spec@datasets, vars,
-  codelists = adam_spec@codelists,
-  study = spec_study(adam_spec)
-)
+strict <- set_type(adam_spec, "ADSL", AGE = "integer")
 raw <- cdisc_adsl
 raw$AGE[1] <- raw$AGE[1] + 0.5
 tryCatch(
@@ -184,7 +178,7 @@ Unicode NFC (UAX #15).
 ## Where to next
 
 - [Specifications](specs.html) &mdash; the spec whose metadata every codec
-  carries.
+  carries, and the define.xml it writes.
 - [Conform & validate](conform.html) &mdash; produce the conformed frame
   these writers persist.
 - [Recipes](recipes.html) &mdash; conversion inside an end-to-end ADaM and

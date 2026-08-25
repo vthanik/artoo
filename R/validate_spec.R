@@ -1138,7 +1138,7 @@ validate_spec <- function(
 ) {
   call <- rlang::caller_env()
   on_error <- match.arg(on_error)
-  .check_spec_arg(spec, call)
+  spec <- .check_spec_arg(spec, call)
   if (!is.null(dataset)) {
     dataset <- unique(trimws(as.character(dataset)))
     for (ds in dataset) {

@@ -1,0 +1,502 @@
+# Tests for lint_define() — reference integrity of a Define-XML document.
+#
+# The organising idea: every finding this reports is invisible to
+# validate_define(). Several tests therefore assert BOTH — the schema says the
+# document is fine, and the lint says it is not. That pairing is the whole
+# argument for the function existing.
+#
+# Mutations are text-level surgery on the serialised file, with the anchor's
+# uniqueness asserted, so an edit cannot silently land somewhere else and
+# certify the wrong thing.
+
+skip_if_not_installed("xml2")
+
+minimal <- function() {
+  p <- system.file("extdata", "define-minimal.xml", package = "artoo")
+  skip_if(!nzchar(p), "bundled minimal define is unavailable")
+  p
+}
+
+fixture <- function(name) {
+  p <- testthat::test_path("fixtures", name)
+  skip_if(!file.exists(p), paste(name, "fixture is unavailable"))
+  p
+}
+
+# Replace `old` with `new` in a copy of `path`, asserting `old` occurs exactly
+# `n` times first. Returns the new path.
+edit_xml <- function(path, old, new, n = 1L) {
+  txt <- readLines(path, warn = FALSE)
+  hits <- sum(vapply(
+    txt,
+    function(l) lengths(regmatches(l, gregexpr(old, l, fixed = TRUE))),
+    integer(1)
+  ))
+  expect_identical(hits, n)
+  out <- file.path(
+    withr::local_tempdir(.local_envir = parent.frame()),
+    "edited.xml"
+  )
+  writeLines(gsub(old, new, txt, fixed = TRUE), out)
+  out
+}
+
+checks_of <- function(report) sort(unique(report@findings$check))
+
+# ---- the gate: clean documents stay clean -------------------------------
+
+test_that("the bundled minimal document has no reference problems", {
+  report <- lint_define(minimal())
+  expect_s3_class(report, "artoo::artoo_check")
+  expect_identical(nrow(report@findings), 0L)
+  expect_gt(report@summary$n_definitions, 0L)
+  expect_gt(report@summary$n_references, 0L)
+})
+
+test_that("both official Define-XML 2.0 examples are clean", {
+  for (f in c("define20-sdtm.xml", "define20-adam.xml")) {
+    report <- lint_define(fixture(f))
+    expect_identical(nrow(report@findings), 0L, info = f)
+  }
+})
+
+test_that("the official 2.1 examples report only their one real defect", {
+  # Not zero: both 2.1 examples define six def:Standard entries and reference
+  # only five, so STD.5 is genuinely unreferenced. This is a true positive in
+  # CDISC's own published example -- Pinnacle 21's the unreferenced-definition rule flags it too -- so
+  # the expectation pins it rather than suppressing it. If this count ever
+  # moves, either the fixture changed or the lint gained a false positive.
+  for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
+    report <- lint_define(fixture(f))
+    expect_true("define_orphan_standard" %in% report@findings$check, info = f)
+    expect_match(
+      report@findings$message[
+        report@findings$check == "define_orphan_standard"
+      ],
+      "STD\\.5",
+      info = f
+    )
+  }
+  # The SDTM example carries a second true positive of its own: SUPPVS is
+  # flagged def:HasNoData with no comment explaining it, which is what
+  # Pinnacle 21 the empty-dataset comment rule asks for. Pinned rather than suppressed, for the same
+  # reason as the orphan standard.
+  sdtm <- lint_define(fixture("define21-sdtm.xml"))@findings
+  expect_setequal(
+    sdtm$check,
+    c("define_orphan_standard", "define_no_data_uncommented")
+  )
+  expect_match(
+    sdtm$message[sdtm$check == "define_no_data_uncommented"],
+    "SUPPVS"
+  )
+  expect_identical(
+    nrow(lint_define(fixture("define21-adam.xml"))@findings),
+    1L
+  )
+})
+
+# ---- dangling references ------------------------------------------------
+
+test_that("a dangling variable reference is caught, though the schema passes", {
+  bad <- edit_xml(minimal(), 'ItemOID="IT.DM.SEX"', 'ItemOID="IT.DM.NOPE"')
+  expect_true(validate_define(bad)@summary$valid)
+
+  report <- lint_define(bad)
+  expect_true("define_dangling_item" %in% checks_of(report))
+  expect_identical(
+    report@findings$severity[report@findings$check == "define_dangling_item"],
+    "error"
+  )
+  expect_match(
+    report@findings$message[report@findings$check == "define_dangling_item"],
+    "IT.DM.NOPE"
+  )
+})
+
+test_that("a dangling codelist reference is caught", {
+  bad <- edit_xml(minimal(), 'CodeListOID="CL.SEX"', 'CodeListOID="CL.NOPE"')
+  expect_true(validate_define(bad)@summary$valid)
+  expect_true("define_dangling_codelist" %in% checks_of(lint_define(bad)))
+})
+
+test_that("a dangling comment reference is caught", {
+  bad <- edit_xml(
+    minimal(),
+    'def:CommentOID="COM.SEX"',
+    'def:CommentOID="COM.NOPE"'
+  )
+  expect_true("define_dangling_comment" %in% checks_of(lint_define(bad)))
+})
+
+test_that("a dangling standard reference is caught", {
+  bad <- edit_xml(
+    minimal(),
+    'def:StandardOID="STD.1"',
+    'def:StandardOID="STD.NOPE"'
+  )
+  expect_true("define_dangling_standard" %in% checks_of(lint_define(bad)))
+})
+
+test_that("a dangling archive location gets its own finding, not a leaf one", {
+  # An ItemGroupDef pointing at a missing leaf is a different problem from a
+  # DocumentRef doing so -- one loses the dataset file, the other a PDF -- so
+  # they carry different condition ids.
+  bad <- edit_xml(
+    minimal(),
+    'def:ArchiveLocationID="LF.DM"',
+    'def:ArchiveLocationID="LF.NOPE"'
+  )
+  found <- checks_of(lint_define(bad))
+  expect_true("define_dangling_archive_location" %in% found)
+  expect_false("define_dangling_leaf" %in% found)
+})
+
+test_that("a dangling value list reference is caught", {
+  src <- fixture("define21-sdtm.xml")
+  txt <- readLines(src, warn = FALSE)
+  hit <- grep("<def:ValueListRef ", txt, fixed = TRUE)[1]
+  skip_if(is.na(hit), "fixture carries no def:ValueListRef")
+  txt[hit] <- sub('ValueListOID="[^"]*"', 'ValueListOID="VL.NOPE"', txt[hit])
+  out <- file.path(withr::local_tempdir(), "vl.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_value_list" %in% checks_of(lint_define(out)))
+})
+
+test_that("a dangling where clause reference is caught", {
+  src <- fixture("define21-sdtm.xml")
+  txt <- readLines(src, warn = FALSE)
+  hit <- grep("<def:WhereClauseRef ", txt, fixed = TRUE)[1]
+  skip_if(is.na(hit), "fixture carries no def:WhereClauseRef")
+  txt[hit] <- sub(
+    'WhereClauseOID="[^"]*"',
+    'WhereClauseOID="WC.NOPE"',
+    txt[hit]
+  )
+  out <- file.path(withr::local_tempdir(), "wc.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_where_clause" %in% checks_of(lint_define(out)))
+})
+
+test_that("a dangling method reference is caught", {
+  src <- fixture("define21-sdtm.xml")
+  txt <- readLines(src, warn = FALSE)
+  hit <- grep('MethodOID="', txt, fixed = TRUE)[1]
+  skip_if(is.na(hit), "fixture carries no MethodOID")
+  txt[hit] <- sub('MethodOID="[^"]*"', 'MethodOID="MT.NOPE"', txt[hit])
+  out <- file.path(withr::local_tempdir(), "mt.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_method" %in% checks_of(lint_define(out)))
+})
+
+test_that("a dangling document reference is caught", {
+  src <- fixture("define21-sdtm.xml")
+  txt <- readLines(src, warn = FALSE)
+  hit <- grep("<def:DocumentRef ", txt, fixed = TRUE)[1]
+  skip_if(is.na(hit), "fixture carries no def:DocumentRef")
+  txt[hit] <- sub('leafID="[^"]*"', 'leafID="LF.NOPE"', txt[hit])
+  out <- file.path(withr::local_tempdir(), "lf.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_leaf" %in% checks_of(lint_define(out)))
+})
+
+# ---- orphan definitions -------------------------------------------------
+
+test_that("an orphaned value list is an ERROR, not a warning", {
+  # This is herald bug (a). Deleting the ValueListRef leaves the
+  # def:ValueListDef defined but unreachable, so every value-level definition
+  # it holds renders nowhere in a reviewer's tool -- and the document still
+  # validates. Silent loss of submission metadata, hence error severity.
+  src <- fixture("define21-sdtm.xml")
+  txt <- readLines(src, warn = FALSE)
+  hit <- grep("<def:ValueListRef ", txt, fixed = TRUE)
+  skip_if(length(hit) == 0L, "fixture carries no def:ValueListRef")
+  out <- file.path(withr::local_tempdir(), "orphan-vl.xml")
+  writeLines(txt[-hit[1]], out)
+
+  expect_true(validate_define(out)@summary$valid)
+
+  report <- lint_define(out)
+  rows <- report@findings[report@findings$check == "define_orphan_value_list", ]
+  expect_identical(nrow(rows), 1L)
+  expect_identical(rows$severity, "error")
+})
+
+test_that("an orphaned codelist is reported as a warning", {
+  bad <- edit_xml(minimal(), '<CodeListRef CodeListOID="CL.SEX"/>', "")
+  report <- lint_define(bad)
+  rows <- report@findings[report@findings$check == "define_orphan_codelist", ]
+  expect_identical(nrow(rows), 1L)
+  expect_identical(rows$severity, "warning")
+})
+
+test_that("an orphaned comment is reported", {
+  bad <- edit_xml(minimal(), ' def:CommentOID="COM.SEX"', "")
+  expect_true("define_orphan_comment" %in% checks_of(lint_define(bad)))
+})
+
+test_that("an orphaned document leaf is reported", {
+  bad <- edit_xml(minimal(), ' def:ArchiveLocationID="LF.DM"', "")
+  expect_true("define_orphan_leaf" %in% checks_of(lint_define(bad)))
+})
+
+test_that("an orphaned variable is reported", {
+  bad <- edit_xml(
+    minimal(),
+    '<ItemRef ItemOID="IT.DM.SEX" OrderNumber="3" Mandatory="Yes"/>',
+    ""
+  )
+  expect_true("define_orphan_item" %in% checks_of(lint_define(bad)))
+})
+
+# ---- the carve-outs that prevent false positives ------------------------
+
+test_that("a dictionary-backed codelist is exempt from the orphan check", {
+  # An ExternalCodeList (MedDRA, WHODrug, ISO 3166) names a dictionary rather
+  # than enumerating terms, so nothing points at it with a CodeListRef and it
+  # is not an orphan. Without this exemption every real AE or CM define
+  # reports a spurious finding.
+  txt <- readLines(minimal(), warn = FALSE)
+  anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
+  expect_length(anchor, 1L)
+  injected <- append(
+    txt,
+    paste0(
+      '      <CodeList OID="CL.MEDDRA" Name="MedDRA" DataType="text">',
+      '<ExternalCodeList Dictionary="MedDRA" Version="25.0"/></CodeList>'
+    ),
+    after = anchor - 1L
+  )
+  out <- file.path(withr::local_tempdir(), "external.xml")
+  writeLines(injected, out)
+
+  report <- lint_define(out)
+  expect_identical(report@summary$n_external_codelists, 1L)
+  expect_false("define_orphan_codelist" %in% checks_of(report))
+})
+
+test_that("a codelist reached through RoleCodeListOID counts as referenced", {
+  # It is referenced, just not through CodeListRef. Swapping the reference
+  # form must not turn the codelist into an orphan.
+  bad <- edit_xml(
+    minimal(),
+    '<CodeListRef CodeListOID="CL.SEX"/>',
+    ""
+  )
+  txt <- readLines(bad, warn = FALSE)
+  hit <- grep('<ItemRef ItemOID="IT.DM.SEX"', txt, fixed = TRUE)
+  expect_length(hit, 1L)
+  txt[hit] <- sub("/>$", ' RoleCodeListOID="CL.SEX"/>', txt[hit])
+  out <- file.path(withr::local_tempdir(), "role.xml")
+  writeLines(txt, out)
+
+  expect_false("define_orphan_codelist" %in% checks_of(lint_define(out)))
+})
+
+# ---- Origin inheritance, both directions --------------------------------
+
+test_that("a variable with no Origin anywhere is reported", {
+  bad <- edit_xml(minimal(), '<def:Origin Type="Derived"/>', "")
+  report <- lint_define(bad)
+  expect_true("define_missing_origin" %in% checks_of(report))
+  expect_match(
+    report@findings$message[report@findings$check == "define_missing_origin"],
+    "IT.DM.USUBJID"
+  )
+})
+
+test_that("a parent variable inherits Origin from its value-level items", {
+  # define21-sdtm.xml's LBORRES carries no Origin of its own; its value-level
+  # items supply one each. Reporting that parent would be a false positive,
+  # and it is exactly the mistake the first implementation made.
+  report <- lint_define(fixture("define21-sdtm.xml"))
+  expect_false("define_missing_origin" %in% checks_of(report))
+})
+
+# ---- error paths --------------------------------------------------------
+
+test_that("a non-XML file is refused", {
+  bad <- file.path(withr::local_tempdir(), "junk.xml")
+  writeLines("not xml <<<", bad)
+  expect_error(lint_define(bad), class = "artoo_error_input")
+})
+
+test_that("a document with no MetaDataVersion is refused", {
+  other <- file.path(withr::local_tempdir(), "no-mdv.xml")
+  writeLines("<root><child/></root>", other)
+  expect_error(lint_define(other), class = "artoo_error_input")
+  expect_snapshot(
+    lint_define(other),
+    error = TRUE,
+    transform = function(x) {
+      gsub("'[^']*[/\\\\]([^/\\\\']+\\.xml)'", "'<tmp>/\\1'", x)
+    }
+  )
+})
+
+test_that("a bad path argument is refused", {
+  expect_error(lint_define(123), class = "artoo_error_input")
+})
+
+test_that("a missing file says so, rather than reporting unparseable XML", {
+  expect_error(
+    lint_define(file.path(withr::local_tempdir(), "absent.xml")),
+    class = "artoo_error_input"
+  )
+})
+
+test_that("a MetaDataVersion with no definitions or references is handled", {
+  # The degenerate document: structurally a define, semantically empty. Every
+  # collector must return its typed empty shape rather than failing.
+  bare <- file.path(withr::local_tempdir(), "bare.xml")
+  writeLines(
+    paste0(
+      '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" ',
+      'xmlns:def="http://www.cdisc.org/ns/def/v2.1">',
+      "<Study><MetaDataVersion/></Study></ODM>"
+    ),
+    bare
+  )
+  report <- lint_define(bare)
+  expect_identical(nrow(report@findings), 0L)
+  expect_identical(report@summary$n_definitions, 0L)
+  expect_identical(report@summary$n_references, 0L)
+  expect_identical(report@summary$n_external_codelists, 0L)
+})
+
+test_that("the printed reports name what they actually checked", {
+  # A Define-XML report must not render the spec-check header: "Datasets: 0
+  # Variables: 0" is false for a define document, and the fields that matter
+  # (version, verdict, reference counts) would never be shown.
+  expect_snapshot(print(validate_define(minimal())))
+  expect_snapshot(print(lint_define(minimal())))
+})
+
+test_that("the lint report shows the external-codelist exemption count", {
+  txt <- readLines(minimal(), warn = FALSE)
+  anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
+  injected <- append(
+    txt,
+    paste0(
+      '      <CodeList OID="CL.MEDDRA" Name="MedDRA" DataType="text">',
+      '<ExternalCodeList Dictionary="MedDRA" Version="25.0"/></CodeList>'
+    ),
+    after = anchor - 1L
+  )
+  out <- file.path(withr::local_tempdir(), "external-report.xml")
+  writeLines(injected, out)
+  expect_output(print(lint_define(out)), "External codelists")
+})
+
+test_that("a dangling ItemOID inside a value list does not crash the lint (#blocker)", {
+  # Regression. `has_origin[[k]]` threw a bare `subscript out of bounds` when a
+  # value list referenced an ItemOID no ItemDef defines -- which is herald bug
+  # (b), the exact defect this lint exists to report. The gate crashed
+  # precisely on the failure it was built to catch, and later phases lean on
+  # lint_define() as the gate over writer output.
+  txt <- readLines(minimal(), warn = FALSE)
+  anchor <- grep("</MetaDataVersion>", txt, fixed = TRUE)
+  expect_length(anchor, 1L)
+
+  injected <- append(
+    txt,
+    c(
+      '      <def:ValueListDef OID="VL.DM.USUBJID">',
+      '        <ItemRef ItemOID="IT.DOES.NOT.EXIST" OrderNumber="1" Mandatory="No"/>',
+      "      </def:ValueListDef>"
+    ),
+    after = anchor - 1L
+  )
+  # Give the parent a value list AND remove its own Origin, so the inheritance
+  # walk has to resolve the dangling child.
+  injected <- sub(
+    '<def:Origin Type="Derived"/>',
+    '<def:ValueListRef ValueListOID="VL.DM.USUBJID"/>',
+    injected,
+    fixed = TRUE
+  )
+  out <- file.path(withr::local_tempdir(), "dangling-vl.xml")
+  writeLines(injected, out)
+
+  report <- expect_no_error(lint_define(out))
+  found <- checks_of(report)
+  expect_true("define_dangling_item" %in% found)
+  expect_true("define_missing_origin" %in% found)
+})
+
+test_that("a comment referenced only from MetaDataVersion is not an orphan", {
+  # def:CommentOID is legal on MetaDataVersion itself, and an XPath of ".//*"
+  # excludes the context node. Missing it produced a false orphan here, and a
+  # false negative for the dangling direction below.
+  txt <- readLines(minimal(), warn = FALSE)
+  hit <- grep('def:DefineVersion="2.1.0">', txt, fixed = TRUE)
+  expect_length(hit, 1L)
+  # Drop the existing reference FIRST, then add the MetaDataVersion one --
+  # doing it the other way round strips the reference straight back off.
+  txt <- sub(' def:CommentOID="COM.SEX"', "", txt, fixed = TRUE)
+  txt[hit] <- sub(
+    'def:DefineVersion="2.1.0">',
+    'def:DefineVersion="2.1.0" def:CommentOID="COM.SEX">',
+    txt[hit],
+    fixed = TRUE
+  )
+  expect_true(any(grepl('def:CommentOID="COM.SEX"', txt, fixed = TRUE)))
+  out <- file.path(withr::local_tempdir(), "mdv-comment.xml")
+  writeLines(txt, out)
+
+  expect_false("define_orphan_comment" %in% checks_of(lint_define(out)))
+})
+
+test_that("a dangling comment reference on MetaDataVersion is caught", {
+  txt <- readLines(minimal(), warn = FALSE)
+  hit <- grep('def:DefineVersion="2.1.0">', txt, fixed = TRUE)
+  txt[hit] <- sub(
+    'def:DefineVersion="2.1.0">',
+    'def:DefineVersion="2.1.0" def:CommentOID="COM.NOPE">',
+    txt[hit],
+    fixed = TRUE
+  )
+  out <- file.path(withr::local_tempdir(), "mdv-dangling.xml")
+  writeLines(txt, out)
+
+  expect_true("define_dangling_comment" %in% checks_of(lint_define(out)))
+})
+
+test_that("the two gates that only lint can see (#p9-review)", {
+  skip_if_not_installed("xml2")
+  # An unconditional value-level item and an uncommented empty dataset are
+  # both invisible to the schema (well-formed, and an optional attribute) and
+  # to the reference checks (nothing to dangle). Without these rules, phase
+  # 10's acceptance gate would certify the exact artefacts it exists to catch.
+  path <- withr::local_tempfile(fileext = ".xml")
+  writeLines(
+    c(
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"',
+      '     xmlns:def="http://www.cdisc.org/ns/def/v2.1"',
+      '     ODMVersion="1.3.2" FileType="Snapshot" FileOID="F"',
+      '     CreationDateTime="2020-01-01T00:00:00">',
+      '  <Study OID="S"><GlobalVariables>',
+      "    <StudyName>S</StudyName><StudyDescription>S</StudyDescription>",
+      "    <ProtocolName>S</ProtocolName></GlobalVariables>",
+      '    <MetaDataVersion OID="M" def:DefineVersion="2.1.0">',
+      '      <def:ValueListDef OID="VL.1">',
+      '        <ItemRef ItemOID="IT.1" Mandatory="No"/>',
+      "      </def:ValueListDef>",
+      '      <ItemGroupDef OID="IG.1" Name="VS" Repeating="No" Purpose="Tabulation"',
+      '                    def:Structure="x" def:HasNoData="Yes">',
+      '        <ItemRef ItemOID="IT.1" Mandatory="No"/>',
+      "      </ItemGroupDef>",
+      '      <ItemDef OID="IT.1" Name="V" DataType="text"/>',
+      "    </MetaDataVersion></Study></ODM>"
+    ),
+    path
+  )
+  checks <- lint_define(path)@findings$check
+  expect_true("define_unconditional_value" %in% checks)
+  expect_true("define_no_data_uncommented" %in% checks)
+})

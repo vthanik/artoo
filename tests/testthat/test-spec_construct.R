@@ -19,15 +19,26 @@ test_that("artoo_spec() builds a valid spec from each bundled pair", {
   expect_identical(spec_standard(sdtm), "SDTMIG 3.1.2")
 })
 
-test_that("mixing the ADaM and SDTM demo tables aborts (one spec, one standard)", {
-  expect_error(
-    artoo_spec(
-      rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
-      rbind(cdisc_adam_variables, cdisc_sdtm_variables),
-      codelists = cdisc_codelists
-    ),
-    class = "artoo_error_spec"
+test_that("mixing the ADaM and SDTM demo tables links each to its own standard (D10)", {
+  # This used to abort: everything folded into ONE scalar, so two values
+  # meant information loss. Per-row values now survive as standard_id
+  # links, the scalar is only the primary, and CDISC's own 2.1 SDTM example
+  # names three standards across its datasets.
+  spec <- artoo_spec(
+    rbind(cdisc_adam_datasets, cdisc_sdtm_datasets),
+    rbind(cdisc_adam_variables, cdisc_sdtm_variables),
+    codelists = cdisc_codelists
   )
+  # A tie is broken by first appearance.
+  expect_identical(spec_standard(spec), "ADaMIG 1.1")
+  linked <- stats::setNames(
+    spec@standards$name[
+      match(spec@datasets$standard_id, spec@standards$standard_id)
+    ],
+    spec@datasets$dataset
+  )
+  expect_identical(unname(linked[["ADSL"]]), "ADaMIG")
+  expect_identical(unname(linked[["DM"]]), "SDTMIG")
 })
 
 test_that("artoo_spec() coerces a tibble slot to a plain data frame", {
@@ -175,9 +186,12 @@ test_that("artoo_spec() canonicalises study fields to the ODM vocabulary", {
   expect_identical(st$study_name, "CDISC01")
   expect_identical(st$study_description, "A study")
   expect_identical(st$protocol_name, "CDISC01-01")
-  expect_identical(st$Language, "en")
+  # Language is canonicalised too now, along with the rest of the document
+  # identifiers a study sheet carries.
+  expect_identical(st$language, "en")
   expect_false(any(
-    c("StudyName", "StudyDescription", "ProtocolName") %in% names(st)
+    c("StudyName", "StudyDescription", "ProtocolName", "Language") %in%
+      names(st)
   ))
 })
 
@@ -244,33 +258,45 @@ test_that("agreeing sources resolve to the one standard", {
   expect_identical(spec_standard(spec), "ADaMIG 1.1")
 })
 
-test_that("mixing standards aborts at construction", {
+test_that("mixing standards mints a row for each and links the datasets (D10)", {
+  spec <- artoo_spec(
+    data.frame(
+      dataset = c("ADSL", "AE", "DM"),
+      standard = c("ADaMIG 1.1", "SDTMIG 3.2", "SDTMIG 3.2")
+    ),
+    data.frame(
+      dataset = c("ADSL", "AE", "DM"),
+      variable = c("AGE", "AETERM", "USUBJID"),
+      data_type = c("integer", "string", "string")
+    )
+  )
+  # The scalar is the value the most datasets name...
+  expect_identical(spec_standard(spec), "SDTMIG 3.2")
+  # ...and every row resolves through its own minted standards entry.
+  expect_identical(nrow(spec@standards), 2L)
+  expect_true(all(spec@datasets$standard_id %in% spec@standards$standard_id))
+  expect_setequal(spec@standards$name, c("ADaMIG", "SDTMIG"))
+  # The display column is consumed; standard_id is its durable form.
+  expect_false("standard" %in% names(spec@datasets))
+})
+
+test_that("an explicit standard contradicting the source aborts (D10)", {
+  # A file describing several standards is data; an ARGUMENT naming one the
+  # file never mentions is the caller contradicting the file.
   expect_error(
     artoo_spec(
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
-      ),
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        variable = c("AGE", "USUBJID"),
-        data_type = c("integer", "string")
-      )
+      data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"),
+      data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+      standard = "SDTMIG 3.2"
     ),
     class = "artoo_error_spec"
   )
   expect_snapshot(
     error = TRUE,
     artoo_spec(
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        standard = c("ADaMIG 1.1", "SDTMIG 3.2")
-      ),
-      data.frame(
-        dataset = c("ADSL", "DM"),
-        variable = c("AGE", "USUBJID"),
-        data_type = c("integer", "string")
-      )
+      data.frame(dataset = "ADSL", standard = "ADaMIG 1.1"),
+      data.frame(dataset = "ADSL", variable = "AGE", data_type = "integer"),
+      standard = "SDTMIG 3.2"
     )
   )
 })
@@ -294,4 +320,63 @@ test_that("blank and NA standards are ignored during resolution", {
     study = data.frame(standard = "  ")
   )
   expect_identical(spec_standard(spec), "SDTMIG 3.2")
+})
+
+test_that("an inline method expression folds in beside the formal ones", {
+  # `.fold_method_expressions()` turns a method's inline `expression_code`
+  # into a method_expressions row. Three of its four exits had no test: no
+  # code at all, code for a method that already has a formal expression, and
+  # stacking onto an existing table.
+  f <- artoo:::.fold_method_expressions
+
+  methods <- data.frame(
+    method_id = c("ME.1", "ME.2"),
+    name = "M",
+    description = "d",
+    expression_context = "SAS",
+    expression_code = c("x = 1;", NA_character_),
+    stringsAsFactors = FALSE
+  )
+
+  # Nothing to fold: no method carries code.
+  blank <- methods
+  blank$expression_code <- NA_character_
+  expect_null(f(blank, NULL))
+
+  # Folded from nothing.
+  out <- f(methods, NULL)
+  expect_identical(out$method_id, "ME.1")
+  expect_identical(out$code, "x = 1;")
+
+  # A method that already has a formal expression is left alone, not doubled.
+  formal <- data.frame(
+    method_id = "ME.1",
+    order = 1L,
+    context = "SAS",
+    code = "formal;",
+    stringsAsFactors = FALSE
+  )
+  expect_identical(f(methods, formal), formal)
+
+  # And an inline one for a DIFFERENT method stacks onto the table.
+  methods2 <- methods
+  methods2$expression_code <- c("x = 1;", "y = 2;")
+  stacked <- f(methods2, formal)
+  expect_identical(nrow(stacked), 2L)
+  expect_setequal(stacked$method_id, c("ME.1", "ME.2"))
+})
+
+test_that("a primary standard is minted only from a versioned IG name", {
+  # Four exits, none tested: no standards table, a blank standard, a standard
+  # with no version, and a name that is not an implementation guide.
+  f <- artoo:::.mint_primary_standard
+  empty <- data.frame(standard_id = character(0), stringsAsFactors = FALSE)
+
+  expect_identical(f(empty, NA_character_), empty)
+  expect_identical(f(empty, ""), empty)
+  expect_identical(f(empty, "SDTMIG"), empty)
+  expect_identical(f(empty, "Something Else 1.0"), empty)
+
+  minted <- f(empty, "SDTMIG 3.4")
+  expect_identical(minted$standard_id, "STD.1")
 })

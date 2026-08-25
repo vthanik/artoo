@@ -377,9 +377,7 @@ test_that(">24h, negative, and fractional times round-trip every codec", {
   df <- data.frame(USUBJID = c("01", "02", "03", "04"))
   df$ATM <- hms::hms(c(100000, -120, 30600.5, NA))
   for (writer_ext in c(".xpt", ".json", ".ndjson", ".parquet", ".rds")) {
-    if (writer_ext == ".parquet") {
-      skip_if_not_installed("nanoparquet")
-    }
+    if (writer_ext == ".parquet") {}
     p <- withr::local_tempfile(fileext = writer_ext)
     write_dataset(df, p)
     back <- read_dataset(p)

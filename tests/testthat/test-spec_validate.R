@@ -133,3 +133,31 @@ test_that("the meta validator rejects an unnamed columns list", {
     regexp = "named list"
   )
 })
+
+test_that("the S7 validator refuses a non-scalar @standard", {
+  # The friendly .check_*() layer catches this first, so the validator behind
+  # it is the last-line defence and had no test at all. Reached by mutating
+  # an already-built object, which is the only way past the constructor.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  broken <- spec
+  attr(broken, "standard") <- c("SDTMIG 3.4", "ADaMIG 1.1")
+  expect_match(
+    artoo:::.spec_validate(broken),
+    "@standard must be a single value",
+    all = FALSE
+  )
+  # And a well-formed spec has nothing to say.
+  expect_null(artoo:::.spec_validate(spec))
+})

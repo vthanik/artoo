@@ -86,7 +86,7 @@ test_that("read_spec() warns on an unrecognised version but still reads (H10)", 
   p <- withr::local_tempfile(fileext = ".json")
   write_spec(spec, p)
   txt <- gsub(
-    '("artoo_spec_version":\\s*)"1"',
+    '("artoo_spec_version":\\s*)"[^"]*"',
     '\\1"99"',
     readLines(p)
   )
@@ -412,4 +412,138 @@ test_that(".scope_codelists rejects a term that resolves to no codelist", {
     stringsAsFactors = FALSE
   )
   expect_identical(nrow(artoo:::.scope_codelists(ok)), 1L)
+})
+
+test_that("an unconsumed Description column survives the read (#p12-final-3)", {
+  skip_if_not_installed("readxl")
+  skip_if_not_installed("writexl")
+  # A newer-generation sheet carries BOTH `Label` and `Description`, and
+  # they can say different things. When Label supplies the label, the
+  # Description column was never consumed -- it is the sponsor's own text,
+  # and the workbook contract is that unrecognised columns survive. Only a
+  # sheet whose Label mapped nothing has its Description consumed as the
+  # label, and dropped, so no ghost `label.1` returns either way.
+  dir <- withr::local_tempdir()
+  book <- file.path(dir, "desc.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Label = "Subject Level",
+        Description = "One record per subject, per SAP 9.1",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        Label = "Unique Subject Identifier",
+        Description = "Sponsor note: pooled ids",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    book
+  )
+  spec <- suppressWarnings(read_spec(book))
+  expect_identical(spec@variables$label, "Unique Subject Identifier")
+  expect_identical(spec@variables$Description, "Sponsor note: pooled ids")
+  expect_identical(
+    spec@datasets$Description,
+    "One record per subject, per SAP 9.1"
+  )
+
+  # ...and it rides a full round trip without minting a ghost label.N.
+  back <- file.path(dir, "back.xlsx")
+  suppressWarnings(write_spec(spec, back))
+  again <- suppressWarnings(read_spec(back))
+  expect_identical(again@variables$Description, "Sponsor note: pooled ids")
+  expect_false(any(grepl("^label\\.", names(again@variables))))
+
+  # A sheet whose Label column mapped nothing still consumes Description
+  # as the label, exactly as before.
+  older <- file.path(dir, "older.xlsx")
+  writexl::write_xlsx(
+    list(
+      Datasets = data.frame(
+        Dataset = "ADSL",
+        Description = "Subject Level",
+        Structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      Variables = data.frame(
+        Dataset = "ADSL",
+        Variable = "USUBJID",
+        Description = "Unique Subject Identifier",
+        `Data Type` = "text",
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    ),
+    older
+  )
+  consumed <- suppressWarnings(read_spec(older))
+  expect_identical(consumed@variables$label, "Unique Subject Identifier")
+  expect_false("Description" %in% names(consumed@variables))
+})
+
+test_that("pruning tolerates a documents table without roles (#p12-final-4)", {
+  # Scoping prunes shared metadata nothing in scope references. A documents
+  # table is not required to carry a `role` column, and without one no
+  # document sits in a container -- so only actual references keep a leaf.
+  tables <- list(
+    variables = data.frame(
+      dataset = "DM",
+      variable = "USUBJID",
+      origin_document_id = "LF.keep",
+      stringsAsFactors = FALSE
+    ),
+    documents = data.frame(
+      document_id = c("LF.keep", "LF.other"),
+      href = c("acrf.pdf", "other.pdf"),
+      stringsAsFactors = FALSE
+    )
+  )
+  out <- artoo:::.spec_scope_referenced(tables)
+  expect_identical(out$documents$document_id, "LF.keep")
+})
+
+test_that("scoping an unlisted dataset table refuses by name (#p12-final-4)", {
+  # The guard aborts before touching any sheet, and says what the file
+  # defines -- which is nothing when the table has no dataset column.
+  expect_error(
+    artoo:::.spec_scope_tables(list(datasets = NULL), "DM", call = NULL),
+    class = "artoo_error_input"
+  )
+})
+
+test_that("a spec with no datasets survives its own JSON round trip", {
+  # write_spec() wrote this file and read_spec() then refused it -- and
+  # refused by telling the caller to "pass at least a dataset table", when
+  # the caller had passed a path. A key that is PRESENT but empty means the
+  # spec has none, which is not the same as the key being absent, and
+  # jsonlite reads an empty table back as a zero-length list.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = character(0),
+      structure = character(0),
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = character(0),
+      variable = character(0),
+      data_type = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_spec(spec, p)
+
+  back <- read_spec(p)
+  expect_identical(nrow(back@datasets), 0L)
+  expect_identical(nrow(back@variables), 0L)
+  # The optional slots keep their NULL: only the two REQUIRED tables change,
+  # because only their absence makes the constructor refuse the file.
+  expect_null(back@values)
 })

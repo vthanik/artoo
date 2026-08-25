@@ -66,7 +66,7 @@ test_that("the shipped P21 workbooks carry the study through their Define sheet"
   skip_if_not_installed("readxl")
   p <- system.file("extdata", "adam-spec.xlsx", package = "artoo")
   skip_if_not(nzchar(p))
-  expect_true("Define" %in% readxl::excel_sheets(p))
+  expect_true("Study" %in% readxl::excel_sheets(p))
   back <- read_spec(p)
   expect_identical(spec_study(back, "study_name"), "CDISC-Sample")
 })

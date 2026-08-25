@@ -3,8 +3,6 @@
 # and graceful degrade for a foreign parquet with no sidecar (9.B). Needs
 # nanoparquet; skipped where absent.
 
-skip_if_not_installed("nanoparquet")
-
 demo_adam_spec <- function() {
   artoo_spec(
     cdisc_adam_datasets,
@@ -254,7 +252,6 @@ test_that("an invalid compression value aborts before writing", {
 
 # ---- on_invalid: UTF-8 validation parity with write_xpt --------------------
 test_that("write_parquet gates invalid UTF-8 through on_invalid", {
-  skip_if_not_installed("nanoparquet")
   spec <- artoo_spec(
     cdisc_sdtm_datasets,
     cdisc_sdtm_variables,
@@ -279,7 +276,6 @@ test_that("write_parquet gates invalid UTF-8 through on_invalid", {
 # ---- Regression: factor class consistency (code review 2026-06-14) ----
 
 test_that("a factor column reads back as character, matching the JSON codec", {
-  skip_if_not_installed("nanoparquet")
   df <- data.frame(SEX = factor(c("M", "F", "M")), AGE = c(40L, 50L, 60L))
   pp <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(df, pp)

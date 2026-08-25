@@ -2,18 +2,45 @@
 % Please edit documentation in R/spec_write.R
 \name{write_spec}
 \alias{write_spec}
-\title{Write a specification to native JSON or a P21 Excel workbook}
+\title{Write a specification to JSON, an Excel workbook, or Define-XML}
 \usage{
-write_spec(spec, path)
+write_spec(spec, path, ...)
 }
 \arguments{
 \item{spec}{\emph{The specification to serialise.} \verb{<artoo_spec>: required}.
 Build one with \code{\link[=artoo_spec]{artoo_spec()}} or \code{\link[=read_spec]{read_spec()}}.}
 
 \item{path}{\emph{Destination file.} \verb{<character(1)>: required}. The extension
-picks the format: \code{.json} (native, lossless) or \code{.xlsx} (P21
-interchange; needs the \code{writexl} package). Any other extension aborts
-with \code{artoo_error_input}.}
+picks the format: \code{.json} (native, lossless), \code{.xlsx} (P21
+interchange; needs the \code{writexl} package), or \code{.xml} (Define-XML;
+needs the \code{xml2} package). Any other extension aborts with
+\code{artoo_error_input}.}
+
+\item{...}{\emph{Format-specific options.} Ignored by the JSON and xlsx paths.
+Define-XML accepts:
+\itemize{
+\item \code{version} -- \verb{<character(1)> | NULL}. \code{"2.1"} (default) or \code{"2.0"},
+resolved from the spec's own \code{define_version} when unset. Writing 2.0
+from a 2.1-shaped spec warns about each construct 2.0 cannot carry.
+\item \code{created} -- the \code{CreationDateTime} stamp, formatted as UTC. Freeze it
+for a reproducible submission build; the default is the current time.
+\item \code{stylesheet} -- \verb{<logical(1)> | <character(1)>: default TRUE}. \code{TRUE}
+writes the \code{xml-stylesheet} processing instruction and copies the
+bundled CDISC stylesheet beside the output; a string names a
+stylesheet without copying one; \code{FALSE} writes neither.
+\item \code{data} -- \verb{<list of <data.frame>> | <character(1)> | NULL}. The
+datasets the define describes: a list named for each dataset, or one
+path to the folder holding them. artoo reads them and fills what the
+spec leaves blank; see \strong{Data-aware writing}.
+\item \code{data_format} -- \verb{<character> | NULL}. When \code{data} is a folder,
+restrict it to these formats, named as \code{\link[=artoo_formats]{artoo_formats()}} lists them.
+Use it when a folder holds one dataset in two formats.
+\item \code{html} -- \verb{<logical(1)> | <character(1)>: default FALSE}. \code{TRUE} also
+renders the document through its stylesheet into a sibling \code{.html}; a
+string renders it to that path. Needs the \code{xslt} and \code{callr} packages.
+\item \code{validate} -- \verb{<logical(1)>: default TRUE}. Schema-validate before the
+file is put in place.
+}}
 }
 \value{
 \emph{The output \code{path}, invisibly.} Read it back with \code{\link[=read_spec]{read_spec()}}.
@@ -21,10 +48,11 @@ with \code{artoo_error_input}.}
 \description{
 Serialise a \code{artoo_spec}, dispatching on the file extension: a \code{.json}
 path writes artoo's native, lossless JSON; a \code{.xlsx} path writes a
-Pinnacle 21 (P21) style Excel workbook. Both are inverses of
-\code{\link[=read_spec]{read_spec()}} on their format, which makes the spec converters free
-compositions: \code{read_spec("define.xml") |> write_spec("spec.xlsx")} is a
-Define-XML to P21 bridge in one line.
+Pinnacle 21 (P21) style Excel workbook; a \code{.xml} path writes a
+submission-grade Define-XML 2.1 or 2.0 document. Each is the inverse of
+\code{\link[=read_spec]{read_spec()}} on its format, which makes the spec converters free
+compositions: \code{read_spec("spec.xlsx") |> write_spec("define.xml")} turns
+a workbook into a define.xml in one line.
 }
 \details{
 \strong{Native JSON is the lossless format.} Each slot is written as an array
@@ -49,8 +77,74 @@ Columns the P21 vocabulary does not model are not lost: a foreign column
 carried on a slot is re-emitted verbatim under its own header, so an xlsx
 round-trip keeps user columns.
 
-\strong{Note:} fields with no P21 column (\code{itemoid}, \code{target_data_type},
-per-variable \code{key_sequence}) do not survive an xlsx round-trip;
+\strong{Note:} the xlsx writer emits every sheet the spec has content for, so
+\code{standards}, \code{where_clauses}, \code{arm_displays}, \code{arm_results} and
+\code{dictionaries} survive a round trip. \code{method_expressions} does not
+survive whole: a workbook gives each method one row with one code cell,
+so a method carrying several formal expressions keeps only the first and
+the write says which methods it truncated. Write JSON when a spec has
+multi-expression methods, or when you need back the OIDs a Define-XML
+document chose.
+
+\strong{Define-XML is the submission format.} The \code{.xml} path emits
+Define-XML 2.1 or 2.0 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it
+built before the file reaches its destination, so an invalid document
+never overwrites a good one. Value-level metadata is emitted whole: the
+parent variable's \code{def:ValueListRef}, the \code{def:ValueListDef}, a real
+\code{ItemDef} per value-level row, and the \code{def:WhereClauseRef} and
+\code{def:WhereClauseDef} that say which rows it applies to.
+
+Identifiers already on the spec are reused verbatim, so a document read
+and written back keeps every OID a reviewer may have bookmarked; the rest
+are minted readably (\code{IG.DM}, \code{IT.DM.USUBJID}, \code{VL.VS.VSORRES}). Two
+schema-required attributes are derived rather than demanded:
+\code{def:Structure} falls back to the dataset keys, and \code{Purpose} follows the
+CDISC standard. A dataset with neither a structure nor keys aborts with
+\code{artoo_error_define} rather than being given an invented one.
+
+\strong{HTML.} A define.xml renders through an XSLT stylesheet, and the written
+document names one in a processing instruction and gets a copy of it
+alongside (a reference to a stylesheet that is not there is itself a
+conformance finding). An existing stylesheet beside the output is never
+overwritten, so a customised rendering survives. Pass \code{html = TRUE} to also
+materialise the rendered HTML: browsers are removing XSLT support, and a
+reviewer working from a submission archive should not need one.
+
+\strong{What a folder measures.} A named list describes the frames in memory; a
+folder describes the bytes on disk. Where the two differ the folder is
+right about what will be submitted -- a transport file pads to fixed width,
+so a value's trailing blanks are part of it there and not in R. A gzipped
+\code{.json} or \code{.ndjson} is matched like any other file; \code{.xpt.gz} is not,
+because \code{\link[=read_dataset]{read_dataset()}} does not read one either.
+
+\strong{A folder instead of a list.} \code{data} also takes one path to the folder
+holding the datasets. Each dataset the spec names is matched to a file
+whose basename is that name, ignoring case: \code{DM} to \code{dm.xpt}, \code{dm.json},
+\code{dm.parquet}. The folder is inventoried, not descended. A dataset with no
+file is normal and reported, not an error, and a file the spec does not
+name is left alone. A dataset matching MORE than one file aborts rather
+than choosing: two formats can disagree about byte width, so picking one
+silently would change the document. Name the format with \code{data_format} to
+resolve it. A file that cannot be read aborts too, naming every unreadable
+file at once rather than stopping at the first.
+
+\strong{Data-aware writing.} Pass \code{data} and artoo reads the datasets the
+define describes, which a spec-only tool cannot. A blank \code{length} is
+filled from the real maximum byte width; a stated one shorter than the
+data is widened, because a length below the real maximum is a conformance
+finding, and the write says which variables it widened. A stated length
+LONGER than the data is left alone: a length is a claim about the domain,
+not about one extract. Value-level metadata is derived for the standard
+findings shapes -- a result keyed by its test code, \code{TSVAL} by \code{TSPARMCD},
+\code{QVAL} by \code{QNAM}, \code{AVAL} and \code{AVALC} by \code{PARAMCD} -- with each derived row
+carrying the type and width of the rows it covers. A variable the spec
+already gives value-level rows to is never touched. A dataset with no
+records is flagged \code{def:HasNoData} when it also carries a comment
+explaining the absence, and left unflagged with a warning when it does
+not.
+
+Fields with no P21 column (\code{itemoid}, \code{target_data_type},
+per-variable \code{key_sequence}) likewise do not survive an xlsx round-trip;
 persist to JSON when you need the spec back exactly. The \verb{Data Type}
 re-encoding is also non-injective: \code{decimal}, \code{double}, \code{boolean}, and
 \code{URI} fold to \code{float} or \code{text} on a read-back. A Define-XML
@@ -81,10 +175,46 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   spec_datasets(read_spec(xlsx))
 }
 
+# ---- Example 3: the same spec as a submission-grade define.xml ----
+#
+# Read the bundled minimal Define-XML, write it back with a frozen
+# timestamp, and confirm the result is schema-valid. The write itself
+# validates, so reaching this line already proves it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  dm <- read_spec(
+    system.file("extdata", "define-minimal.xml", package = "artoo")
+  )
+  xml <- file.path(tempdir(), "define.xml")
+  write_spec(dm, xml, created = "2020-01-01 00:00:00")
+  validate_define(xml)
+}
+
+# ---- Example 4: let a folder of datasets fill the blanks ----
+#
+# A spec states a variable's length or leaves it blank. Point `data` at
+# the folder holding the datasets and artoo matches each one the spec
+# names to a file called after it, then fills the blanks from the real
+# maximum byte width. It reports which files it used, because a define is
+# a submission document and that is what a reader cannot recover from it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  folder <- file.path(tempdir(), "datasets")
+  dir.create(folder, showWarnings = FALSE)
+  write_json(
+    apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off"),
+    file.path(folder, "adsl.json")
+  )
+  from_folder <- file.path(tempdir(), "from-folder.xml")
+  write_spec(adam_spec, from_folder, data = folder)
+  lint_define(from_folder)
+}
+
 }
 \seealso{
 \strong{Inverse:} \code{\link[=read_spec]{read_spec()}} reads native JSON, a P21 Excel workbook, or
 Define-XML back into a \code{artoo_spec}.
+
+\strong{Check the Define-XML written:} \code{\link[=validate_define]{validate_define()}} schema-validates it,
+\code{\link[=lint_define]{lint_define()}} checks its reference integrity.
 
 \strong{Build / inspect:} \code{\link[=artoo_spec]{artoo_spec()}}, \code{\link[=spec_datasets]{spec_datasets()}},
 \code{\link[=spec_variables]{spec_variables()}}, \code{\link[=spec_standard]{spec_standard()}}.

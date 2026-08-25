@@ -1,3 +1,5 @@
+^\.git$
+^\.gitattributes$
 ^\.claude$
 ^CLAUDE\.md$
 ^CLAUDE\.local\.md$

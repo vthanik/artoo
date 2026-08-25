@@ -10,8 +10,15 @@ skip_if_not_installed("xml2")
   p
 }
 
+# The fixture carries an external codelist, and reading one warns that it was
+# dropped. That warning is asserted in test-spec_read_define_columns.R; here
+# it would bury the warnings these tests are actually about.
+.read_define_fixture <- function(...) {
+  suppressWarnings(read_spec(.define_fixture(), ...))
+}
+
 test_that("read_spec parses the CDISC 2.1 example into a artoo_spec", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   expect_true(is_artoo_spec(spec))
   ds <- spec@datasets
   expect_true(all(c("TS", "DM", "LB") %in% ds$dataset))
@@ -20,7 +27,7 @@ test_that("read_spec parses the CDISC 2.1 example into a artoo_spec", {
 })
 
 test_that("variables carry the Define attributes", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   v <- spec_variables(spec, "DM")
   age <- v[v$variable == "AGE", ]
   expect_identical(age$label, "Age")
@@ -40,7 +47,7 @@ test_that("variables carry the Define attributes", {
 })
 
 test_that("codelists carry terms, decodes, order, and extensibility", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   cl <- spec@codelists
   armcd <- cl[cl$codelist_id == "CL.ARMCD", ]
   expect_identical(
@@ -58,20 +65,24 @@ test_that("codelists carry terms, decodes, order, and extensibility", {
   expect_true(is.na(ageu$decode[ageu$term == "YEARS"]))
 })
 
-test_that("an external-dictionary codelist is dropped from variable refs", {
-  spec <- read_spec(.define_fixture())
-  # CL.ISO.COUNTRY is an ExternalCodeList (ISO-3166): not an enumerable
-  # membership list, so it appears nowhere in the spec's codelists and no
-  # variable references it.
+test_that("an external-dictionary codelist lands in dictionaries, refs intact", {
+  spec <- .read_define_fixture()
+  # CL.ISO.COUNTRY is an ExternalCodeList (ISO-3166): a terminology named
+  # rather than enumerated, so it is a dictionary rather than a codelist --
+  # and the variable that names it KEEPS the reference. It used to be
+  # stripped, which silently unbound every coded term in an adverse-events
+  # define from the dictionary that defines it.
   expect_false("CL.ISO.COUNTRY" %in% spec@codelists$codelist_id)
-  expect_false(any(
-    spec@variables$codelist_id %in% "CL.ISO.COUNTRY",
+  expect_true("CL.ISO.COUNTRY" %in% spec@dictionaries$dictionary_id)
+  expect_true(any(
+    c(spec@variables$codelist_id, spec@values$codelist_id) %in%
+      "CL.ISO.COUNTRY",
     na.rm = TRUE
   ))
 })
 
 test_that("methods, comments, and documents are carried", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   m <- spec@methods
   age <- m[m$method_id == "MT.AGE", ]
   expect_identical(age$type, "Computation")
@@ -90,7 +101,7 @@ test_that("methods, comments, and documents are carried", {
 })
 
 test_that("value-level metadata lands in @values with where clauses", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   vl <- spec@values
   expect_s3_class(vl, "data.frame")
   lb <- vl[vl$dataset == "LB" & vl$variable == "LBORRES", ]
@@ -100,7 +111,7 @@ test_that("value-level metadata lands in @values with where clauses", {
 })
 
 test_that("the study block carries the name; the standard rides @standard", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   st <- spec@study
   expect_identical(st$study_name, "CDISC01_1")
   # GlobalVariables carries all three ODM fields; StudyDescription must not
@@ -117,7 +128,7 @@ test_that("the study block carries the name; the standard rides @standard", {
 })
 
 test_that("the parsed spec validates", {
-  spec <- read_spec(.define_fixture())
+  spec <- .read_define_fixture()
   chk <- validate_spec(spec)
   # Findings are fine (the example exercises edge features); a hard failure
   # in validation is not.
@@ -135,16 +146,16 @@ test_that("a Define-XML v1.0 document aborts with guidance", {
     ),
     p
   )
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
 })
 
 test_that("a non-Define XML document aborts cleanly", {
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines("<root><child/></root>", p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
   p2 <- withr::local_tempfile(fileext = ".xml")
   writeLines("not xml at all <<<", p2)
-  expect_error(read_spec(p2), class = "artoo_error_input")
+  expect_error(read_spec(p2), class = "artoo_error_spec")
 })
 
 # ---- a minimal Define-XML 2.0 document (edge coverage) ----------------------
@@ -201,11 +212,101 @@ test_that("an ItemRef without its ItemDef aborts as inconsistent", {
   )
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines(.mini_define(body), p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
 })
 
 test_that("a MetaDataVersion without ItemGroupDefs aborts", {
   p <- withr::local_tempfile(fileext = ".xml")
   writeLines(.mini_define(""), p)
-  expect_error(read_spec(p), class = "artoo_error_input")
+  expect_error(read_spec(p), class = "artoo_error_spec")
+})
+
+test_that("scoping drops the metadata it orphans, not the author's (#p12-review-4)", {
+  skip_if_not_installed("xml2")
+  # Scoping removes the referrers, so a codelist left behind is not the
+  # author's orphan but one artoo just made: a spec narrowed to two ADaM
+  # datasets wrote a define.xml its own linter flagged thirty-two times.
+  full <- suppressWarnings(read_spec(test_path(
+    "fixtures",
+    "define21-adam.xml"
+  )))
+  scoped <- suppressWarnings(read_spec(
+    test_path("fixtures", "define21-adam.xml"),
+    datasets = c("ADSL", "ADAE")
+  ))
+  expect_lt(
+    length(unique(scoped@codelists$codelist_id)),
+    length(unique(full@codelists$codelist_id))
+  )
+  expect_lt(nrow(scoped@methods), nrow(full@methods))
+  # Nothing that survived is now dangling, which is the failure mode every
+  # hand-written list of reference columns produced.
+  path <- file.path(withr::local_tempdir(), "define.xml")
+  suppressMessages(suppressWarnings(
+    write_spec(scoped, path, created = "2020-01-01 00:00:00")
+  ))
+  findings <- lint_define(path)@findings
+  expect_false(any(grepl("^define_dangling", findings$check)))
+  # An UNSCOPED read is left exactly as the author wrote it.
+  expect_identical(
+    nrow(full@codelists),
+    nrow(
+      suppressWarnings(read_spec(test_path(
+        "fixtures",
+        "define21-adam.xml"
+      )))@codelists
+    )
+  )
+})
+
+test_that("a define carrying only the mandatory parts reads back empty, not broken", {
+  skip_if_not_installed("xml2")
+  # A first-draft define has no analysis results, no codelist items, no
+  # document refs and no typed standard. Every reader for those is a guard
+  # over an element that is simply absent, and a guard that aborts instead of
+  # returning nothing turns a sparse document into an unreadable one.
+  spec <- artoo_spec(
+    standard = "SDTMIG 3.4",
+    study = data.frame(study_name = "S", stringsAsFactors = FALSE),
+    datasets = data.frame(
+      dataset = "VS",
+      structure = "One record per test",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "VS",
+      variable = "VSORRES",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  path <- file.path(withr::local_tempdir(), "minimal.xml")
+  suppressWarnings(write_spec(spec, path, created = "2020-01-01 00:00:00"))
+
+  back <- suppressWarnings(read_spec(path))
+  expect_identical(nrow(back@arm_displays), 0L)
+  expect_identical(nrow(back@arm_results), 0L)
+  expect_identical(nrow(back@codelists), 0L)
+  expect_identical(nrow(back@where_clauses), 0L)
+  expect_identical(nrow(back@dictionaries), 0L)
+  # The one thing that is not empty: the archive leaf the writer derives.
+  expect_identical(back@documents$document_id, "LF.VS")
+  expect_identical(back@variables$variable, "VSORRES")
+})
+
+test_that("an Alias context artoo does not model is reported, not swallowed", {
+  skip_if_not_installed("xml2")
+  # Every bundled fixture raises this, and helper-define-fixtures.R suppresses
+  # it wholesale so it does not bury the warnings other tests assert on. That
+  # suppression is only safe while something pins the warning: without this,
+  # the reader could go silent on an unmodelled Alias and no test would see
+  # it. Only "nci:ExtCodeID" is read, so the others are a real write-back loss.
+  expect_warning(
+    read_spec(test_path("fixtures", "define21-sdtm.xml")),
+    class = "artoo_warning_spec"
+  )
+  expect_warning(
+    read_spec(test_path("fixtures", "define21-sdtm.xml")),
+    "name a context artoo does not model"
+  )
 })

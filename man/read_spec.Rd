@@ -7,9 +7,11 @@
 read_spec(path, datasets = NULL, on_duplicate = c("error", "first", "warn"))
 }
 \arguments{
-\item{path}{\emph{The specification file to read.} \verb{<character(1)>: required}. A \code{.json} (native) or \code{.xlsx} / \code{.xls} (P21) file.
+\item{path}{\emph{The specification file to read.} \verb{<character(1)>: required}. A \code{.json} (native), \code{.xlsx} / \code{.xls} (P21), or \code{.xml}
+(Define-XML 2.0 or 2.1) file.
 
-\strong{Requirement:} reading a P21 workbook needs the \code{readxl} package.}
+\strong{Requirement:} reading a P21 workbook needs the \code{readxl} package, and
+reading a define.xml needs \code{xml2}.}
 
 \item{datasets}{\emph{Read only these datasets.} \verb{<character> | NULL}. \code{NULL}
 (default) reads the whole spec. Otherwise the spec is scoped to the
@@ -56,10 +58,11 @@ CommentDefs / leaves become the supporting slots, and ValueListDefs land
 in the value-level slot with their where-clauses rendered as readable
 text.
 
-\strong{Note:} an \code{ExternalCodeList} (MedDRA, ISO-3166) names a dictionary,
-not an enumerable membership list; it is dropped, and variables that
-referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
-refused with guidance.
+\strong{Note:} an \code{ExternalCodeList} (MedDRA, ISO-3166) names a dictionary
+rather than an enumerable membership list, so it lands in
+\code{dictionaries} rather than \code{codelists}; a variable that references one
+keeps the reference, because a workbook has one column for both.
+Define-XML v1.0 (the 2005 model) is refused with guidance.
 
 \strong{P21 ingestion.} Sheets are located by a tolerant alias match
 (case-, space-, and spelling-variant insensitive). Datasets and

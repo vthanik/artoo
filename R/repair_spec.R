@@ -64,7 +64,7 @@
 #' @export
 repair_spec <- function(spec, findings) {
   call <- rlang::caller_env()
-  .check_spec_arg(spec, call = call)
+  spec <- .check_spec_arg(spec, call = call)
 
   need <- c("check", "dataset", "variable")
   if (!is.data.frame(findings) || !all(need %in% names(findings))) {

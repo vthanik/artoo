@@ -77,7 +77,7 @@ check_study <- function(
 ) {
   call <- rlang::caller_env()
   decode <- match.arg(decode)
-  .check_spec_arg(spec, call = call)
+  spec <- .check_spec_arg(spec, call = call)
 
   if (!is.list(data) || is.data.frame(data) || !length(data)) {
     .artoo_abort(

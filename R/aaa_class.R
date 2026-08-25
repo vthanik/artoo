@@ -27,6 +27,16 @@
 # (e.g. an ADaM numeric date is dataType "date", targetDataType "integer").
 .cdisc_targettypes <- c("integer", "decimal")
 
+# The ODM RangeCheck comparator vocabulary, closed in the schema. artoo
+# validates against it at read time rather than letting the schema gate report
+# it much later with a less actionable message. Lives here, with the other
+# closed vocabularies, because R sources this file first and both the
+# where-clause reader and the Define-XML version profiles need it.
+.wc_comparators <- c("LT", "LE", "GT", "GE", "EQ", "NE", "IN", "NOTIN")
+
+# Comparators whose value cell holds a LIST rather than one atomic value.
+.wc_set_comparators <- c("IN", "NOTIN")
+
 # ---- Per-slot column schemas: name -> required storage mode --------------
 # `req` lists the columns a slot MUST carry; the rest are optional and are
 # filled with a typed NA at construction.
@@ -38,7 +48,24 @@
   subclass = "character",
   structure = "character",
   keys = "character",
-  comment_id = "character"
+  comment_id = "character",
+  # ---- Define-XML ItemGroupDef attributes ----
+  # Carried so a written define.xml can be submission-grade rather than
+  # merely schema-valid: Pinnacle 21 treats most of these as required even
+  # though the XSD marks them optional.
+  itemgroupoid = "character", # ItemGroupDef/@OID            both
+  domain = "character", # @Domain                      both
+  sas_dataset_name = "character", # @SASDatasetName              both
+  repeating = "logical", # @Repeating (schema-required) both
+  reference_data = "logical", # @IsReferenceData             both
+  purpose = "character", # @Purpose                     both
+  archive_location_id = "character", # @def:ArchiveLocationID       both
+  standard_id = "character", # @def:StandardOID             2.1
+  is_non_standard = "logical", # @def:IsNonStandard           2.1
+  has_no_data = "logical", # @def:HasNoData               2.1
+  alias_context = "character", # Alias/@Context               both
+  alias_name = "character", # Alias/@Name                  both
+  order = "integer" # emission order            artoo
 )
 .spec_req_datasets <- c("dataset")
 
@@ -64,17 +91,48 @@
   predecessor = "character",
   assigned_value = "character",
   pages = "character",
-  role = "character"
+  role = "character",
+  # ---- Define-XML ItemDef / ItemRef additions ----
+  sas_field_name = "character", # ItemDef/@SASFieldName             both
+  value_list_id = "character", # def:ValueListRef/@ValueListOID    both
+  origin_description = "character", # def:Origin/Description            both
+  origin_document_id = "character", # def:Origin//def:DocumentRef@leafID both
+  page_type = "character", # def:PDFPageRef/@Type              both
+  page_title = "character", # def:PDFPageRef/@Title             2.1
+  role_codelist_id = "character", # ItemRef/@RoleCodeListOID          both
+  is_non_standard = "logical", # ItemRef/@def:IsNonStandard        2.1
+  has_no_data = "logical", # ItemRef/@def:HasNoData            2.1
+  alias_context = "character", # ItemDef/Alias/@Context            both
+  alias_name = "character" # ItemDef/Alias/@Name               both
 )
 .spec_req_variables <- c("dataset", "variable", "data_type")
 
+# Codelists are one row per TERM, so the list-level attributes below repeat
+# on every term row of the same codelist. That matches the shape of the source
+# workbook, which also repeats them, and it keeps the slot a plain rectangle;
+# .spec_validate() checks they agree within a codelist so the duplication
+# cannot drift. NA is tolerated: a workbook that fills the header only on a
+# codelist's first term row is the normal shape. The companion rule every
+# consumer must follow is therefore "the unique non-NA value", never "the
+# first row" -- taking row 1 loses the value whenever row 1 is blank.
 .spec_cols_codelists <- c(
   codelist_id = "character",
   term = "character",
   decode = "character",
   order = "integer",
   extended = "logical",
-  comment_id = "character"
+  comment_id = "character",
+  # ---- list-level, repeated on each term row ----
+  name = "character", # CodeList/@Name (required)     both
+  data_type = "character", # CodeList/@DataType (required) both
+  sas_format_name = "character", # @SASFormatName                both
+  nci_code = "character", # Alias[nci:ExtCodeID]/@Name    both
+  standard_id = "character", # @def:StandardOID              2.1
+  is_non_standard = "logical", # @def:IsNonStandard            2.1
+  # ---- term-level ----
+  term_nci_code = "character", # CodeListItem Alias/@Name      both
+  rank = "integer", # CodeListItem/@Rank            both
+  term_description = "character" # CodeListItem/Description      2.1
 )
 .spec_req_codelists <- c("codelist_id", "term")
 
@@ -90,7 +148,9 @@
   expression_context = "character",
   expression_code = "character",
   document_id = "character",
-  pages = "character"
+  pages = "character",
+  page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character" # def:PDFPageRef/@Title
 )
 .spec_req_methods <- c("method_id")
 
@@ -98,16 +158,177 @@
   comment_id = "character",
   description = "character",
   document_id = "character",
-  pages = "character"
+  pages = "character",
+  page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character" # def:PDFPageRef/@Title
 )
 .spec_req_comments <- c("comment_id")
 
 .spec_cols_documents <- c(
   document_id = "character",
   title = "character",
-  href = "character"
+  href = "character",
+  # Which MetaDataVersion container owns this leaf: annotated_crf,
+  # supplemental, archive, or other. Read off the container rather than
+  # guessed from the filename -- a title-regex heuristic writes a different
+  # document than it read, because a leaf referenced only from def:Origin
+  # sits in no container at all.
+  role = "character"
 )
 .spec_req_documents <- c("document_id")
+
+# ---- Slots that need their own table -------------------------------------
+# These carry structure a rectangle on an existing slot cannot hold, so each
+# is its own S7 property. They all land in ONE release deliberately: an S7
+# object embeds a copy of its class, so every property addition strands every
+# previously-saved spec, and one migration covers N properties exactly as
+# cheaply as it covers one.
+
+# def:Standards (2.1). Define-XML 2.0 instead carries a single
+# def:StandardName + def:StandardVersion pair on MetaDataVersion, which is
+# derived from the row flagged `is_primary` when writing 2.0.
+.spec_cols_standards <- c(
+  standard_id = "character", # def:Standard/@OID
+  name = "character", # @Name
+  type = "character", # @Type: IG or CT
+  version = "character", # @Version
+  status = "character", # @Status
+  publishing_set = "character", # @PublishingSet (Type = "CT" only)
+  comment_id = "character", # @def:CommentOID
+  is_primary = "logical", # artoo: which IG becomes 2.0's single pair
+  order = "integer"
+)
+.spec_req_standards <- c("standard_id", "name", "version")
+
+# def:WhereClauseDef, fully normalised: one row per CheckValue.
+# A CheckValue is free text and CAN contain a comma or a space (the CDISC
+# example carries "LOCAL LAB"), so any collapsed encoding is lossy.
+.spec_cols_where_clauses <- c(
+  where_clause_id = "character", # def:WhereClauseDef/@OID
+  check_order = "integer", # RangeCheck index within the clause
+  dataset = "character", # human-writable target
+  variable = "character", # human-writable target
+  itemoid = "character", # RangeCheck/@def:ItemOID (authoritative)
+  comparator = "character", # @Comparator
+  soft_hard = "character", # @SoftHard
+  value = "character", # CheckValue text
+  value_order = "integer", # CheckValue index within the RangeCheck
+  comment_id = "character" # @def:CommentOID (2.1)
+)
+.spec_req_where_clauses <- c("where_clause_id", "comparator")
+
+# MethodDef/FormalExpression, 0..n per method. A separate table rather than
+# extra rows on `methods`, because validate_spec() already publishes a
+# method_id_unique rule and repeating the id would silently change what that
+# rule means.
+.spec_cols_method_expressions <- c(
+  method_id = "character",
+  order = "integer",
+  context = "character", # FormalExpression/@Context
+  code = "character" # the expression body
+)
+.spec_req_method_expressions <- c("method_id")
+
+# Analysis Results Metadata (ARM v1.0). Version-neutral: the arm: vocabulary
+# is identical for Define-XML 2.0 and 2.1, only the namespace binding differs.
+.spec_cols_arm_displays <- c(
+  display_id = "character", # arm:ResultDisplay/@OID
+  name = "character", # @Name
+  description = "character",
+  document_id = "character",
+  pages = "character",
+  page_type = "character",
+  page_title = "character", # def:PDFPageRef/@Title            2.1
+  order = "integer"
+)
+.spec_req_arm_displays <- c("display_id")
+
+# Grain is one row per (result x analysis dataset), because an
+# arm:AnalysisDataset carries its own def:WhereClauseRef and a delimited
+# string cannot express that.
+.spec_cols_arm_results <- c(
+  display_id = "character",
+  result_id = "character", # arm:AnalysisResult/@OID
+  name = "character",
+  description = "character",
+  parameter_id = "character", # @ParameterOID
+  reason = "character", # @AnalysisReason
+  purpose = "character", # @AnalysisPurpose
+  dataset = "character", # arm:AnalysisDataset/@ItemGroupOID
+  variables = "character", # space-separated arm:AnalysisVariable names
+  where_clause_id = "character",
+  datasets_comment_id = "character",
+  documentation = "character",
+  documentation_document_id = "character",
+  documentation_pages = "character",
+  documentation_page_type = "character",
+  documentation_page_title = "character",
+  programming_context = "character",
+  programming_code = "character",
+  programming_document_id = "character",
+  programming_pages = "character",
+  programming_page_type = "character",
+  programming_page_title = "character",
+  order = "integer"
+)
+.spec_req_arm_results <- c("display_id", "result_id")
+
+# External codelists (MedDRA, WHODrug, ISO 3166). RESERVED, not yet
+# populated: dictionaries are out of scope for this release, but the property
+# is added now because the expensive half of the feature is the property, not
+# the code. Adding it later would strand every spec saved in between.
+.spec_cols_dictionaries <- c(
+  dictionary_id = "character", # CodeList/@OID
+  name = "character", # @Name
+  data_type = "character", # @DataType
+  dictionary = "character", # ExternalCodeList/@Dictionary
+  version = "character", # @Version
+  href = "character",
+  ref = "character"
+)
+.spec_req_dictionaries <- c("dictionary_id")
+
+# Value-level metadata finally gets a column schema. It stays class_any on
+# the S7 property so is.null(x@values) keeps meaning "no VLM", but when
+# present it is coerced to this shape.
+.spec_cols_values <- c(
+  dataset = "character",
+  variable = "character",
+  where_clause_id = "character", # def:WhereClauseRef/@WhereClauseOID
+  where_clause = "character", # rendered display text (derived)
+  value_list_id = "character", # def:ValueListDef/@OID
+  itemoid = "character",
+  label = "character",
+  data_type = "character",
+  length = "integer",
+  significant_digits = "integer",
+  display_format = "character",
+  codelist_id = "character",
+  method_id = "character",
+  comment_id = "character",
+  order = "integer",
+  mandatory = "logical",
+  # A value-level ItemRef takes Role and RoleCodeListOID exactly as a
+  # dataset-level one does; reading only the dataset-level pair meant every
+  # value-level Role vanished on a round trip -- seven of them in CDISC's own
+  # 2.1 SDTM example.
+  role = "character", # ItemRef/@Role
+  role_codelist_id = "character", # ItemRef/@RoleCodeListOID
+  origin = "character",
+  source = "character",
+  # A value-level def:Origin carries the same Description and annotated-CRF
+  # page reference a variable-level one does, and dropping them loses the CRF
+  # annotation the FDA expects on every collected item.
+  origin_description = "character", # def:Origin/Description
+  origin_document_id = "character", # def:Origin//def:DocumentRef@leafID
+  page_type = "character", # def:PDFPageRef/@Type
+  page_title = "character", # def:PDFPageRef/@Title
+  predecessor = "character",
+  assigned_value = "character",
+  pages = "character",
+  sas_field_name = "character"
+)
+.spec_req_values <- c("dataset", "variable")
 
 # ---- S7 classes ----------------------------------------------------------
 
@@ -133,7 +354,13 @@ artoo_spec_class <- S7::new_class(
     methods = S7::class_data.frame,
     comments = S7::class_data.frame,
     documents = S7::class_data.frame,
-    values = S7::new_property(S7::class_any, default = NULL)
+    values = S7::new_property(S7::class_any, default = NULL),
+    standards = S7::class_data.frame,
+    where_clauses = S7::class_data.frame,
+    method_expressions = S7::class_data.frame,
+    arm_displays = S7::class_data.frame,
+    arm_results = S7::class_data.frame,
+    dictionaries = S7::class_data.frame
   ),
   validator = function(self) {
     .spec_validate(self)

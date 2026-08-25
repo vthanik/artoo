@@ -112,6 +112,7 @@
   vars <- self@variables
   dsets <- self@datasets
   clists <- self@codelists
+  dicts <- self@dictionaries
 
   # Variable data types must be canonical CDISC dataTypes.
   if ("data_type" %in% names(vars) && nrow(vars)) {
@@ -188,16 +189,18 @@
     }
   }
 
-  # Cross-slot: every codelist_id used must resolve in codelists.
+  # Cross-slot: every codelist_id used must resolve in codelists -- or in
+  # dictionaries. A variable names its terminology in one column whichever
+  # kind it is, because that is the only column a workbook has, so an
+  # external dictionary lands in `codelist_id` too.
   if ("codelist_id" %in% names(vars) && nrow(vars)) {
     used <- unique(vars$codelist_id[
       !is.na(vars$codelist_id) & nzchar(vars$codelist_id)
     ])
-    known <- if ("codelist_id" %in% names(clists)) {
-      unique(clists$codelist_id)
-    } else {
-      character(0)
-    }
+    known <- c(
+      if ("codelist_id" %in% names(clists)) unique(clists$codelist_id),
+      if ("dictionary_id" %in% names(dicts)) unique(dicts$dictionary_id)
+    )
     unresolved <- setdiff(used, known)
     if (length(unresolved)) {
       issues <- c(
@@ -211,7 +214,79 @@
     }
   }
 
+  # The structural slots. Without these the "last line of defence" does not
+  # actually defend them: S7::set_props(spec, standards = <garbage>) would
+  # pass.
+  for (nm in c(
+    "standards",
+    "where_clauses",
+    "method_expressions",
+    "arm_displays",
+    "arm_results",
+    "dictionaries"
+  )) {
+    issues <- c(
+      issues,
+      .validate_slot(
+        S7::prop(self, nm),
+        get(paste0(".spec_cols_", nm)),
+        get(paste0(".spec_req_", nm)),
+        nm
+      )
+    )
+  }
+
+  # Codelist list-level attributes are DENORMALISED: `codelists` is one row
+  # per term, so @Name, @DataType and the rest repeat on every term row of the
+  # same codelist. That matches the source workbook's own shape, but nothing
+  # about a rectangle stops two rows of one codelist disagreeing, and the
+  # writer takes the first. Check they agree, so the duplication cannot drift.
+  issues <- c(issues, .validate_codelist_headers(clists))
+
   if (length(issues)) issues else NULL
+}
+
+# The list-level columns of `codelists`, which must be constant within a
+# codelist_id.
+.spec_codelist_header_cols <- c(
+  "name",
+  "data_type",
+  "sas_format_name",
+  "nci_code",
+  "standard_id",
+  "is_non_standard"
+)
+
+#' @noRd
+.validate_codelist_headers <- function(clists) {
+  if (!nrow(clists) || !"codelist_id" %in% names(clists)) {
+    return(character(0))
+  }
+  cols <- intersect(.spec_codelist_header_cols, names(clists))
+  if (!length(cols)) {
+    return(character(0))
+  }
+  bad <- character(0)
+  for (col in cols) {
+    split_vals <- split(clists[[col]], clists$codelist_id)
+    inconsistent <- names(split_vals)[vapply(
+      split_vals,
+      function(v) length(unique(v[!is.na(v)])) > 1L,
+      logical(1)
+    )]
+    if (length(inconsistent)) {
+      bad <- c(
+        bad,
+        sprintf(
+          "codelists$%s disagrees within codelist%s %s.",
+          col,
+          if (length(inconsistent) > 1L) "s" else "",
+          paste(inconsistent, collapse = ", ")
+        )
+      )
+    }
+  }
+  bad
 }
 
 #' Validate a artoo_meta

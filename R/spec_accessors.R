@@ -1,6 +1,12 @@
 # spec_accessors.R — pure, total accessors onto a artoo_spec.
 
-# Abort unless `spec` is a artoo_spec.
+# Abort unless `spec` is a artoo_spec, and bring it up to the current class
+# if it was saved by an older artoo.
+#
+# THIS RETURNS THE SPEC AND THE RETURN MUST BE USED: `spec <-
+# .check_spec_arg(spec, ...)`. Calling it for side effect only -- which every
+# call site did before phase 3 -- silently discards the migrated object, and
+# the stale one then dies on the first new property. See spec_migrate.R.
 #' @noRd
 .check_spec_arg <- function(spec, call = rlang::caller_env()) {
   if (!is_artoo_spec(spec)) {
@@ -14,7 +20,7 @@
       call = call
     )
   }
-  invisible(spec)
+  .spec_migrate(spec, call = call)
 }
 
 # Abort unless `dataset` names a dataset in the spec.
@@ -61,7 +67,7 @@
 #'   for its sort keys.
 #' @export
 spec_datasets <- function(spec) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   ds <- spec@datasets
   if (!("dataset" %in% names(ds)) || !nrow(ds)) {
     return(character(0))
@@ -127,7 +133,7 @@ spec_datasets <- function(spec) {
 #'   variable's controlled terminology.
 #' @export
 spec_variables <- function(spec, dataset = NULL) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   vars <- spec@variables
   if (is.null(dataset)) {
     return(vars)
@@ -181,7 +187,7 @@ spec_variables <- function(spec, dataset = NULL) {
 #' @seealso [spec_variables()] for which variables reference a codelist.
 #' @export
 spec_codelists <- function(spec, codelist_id = NULL) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   cl <- spec@codelists
   if (is.null(codelist_id)) {
     return(cl)
@@ -237,7 +243,7 @@ spec_codelists <- function(spec, codelist_id = NULL) {
 #'   the variables a key must reference.
 #' @export
 spec_keys <- function(spec, dataset) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   .check_dataset_arg(spec, dataset)
   ds <- spec@datasets
   raw <- ds$keys[!is.na(ds$dataset) & ds$dataset == dataset]
@@ -293,7 +299,7 @@ spec_keys <- function(spec, dataset) {
 #'   [artoo_spec()] for how the standard is resolved.
 #' @export
 spec_standard <- function(spec) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   spec@standard
 }
 
@@ -335,7 +341,7 @@ spec_standard <- function(spec) {
 #'   [spec_standard()] for the spec's CDISC standard.
 #' @export
 spec_study <- function(spec, field = NULL) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   study <- spec@study
   if (is.null(field)) {
     return(study)
@@ -386,7 +392,7 @@ spec_study <- function(spec, field = NULL) {
 #' @seealso [spec_comments()], [spec_documents()], [validate_spec()].
 #' @export
 spec_methods <- function(spec) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   spec@methods
 }
 
@@ -421,7 +427,7 @@ spec_methods <- function(spec) {
 #' @seealso [spec_methods()], [spec_documents()], [validate_spec()].
 #' @export
 spec_comments <- function(spec) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   spec@comments
 }
 
@@ -453,6 +459,6 @@ spec_comments <- function(spec) {
 #' @seealso [spec_methods()], [spec_comments()], [validate_spec()].
 #' @export
 spec_documents <- function(spec) {
-  .check_spec_arg(spec)
+  spec <- .check_spec_arg(spec)
   spec@documents
 }

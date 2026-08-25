@@ -64,17 +64,40 @@ adapt <- function(spec, extend = character(0), float_vars = character(0)) {
   cl <- spec@codelists
   v$data_type[v$variable %in% float_vars] <- "float"
   cl$extended[cl$codelist_id %in% extend] <- TRUE
-  artoo_spec(
-    spec@datasets,
-    v,
-    codelists = cl,
-    study = spec@study,
-    values = spec@values,
-    methods = spec@methods,
-    comments = spec@comments,
-    documents = spec@documents,
-    standard = spec@standard
+  rebuild(spec, datasets = spec@datasets, variables = v, codelists = cl)
+}
+
+# Rebuild a spec with some slots replaced, carrying EVERY other slot through.
+#
+# Naming the slots one by one is how the bundled specs silently lost their
+# standards, structured where clauses and analysis results: this script
+# predates those slots, so it rebuilt through the eight it knew and dropped
+# the rest. Reading them from the object means a slot added later travels
+# without this script being touched.
+rebuild <- function(spec, ...) {
+  replaced <- list(...)
+  slots <- c(
+    "datasets",
+    "variables",
+    "codelists",
+    "study",
+    "values",
+    "methods",
+    "comments",
+    "documents",
+    "standards",
+    "where_clauses",
+    "method_expressions",
+    "arm_displays",
+    "arm_results",
+    "dictionaries"
   )
+  args <- lapply(slots, function(nm) {
+    if (nm %in% names(replaced)) replaced[[nm]] else S7::prop(spec, nm)
+  })
+  names(args) <- slots
+  args$standard <- spec@standard
+  do.call(artoo_spec, args)
 }
 
 # Declare the SDTMIG VS timepoint variables and add VSTPTNUM to the VS key
@@ -99,17 +122,7 @@ add_vs_timepoints <- function(spec) {
     ds$keys[ds$dataset == "VS"],
     "VSTPTNUM"
   )
-  artoo_spec(
-    ds,
-    v,
-    codelists = spec@codelists,
-    study = spec@study,
-    values = spec@values,
-    methods = spec@methods,
-    comments = spec@comments,
-    documents = spec@documents,
-    standard = spec@standard
-  )
+  rebuild(spec, datasets = ds, variables = v)
 }
 
 adam_spec <- adapt(fetch_define(sources$adam), extend = "CL.BMICAT")
@@ -140,12 +153,32 @@ write_spec(sdtm_spec, "inst/extdata/sdtm-spec.xlsx")
 
 for (nm in c("adam", "sdtm")) {
   spec <- get(paste0(nm, "_spec"))
-  back <- read_spec(sprintf("inst/extdata/%s-spec.xlsx", nm))
+  # READ IT LOUDLY. The gate compared three columns and trapped no
+  # conditions, so a workbook whose ValueLevel rows all named a where clause
+  # it did not itself define passed, shipped, and warned in the user's face
+  # on first read -- the one thing the reader is guaranteed to say out loud,
+  # and the gate could not hear it.
+  warnings <- character(0)
+  back <- withCallingHandlers(
+    read_spec(sprintf("inst/extdata/%s-spec.xlsx", nm)),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  if (length(warnings)) {
+    stop(
+      sprintf("inst/extdata/%s-spec.xlsx does not read cleanly:\n  ", nm),
+      paste(warnings, collapse = "\n  ")
+    )
+  }
   stopifnot(
     identical(spec_standard(back), spec_standard(spec)),
     setequal(spec_datasets(back), spec_datasets(spec)),
     identical(back@variables$variable, spec@variables$variable),
-    identical(back@variables$data_type, spec@variables$data_type)
+    identical(back@variables$data_type, spec@variables$data_type),
+    # Every value-level row resolves to a clause the same workbook defines.
+    all(back@values$where_clause %in% back@where_clauses$where_clause_id)
   )
 }
 

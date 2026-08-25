@@ -295,7 +295,6 @@ test_that("json honors col_select and n_max via the generic filter", {
 })
 
 test_that("parquet honors col_select (native projection) and n_max", {
-  skip_if_not_installed("nanoparquet")
   p <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(cdisc_dm, p)
   back <- read_parquet(p, col_select = rev(names(cdisc_dm)[1:3]), n_max = 4)
@@ -304,7 +303,6 @@ test_that("parquet honors col_select (native projection) and n_max", {
 })
 
 test_that("col_select works on a foreign parquet with no artoo metadata", {
-  skip_if_not_installed("nanoparquet")
   df <- data.frame(A = 1:3, B = 4:6, C = 7:9)
   p <- withr::local_tempfile(fileext = ".parquet")
   nanoparquet::write_parquet(df, p)

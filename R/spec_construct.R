@@ -14,7 +14,7 @@
   if (length(missing)) {
     .artoo_abort(
       c(
-        "{.arg {slot}} is missing a required column{cli::qty(missing)}{?s}: {.val {missing}}.",
+        "{.arg {slot}} is missing {cli::qty(length(missing))}a required column{?s}: {.val {missing}}.",
         "i" = "Required: {.val {req}}."
       ),
       kind = "spec",
@@ -58,14 +58,17 @@
 #' variable names a dataset absent from `datasets`, or references a
 #' `codelist_id` absent from `codelists`.
 #'
-#' **One spec, one standard.** A `artoo_spec` carries exactly one CDISC
-#' standard, stored as the scalar `@standard` property. The constructor
-#' resolves it from the `standard` argument, a `standard` column in
-#' `datasets` (the P21 workbook shape), and a `standard` field in `study`
-#' (the Define-XML shape) — those columns are consumed, so `@standard` is
-#' the single home. More than one distinct value aborts with
-#' `artoo_error_spec`; scope the source to one standard (e.g.
-#' `read_spec(path, datasets = ...)`) instead of mixing.
+#' **One primary standard, linked per dataset.** The scalar `@standard`
+#' property holds the spec's primary CDISC standard, resolved from the
+#' `standard` argument, a `standard` column in `datasets` (the P21 workbook
+#' shape), and a `standard` field in `study` (the Define-XML shape) — those
+#' columns are consumed, so `@standard` is the single home. A `datasets`
+#' column naming several standards is legitimate (a study may mix
+#' implementation-guide versions): each row is linked to its standard via
+#' `datasets$standard_id`, minting a `standards` row where none defines the
+#' name, and `@standard` takes the study's stated standard, or failing that
+#' the one most datasets name. An explicit `standard` argument contradicting
+#' every value in the source aborts with `artoo_error_spec`.
 #'
 #' **One study vocabulary.** Well-known study fields are canonicalised to
 #' the CDISC ODM GlobalVariables names, snake_cased: `study_name`,
@@ -96,13 +99,14 @@
 #'   as `StudyName` or `studyid` resolve automatically); other fields pass
 #'   through verbatim. A `standard` field, when present, is consumed into
 #'   `@standard`.
-#' @param standard *The CDISC standard the spec implements.*
+#' @param standard *The primary CDISC standard the spec implements.*
 #'   `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
-#'   `NULL` (default) it is resolved from `datasets$standard` or
-#'   `study$standard`; absent everywhere, `@standard` is `NA`.
+#'   `NULL` (default) it is resolved from `study$standard`, or from the
+#'   value most rows of `datasets$standard` name; absent everywhere,
+#'   `@standard` is `NA`.
 #'
-#'   **Restriction:** all sources must agree on one value; conflicting
-#'   standards abort with `artoo_error_spec`.
+#'   **Restriction:** an explicit value that matches nothing the source
+#'   names aborts with `artoo_error_spec`.
 #' @param values *Value-level (VLM) metadata.* `<data.frame> | NULL`.
 #' @param methods *Derivation methods.* `<data.frame> | NULL`. The
 #'   Define-XML method definitions variables reference by `method_id`; must
@@ -112,6 +116,30 @@
 #'   by `comment_id`; must carry `comment_id` when supplied.
 #' @param documents *Document references.* `<data.frame> | NULL`. Referenced
 #'   by `document_id`; must carry `document_id` when supplied.
+#' @param standards *CDISC standards this spec claims.* `<data.frame> | NULL`.
+#'   Must carry `standard_id`, `name` and `version`. Define-XML 2.1 emits these
+#'   as a `def:Standards` block that datasets and codelists reference by id;
+#'   2.0 has room for only one, taken from the row flagged `is_primary`.
+#' @param where_clauses *Structured value-level conditions.*
+#'   `<data.frame> | NULL`. Must carry `where_clause_id` and `comparator`. One
+#'   row per check value, because a check value is free text and may itself
+#'   contain a comma, so any collapsed form would be lossy.
+#' @param method_expressions *Formal expressions for derivation methods.*
+#'   `<data.frame> | NULL`. Must carry `method_id`. A separate table because a
+#'   method may carry several expressions in different languages, which extra
+#'   rows on `methods` could not express without changing what the published
+#'   one-row-per-method rule means.
+#' @param arm_displays *Analysis result displays.* `<data.frame> | NULL`.
+#'   Must carry `display_id`. Analysis Results Metadata is version-neutral:
+#'   the vocabulary is identical for Define-XML 2.0 and 2.1.
+#' @param arm_results *Analysis results.* `<data.frame> | NULL`. Must carry
+#'   `display_id` and `result_id`. One row per result and analysis dataset,
+#'   since each analysis dataset carries its own where-clause reference.
+#' @param dictionaries *External codelists.* `<data.frame> | NULL`. Must carry
+#'   `dictionary_id`. A terminology too large to enumerate, named rather than
+#'   listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and a
+#'   variable points at one from the same `codelist_id` column it would use
+#'   for an enumerated list.
 #'
 #' @return *A validated `artoo_spec` object.* Inspect it with
 #'   [spec_datasets()] / [spec_variables()], or check it with
@@ -149,7 +177,13 @@ artoo_spec <- function(
   methods = NULL,
   comments = NULL,
   documents = NULL,
-  standard = NULL
+  standard = NULL,
+  standards = NULL,
+  where_clauses = NULL,
+  method_expressions = NULL,
+  arm_displays = NULL,
+  arm_results = NULL,
+  dictionaries = NULL
 ) {
   call <- rlang::caller_env()
   if (is.null(datasets) || is.null(variables)) {
@@ -204,6 +238,49 @@ artoo_spec <- function(
     "documents",
     call
   )
+  standards <- .coerce_slot(
+    standards,
+    .spec_cols_standards,
+    .spec_req_standards,
+    "standards",
+    call
+  )
+  where_clauses <- .coerce_slot(
+    where_clauses,
+    .spec_cols_where_clauses,
+    .spec_req_where_clauses,
+    "where_clauses",
+    call
+  )
+  method_expressions <- .coerce_slot(
+    method_expressions,
+    .spec_cols_method_expressions,
+    .spec_req_method_expressions,
+    "method_expressions",
+    call
+  )
+  method_expressions <- .fold_method_expressions(methods, method_expressions)
+  arm_displays <- .coerce_slot(
+    arm_displays,
+    .spec_cols_arm_displays,
+    .spec_req_arm_displays,
+    "arm_displays",
+    call
+  )
+  arm_results <- .coerce_slot(
+    arm_results,
+    .spec_cols_arm_results,
+    .spec_req_arm_results,
+    "arm_results",
+    call
+  )
+  dictionaries <- .coerce_slot(
+    dictionaries,
+    .spec_cols_dictionaries,
+    .spec_req_dictionaries,
+    "dictionaries",
+    call
+  )
   study <- if (is.null(study)) {
     data.frame()
   } else {
@@ -219,6 +296,25 @@ artoo_spec <- function(
       values,
       stringsAsFactors = FALSE,
       check.names = FALSE
+    )
+    # Coerce to the value-level schema so every consumer sees one shape.
+    # NULL still means "no value-level metadata"; a present table is
+    # rectangular and typed, which is what lets the writer read
+    # where_clause_id / value_list_id / itemoid without guarding each one.
+    # No required columns here, deliberately. The goal is a UNIFORM SHAPE --
+    # every schema column present and typed, so the writer can read
+    # where_clause_id / value_list_id / itemoid without guarding each one --
+    # not a new admissibility rule. `values` has always accepted whatever a
+    # source carried, and rejecting a spec that was valid yesterday is a
+    # different decision from making the shape predictable. A value-level row
+    # that names no dataset or variable is reported by validate_spec()
+    # instead, where it is a finding rather than a fatal error.
+    values <- .coerce_slot(
+      values,
+      .spec_cols_values,
+      character(0),
+      "values",
+      call
     )
     # An all-NA column has no type signal on a JSON round-trip: jsonlite writes
     # [null, ...] and reads it back as logical, so write_spec()/read_spec()
@@ -238,9 +334,17 @@ artoo_spec <- function(
   variables <- .derive_key_sequence(datasets, variables)
 
   # Resolve the one CDISC standard from every place a source can carry it
-  # (explicit argument, P21 datasets column, Define-XML study field), then
-  # strip those columns — @standard is the single home.
+  # (explicit argument, P21 datasets column, Define-XML study field, and the
+  # workbook Study sheet's StandardName/StandardVersion pair), then strip
+  # those columns — @standard is the single home.
+  study <- .study_standard_pair(study)
   standard <- .resolve_standard(standard, datasets, study, call)
+  # Each dataset keeps ITS standard as a standard_id link before the
+  # display column is consumed -- the scalar above is only the primary,
+  # and stamping it over rows that name another misdescribed them.
+  linked <- .link_dataset_standards(datasets, standards)
+  datasets <- linked$datasets
+  standards <- linked$standards
   datasets$standard <- NULL
   study$standard <- NULL
 
@@ -259,7 +363,7 @@ artoo_spec <- function(
     )
   }
 
-  .spec_check_refs(datasets, variables, codelists, call)
+  .spec_check_refs(datasets, variables, codelists, dictionaries, call)
 
   artoo_spec_class(
     standard = standard,
@@ -270,7 +374,13 @@ artoo_spec <- function(
     methods = methods,
     comments = comments,
     documents = documents,
-    values = values
+    values = values,
+    standards = standards,
+    where_clauses = where_clauses,
+    method_expressions = method_expressions,
+    arm_displays = arm_displays,
+    arm_results = arm_results,
+    dictionaries = dictionaries
   )
 }
 
@@ -309,7 +419,22 @@ artoo_spec <- function(
 .study_field_aliases <- list(
   study_name = c("studyname", "studyid"),
   study_description = c("studydescription"),
-  protocol_name = c("protocolname")
+  protocol_name = c("protocolname"),
+  # The document identifiers, under the spellings a workbook's study sheet
+  # uses. Without these a workbook artoo wrote came back with columns named
+  # `DefineVersion` and `MetaDataVersionOID`, which no consumer looks for --
+  # the write knew the vocabulary and the read did not.
+  define_version = c("defineversion"),
+  study_oid = c("studyoid"),
+  file_oid = c("fileoid"),
+  odm_context = c("context", "odmcontext"),
+  metadata_version_oid = c("metadataversionoid"),
+  metadata_version_name = c("metadataversionname"),
+  metadata_version_description = c("metadataversiondescription"),
+  originator = c("originator"),
+  source_system = c("sourcesystem"),
+  source_system_version = c("sourcesystemversion"),
+  language = c("language")
 )
 
 # Canonicalise the study frame's well-known fields so every consumer
@@ -350,39 +475,142 @@ artoo_spec <- function(
   study
 }
 
-# Resolve the spec's one CDISC standard. Unions the explicit argument, a
-# P21-style `standard` column on the datasets table, and a Define-XML-style
-# `standard` field on the study row; drops NA/blank; aborts when more than
-# one distinct value survives. Returns a length-1 character (NA when no
-# source names a standard).
+# Resolve the spec's PRIMARY standard. The datasets column naming several
+# standards is legitimate -- a study mixes implementation-guide versions,
+# and CDISC's own 2.1 SDTM example names three -- so it no longer aborts:
+# each row keeps its own via `standard_id` (.link_dataset_standards), and
+# the scalar is only the primary. The study field is the author's explicit
+# primary assertion, so it wins; failing that, the value the most datasets
+# name, ties broken by first appearance (stable under row reordering,
+# which "first seen" alone is not).
+#
+# An explicit `standard` argument that matches NOTHING in the source is a
+# different fault -- the caller contradicting the file -- and still aborts.
 #' @noRd
 .resolve_standard <- function(standard, datasets, study, call) {
-  cands <- c(
-    standard,
-    if ("standard" %in% names(datasets)) datasets$standard,
-    if ("standard" %in% names(study)) study$standard
-  )
-  cands <- trimws(as.character(cands))
-  cands <- unique(cands[!is.na(cands) & nzchar(cands)])
-  if (length(cands) > 1L) {
-    .artoo_abort(
-      c(
-        "A {.cls artoo_spec} carries exactly one CDISC standard.",
-        "x" = "Found {length(cands)} distinct standards: {.val {cands}}.",
-        "i" = "Split the source by standard, or scope the read to one standard's datasets with {.code read_spec(path, datasets = ...)}."
-      ),
-      kind = "spec",
-      call = call
-    )
+  clean <- function(x) {
+    x <- trimws(as.character(x))
+    x[!is.na(x) & nzchar(x)]
   }
-  if (length(cands)) cands else NA_character_
+  explicit <- unique(clean(standard))
+  from_ds <- if ("standard" %in% names(datasets)) {
+    clean(datasets$standard)
+  } else {
+    character(0)
+  }
+  from_study <- unique(clean(
+    if ("standard" %in% names(study)) study$standard
+  ))
+  in_file <- unique(c(from_ds, from_study))
+  if (length(explicit)) {
+    if (length(in_file) && !explicit[[1L]] %in% in_file) {
+      .artoo_abort(
+        c(
+          "{.arg standard} contradicts the source.",
+          "x" = "{.val {explicit[[1L]]}} was given; the source names {.val {in_file}}.",
+          "i" = "Drop the argument, or pass one of the source's values."
+        ),
+        kind = "spec",
+        call = call
+      )
+    }
+    return(explicit[[1L]])
+  }
+  if (length(from_study)) {
+    return(from_study[[1L]])
+  }
+  if (length(from_ds)) {
+    counts <- table(factor(from_ds, levels = unique(from_ds)))
+    return(names(counts)[[which.max(counts)]])
+  }
+  NA_character_
+}
+
+# Link each dataset to the standard its own cell names (workbook shape).
+#
+# The Datasets sheet records a standard PER ROW as a display string
+# ("ADaMIG 1.1"); Define-XML records it as `def:StandardOID` resolving into
+# the def:Standards block, and the stylesheet renders it in every dataset
+# heading. Folding the column into the scalar and dropping it left every
+# ItemGroupDef without the attribute, so a workbook-sourced define never
+# said which standard a dataset implements.
+#
+# An explicit `standard_id` on the row wins. A display string no standards
+# row defines mints one, in the shape .mint_primary_standard() mints for
+# the Study sheet's pair -- and only that shape: a string whose name part
+# does not end in IG has no derivable Type, and a guessed Type would be a
+# sponsor assertion artoo invented, so such rows stay unlinked.
+#' @noRd
+.link_dataset_standards <- function(datasets, standards) {
+  out <- list(datasets = datasets, standards = standards)
+  if (!nrow(datasets) || !("standard" %in% names(datasets))) {
+    return(out)
+  }
+  cells <- trimws(as.character(datasets$standard))
+  stated <- trimws(as.character(datasets$standard_id))
+  todo <- which(
+    !is.na(cells) & nzchar(cells) & (is.na(stated) | !nzchar(stated))
+  )
+  if (!length(todo)) {
+    return(out)
+  }
+  display <- function(name, version) {
+    trimws(paste(name, ifelse(is.na(version), "", version)))
+  }
+  known <- display(
+    trimws(as.character(standards$name)),
+    trimws(as.character(standards$version))
+  )
+  for (i in todo) {
+    parts <- strsplit(cells[[i]], "[[:space:]]+")[[1L]]
+    name <- paste(utils::head(parts, -1L), collapse = " ")
+    renamed <- unname(.dx_standard_renames[name])
+    if (!is.na(renamed)) {
+      name <- renamed
+    }
+    version <- if (length(parts) > 1L) utils::tail(parts, 1L) else ""
+    hit <- match(trimws(paste(name, version)), known)
+    if (is.na(hit)) {
+      if (length(parts) < 2L || !grepl("IG$", name)) {
+        next
+      }
+      n <- nrow(standards) + 1L
+      id <- sprintf("STD.%d", n)
+      while (id %in% as.character(standards$standard_id)) {
+        n <- n + 1L
+        id <- sprintf("STD.%d", n)
+      }
+      row <- standards[NA_integer_, , drop = FALSE]
+      row$standard_id <- id
+      row$name <- name
+      row$type <- "IG"
+      row$version <- version
+      # def:Standard requires a Status, and a row without one suppresses
+      # the whole block (see .dx_standards), dangling every reference this
+      # link exists to create. "Final" is the same claim the Study sheet's
+      # pair mints with.
+      row$status <- "Final"
+      standards <- rbind(standards, row)
+      rownames(standards) <- NULL
+      known <- c(known, trimws(paste(name, version)))
+      hit <- length(known)
+    }
+    datasets$standard_id[[i]] <- standards$standard_id[[hit]]
+  }
+  list(datasets = datasets, standards = standards)
 }
 
 # Friendly cross-slot reference checks (the S7 validator repeats these as a
 # last line of defence). Each message carries a single varying quantity so
 # cli pluralisation is unambiguous.
 #' @noRd
-.spec_check_refs <- function(datasets, variables, codelists, call) {
+.spec_check_refs <- function(
+  datasets,
+  variables,
+  codelists,
+  dictionaries,
+  call
+) {
   if (nrow(variables)) {
     # Duplicate (dataset, variable) definitions make every downstream step
     # ambiguous (which label? which type?). Fail at construction, with the
@@ -431,18 +659,25 @@ artoo_spec <- function(
     used <- unique(variables$codelist_id[
       !is.na(variables$codelist_id) & nzchar(variables$codelist_id)
     ])
-    known <- if ("codelist_id" %in% names(codelists)) {
-      unique(codelists$codelist_id)
-    } else {
-      character(0)
-    }
+    # A variable names its terminology in ONE column whichever kind it is,
+    # because that is the only column a workbook has: an enumerated codelist
+    # and an external dictionary (MedDRA, WHODrug, ISO 3166) both land in
+    # `codelist_id`. Checking only `codelists` aborted every AE, CM and MH
+    # spec ever written, telling the author to add terms for a dictionary
+    # that by definition has none.
+    known <- c(
+      if ("codelist_id" %in% names(codelists)) unique(codelists$codelist_id),
+      if ("dictionary_id" %in% names(dictionaries)) {
+        unique(dictionaries$dictionary_id)
+      }
+    )
     unresolved <- setdiff(used, known)
     if (length(unresolved)) {
       .artoo_abort(
         c(
           "Some variables reference a codelist not in {.arg codelists}.",
           "x" = "Unresolved codelist_id{?s}: {.val {unresolved}}.",
-          "i" = "Add the codelist's terms to {.arg codelists}."
+          "i" = "Add the codelist's terms to {.arg codelists}, or the external dictionary to {.arg dictionaries}."
         ),
         kind = "spec",
         call = call
@@ -480,4 +715,137 @@ artoo_spec <- function(
 #' @export
 is_artoo_spec <- function(x) {
   S7::S7_inherits(x, artoo_spec_class)
+}
+
+# A method may state one formal expression inline -- a context and a code
+# column on the methods table, which is how a workbook carries it -- or any
+# number of them in the `method_expressions` table, which is how Define-XML
+# does. Fold the inline form into the table so everything downstream sees
+# one representation.
+#
+# Without this the workbook columns were read and then consumed by nothing:
+# a method authored with a formal expression produced a define.xml with none,
+# silently, and writing a define's expressions back to a workbook warned that
+# no sheet could hold them while writing the two columns that can.
+#' @noRd
+.fold_method_expressions <- function(methods, expressions) {
+  if (
+    is.null(methods) ||
+      !nrow(methods) ||
+      !all(c("expression_context", "expression_code") %in% names(methods))
+  ) {
+    return(expressions)
+  }
+  code <- as.character(methods$expression_code)
+  has <- !is.na(code) & nzchar(trimws(code))
+  if (!any(has)) {
+    return(expressions)
+  }
+  already <- if (is.null(expressions)) {
+    character(0)
+  } else {
+    as.character(expressions$method_id)
+  }
+  has <- has & !(as.character(methods$method_id) %in% already)
+  if (!any(has)) {
+    return(expressions)
+  }
+  inline <- data.frame(
+    method_id = as.character(methods$method_id)[has],
+    order = 1L,
+    context = as.character(methods$expression_context)[has],
+    code = code[has],
+    stringsAsFactors = FALSE
+  )
+  if (is.null(expressions) || !nrow(expressions)) {
+    return(inline)
+  }
+  .dx_stack(expressions, inline)
+}
+
+# The workbook Study sheet states the standard as two attributes, a name and
+# a version, rather than as one string. Fold them into the `standard` field
+# every other source uses, so the resolver has one vocabulary to reason
+# about, and apply the same hyphen renames the Define-XML writer does --
+# a sheet saying "SDTM-IG" means the standard artoo calls "SDTMIG".
+#
+# Without this the two attributes rode through as unmodelled study fields
+# and `@standard` stayed NA, so the most complete real workbook available to
+# this project could not be written to Define-XML at all: 2.0 refuses to
+# write without a standard name and version.
+#' @noRd
+.study_standard_pair <- function(study) {
+  if (is.null(study) || !nrow(study) || "standard" %in% names(study)) {
+    return(study)
+  }
+  norm <- gsub("[^a-z0-9]", "", tolower(names(study)))
+  name <- .study_field(study, norm, "standardname")
+  version <- .study_field(study, norm, "standardversion")
+  if (is.na(name)) {
+    return(study)
+  }
+  renamed <- unname(.dx_standard_renames[name])
+  if (!is.na(renamed)) {
+    name <- renamed
+  }
+  study$standard <- trimws(paste(name, if (!is.na(version)) version))
+  # Consumed, so drop them: `@standard` is the single home, and leaving the
+  # pair behind means the next write emits the standard twice, once from
+  # the leftovers and once from the resolved scalar.
+  study[which(norm %in% c("standardname", "standardversion"))] <- NULL
+  study
+}
+
+#' @noRd
+.study_field <- function(study, norm, want) {
+  hit <- which(norm == want)
+  if (!length(hit)) {
+    return(NA_character_)
+  }
+  value <- trimws(as.character(study[[hit[[1L]]]])[[1L]])
+  if (is.na(value) || !nzchar(value)) NA_character_ else value
+}
+
+# Define-XML 2.1 wants a def:Standards block, not just a standard name, so a
+# spec that knows its standard and carries no standards table writes 2.1
+# with a warning that the block was not written. One primary row costs
+# nothing and fixes both versions in one place.
+#
+# Called from the WORKBOOK READER, not the constructor. A workbook's Study
+# sheet asserting a name and a version is an author saying "this is the
+# standard", which is enough to state as a standards row. Minting in the
+# constructor instead made every construction do it, so a spec with no
+# standards table gained one on a JSON round trip and stopped being equal to
+# itself -- and it would have put a Status of "Final" into specs whose
+# author never claimed one.
+#
+# The type is read off the name rather than assumed: a name ending in IG is
+# an implementation guide, anything else is left for the writer to refuse
+# rather than guessed at.
+#' @noRd
+.mint_primary_standard <- function(standards, standard) {
+  if (!is.null(standards) && nrow(standards)) {
+    return(standards)
+  }
+  if (is.na(standard) || !nzchar(standard)) {
+    return(standards)
+  }
+  parts <- strsplit(trimws(standard), "[[:space:]]+")[[1L]]
+  if (length(parts) < 2L) {
+    return(standards)
+  }
+  name <- paste(utils::head(parts, -1L), collapse = " ")
+  if (!grepl("IG$", name)) {
+    return(standards)
+  }
+  data.frame(
+    standard_id = "STD.1",
+    name = name,
+    type = "IG",
+    version = utils::tail(parts, 1L),
+    status = "Final",
+    is_primary = TRUE,
+    order = 1L,
+    stringsAsFactors = FALSE
+  )
 }

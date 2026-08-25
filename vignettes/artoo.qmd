@@ -151,6 +151,40 @@ parquet <- tempfile(fileext = ".parquet")
 write_parquet(read_json(json), parquet)
 ```
 
+## 4b. Write the define.xml
+
+The datasets are half of a submission; the other half is the Define-XML
+document that describes them. It is the same spec, written out:
+
+```{r}
+define <- file.path(tempdir(), "define.xml")
+write_spec(adam_spec, define)
+```
+
+artoo schema-validates what it built before the file reaches its
+destination, so an invalid document never replaces a good one. Two checks
+read it back &mdash; `validate_define()` against the bundled CDISC schemas,
+and `lint_define()` for the reference integrity a schema cannot see:
+
+```{r}
+validate_define(define)
+```
+
+```{r}
+lint_define(define)
+```
+
+Two orphans, no dangling references. An orphan is something defined that
+nothing points at &mdash; here a leaf and a CDISC standard the pilot spec's
+other datasets used &mdash; and the document is valid with them. A dangling
+reference, one pointing at nothing, is the error case.
+
+Pass `data =` and the datasets inform the document: a blank length is filled
+from the real maximum byte width, and value-level metadata is derived for
+the standard findings shapes. Pass `html = TRUE` and the document is also
+rendered through its own CDISC stylesheet, which matters because browsers
+are dropping XSLT support.
+
 ## 5. Read back, intact
 
 Reading restores the values, the R classes (dates as `Date`, times as
@@ -174,7 +208,9 @@ archived is what you analysed.
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.html) &mdash;
   read a spec from Define-XML or a workbook, inspect it with the `spec_*`
-  accessors, and fix it in place with `set_type()` / `repair_spec()`.
+  accessors, fix it in place with `set_type()` / `repair_spec()`, and write
+  it back out as Define-XML 2.0 or 2.1 &mdash; or as a blank workbook to fill
+  in, with `write_template()`.
 - [Conform & validate](https://vthanik.github.io/artoo/articles/conform.html) &mdash;
   `apply_spec()` in depth, then every conformance finding from `check_spec()`
   and `check_study()`, and the errors artoo raises.
@@ -184,4 +220,3 @@ archived is what you analysed.
 - [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) &mdash;
   end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist decoding,
   each rendered live on the demo data.
-```

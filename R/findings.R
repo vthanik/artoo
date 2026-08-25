@@ -25,10 +25,15 @@
   "comment",
   "document",
   "ct",
-  "arm"
+  "arm",
+  # Schema conformance of a Define-XML document, as opposed to the integrity
+  # of a spec object. Only the "define" engine emits these.
+  "schema"
 )
 .spec_severities <- c("error", "warning", "note")
-.spec_engines <- c("spec", "data")
+# engine == "define" -> validate_define() / lint_define(), which read a
+# Define-XML document rather than an artoo_spec.
+.spec_engines <- c("spec", "data", "define")
 
 #' @noRd
 .spec_rules <- function() {

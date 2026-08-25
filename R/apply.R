@@ -188,7 +188,7 @@ apply_spec <- function(
       call = call
     )
   }
-  .check_spec_arg(spec, call = call)
+  spec <- .check_spec_arg(spec, call = call)
   .check_dataset_arg(spec, dataset, call = call)
 
   info <- .apply_info(spec, dataset, call = call)
