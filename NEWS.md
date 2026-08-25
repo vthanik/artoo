@@ -1,5 +1,11 @@
 # artoo 0.2.0
 
+* `read_spec()` reads back a native JSON spec that names no datasets.
+  `write_spec()` wrote the file and `read_spec()` refused it, saying to
+  "pass at least a `dataset` table" to a caller who had passed a path. A key
+  that is present but empty means the spec has none, which is not the same as
+  the key being absent.
+
 * `write_spec()` to Define-XML names every unreadable file at once when
   `data` is a folder, rather than stopping at the first. A folder holding
   three corrupt datasets took three runs to discover. It still aborts rather

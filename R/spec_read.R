@@ -673,6 +673,23 @@ read_spec <- function(
 # ---- Native JSON --------------------------------------------------------
 
 #' @noRd
+# A zero-row frame with the slot's declared columns, so an empty table read
+# from JSON reaches the constructor as an empty TABLE rather than as nothing.
+#' @noRd
+.empty_slot_frame <- function(slot) {
+  nm <- paste0(".spec_cols_", slot)
+  ns <- asNamespace("artoo")
+  # Not every slot pick() handles is a table with a column schema -- `study`
+  # is a list. Those keep the old answer.
+  if (!exists(nm, envir = ns, inherits = FALSE)) {
+    return(NULL)
+  }
+  cols <- get(nm, envir = ns, inherits = FALSE)
+  out <- lapply(cols, function(type) vector(type, 0L))
+  names(out) <- names(cols)
+  as.data.frame(out, stringsAsFactors = FALSE)
+}
+
 .read_spec_json <- function(
   path,
   datasets = NULL,
@@ -685,13 +702,25 @@ read_spec <- function(
   # An empty array [] simplifies to an empty list; a JSON null to NULL.
   # Both mean "no rows" -> NULL, which artoo_spec() rebuilds as the typed
   # empty slot.
+  # A key that is PRESENT but empty means "this spec has none", which is not
+  # the same as absent. jsonlite reads an empty table back as a zero-length
+  # list, so collapsing both to NULL made write_spec() produce a .json that
+  # read_spec() then refused -- and refused by blaming the caller's arguments,
+  # when the caller had passed a file. An empty table comes back as a zero-row
+  # frame carrying its schema's columns.
   pick <- function(nm) {
     x <- raw[[nm]]
-    if (is.null(x)) {
-      return(NULL)
+    if (is.data.frame(x) && nrow(x)) {
+      return(x)
     }
-    if (is.data.frame(x)) {
-      return(if (nrow(x)) x else NULL)
+    # An OPTIONAL table that is empty stays NULL: that is the contract every
+    # round-trip test pins, and `values = NULL` means "no value-level rows".
+    # The two REQUIRED tables cannot, because NULL there is read as absent and
+    # the constructor refuses the file -- so write_spec() produced a .json
+    # that read_spec() rejected, blaming the caller's arguments when the
+    # caller had passed a path. Present-but-empty comes back empty.
+    if (nm %in% c("datasets", "variables") && nm %in% names(raw)) {
+      return(.empty_slot_frame(nm))
     }
     NULL
   }

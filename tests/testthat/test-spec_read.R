@@ -517,3 +517,33 @@ test_that("scoping an unlisted dataset table refuses by name (#p12-final-4)", {
     class = "artoo_error_input"
   )
 })
+
+test_that("a spec with no datasets survives its own JSON round trip", {
+  # write_spec() wrote this file and read_spec() then refused it -- and
+  # refused by telling the caller to "pass at least a dataset table", when
+  # the caller had passed a path. A key that is PRESENT but empty means the
+  # spec has none, which is not the same as the key being absent, and
+  # jsonlite reads an empty table back as a zero-length list.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = character(0),
+      structure = character(0),
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = character(0),
+      variable = character(0),
+      data_type = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+  p <- withr::local_tempfile(fileext = ".json")
+  write_spec(spec, p)
+
+  back <- read_spec(p)
+  expect_identical(nrow(back@datasets), 0L)
+  expect_identical(nrow(back@variables), 0L)
+  # The optional slots keep their NULL: only the two REQUIRED tables change,
+  # because only their absence makes the constructor refuse the file.
+  expect_null(back@values)
+})

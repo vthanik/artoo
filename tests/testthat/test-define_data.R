@@ -1525,3 +1525,27 @@ test_that("a dataset stating no archive location is warned about", {
     "does not hold"
   )
 })
+
+test_that("a spec whose datasets table lost a column is still handled", {
+  # The schema guarantees `archive_location_id` on any spec the CONSTRUCTOR
+  # builds. It does not guarantee it on the object: S7::set_props() bypasses
+  # .coerce_slot(), and a spec migrated from an older artoo is rebuilt from
+  # whatever that version stored. Deleting the guard on the constructor's
+  # promise turned this into a bare R error naming a names() length mismatch.
+  spec <- folder_spec()
+  stripped <- S7::set_props(
+    spec,
+    datasets = data.frame(dataset = c("DM", "VS"), stringsAsFactors = FALSE)
+  )
+  expect_false("archive_location_id" %in% names(stripped@datasets))
+
+  d <- withr::local_tempdir()
+  write_json(folder_frames()$DM, file.path(d, "dm.json"))
+  write_json(folder_frames()$VS, file.path(d, "vs.json"))
+
+  expect_warning(
+    resolved <- suppressMessages(artoo:::.dx_resolve_data_dir(d, stripped)),
+    "does not hold"
+  )
+  expect_setequal(names(resolved), c("DM", "VS"))
+})
