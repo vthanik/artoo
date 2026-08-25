@@ -1231,3 +1231,91 @@ test_that("two extensions of one format do not point at data_format", {
     "remove or rename one"
   )
 })
+
+test_that("a colliding dataset group is named in full, and duplicates are called duplicates", {
+  # `unique(datasets[duplicated(...)])` kept only the LATER members, so
+  # c("DM", "dm") showed one name and left the reader to guess the other.
+  # And two identical names do not "differ only in case".
+  twin_spec <- function(names) {
+    artoo_spec(
+      datasets = data.frame(
+        dataset = names,
+        structure = "One record per subject",
+        stringsAsFactors = FALSE
+      ),
+      variables = data.frame(
+        dataset = names,
+        variable = paste0("V", seq_along(names)),
+        data_type = "string",
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+  d <- withr::local_tempdir()
+
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, twin_spec(c("DM", "dm"))),
+    "DM"
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, twin_spec(c("DM", "dm"))),
+    "differ only in case"
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, twin_spec(c("DM", "DM"))),
+    "same dataset more than once"
+  )
+})
+
+test_that("a spec naming no datasets says so, rather than blaming the folder", {
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = character(0),
+      structure = character(0),
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = character(0),
+      variable = character(0),
+      data_type = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  expect_warning(
+    artoo:::.dx_resolve_data_dir(d, spec),
+    "spec names no datasets"
+  )
+})
+
+test_that("an unusable data path says what was wrong with it", {
+  spec <- folder_spec()
+  expect_error(
+    artoo:::.dx_resolve_data_dir(NA_character_, spec),
+    "NA",
+    class = "artoo_error_input"
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir("", spec),
+    "empty string",
+    class = "artoo_error_input"
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir(c("a", "b"), spec),
+    "2 values",
+    class = "artoo_error_input"
+  )
+})
+
+test_that("the folder is inventoried, and non-dataset files are skipped", {
+  # Both guards were unasserted: a subdirectory named like a dataset file, and
+  # a file whose extension no codec claims.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "dm.json"))
+  writeLines("not a dataset", file.path(d, "vs.txt"))
+  write_xpt(folder_frames()$VS, file.path(d, "vs.xpt"))
+
+  resolved <- suppressMessages(artoo:::.dx_resolve_data_dir(d, spec))
+  expect_identical(names(resolved), "VS")
+})

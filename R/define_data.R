@@ -65,12 +65,18 @@
   data_format = NULL,
   call = rlang::caller_env()
 ) {
-  if (length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
+  bad <- if (length(dir) != 1L) {
+    "You supplied {length(dir)} values."
+  } else if (is.na(dir)) {
+    "You supplied {.code NA}."
+  } else if (!nzchar(dir)) {
+    "You supplied an empty string."
+  } else {
+    NA_character_
+  }
+  if (!is.na(bad)) {
     .artoo_abort(
-      c(
-        "{.arg data} must be one directory path.",
-        "x" = "You supplied {length(dir)} value{?s}."
-      ),
+      c("{.arg data} must be one directory path.", "x" = bad),
       kind = "input",
       call = call
     )
@@ -98,11 +104,20 @@
   # Matching is case-insensitive, so two dataset names differing only in case
   # would both claim the same file and neither answer would be right. The
   # constructor permits them, so this is checked rather than assumed.
-  twins <- unique(datasets[duplicated(toupper(datasets))])
+  # The FULL colliding group, not just the later members: `unique(datasets[
+  # duplicated(...)])` drops the first occurrence, so `c("DM", "dm")` showed
+  # one name and left the reader to guess the other.
+  clash <- toupper(datasets)[duplicated(toupper(datasets))]
+  twins <- datasets[toupper(datasets) %in% clash]
   if (length(twins)) {
+    head <- if (length(unique(twins)) == 1L) {
+      "The spec names the same dataset more than once."
+    } else {
+      "The spec names datasets that differ only in case."
+    }
     .artoo_abort(
       c(
-        "The spec names datasets that differ only in case.",
+        head,
         "x" = "{.val {twins}}.",
         "i" = "A folder cannot say which file belongs to which; pass a named list."
       ),
@@ -154,11 +169,22 @@
 
   matched <- hits[lengths(hits) == 1L]
   if (!length(matched)) {
-    .artoo_warn(
+    # A spec that names no datasets did not fail to match; there was nothing
+    # to match. Pointing the reader at the folder would send them to the wrong
+    # place entirely.
+    msg <- if (!length(datasets)) {
+      c(
+        "The spec names no datasets, so {.arg data} has nothing to inform.",
+        "i" = "Add rows to {.code spec@datasets} before passing data."
+      )
+    } else {
       c(
         "No file in {.path {dir}} matches a dataset the spec names.",
         "i" = "Expected a file named for a dataset, as {.file dm.xpt}."
-      ),
+      )
+    }
+    .artoo_warn(
+      msg,
       kind = "spec",
       call = call
     )
