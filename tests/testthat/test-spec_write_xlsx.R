@@ -810,3 +810,34 @@ test_that("a condition of no values collapses to nothing", {
   expect_true(is.na(sheet$Value[[1]]))
   expect_identical(sheet$Value[[2]], "HEIGHT")
 })
+
+test_that("a multi-expression method loses all but the first, and says so", {
+  # The help page claimed method_expressions survives an xlsx round trip.
+  # It does not: a workbook gives each method ONE row with ONE code cell.
+  # The claim was "measured" against a hand-built spec carrying a single
+  # expression, which cannot detect a rule about the second one.
+  skip_if_not_installed("xml2")
+  skip_if_not_installed("writexl")
+  spec <- read_define("define21-sdtm.xml")
+  expect_gt(nrow(spec@method_expressions), 2L)
+
+  book <- file.path(withr::local_tempdir(), "spec.xlsx")
+  expect_warning(write_spec(spec, book), "formal expression")
+
+  back <- suppressWarnings(read_spec(book))
+  # One row per method that had any, never more.
+  expect_identical(
+    nrow(back@method_expressions),
+    length(unique(spec@method_expressions$method_id))
+  )
+  expect_lt(nrow(back@method_expressions), nrow(spec@method_expressions))
+
+  # The tables the note DOES promise: measured on the same document.
+  for (slot in c("standards", "where_clauses", "arm_displays", "arm_results")) {
+    expect_identical(
+      nrow(S7::prop(back, slot)),
+      nrow(S7::prop(spec, slot)),
+      info = slot
+    )
+  }
+})

@@ -34,6 +34,13 @@
   meta <- if (has_meta) get_meta(x) else NULL
   nm <- if (is.null(meta)) NULL else meta@dataset$name
   member <- if (is.null(nm) || is.na(nm) || !nzchar(nm)) {
+    # WHAT NO TEST HERE CAN SEE: this branch runs only for a file carrying no
+    # artoo metadata, which today means a plain saveRDS() .rds -- and .rds
+    # cannot be gzipped. So .path_stem()'s gz peel is unobservable at this
+    # call site, and swapping it for file_path_sans_ext(basename(.)) passes
+    # every test. It stays because it is correct for the inputs this branch
+    # would see if a gzip-capable codec ever stopped recording a name; the
+    # peel is load-bearing, and tested, in the folder resolver.
     .path_stem(path)
   } else {
     nm

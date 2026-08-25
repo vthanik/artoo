@@ -223,3 +223,42 @@ test_that("the restriction is by resolved format, not merely by extension", {
     expect_true(all(m$format %in% f))
   }
 })
+
+test_that(".path_stem peels gzip before the dataset extension", {
+  # Asserted directly, because .members_single()'s use of it is unobservable:
+  # that branch runs only for a file with no artoo metadata, which today means
+  # a plain saveRDS() .rds, and .rds cannot be gzipped. The peel is
+  # load-bearing in the folder resolver instead, where test-define_data.R
+  # covers it -- a non-vectorised version there failed loudly.
+  expect_identical(artoo:::.path_stem("some/where/dm.json.gz"), "dm")
+  expect_identical(artoo:::.path_stem("dm.ndjson.gz"), "dm")
+  expect_identical(artoo:::.path_stem("dm.json"), "dm")
+  expect_identical(artoo:::.path_stem("dm.xpt"), "dm")
+  # Vectorised: the non-vectorised version returned silent garbage here.
+  expect_identical(
+    artoo:::.path_stem(c("dm.json.gz", "vs.xpt")),
+    c("dm", "vs")
+  )
+})
+
+test_that("the restriction survives two codecs claiming one extension", {
+  # The post-filter is unobservable with the shipped registry, because no two
+  # codecs share an extension and the extension filter alone gets the right
+  # answer. Deleting it leaves the suite green. Register an overlapping codec
+  # to make the contract testable at all -- which is the situation the
+  # registry header says a public register_codec() is designed for.
+  dm <- demo_dm()
+  d <- withr::local_tempdir()
+  write_json(dm, file.path(d, "dm.json"))
+
+  artoo:::.register_codec(
+    "zjson",
+    encode = "encode_json",
+    decode = "decode_json",
+    extensions = "json"
+  )
+  withr::defer(rm("zjson", envir = artoo:::.artoo_codecs))
+
+  m <- members(d, format = "zjson")
+  expect_true(all(m$format %in% "zjson"))
+})

@@ -65,13 +65,13 @@
 #' round-trip keeps user columns.
 #'
 #' **Note:** the xlsx writer emits every sheet the spec has content for, so
-#' `standards`, `where_clauses`, `method_expressions`, `arm_displays`,
-#' `arm_results` and `dictionaries` all survive a round trip; each was
-#' measured through write-then-read. Reading a Define-XML document and
-#' writing it to xlsx keeps its `def:Standards` block, its where clauses and
-#' its formal expressions. What a workbook still cannot carry is the OID a
-#' document chose for each object, so write JSON when you need those back
-#' unchanged.
+#' `standards`, `where_clauses`, `arm_displays`, `arm_results` and
+#' `dictionaries` survive a round trip. `method_expressions` does not
+#' survive whole: a workbook gives each method one row with one code cell,
+#' so a method carrying several formal expressions keeps only the first and
+#' the write says which methods it truncated. Write JSON when a spec has
+#' multi-expression methods, or when you need back the OIDs a Define-XML
+#' document chose.
 #'
 #' **Define-XML is the submission format.** The `.xml` path emits
 #' Define-XML 2.1 or 2.0 (needs the `xml2` package) and SCHEMA-VALIDATES what it

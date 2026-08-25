@@ -78,13 +78,13 @@ carried on a slot is re-emitted verbatim under its own header, so an xlsx
 round-trip keeps user columns.
 
 \strong{Note:} the xlsx writer emits every sheet the spec has content for, so
-\code{standards}, \code{where_clauses}, \code{method_expressions}, \code{arm_displays},
-\code{arm_results} and \code{dictionaries} all survive a round trip; each was
-measured through write-then-read. Reading a Define-XML document and
-writing it to xlsx keeps its \code{def:Standards} block, its where clauses and
-its formal expressions. What a workbook still cannot carry is the OID a
-document chose for each object, so write JSON when you need those back
-unchanged.
+\code{standards}, \code{where_clauses}, \code{arm_displays}, \code{arm_results} and
+\code{dictionaries} survive a round trip. \code{method_expressions} does not
+survive whole: a workbook gives each method one row with one code cell,
+so a method carrying several formal expressions keeps only the first and
+the write says which methods it truncated. Write JSON when a spec has
+multi-expression methods, or when you need back the OIDs a Define-XML
+document chose.
 
 \strong{Define-XML is the submission format.} The \code{.xml} path emits
 Define-XML 2.1 or 2.0 (needs the \code{xml2} package) and SCHEMA-VALIDATES what it

@@ -1417,3 +1417,17 @@ test_that("every unreadable file is named, in one abort", {
   expect_match(err, "dm.json (matched to DM)", fixed = TRUE)
   expect_match(err, "vs.json (matched to VS)", fixed = TRUE)
 })
+
+test_that("data_format with no data at all is refused", {
+  # The other two shapes were guarded; this one returned early before the
+  # argument was ever looked at, so `data_format = "nope"` was accepted.
+  spec <- folder_spec()
+  expect_error(
+    artoo:::.dx_check_data(NULL, spec, data_format = "json"),
+    class = "artoo_error_input"
+  )
+  expect_error(
+    artoo:::.dx_check_data(NULL, spec, data_format = "nope"),
+    class = "artoo_error_input"
+  )
+})

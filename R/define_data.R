@@ -394,6 +394,20 @@
   call = rlang::caller_env()
 ) {
   if (is.null(data)) {
+    # Validated even here. `data_format` with no `data` at all cannot do
+    # anything, and an argument silently accepted is how a call that did not
+    # do what its author meant still looks like it worked.
+    if (!is.null(data_format)) {
+      .artoo_abort(
+        c(
+          "{.arg data_format} applies only when {.arg data} is a folder.",
+          "x" = "You supplied no {.arg data}.",
+          "i" = "Drop {.arg data_format}, or pass the folder holding the datasets."
+        ),
+        kind = "input",
+        call = call
+      )
+    }
     return(NULL)
   }
   # A directory: resolve it to the named list the rest of this function would
