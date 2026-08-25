@@ -22,6 +22,7 @@
   version = NULL,
   created = NULL,
   data = NULL,
+  data_format = NULL,
   stylesheet = TRUE,
   html = FALSE,
   validate = TRUE,
@@ -37,7 +38,7 @@
   # Let the data speak first, so everything downstream -- the completeness
   # notice, the OID table, the builders -- sees one spec and cannot tell a
   # data-informed one from a hand-written one.
-  spec <- .dx_apply_data(spec, data, p, call)
+  spec <- .dx_apply_data(spec, data, p, data_format = data_format, call = call)
   # Names become OIDs here, on a copy: a spec author writes `AEENDY` on a
   # Methods sheet, and the document says `MT.AEENDY`, because an OID must be
   # unique across the whole MetaDataVersion and a bare name is not.

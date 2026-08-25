@@ -49,11 +49,150 @@
 #' @noRd
 .dx_vlm_limit <- 200L
 
+# A directory -> the named list of frames `data =` would otherwise be given.
+#
+# The spec's Datasets sheet already names every dataset, and a submission
+# folder holds `dm.xpt`, `ae.xpt` -- basenames that ARE those names. So the
+# folder carries everything the named list makes the caller retype.
+#
+# Matching is on the BASENAME, not on the dataset name recorded inside the
+# file, because that is the only resolution that costs no read: the ambiguity
+# and coverage decisions below all have to be made BEFORE anything is opened.
+#' @noRd
+.dx_resolve_data_dir <- function(
+  dir,
+  spec,
+  data_format = NULL,
+  call = rlang::caller_env()
+) {
+  if (length(dir) != 1L || is.na(dir) || !nzchar(dir)) {
+    .artoo_abort(
+      c(
+        "{.arg data} must be one directory path.",
+        "x" = "You supplied {length(dir)} value{?s}."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
+  if (!dir.exists(dir)) {
+    hint <- if (file.exists(dir)) {
+      "Pass the folder holding the datasets, or a named list of frames."
+    } else {
+      "No directory at that path."
+    }
+    .artoo_abort(
+      c(
+        "{.arg data} must be a directory.",
+        "x" = "{.path {dir}} is not one.",
+        "i" = hint
+      ),
+      kind = "input",
+      call = call
+    )
+  }
+  formats <- .members_formats(data_format, call = call)
+
+  datasets <- as.character(spec@datasets$dataset)
+  datasets <- datasets[!.dx_blank(datasets)]
+  # Matching is case-insensitive, so two dataset names differing only in case
+  # would both claim the same file and neither answer would be right. The
+  # constructor permits them, so this is checked rather than assumed.
+  twins <- unique(datasets[duplicated(toupper(datasets))])
+  if (length(twins)) {
+    .artoo_abort(
+      c(
+        "The spec names datasets that differ only in case.",
+        "x" = "{.val {twins}}.",
+        "i" = "A folder cannot say which file belongs to which; pass a named list."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+
+  files <- list.files(dir, full.names = TRUE)
+  files <- files[!dir.exists(files)]
+  files <- files[
+    tolower(tools::file_ext(files)) %in% .known_extensions(formats)
+  ]
+  files <- sort(files)
+  stems <- toupper(tools::file_path_sans_ext(basename(files)))
+
+  hits <- lapply(toupper(datasets), function(d) files[stems == d])
+  names(hits) <- datasets
+
+  # More than one file for one dataset is not artoo's choice to make. The
+  # formats can disagree about byte width, so picking one silently changes
+  # the document; `data_format` is how a caller resolves it deliberately.
+  ambiguous <- datasets[lengths(hits) > 1L]
+  if (length(ambiguous)) {
+    shown <- basename(unlist(hits[ambiguous], use.names = FALSE))
+    .artoo_abort(
+      c(
+        "{length(ambiguous)} dataset{?s} match{?es/} more than one file.",
+        "x" = "{.val {ambiguous}}: {.file {shown}}.",
+        "i" = "Pass {.arg data_format} to name the format to read."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
+
+  matched <- hits[lengths(hits) == 1L]
+  if (!length(matched)) {
+    .artoo_warn(
+      c(
+        "No file in {.path {dir}} matches a dataset the spec names.",
+        "i" = "Expected a file named for a dataset, as {.file dm.xpt}."
+      ),
+      kind = "spec",
+      call = call
+    )
+    return(list())
+  }
+
+  # One notice covering both directions, so a near-miss pair -- DM unmatched,
+  # `demo.xpt` unclaimed -- sits on adjacent lines of the same message. Unlike
+  # the named-list path, an unclaimed FILE is not warned about: naming a frame
+  # in a list asserts intent to use it, while a folder asserts nothing, and a
+  # study folder legitimately holds datasets a partial spec does not describe.
+  missing <- setdiff(datasets, names(matched))
+  spare <- basename(setdiff(files, unlist(matched, use.names = FALSE)))
+  if (length(missing) || length(spare)) {
+    msg <- c(
+      "Read {length(matched)} of {length(datasets)} dataset{?s} from {.path {dir}}."
+    )
+    if (length(missing)) {
+      msg <- c(msg, "i" = "No file for {.val {missing}}.")
+    }
+    if (length(spare)) {
+      msg <- c(msg, "i" = "Not named by the spec: {.file {spare}}.")
+    }
+    .artoo_inform(msg, kind = "spec")
+  }
+
+  lapply(matched, function(f) read_dataset(f))
+}
+
 # Validate the `data` argument and reduce it to the datasets the spec names.
 #' @noRd
-.dx_check_data <- function(data, spec, call = rlang::caller_env()) {
+.dx_check_data <- function(
+  data,
+  spec,
+  data_format = NULL,
+  call = rlang::caller_env()
+) {
   if (is.null(data)) {
     return(NULL)
+  }
+  # A directory: resolve it to the named list the rest of this function would
+  # have been handed. It comes back already scoped to the spec's datasets, so
+  # it skips the shape checks below -- including the empty-list abort, which
+  # would fire on the legitimate "folder matched nothing" case the resolver
+  # has already warned about.
+  if (is.character(data)) {
+    return(.dx_resolve_data_dir(data, spec, data_format, call = call))
   }
   # A data frame is a named list, so it reaches the element check below and
   # is refused there for a column not being a data frame. Catch it here and
@@ -113,8 +252,14 @@
 # The whole data-aware pass, in order. Each step returns a spec, so the
 # writer downstream cannot tell a data-informed spec from a hand-written one.
 #' @noRd
-.dx_apply_data <- function(spec, data, p, call = rlang::caller_env()) {
-  data <- .dx_check_data(data, spec, call)
+.dx_apply_data <- function(
+  spec,
+  data,
+  p,
+  data_format = NULL,
+  call = rlang::caller_env()
+) {
+  data <- .dx_check_data(data, spec, data_format, call = call)
   if (is.null(data) || !length(data)) {
     return(spec)
   }

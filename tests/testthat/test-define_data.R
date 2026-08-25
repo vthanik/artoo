@@ -921,3 +921,190 @@ test_that("a value-level type stays blank when the data cannot answer it", {
   # Same object back: nothing was inferred, so nothing is rebuilt.
   expect_identical(artoo:::.dx_data_values(spec, list(VS = vs_data())), spec)
 })
+
+# ---- data = a folder -------------------------------------------------------
+
+folder_spec <- function() {
+  artoo_spec(
+    standard = "SDTMIG 3.4",
+    datasets = data.frame(
+      dataset = c("DM", "VS"),
+      label = c("Demographics", "Vital Signs"),
+      class = c("SPECIAL PURPOSE", "FINDINGS"),
+      domain = c("DM", "VS"),
+      purpose = "Tabulation",
+      repeating = c(FALSE, TRUE),
+      structure = c("One record per subject", "One record per test"),
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = c("DM", "DM", "VS", "VS"),
+      variable = c("USUBJID", "SEX", "USUBJID", "VSORRES"),
+      label = "x",
+      data_type = "string",
+      length = NA_integer_,
+      origin = "Collected",
+      stringsAsFactors = FALSE
+    )
+  )
+}
+
+folder_frames <- function() {
+  list(
+    DM = data.frame(
+      USUBJID = c("01-001", "01-002"),
+      SEX = c("F", "M"),
+      stringsAsFactors = FALSE
+    ),
+    VS = data.frame(
+      USUBJID = c("01-001", "01-002"),
+      VSORRES = c("162.6", "170.0"),
+      stringsAsFactors = FALSE
+    )
+  )
+}
+
+test_that("a folder of datasets writes the same define as the named list", {
+  skip_if_not_installed("xml2")
+  # The whole point of the feature: the folder carries what the list makes
+  # the caller retype, so the two calls must be indistinguishable downstream.
+  spec <- folder_spec()
+  frames <- folder_frames()
+  d <- withr::local_tempdir()
+  write_json(frames$DM, file.path(d, "dm.json"))
+  write_json(frames$VS, file.path(d, "vs.json"))
+
+  a <- file.path(withr::local_tempdir(), "a.xml")
+  b <- file.path(withr::local_tempdir(), "b.xml")
+  suppressMessages(
+    suppressWarnings(write_spec(spec, a, data = d, created = FROZEN_DATA))
+  )
+  suppressWarnings(write_spec(spec, b, data = frames, created = FROZEN_DATA))
+
+  expect_identical(readLines(a, warn = FALSE), readLines(b, warn = FALSE))
+  # ...and the data actually changed the document, so the equality above is
+  # not two identical no-ops.
+  bare <- file.path(withr::local_tempdir(), "bare.xml")
+  suppressWarnings(write_spec(spec, bare, created = FROZEN_DATA))
+  expect_false(
+    identical(readLines(a, warn = FALSE), readLines(bare, warn = FALSE))
+  )
+})
+
+test_that("case does not matter when matching a file to a dataset", {
+  skip_if_not_installed("xml2")
+  spec <- folder_spec()
+  frames <- folder_frames()
+  d <- withr::local_tempdir()
+  write_json(frames$DM, file.path(d, "DM.json"))
+  write_json(frames$VS, file.path(d, "Vs.json"))
+  resolved <- suppressMessages(
+    artoo:::.dx_resolve_data_dir(d, spec)
+  )
+  expect_setequal(names(resolved), c("DM", "VS"))
+})
+
+test_that("one dataset matching two files aborts instead of choosing", {
+  # Two formats can disagree about byte width, so a silent pick changes the
+  # document artoo writes.
+  spec <- folder_spec()
+  frames <- folder_frames()
+  d <- withr::local_tempdir()
+  write_json(frames$DM, file.path(d, "dm.json"))
+  write_rds(frames$DM, file.path(d, "dm.rds"))
+  write_json(frames$VS, file.path(d, "vs.json"))
+
+  expect_snapshot(artoo:::.dx_resolve_data_dir(d, spec), error = TRUE)
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, spec),
+    class = "artoo_error_input"
+  )
+  # ...and data_format is the way out.
+  resolved <- suppressMessages(
+    artoo:::.dx_resolve_data_dir(d, spec, data_format = "json")
+  )
+  expect_setequal(names(resolved), c("DM", "VS"))
+})
+
+test_that("a folder matching nothing warns and leaves the spec alone", {
+  # It must NOT hit the empty-list abort: the resolver has already said what
+  # is wrong, and a second message blaming the caller's list would be false.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_json(folder_frames()$DM, file.path(d, "unrelated.json"))
+
+  expect_warning(
+    resolved <- artoo:::.dx_resolve_data_dir(d, spec),
+    "matches a dataset the spec names"
+  )
+  expect_identical(resolved, list())
+  expect_no_error(
+    suppressWarnings(artoo:::.dx_check_data(d, spec))
+  )
+})
+
+test_that("partial coverage is reported once, both directions", {
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_json(folder_frames()$DM, file.path(d, "dm.json"))
+  write_json(folder_frames()$VS, file.path(d, "demo.json"))
+  # The temp path is machine-specific; redact it or the snapshot churns on
+  # every run and differs across CI runners.
+  expect_snapshot(
+    resolved <- artoo:::.dx_resolve_data_dir(d, spec),
+    transform = function(x) sub("'/[^']*'", "'<dir>'", x)
+  )
+  expect_identical(names(resolved), "DM")
+})
+
+test_that("a folder is inventoried, not descended", {
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "nested"))
+  write_json(folder_frames()$DM, file.path(d, "nested", "dm.json"))
+  write_json(folder_frames()$VS, file.path(d, "vs.json"))
+  resolved <- suppressMessages(artoo:::.dx_resolve_data_dir(d, spec))
+  expect_identical(names(resolved), "VS")
+})
+
+test_that("a path that is not a directory is refused by what it is", {
+  spec <- folder_spec()
+  f <- withr::local_tempfile(fileext = ".json")
+  write_json(folder_frames()$DM, f)
+  expect_snapshot(
+    artoo:::.dx_resolve_data_dir(f, spec),
+    error = TRUE,
+    transform = function(x) sub("'/[^']*'", "'<path>'", x)
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir(f, spec),
+    class = "artoo_error_input"
+  )
+  expect_error(
+    artoo:::.dx_resolve_data_dir(file.path(tempdir(), "nope"), spec),
+    class = "artoo_error_input"
+  )
+})
+
+test_that("dataset names differing only in case refuse a folder", {
+  # artoo_spec() permits them and matching is case-insensitive, so neither
+  # answer would be right. Measured, not assumed: the constructor accepts it.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = c("DM", "dm"),
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = c("DM", "dm"),
+      variable = c("USUBJID", "SEX"),
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  expect_error(
+    artoo:::.dx_resolve_data_dir(d, spec),
+    class = "artoo_error_spec"
+  )
+})

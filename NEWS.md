@@ -1,5 +1,20 @@
 # artoo 0.2.0.9000
 
+* `write_spec()` to Define-XML accepts a folder for `data =`, not only a
+  named list of frames. Each dataset the spec names is matched to a file
+  whose basename is that name, ignoring case, so a submission folder of
+  `dm.xpt` and `ae.xpt` no longer has to be retyped as
+  `list(DM = dm, AE = ae)`. The folder is inventoried, not descended. A
+  dataset with no file is reported, not an error; a file the spec does not
+  name is left alone; a dataset matching two files aborts rather than
+  choosing, because two formats can disagree about byte width and picking
+  one silently would change the document.
+
+* `write_spec()` to Define-XML gains `data_format =`, restricting a folder
+  to the named formats. It takes format names as `artoo_formats()` lists
+  them. Adding it means `write_spec()` no longer accepts `dat =` as an
+  abbreviation of `data =`, which R had been resolving by partial matching.
+
 * `members()` gains `format =`, restricting the inventory to the named
   formats. It takes format names as `artoo_formats()` lists them, not file
   extensions, so `"parquet"` claims both `.parquet` and `.pq`; several names

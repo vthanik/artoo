@@ -28,9 +28,13 @@ for a reproducible submission build; the default is the current time.
 writes the \code{xml-stylesheet} processing instruction and copies the
 bundled CDISC stylesheet beside the output; a string names a
 stylesheet without copying one; \code{FALSE} writes neither.
-\item \code{data} -- \verb{<list of <data.frame>> | NULL}. The datasets the define
-describes, named for their dataset. artoo reads them and fills what
-the spec leaves blank; see \strong{Data-aware writing}.
+\item \code{data} -- \verb{<list of <data.frame>> | <character(1)> | NULL}. The
+datasets the define describes: a list named for each dataset, or one
+path to the folder holding them. artoo reads them and fills what the
+spec leaves blank; see \strong{Data-aware writing}.
+\item \code{data_format} -- \verb{<character> | NULL}. When \code{data} is a folder,
+restrict it to these formats, named as \code{\link[=artoo_formats]{artoo_formats()}} lists them.
+Use it when a folder holds one dataset in two formats.
 \item \code{html} -- \verb{<logical(1)> | <character(1)>: default FALSE}. \code{TRUE} also
 renders the document through its stylesheet into a sibling \code{.html}; a
 string renders it to that path. Needs the \code{xslt} and \code{callr} packages.
@@ -103,6 +107,16 @@ conformance finding). An existing stylesheet beside the output is never
 overwritten, so a customised rendering survives. Pass \code{html = TRUE} to also
 materialise the rendered HTML: browsers are removing XSLT support, and a
 reviewer working from a submission archive should not need one.
+
+\strong{A folder instead of a list.} \code{data} also takes one path to the folder
+holding the datasets. Each dataset the spec names is matched to a file
+whose basename is that name, ignoring case: \code{DM} to \code{dm.xpt}, \code{dm.json},
+\code{dm.parquet}. The folder is inventoried, not descended. A dataset with no
+file is normal and reported, not an error, and a file the spec does not
+name is left alone. A dataset matching MORE than one file aborts rather
+than choosing: two formats can disagree about byte width, so picking one
+silently would change the document. Name the format with \code{data_format} to
+resolve it.
 
 \strong{Data-aware writing.} Pass \code{data} and artoo reads the datasets the
 define describes, which a spec-only tool cannot. A blank \code{length} is

@@ -95,6 +95,16 @@
 #' materialise the rendered HTML: browsers are removing XSLT support, and a
 #' reviewer working from a submission archive should not need one.
 #'
+#' **A folder instead of a list.** `data` also takes one path to the folder
+#' holding the datasets. Each dataset the spec names is matched to a file
+#' whose basename is that name, ignoring case: `DM` to `dm.xpt`, `dm.json`,
+#' `dm.parquet`. The folder is inventoried, not descended. A dataset with no
+#' file is normal and reported, not an error, and a file the spec does not
+#' name is left alone. A dataset matching MORE than one file aborts rather
+#' than choosing: two formats can disagree about byte width, so picking one
+#' silently would change the document. Name the format with `data_format` to
+#' resolve it.
+#'
 #' **Data-aware writing.** Pass `data` and artoo reads the datasets the
 #' define describes, which a spec-only tool cannot. A blank `length` is
 #' filled from the real maximum byte width; a stated one shorter than the
@@ -138,9 +148,13 @@
 #'     writes the `xml-stylesheet` processing instruction and copies the
 #'     bundled CDISC stylesheet beside the output; a string names a
 #'     stylesheet without copying one; `FALSE` writes neither.
-#'   * `data` -- `<list of <data.frame>> | NULL`. The datasets the define
-#'     describes, named for their dataset. artoo reads them and fills what
-#'     the spec leaves blank; see **Data-aware writing**.
+#'   * `data` -- `<list of <data.frame>> | <character(1)> | NULL`. The
+#'     datasets the define describes: a list named for each dataset, or one
+#'     path to the folder holding them. artoo reads them and fills what the
+#'     spec leaves blank; see **Data-aware writing**.
+#'   * `data_format` -- `<character> | NULL`. When `data` is a folder,
+#'     restrict it to these formats, named as [artoo_formats()] lists them.
+#'     Use it when a folder holds one dataset in two formats.
 #'   * `html` -- `<logical(1)> | <character(1)>: default FALSE`. `TRUE` also
 #'     renders the document through its stylesheet into a sibling `.html`; a
 #'     string renders it to that path. Needs the `xslt` and `callr` packages.
