@@ -17,9 +17,15 @@
 # `call` lands as the trailing formal. Resolved with match.fun() at
 # dispatch time (storing the names, not the closures, keeps covr's
 # instrumented bindings live and lets a codec be redefined). `extensions`
-# are lowercase, dot-free; `mode` is "rw" or "r". `engine` names an optional
-# Suggests package the codec needs (e.g. "nanoparquet"); NULL means the codec
-# is pure-R and always available. artoo_formats() consults it.
+# are lowercase, dot-free; `mode` is "rw" or "r". `engine` names a package the
+# codec needs (e.g. "nanoparquet"); NULL means the codec is pure-R.
+# artoo_formats() consults it.
+#
+# NOT necessarily a Suggests, whatever this comment used to say: nanoparquet
+# is in Imports, so .codec_available() is unconditionally TRUE and no engine
+# gate can fire. Three separate readers took the old wording at face value and
+# designed around a branch that cannot run. The mechanism stays for a codec
+# whose engine really is optional; the current fact is that none is.
 #' @noRd
 .register_codec <- function(
   format,

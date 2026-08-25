@@ -117,7 +117,6 @@ test_that("character ISO --DTC stays text across json, ndjson, and rds", {
 })
 
 test_that("character ISO --DTC stays text through parquet", {
-  skip_if_not_installed("nanoparquet")
   spec <- dtc_spec()
   dm <- apply_spec(dtc_frame(), spec, "DM", conformance = "off")
   p <- withr::local_tempfile(fileext = ".parquet")

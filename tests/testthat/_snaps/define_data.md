@@ -63,3 +63,15 @@
       x You supplied `data` as a list.
       i Drop `data_format`, or pass the folder holding the datasets.
 
+# the ambiguity abort keeps the dataset-to-files pairing
+
+    Code
+      artoo:::.dx_resolve_data_dir(d, spec)
+    Condition
+      Error:
+      ! 3 datasets match more than one file.
+      x "DM": 'dm.json' and 'dm.rds'.
+      x "VS": 'vs.json' and 'vs.rds'.
+      x "AE": 'ae.json' and 'ae.rds'.
+      i Pass `data_format` to name one, as `data_format = "json"`.
+

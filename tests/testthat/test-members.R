@@ -114,7 +114,6 @@ test_that("format = restricts a mixed directory to the named formats", {
 test_that("format = names a format, not an extension", {
   # The registry maps one name to several extensions, so "parquet" must claim
   # .pq as well. An extension-shaped argument would inventory half a folder.
-  skip_if_not_installed("nanoparquet")
   dm <- demo_dm()
   d <- withr::local_tempdir()
   write_parquet(dm, file.path(d, "dm.parquet"))

@@ -156,10 +156,35 @@
     } else {
       "They are all {.val {fmts[[1L]]}}, so remove or rename one."
     }
+    # One line per dataset. Flattening every candidate into a single list
+    # loses the dataset-to-files pairing exactly when there is more than one
+    # dataset to pair, which is when the reader needs it. Capped so six
+    # ambiguous datasets is a message and not a wall.
+    #
+    # .cli_escape() is not optional here: a dataset named `d{1}` would have
+    # its braces read as cli interpolation and print as `d1`.
+    named <- utils::head(ambiguous, 5L)
+    lines <- vapply(
+      named,
+      function(d) {
+        .cli_escape(
+          cli::format_inline("{.val {d}}: {.file {basename(hits[[d]])}}.")
+        )
+      },
+      character(1),
+      USE.NAMES = FALSE
+    )
+    rest <- length(ambiguous) - length(named)
+    if (rest) {
+      lines <- c(
+        lines,
+        cli::format_inline("{rest} more dataset{?s} not shown.")
+      )
+    }
     .artoo_abort(
       c(
         "{length(ambiguous)} dataset{?s} match{?es/} more than one file.",
-        "x" = "{.val {ambiguous}}: {.file {shown}}.",
+        stats::setNames(lines, rep("x", length(lines))),
         "i" = remedy
       ),
       kind = "input",

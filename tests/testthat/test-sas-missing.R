@@ -91,7 +91,6 @@ test_that("special missings survive xpt -> json -> xpt", {
 })
 
 test_that("special missings survive xpt -> parquet -> xpt", {
-  skip_if_not_installed("nanoparquet")
   df <- .tagged_frame()
   xpt1 <- withr::local_tempfile(fileext = ".xpt")
   pq <- withr::local_tempfile(fileext = ".parquet")
@@ -114,7 +113,6 @@ test_that("special missings survive xpt -> parquet -> xpt", {
 })
 
 test_that("special missings survive the full chain json -> parquet -> rds", {
-  skip_if_not_installed("nanoparquet")
   df <- .tagged_frame()
   jsn <- withr::local_tempfile(fileext = ".json")
   pq <- withr::local_tempfile(fileext = ".parquet")
@@ -140,7 +138,6 @@ test_that("n_max keeps and aligns tags on json and parquet reads", {
   part <- read_json(jsn, n_max = 3)
   expect_identical(attr(part$AENDY, "sas_missing"), c(NA, ".A", "._"))
 
-  skip_if_not_installed("nanoparquet")
   pq <- withr::local_tempfile(fileext = ".parquet")
   write_parquet(df, pq)
   partp <- read_parquet(pq, n_max = 3)

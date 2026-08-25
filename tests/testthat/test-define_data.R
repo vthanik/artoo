@@ -1221,7 +1221,6 @@ test_that("data_format reaches the resolver through write_spec()", {
 test_that("two extensions of one format do not point at data_format", {
   # `data_format = "parquet"` cannot separate dm.parquet from dm.pq, so
   # naming the argument there sends the reader in a circle.
-  skip_if_not_installed("nanoparquet")
   spec <- folder_spec()
   d <- withr::local_tempdir()
   write_parquet(folder_frames()$DM, file.path(d, "dm.parquet"))
@@ -1318,4 +1317,53 @@ test_that("the folder is inventoried, and non-dataset files are skipped", {
 
   resolved <- suppressMessages(artoo:::.dx_resolve_data_dir(d, spec))
   expect_identical(names(resolved), "VS")
+})
+
+test_that("the ambiguity abort keeps the dataset-to-files pairing", {
+  # Flattening every candidate into one list loses the pairing exactly when
+  # there is more than one dataset to pair, which is when it is needed.
+  many <- c("DM", "VS", "AE")
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = many,
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = many,
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  f <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
+  for (n in tolower(many)) {
+    write_json(f, file.path(d, paste0(n, ".json")))
+    write_rds(f, file.path(d, paste0(n, ".rds")))
+  }
+  expect_snapshot(artoo:::.dx_resolve_data_dir(d, spec), error = TRUE)
+})
+
+test_that("a braced dataset name survives the message intact", {
+  # .cli_escape() is load-bearing: unescaped, cli reads `D{1}` as
+  # interpolation and prints `D1`, naming a dataset that does not exist.
+  spec <- artoo_spec(
+    datasets = data.frame(
+      dataset = "D{1}",
+      structure = "One record per subject",
+      stringsAsFactors = FALSE
+    ),
+    variables = data.frame(
+      dataset = "D{1}",
+      variable = "USUBJID",
+      data_type = "string",
+      stringsAsFactors = FALSE
+    )
+  )
+  d <- withr::local_tempdir()
+  f <- data.frame(USUBJID = "01-001", stringsAsFactors = FALSE)
+  write_json(f, file.path(d, "d{1}.json"))
+  write_rds(f, file.path(d, "d{1}.rds"))
+  expect_error(artoo:::.dx_resolve_data_dir(d, spec), "D\\{1\\}")
 })
