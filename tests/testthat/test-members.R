@@ -162,10 +162,37 @@ test_that("an unusable format restriction aborts", {
 test_that("format = NULL is the released behaviour, unchanged", {
   # members() shipped in 0.1.3 without this argument. The default must return
   # exactly what it returned then, or every caller on CRAN changes meaning.
+  #
+  # Asserted against the expected CONTENT, not against members(d, format =
+  # NULL): NULL is the default, so comparing the two is identical(f(x), f(x))
+  # and stays green even if NULL stopped meaning "every format".
   dm <- demo_dm()
   d <- withr::local_tempdir()
   write_json(dm, file.path(d, "dm.json"))
   write_rds(dm, file.path(d, "dm.rds"))
-  expect_identical(members(d), members(d, format = NULL))
-  expect_identical(nrow(members(d)), 2L)
+  write_xpt(dm, file.path(d, "dm.xpt"))
+
+  m <- members(d)
+  expect_identical(m$file, c("dm.json", "dm.rds", "dm.xpt"))
+  expect_identical(m$format, c("json", "rds", "xpt"))
+  expect_identical(nrow(m), 3L)
+  expect_s3_class(m, "artoo_members")
+  expect_identical(
+    names(m),
+    c("file", "member", "label", "records", "variables", "format")
+  )
+})
+
+test_that("an empty-string format aborts as a condition, not a crash", {
+  # base::exists("") throws an unclassed "invalid first argument", which
+  # escapes every artoo_error_* handler a caller could have written.
+  d <- withr::local_tempdir()
+  expect_error(members(d, format = ""), class = "artoo_error_codec")
+
+  # The root cause is in the shared resolver, so the sibling that reaches it
+  # first is fixed too. read_dataset() checks the path before the format, so
+  # the file has to exist to get there.
+  f <- file.path(d, "dm.json")
+  write_json(demo_dm(), f)
+  expect_error(read_dataset(f, format = ""), class = "artoo_error_codec")
 })

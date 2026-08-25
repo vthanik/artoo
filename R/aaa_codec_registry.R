@@ -69,6 +69,9 @@
     !is.character(format) ||
       length(format) != 1L ||
       is.na(format) ||
+      # Before exists(): base::exists("") throws an unclassed "invalid first
+      # argument", which escapes every artoo condition handler.
+      !nzchar(format) ||
       !exists(format, envir = .artoo_codecs, inherits = FALSE)
   ) {
     known <- .registered_formats()
