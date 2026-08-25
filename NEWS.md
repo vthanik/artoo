@@ -1,4 +1,4 @@
-# artoo 0.2.0.9000
+# artoo 0.2.0
 
 * `members()` reads a gzipped dataset. `members("dm.ndjson.gz")` aborted with
   `No codec handles the "gz" extension` on a file `write_ndjson()` produces
@@ -28,8 +28,6 @@
   every format, which is what `members()` did before. The reason to pass it
   is a directory holding one dataset in two formats, where the full
   inventory reports both.
-
-# artoo 0.2.0
 
 * `read_spec()` refuses an `Analysis Criteria` sheet missing `Display`,
   `Result` or `Dataset`, naming the column. It used to tolerate the absence
