@@ -34,8 +34,14 @@
       resolved <- artoo:::.dx_resolve_data_dir(d, spec)
     Message
       Read 1 of 2 datasets from '<dir>'.
+      i Used 'dm.json'.
       i No file for "VS".
       i Not named by the spec: 'demo.json'.
+    Condition
+      Warning:
+      1 archive location names a file the folder does not hold.
+      x dm.json -> dm.xpt.
+      i Set `datasets$archive_location_id` if the submission ships something else.
 
 # a path that is not a directory is refused by what it is
 
@@ -46,4 +52,14 @@
       ! `data` must be a directory.
       x '<path>' is not one.
       i Pass the folder holding the datasets, or a named list of frames.
+
+# data_format without a folder is refused, not ignored
+
+    Code
+      artoo:::.dx_check_data(folder_frames(), spec, data_format = "json")
+    Condition
+      Error:
+      ! `data_format` applies only when `data` is a folder.
+      x You supplied `data` as a list.
+      i Drop `data_format`, or pass the folder holding the datasets.
 

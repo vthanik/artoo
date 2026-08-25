@@ -1108,3 +1108,75 @@ test_that("dataset names differing only in case refuse a folder", {
     class = "artoo_error_spec"
   )
 })
+
+test_that("a file recording a different dataset than its name is reported", {
+  # The failure this exists for: copy vs.json to dm.json and DM's lengths get
+  # widened from VS bytes, silently. The define then asserts a measurement of
+  # a dataset it never saw. Every format artoo reads records the real name,
+  # and the frame is already in hand, so the check is free.
+  spec <- folder_spec()
+  vs <- apply_spec(cdisc_vs, sdtm_spec, "VS", conformance = "off")
+  d <- withr::local_tempdir()
+  write_json(vs, file.path(d, "dm.json"))
+
+  expect_warning(
+    suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)),
+    "records VS, matched to DM"
+  )
+})
+
+test_that("a file that records no name of its own is not accused", {
+  # A frame that never carried `dataset_name` writes the placeholder. It is
+  # saying "I do not know", not "I am DATA", and warning on it would fire on
+  # every hand-built file.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  # xpt, so the unrelated archive-shape warning stays out of the way and this
+  # asserts only what it is about.
+  write_xpt(folder_frames()$DM, file.path(d, "dm.xpt"))
+  expect_no_warning(suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)))
+})
+
+test_that("a non-xpt folder warns that the derived archive location is not there", {
+  # artoo derives `<dataset>.xpt` for a dataset stating no archive location.
+  # The folder has just shown the dataset is not stored that way, so the
+  # derived reference points at a file nobody has seen -- and this is the one
+  # caller holding evidence about it.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_json(folder_frames()$DM, file.path(d, "dm.json"))
+  write_json(folder_frames()$VS, file.path(d, "vs.json"))
+  expect_warning(
+    suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)),
+    "name a file the folder does not hold"
+  )
+
+  # An xpt folder is what the derivation already assumes, so it says nothing.
+  x <- withr::local_tempdir()
+  write_xpt(folder_frames()$DM, file.path(x, "dm.xpt"))
+  write_xpt(folder_frames()$VS, file.path(x, "vs.xpt"))
+  expect_no_warning(suppressMessages(artoo:::.dx_resolve_data_dir(x, spec)))
+})
+
+test_that("coverage is reported even when every dataset was found", {
+  # The complete case is the one a real build hits, and which files informed
+  # a submission document is the thing a reader cannot recover afterwards.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_xpt(folder_frames()$DM, file.path(d, "dm.xpt"))
+  write_xpt(folder_frames()$VS, file.path(d, "vs.xpt"))
+  expect_message(artoo:::.dx_resolve_data_dir(d, spec), "Read 2 of 2 datasets")
+  expect_message(artoo:::.dx_resolve_data_dir(d, spec), "dm.xpt")
+})
+
+test_that("data_format without a folder is refused, not ignored", {
+  spec <- folder_spec()
+  expect_snapshot(
+    artoo:::.dx_check_data(folder_frames(), spec, data_format = "json"),
+    error = TRUE
+  )
+  expect_error(
+    artoo:::.dx_check_data(folder_frames(), spec, data_format = "json"),
+    class = "artoo_error_input"
+  )
+})

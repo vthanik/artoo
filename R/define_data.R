@@ -159,20 +159,124 @@
   # study folder legitimately holds datasets a partial spec does not describe.
   missing <- setdiff(datasets, names(matched))
   spare <- basename(setdiff(files, unlist(matched, use.names = FALSE)))
-  if (length(missing) || length(spare)) {
-    msg <- c(
-      "Read {length(matched)} of {length(datasets)} dataset{?s} from {.path {dir}}."
-    )
-    if (length(missing)) {
-      msg <- c(msg, "i" = "No file for {.val {missing}}.")
-    }
-    if (length(spare)) {
-      msg <- c(msg, "i" = "Not named by the spec: {.file {spare}}.")
-    }
-    .artoo_inform(msg, kind = "spec")
+  # ALWAYS, not only when something is unmatched. A define is a submission
+  # artefact, and which files informed it is the one thing a reader cannot
+  # recover from the document afterwards, so the complete-coverage case,
+  # which is the one a real build hits, is exactly the case that must not be
+  # silent. The files actually read are named for the same reason.
+  used <- basename(unlist(matched, use.names = FALSE))
+  msg <- c(
+    "Read {length(matched)} of {length(datasets)} dataset{?s} from {.path {dir}}.",
+    "i" = "Used {.file {used}}."
+  )
+  if (length(missing)) {
+    msg <- c(msg, "i" = "No file for {.val {missing}}.")
   }
+  if (length(spare)) {
+    msg <- c(msg, "i" = "Not named by the spec: {.file {spare}}.")
+  }
+  .artoo_inform(msg, kind = "spec")
 
-  lapply(matched, function(f) read_dataset(f))
+  frames <- lapply(matched, function(f) read_dataset(f))
+  .dx_check_recorded_names(frames, matched, call = call)
+  .dx_check_archive_shape(spec, matched, call = call)
+  frames
+}
+
+# A file matched by its BASENAME may not hold what its name claims. Every
+# format artoo reads records the dataset's own name, so the claim is
+# checkable, and it costs nothing because the frame is already read.
+#
+# Without this, `vs.json` copied to `dm.json` widens DM's lengths from VS
+# bytes and says nothing: the define then asserts a measurement of a dataset
+# it never saw.
+#
+# Skipped when the file records the writer's placeholder rather than a real
+# name. A frame that never carried `dataset_name` is saying "I do not know",
+# not "I am DATA".
+#' @noRd
+.dx_check_recorded_names <- function(
+  frames,
+  matched,
+  call = rlang::caller_env()
+) {
+  wrong <- character(0)
+  for (ds in names(frames)) {
+    x <- frames[[ds]]
+    if (!is.character(attr(x, "metadata_json", exact = TRUE))) {
+      next
+    }
+    recorded <- tryCatch(get_meta(x)@dataset$name, error = function(e) NULL)
+    blank <- is.null(recorded) || .dx_blank(recorded)
+    if (blank || identical(recorded, "DATA")) {
+      next
+    }
+    if (!identical(toupper(recorded), toupper(ds))) {
+      wrong <- c(
+        wrong,
+        sprintf(
+          "%s records %s, matched to %s",
+          basename(matched[[ds]]),
+          recorded,
+          ds
+        )
+      )
+    }
+  }
+  if (length(wrong)) {
+    .artoo_warn(
+      c(
+        "{length(wrong)} file{?s} record{?s/} a different dataset than the name says.",
+        "x" = "{wrong}.",
+        "i" = "The file name decides which dataset it informs; rename it, or pass a named list."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  invisible(NULL)
+}
+
+# artoo derives an archive location of `<dataset>.xpt` for a dataset that
+# states none. When the folder has just shown the dataset is NOT stored as
+# xpt, that derived reference points at a file nobody has seen, and unlike
+# every other caller this one holds evidence about it. Say so. Do not change
+# the href, which is a parked decision of its own.
+#' @noRd
+.dx_check_archive_shape <- function(
+  spec,
+  matched,
+  call = rlang::caller_env()
+) {
+  ds <- spec@datasets
+  stated <- if ("archive_location_id" %in% names(ds)) {
+    as.character(ds$archive_location_id)
+  } else {
+    rep(NA_character_, nrow(ds))
+  }
+  names(stated) <- as.character(ds$dataset)
+  odd <- character(0)
+  for (d in names(matched)) {
+    if (!.dx_blank(stated[[d]])) {
+      next
+    }
+    ext <- tolower(tools::file_ext(matched[[d]]))
+    if (!(ext %in% c("xpt", "xport"))) {
+      odd <- c(odd, sprintf("%s -> %s.xpt", basename(matched[[d]]), tolower(d)))
+    }
+  }
+  if (length(odd)) {
+    .artoo_warn(
+      c(
+        "{length(odd)} archive location{?s} name{?s/} a file the folder does not hold.",
+        "x" = "{odd}.",
+        "i" = "Set {.code datasets$archive_location_id} if the submission ships something else."
+      ),
+      kind = "spec",
+      call = call
+    )
+  }
+  invisible(NULL)
 }
 
 # Validate the `data` argument and reduce it to the datasets the spec names.
@@ -193,6 +297,21 @@
   # has already warned about.
   if (is.character(data)) {
     return(.dx_resolve_data_dir(data, spec, data_format, call = call))
+  }
+  # Past here `data` is a list, so the restriction has nothing to restrict.
+  # Accepting it silently is how a call that did not do what its author meant
+  # still looks like it worked, which is the reason write_spec() refuses
+  # stray dots rather than ignoring them.
+  if (!is.null(data_format)) {
+    .artoo_abort(
+      c(
+        "{.arg data_format} applies only when {.arg data} is a folder.",
+        "x" = "You supplied {.arg data} as {.obj_type_friendly {data}}.",
+        "i" = "Drop {.arg data_format}, or pass the folder holding the datasets."
+      ),
+      kind = "input",
+      call = call
+    )
   }
   # A data frame is a named list, so it reaches the element check below and
   # is refused there for a column not being a data frame. Catch it here and
