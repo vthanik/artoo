@@ -108,6 +108,12 @@ overwritten, so a customised rendering survives. Pass \code{html = TRUE} to also
 materialise the rendered HTML: browsers are removing XSLT support, and a
 reviewer working from a submission archive should not need one.
 
+\strong{What a folder measures.} A named list describes the frames in memory; a
+folder describes the bytes on disk. Where the two differ the folder is
+right about what will be submitted -- a transport file pads to fixed width,
+so a value's trailing blanks are part of it there and not in R. Compressed
+\code{.gz} datasets are matched like any other.
+
 \strong{A folder instead of a list.} \code{data} also takes one path to the folder
 holding the datasets. Each dataset the spec names is matched to a file
 whose basename is that name, ignoring case: \code{DM} to \code{dm.xpt}, \code{dm.json},

@@ -34,7 +34,7 @@
   meta <- if (has_meta) get_meta(x) else NULL
   nm <- if (is.null(meta)) NULL else meta@dataset$name
   member <- if (is.null(nm) || is.na(nm) || !nzchar(nm)) {
-    tools::file_path_sans_ext(basename(path))
+    .path_stem(path)
   } else {
     nm
   }
@@ -57,6 +57,41 @@
 
 # Every extension any registered codec claims (the membership test for the
 # directory branch -- distinct from .codec_for_ext, which ABORTS on a miss).
+# Extensions whose codec can sit behind transparent gzip. read_dataset()
+# peels `.gz` for exactly these (`.resolve_format`, R/io.R), so anything that
+# INVENTORIES files for it must peel the same ones or a readable file becomes
+# invisible -- or worse, aborts, which is what members("dm.ndjson.gz") did on
+# a file write_ndjson()'s own examples produce.
+#' @noRd
+.gz_extensions <- function() {
+  unique(unlist(lapply(c("json", "ndjson"), function(f) {
+    .artoo_codecs[[f]]$extensions
+  })))
+}
+
+# The extension that decides the codec, after peeling transparent gzip.
+# `dm.parquet.gz` keeps `gz` and stays unhandled, because read_dataset()
+# refuses it too.
+#' @noRd
+.effective_ext <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  if (!identical(ext, "gz")) {
+    return(ext)
+  }
+  inner <- tolower(tools::file_ext(sub("\\.gz$", "", path, ignore.case = TRUE)))
+  if (inner %in% .gz_extensions()) inner else ext
+}
+
+# The basename with its dataset extension removed, gzip peeled first, so
+# `dm.json.gz` stems to `dm` exactly as `dm.json` does.
+#' @noRd
+.path_stem <- function(path) {
+  base <- basename(path)
+  gz <- tolower(tools::file_ext(base)) == "gz"
+  base[gz] <- sub("\\.gz$", "", base[gz], ignore.case = TRUE)
+  tools::file_path_sans_ext(base)
+}
+
 #' @noRd
 .known_extensions <- function(formats = NULL) {
   unique(unlist(lapply(formats %||% .registered_formats(), function(f) {
@@ -107,13 +142,14 @@
 .members_dir <- function(path, formats = NULL, call = rlang::caller_env()) {
   files <- list.files(path, full.names = TRUE)
   files <- files[!dir.exists(files)]
-  keep <- tolower(tools::file_ext(files)) %in% .known_extensions(formats)
+  keep <- vapply(files, .effective_ext, character(1), USE.NAMES = FALSE) %in%
+    .known_extensions(formats)
   files <- sort(files[keep])
   if (!length(files)) {
     return(.empty_members())
   }
   rows <- lapply(files, function(f) {
-    codec <- .codec_for_ext(tolower(tools::file_ext(f)), call = call)
+    codec <- .codec_for_ext(.effective_ext(f), call = call)
     if (codec$format == "xpt") {
       .members_xpt(f)
     } else {
@@ -236,7 +272,7 @@ members <- function(path, format = NULL) {
         call = call
       )
     }
-    codec <- .codec_for_ext(tools::file_ext(path), call = call)
+    codec <- .codec_for_ext(.effective_ext(path), call = call)
     # The restriction filters here too, rather than being ignored because the
     # caller named one file. Silently accepting an argument that cannot apply
     # is how a mistyped one looks like it worked.

@@ -95,6 +95,12 @@
 #' materialise the rendered HTML: browsers are removing XSLT support, and a
 #' reviewer working from a submission archive should not need one.
 #'
+#' **What a folder measures.** A named list describes the frames in memory; a
+#' folder describes the bytes on disk. Where the two differ the folder is
+#' right about what will be submitted -- a transport file pads to fixed width,
+#' so a value's trailing blanks are part of it there and not in R. Compressed
+#' `.gz` datasets are matched like any other.
+#'
 #' **A folder instead of a list.** `data` also takes one path to the folder
 #' holding the datasets. Each dataset the spec names is matched to a file
 #' whose basename is that name, ignoring case: `DM` to `dm.xpt`, `dm.json`,

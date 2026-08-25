@@ -1,5 +1,11 @@
 # artoo 0.2.0.9000
 
+* `members()` reads a gzipped dataset. `members("dm.ndjson.gz")` aborted with
+  `No codec handles the "gz" extension` on a file `write_ndjson()` produces
+  and `read_dataset()` reads. Gzip is peeled for the codecs that support it,
+  so `dm.json.gz` inventories as `dm` and `dm.parquet.gz` stays unhandled,
+  which is what `read_dataset()` does with it too.
+
 * `write_spec()` to Define-XML accepts a folder for `data =`, not only a
   named list of frames. Each dataset the spec names is matched to a file
   whose basename is that name, ignoring case, so a submission folder of

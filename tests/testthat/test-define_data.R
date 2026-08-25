@@ -968,6 +968,16 @@ test_that("a folder of datasets writes the same define as the named list", {
   skip_if_not_installed("xml2")
   # The whole point of the feature: the folder carries what the list makes
   # the caller retype, so the two calls must be indistinguishable downstream.
+  #
+  # SCOPE, measured rather than assumed. This holds for the codecs that
+  # round-trip a frame unchanged; it does NOT hold in general, and the
+  # difference is not a defect. `.xpt` pads to fixed width, so a trailing
+  # blank returns as part of the value and a length shrinks by one; an
+  # all-blank column loses its Length entirely. Non-NFC text is normalised by
+  # json, ndjson and parquet alike, so only `.rds` preserves it byte for
+  # byte. The honest statement is that a named list describes the frame in
+  # memory and a folder describes the bytes on disk, and where they differ
+  # the folder is right about what will be submitted.
   spec <- folder_spec()
   frames <- folder_frames()
   d <- withr::local_tempdir()
@@ -1366,4 +1376,44 @@ test_that("a braced dataset name survives the message intact", {
   write_json(f, file.path(d, "d{1}.json"))
   write_rds(f, file.path(d, "d{1}.rds"))
   expect_error(artoo:::.dx_resolve_data_dir(d, spec), "D\\{1\\}")
+})
+
+test_that("a gzipped dataset is matched, and members() can see it too", {
+  # read_dataset() peels .gz for the text codecs, so a file it reads must not
+  # be invisible to the functions that inventory files for it. members() did
+  # worse than ignore it -- it aborted on a file write_ndjson()'s own
+  # examples produce.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  write_ndjson(folder_frames()$DM, file.path(d, "dm.ndjson.gz"))
+  write_json(folder_frames()$VS, file.path(d, "vs.json"))
+
+  resolved <- suppressMessages(
+    suppressWarnings(artoo:::.dx_resolve_data_dir(d, spec))
+  )
+  expect_setequal(names(resolved), c("DM", "VS"))
+  expect_identical(nrow(members(d)), 2L)
+  expect_no_error(members(file.path(d, "dm.ndjson.gz")))
+
+  # A format that cannot sit behind gzip stays unhandled, because
+  # read_dataset() refuses it too.
+  expect_identical(artoo:::.effective_ext("x.parquet.gz"), "gz")
+  expect_identical(artoo:::.effective_ext("x.json.gz"), "json")
+})
+
+test_that("every unreadable file is named, in one abort", {
+  # Stopping at the first bad file makes a folder with three corrupt datasets
+  # take three runs to discover.
+  spec <- folder_spec()
+  d <- withr::local_tempdir()
+  writeLines("{ not json", file.path(d, "dm.json"))
+  writeLines("{ not json", file.path(d, "vs.json"))
+
+  err <- tryCatch(
+    suppressMessages(artoo:::.dx_resolve_data_dir(d, spec)),
+    artoo_error_input = function(e) conditionMessage(e)
+  )
+  expect_match(err, "2 files")
+  expect_match(err, "dm.json (matched to DM)", fixed = TRUE)
+  expect_match(err, "vs.json (matched to VS)", fixed = TRUE)
 })

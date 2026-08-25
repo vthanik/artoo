@@ -129,10 +129,14 @@
   files <- list.files(dir, full.names = TRUE)
   files <- files[!dir.exists(files)]
   files <- files[
-    tolower(tools::file_ext(files)) %in% .known_extensions(formats)
+    vapply(files, .effective_ext, character(1), USE.NAMES = FALSE) %in%
+      .known_extensions(formats)
   ]
   files <- files[order(files, method = "radix")]
-  stems <- toupper(tools::file_path_sans_ext(basename(files)))
+  # Gzip peeled first, so `dm.json.gz` stems to `dm` exactly as `dm.json`
+  # does. A folder holding both is then two candidates for one dataset, which
+  # the ambiguity rule below already answers.
+  stems <- toupper(.path_stem(files))
 
   hits <- lapply(toupper(datasets), function(d) files[stems == d])
   names(hits) <- datasets
@@ -144,9 +148,10 @@
   if (length(ambiguous)) {
     shown <- basename(unlist(hits[ambiguous], use.names = FALSE))
     fmts <- vapply(
-      tolower(tools::file_ext(shown)),
-      function(e) .codec_for_ext(e, call = call)$format,
-      character(1)
+      shown,
+      function(f) .codec_for_ext(.effective_ext(f), call = call)$format,
+      character(1),
+      USE.NAMES = FALSE
     )
     # The remedy is only offered when it can work. Two extensions of the SAME
     # format (dm.parquet beside dm.pq) survive every restriction, so pointing
@@ -241,7 +246,44 @@
   }
   .artoo_inform(msg, kind = "spec")
 
-  frames <- lapply(matched, function(f) read_dataset(f))
+  # Every failure, then one abort. Reading stops at the first bad file
+  # otherwise, so a folder with three corrupt datasets takes three runs to
+  # discover -- and a corrupt dataset file is itself something the author
+  # needs to know about, which is why this aborts rather than skipping: a
+  # define written from a silently-reduced set of files is the wrong document
+  # written without complaint.
+  frames <- vector("list", length(matched))
+  names(frames) <- names(matched)
+  bad <- character(0)
+  for (ds in names(matched)) {
+    got <- tryCatch(
+      read_dataset(matched[[ds]]),
+      error = function(e) {
+        bad <<- c(
+          bad,
+          .cli_escape(sprintf(
+            "%s (matched to %s): %s",
+            basename(matched[[ds]]),
+            ds,
+            conditionMessage(e)[[1L]]
+          ))
+        )
+        NULL
+      }
+    )
+    frames[[ds]] <- got
+  }
+  if (length(bad)) {
+    .artoo_abort(
+      c(
+        "{length(bad)} file{?s} in {.path {dir}} could not be read.",
+        stats::setNames(bad, rep("x", length(bad))),
+        "i" = "Repair or remove the {length(bad)} file{?s}, or pass a named list of the datasets that do read."
+      ),
+      kind = "input",
+      call = call
+    )
+  }
   .dx_check_recorded_names(frames, matched, call = call)
   .dx_check_archive_shape(spec, matched, call = call)
   frames
