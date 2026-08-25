@@ -293,6 +293,10 @@ test_that("CreationDateTime is UTC and comes from `created`", {
 })
 
 test_that("the two official CDISC 2.1 examples round-trip to an identical spec", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   for (f in c("define21-sdtm.xml", "define21-adam.xml")) {
     spec <- read_define(f)
@@ -738,6 +742,10 @@ test_that("an invalid document never replaces the target file", {
 })
 
 test_that("a spec read as 2.0 is written as 2.0 without being asked", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   spec <- read_define("define20-sdtm.xml")
   path <- file.path(withr::local_tempdir(), "d.xml")
@@ -966,6 +974,10 @@ test_that("the 2.0 golden is stable", {
 })
 
 test_that("both official CDISC 2.0 examples reach a fixed point", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   # Identity is the wrong invariant here, and deliberately so: the writer
   # emits in OrderNumber order, and define20-sdtm.xml carries codelist terms
@@ -1003,6 +1015,10 @@ test_that("a source already in OrderNumber order round-trips to an identical spe
 })
 
 test_that("every spec converts to the other version and stays valid", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   # The eight-way matrix: each example written as each version.
   for (f in c(
@@ -1198,6 +1214,10 @@ test_that("a define naming no standard never writes StandardName=\"NA\" (#p5-rev
 })
 
 test_that("a standard version containing a space survives (#p5-review-2)", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   # "3.1.2 Amendment 1" is a real published IG version. Concatenating the
   # name and version into one scalar and splitting it back on whitespace

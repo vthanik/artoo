@@ -266,6 +266,10 @@ test_that("the stylesheet the document names is the one it renders through", {
 })
 
 test_that("rendered text is not glued together by whitespace stripping (#p8-review-1)", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   skip_if_no_xslt()
   skip_if_not_installed("callr")

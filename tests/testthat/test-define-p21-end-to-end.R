@@ -68,6 +68,10 @@ test_that("every workbook writes a valid Define-XML with no dangling reference",
 })
 
 test_that("a workbook reaches a fixed point after one canonicalisation", {
+  # Gated on CRAN: a breadth loop over the bundled CDISC corpora, which is
+  # where the Windows check time goes. It runs in full on CI, on every
+  # platform, so the coverage is not lost -- only CRAN's clock is spared.
+  skip_on_cran()
   skip_if_not_installed("xml2")
   skip_if_not_installed("readxl")
   # Identity is the wrong invariant twice over. A workbook carries less than
