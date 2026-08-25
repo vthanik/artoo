@@ -48,4 +48,6 @@ spec <- artoo_spec(
 spec_comments(spec)
 #>   comment_id                       description document_id pages
 #> 1      C.AGE Age in years at informed consent.        <NA>  <NA>
+#>   page_type page_title
+#> 1      <NA>       <NA>
 ```

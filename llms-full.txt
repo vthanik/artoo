@@ -40,10 +40,10 @@ adam_spec
     Standard: ADaMIG 1.1
     Datasets:  2
     Variables: 104
-    Codelists: 30
-    Methods: 54
-    Comments: 22
-    Documents: 9
+    Codelists: 20
+    Methods: 45
+    Comments: 11
+    Documents: 8
     Spec for: ADSL, ADAE
 
 ``` r
@@ -206,6 +206,77 @@ parquet <- tempfile(fileext = ".parquet")
 write_parquet(read_json(json), parquet)
 ```
 
+## 4b. Write the define.xml
+
+The datasets are half of a submission; the other half is the Define-XML
+document that describes them. It is the same spec, written out:
+
+``` r
+
+define <- file.path(tempdir(), "define.xml")
+write_spec(adam_spec, define)
+```
+
+artoo schema-validates what it built before the file reaches its
+destination, so an invalid document never replaces a good one. Two
+checks read it back —
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+against the bundled CDISC schemas, and
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for the reference integrity a schema cannot see:
+
+``` r
+
+validate_define(define)
+```
+
+    artoo Define-XML Schema Check
+    =============================
+
+    Summary
+    -------
+    Document: define.xml
+    Define-XML version: 2.1
+    Schema valid: yes
+
+    No findings.
+
+``` r
+
+lint_define(define)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: define.xml
+    Definitions: 198    References: 255
+    External codelists (exempt from the orphan check): 2
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  2
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+
+Two orphans, no dangling references. An orphan is something defined that
+nothing points at — here a leaf and a CDISC standard the pilot spec’s
+other datasets used — and the document is valid with them. A dangling
+reference, one pointing at nothing, is the error case.
+
+Pass `data =` and the datasets inform the document: a blank length is
+filled from the real maximum byte width, and value-level metadata is
+derived for the standard findings shapes. Pass `html = TRUE` and the
+document is also rendered through its own CDISC stylesheet, which
+matters because browsers are dropping XSLT support.
+
 ## 5. Read back, intact
 
 Reading restores the values, the R classes (dates as `Date`, times as
@@ -289,10 +360,13 @@ archived is what you analysed.
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
   — read a spec from Define-XML or a workbook, inspect it with the
-  `spec_*` accessors, and fix it in place with
+  `spec_*` accessors, fix it in place with
   [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
   /
-  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md).
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md),
+  and write it back out as Define-XML 2.0 or 2.1 — or as a blank
+  workbook to fill in, with
+  [`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md).
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.html) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
@@ -307,7 +381,7 @@ archived is what you analysed.
   qualification evidence a regulated pipeline needs.
 - [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) —
   end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist
-  decoding, each rendered live on the demo data. \`\`\`
+  decoding, each rendered live on the demo data.
 # Conform & validate
 
 [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
@@ -393,19 +467,23 @@ strict <- artoo_spec(
   codelists = adam_spec@codelists,
   study = spec_study(adam_spec)
 )
+```
+
+    Error:
+    ! Some variables reference a codelist not in `codelists`.
+    ✖ Unresolved codelist_ids: "CL.AEDICT" and "CL.AEDICTN".
+    ℹ Add the codelist's terms to `codelists`, or the external dictionary to
+      `dictionaries`.
+
+``` r
+
 raw <- cdisc_adsl
 raw$AGE[1] <- raw$AGE[1] + 0.5
 apply_spec(raw, strict, "ADSL", conformance = "off")
 ```
 
     Error:
-    ! Coercion to the spec dataTypes would lose data.
-    ✖ Integer coercion would truncate fractional values in: AGE (1).
-    ℹ This gate is separate from `conformance`; `conformance = "off"` does not
-      bypass it.
-    ℹ To keep these values in R, set `apply_spec(on_coercion_loss = "keep")`, or
-      retype the spec with `set_type()` (dataType "float" or "decimal").
-    ℹ To see every finding at once, run `check_spec(x, spec, dataset)`.
+    ! object 'strict' not found
 
 You have two honest one-line exits: keep the wider source type with
 `apply_spec(on_coercion_loss = "keep")` (the value is preserved and the
@@ -575,7 +653,8 @@ duplicates a definition.)
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  build, inspect, and repair the spec this verb consumes.
+  build, inspect, and repair the spec this verb consumes, and write it
+  out as the submission’s define.xml.
 - [Formats & lossless
   conversion](https://vthanik.github.io/artoo/articles/convert.md) —
   write the conformed frame to any format, and the qualification
@@ -724,8 +803,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpBzuEaV/file1e6527f95aa5.parquet' as
-      "parquet".
+    ! Could not read '/tmp/Rtmp7ffKpB/file1faa2cb95fe.parquet' as "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -791,13 +869,7 @@ evidence as data, so a harness asserts on it programmatically:
 
 ``` r
 
-vars <- spec_variables(adam_spec)
-vars$data_type[vars$variable == "AGE"] <- "integer"
-strict <- artoo_spec(
-  adam_spec@datasets, vars,
-  codelists = adam_spec@codelists,
-  study = spec_study(adam_spec)
-)
+strict <- set_type(adam_spec, "ADSL", AGE = "integer")
 raw <- cdisc_adsl
 raw$AGE[1] <- raw$AGE[1] + 0.5
 tryCatch(
@@ -826,7 +898,8 @@ Unicode NFC (UAX \#15).
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  the spec whose metadata every codec carries.
+  the spec whose metadata every codec carries, and the define.xml it
+  writes.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md) —
   produce the conformed frame these writers persist.
@@ -839,6 +912,8 @@ Unicode NFC (UAX \#15).
 ### Articles
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md):
+- [Authoring a specification
+  workbook](https://vthanik.github.io/artoo/articles/workbook.md):
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md):
 - [Formats & lossless
@@ -880,7 +955,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpNJ7pbJ/file1e8257749ccc.parquet' as
+    ! Could not read '/tmp/RtmpeuiNft/file1fc865b7ef40.parquet' as
       "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
@@ -1225,7 +1300,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1e9f7d3affea.json  DM      Demographics  60       15         json
+    file1fe52df7c6a5.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -1337,7 +1412,7 @@ identical(read_json(p)$TRTSDT, adsl$TRTSDT)
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  the spec each recipe starts from.
+  the spec each recipe starts from, and the define.xml it writes.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
@@ -1375,10 +1450,10 @@ spec
     Standard: ADaMIG 1.1
     Datasets:  2
     Variables: 104
-    Codelists: 30
-    Methods: 54
-    Comments: 22
-    Documents: 9
+    Codelists: 20
+    Methods: 45
+    Comments: 11
+    Documents: 8
     Spec for: ADSL, ADAE
 
 A workbook can carry several standards or duplicate roles; scope the
@@ -1436,13 +1511,27 @@ spec_keys(spec, "ADSL")
 head(spec_codelists(spec))
 ```
 
-      codelist_id order  term decode extended comment_id
-    1   CL.AGEGR1    NA   <65   <NA>       NA       <NA>
-    2   CL.AGEGR1    NA 65-80   <NA>       NA       <NA>
-    3   CL.AGEGR1    NA   >80   <NA>       NA       <NA>
-    4  CL.AGEGR1N     1     1    <65       NA       <NA>
-    5  CL.AGEGR1N     2     2  65-80       NA       <NA>
-    6  CL.AGEGR1N     3     3    >80       NA       <NA>
+      codelist_id order  term decode          name data_type nci_code
+    1   CL.AGEGR1    NA   <65   <NA>     Age Group      text     <NA>
+    2   CL.AGEGR1    NA 65-80   <NA>     Age Group      text     <NA>
+    3   CL.AGEGR1    NA   >80   <NA>     Age Group      text     <NA>
+    4  CL.AGEGR1N     1     1    <65 Age Group (N)   integer     <NA>
+    5  CL.AGEGR1N     2     2  65-80 Age Group (N)   integer     <NA>
+    6  CL.AGEGR1N     3     3    >80 Age Group (N)   integer     <NA>
+      sas_format_name comment_id term_nci_code rank extended standard_id
+    1            <NA>       <NA>          <NA>    1       NA        <NA>
+    2            <NA>       <NA>          <NA>    2       NA        <NA>
+    3            <NA>       <NA>          <NA>    3       NA        <NA>
+    4            <NA>       <NA>          <NA>   NA       NA        <NA>
+    5            <NA>       <NA>          <NA>   NA       NA        <NA>
+    6            <NA>       <NA>          <NA>   NA       NA        <NA>
+      is_non_standard term_description
+    1              NA             <NA>
+    2              NA             <NA>
+    3              NA             <NA>
+    4              NA             <NA>
+    5              NA             <NA>
+    6              NA             <NA>
 
 [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md),
 [`spec_study()`](https://vthanik.github.io/artoo/reference/spec_study.md),
@@ -1507,6 +1596,189 @@ composition:
 read_spec("define.xml") |> write_spec("spec.xlsx")
 ```
 
+## 5. Write the define.xml
+
+A `.xml` path writes Define-XML. The version follows the spec’s own
+`define_version` unless you say otherwise, and both 2.0 and 2.1 are
+written, so a spec read from one converts to the other:
+
+``` r
+
+define <- file.path(tempdir(), "define.xml")
+write_spec(adam_spec, define)
+write_spec(adam_spec, file.path(tempdir(), "define20.xml"), version = "2.0")
+```
+
+    Warning: Define-XML 2.0 cannot carry everything this spec holds.
+    ✖ Dropped or rewritten: "def:Standards (only the primary standard survives)",
+      "def:StandardOID", "def:IsNonStandard", "def:Origin/@Source", "def:SubClass",
+      "ODM/@def:Context", and "def:PDFPageRef/@Title".
+    ℹ Write the spec as "2.1", or to native JSON, to keep it whole.
+
+artoo schema-validates what it built against the bundled CDISC schemas
+*before* the file reaches its destination, so an invalid document never
+replaces a good one. Read it back with the two checks —
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+for the schema,
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for the reference integrity a schema cannot see, because an OID is
+`odm:oidref` rather than `xs:ID` and libxml2 never resolves one:
+
+``` r
+
+validate_define(define)
+```
+
+    artoo Define-XML Schema Check
+    =============================
+
+    Summary
+    -------
+    Document: define.xml
+    Define-XML version: 2.1
+    Schema valid: yes
+
+    No findings.
+
+``` r
+
+lint_define(define)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: define.xml
+    Definitions: 198    References: 255
+    External codelists (exempt from the orphan check): 2
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  2
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+
+The two orphan warnings are honest: the bundled pilot spec is scoped to
+ADSL and ADAE, and it still names a leaf and a CDISC standard that only
+the datasets outside that scope used. An orphan is a warning rather than
+an error because a define.xml with one is valid and loads — a *dangling*
+reference is the error, and there are none.
+
+The write also says what the document is missing. None of these is
+required by the schema — the document validates without them — and every
+one draws a conformance finding, so the write names them rather than
+refusing:
+
+``` r
+
+sparse <- artoo_spec(
+  datasets = data.frame(dataset = "DM", structure = "One record per subject"),
+  variables = data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+  standard = "SDTMIG 3.4"
+)
+invisible(write_spec(sparse, file.path(tempdir(), "sparse.xml")))
+```
+
+    Warning: The spec is not submission-grade.
+    ✖ Nothing fills "datasets$label", "datasets$class", "datasets$domain",
+      "datasets$purpose", "datasets$repeating", "datasets$archive_location_id",
+      "variables$label", "variables$origin", and "variables$length".
+    ℹ A conformance report will raise 9 findings; fill them in the source spec.
+
+    Warning: The `def:Standards` block was not written.
+    ✖ The spec names "SDTMIG 3.4" but carries no `standards` table.
+    ℹ Define-XML 2.1 needs a name, version, type and status for each standard.
+
+### Let the data fill in what it knows
+
+artoo can read the datasets a define describes, which a spec-only tool
+cannot. Pass `data =` and a blank length is filled from the real maximum
+byte width, and value-level metadata is derived for the standard
+findings shapes — a result keyed by its test code, `AVAL` by `PARAMCD` —
+each derived row carrying the type and width of the rows it covers:
+
+``` r
+
+informed <- file.path(tempdir(), "informed.xml")
+invisible(
+  write_spec(sdtm_spec, informed, data = list(VS = cdisc_vs, DM = cdisc_dm))
+)
+```
+
+    Warning: 4 declared lengths are shorter than the data.
+    ✖ "DM.STUDYID", "VS.STUDYID", "VS.VSPOS", and "VS.VISIT": widened to the real
+      maximum.
+    ℹ A length below the real maximum is a conformance finding, so the data wins.
+
+    8 declared lengths are longer than this data.
+    ℹ Left as declared: a length is a claim about the domain, not about one
+      extract.
+
+``` r
+
+lint_define(informed)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: informed.xml
+    Definitions: 198    References: 299
+    External codelists (exempt from the orphan check): 1
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  10
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.DI is defined but nothing references it.
+    [define_orphan_leaf] Document LF.EC is defined but nothing references it.
+    [define_orphan_leaf] Document LF.EX is defined but nothing references it.
+    [define_orphan_leaf] Document LF.LB is defined but nothing references it.
+    [define_orphan_leaf] Document LF.XS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.2 is defined but nothing references it.
+    [define_orphan_standard] Standard STD.2_1 is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+    [define_missing_origin] Variable IT.VS.VSTPT carries no Origin, and neither do its value-level items.
+    [define_missing_origin] Variable IT.VS.VSTPTNUM carries no Origin, and neither do its value-level items.
+
+A stated length shorter than the data is widened, because a length below
+the real maximum is a conformance finding. One *longer* is left alone: a
+length is a claim about the domain, not about one extract.
+
+### Start from a blank workbook
+
+[`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+writes an empty Pinnacle 21 workbook with the sheets and headers
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+recognises, so a spec can be authored from the shape the reader wants
+rather than guessed at:
+
+``` r
+
+template <- tempfile(fileext = ".xlsx")
+write_template(template)
+readxl::excel_sheets(template)
+```
+
+     [1] "Study"             "Datasets"          "Variables"
+     [4] "ValueLevel"        "WhereClauses"      "Codelists"
+     [7] "Dictionaries"      "Methods"           "Comments"
+    [10] "Documents"         "Standards"         "Analysis Displays"
+    [13] "Analysis Results"  "Analysis Criteria"
+
 ## Where to next
 
 - [Conform &
@@ -1519,6 +1791,493 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
   spec in an end-to-end ADaM and SDTM build.
 - [Get started](https://vthanik.github.io/artoo/articles/artoo.md) — the
   round-trip from the top.
+# Authoring a specification workbook
+
+Most specifications are written in Excel, in a workbook of one sheet per
+kind of metadata. artoo reads that workbook and writes the submission’s
+define.xml from it. This article is the reference for filling one in:
+what each sheet is for, which cells artoo actually reads, and the
+handful of places where a plausible-looking entry produces a document
+that is not what you meant.
+
+It is written for the person holding the workbook. If you want the R
+side — inspecting a spec, repairing it, writing the define.xml — that is
+[Specifications](https://vthanik.github.io/artoo/articles/specs.md).
+
+## Start from a blank one
+
+[`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+writes an empty workbook whose sheets and headers are artoo’s own
+reader, so nothing you fill in can be silently ignored:
+
+``` r
+
+book <- tempfile(fileext = ".xlsx")
+write_template(book)
+readxl::excel_sheets(book)
+#>  [1] "Study"             "Datasets"          "Variables"        
+#>  [4] "ValueLevel"        "WhereClauses"      "Codelists"        
+#>  [7] "Dictionaries"      "Methods"           "Comments"         
+#> [10] "Documents"         "Standards"         "Analysis Displays"
+#> [13] "Analysis Results"  "Analysis Criteria"
+```
+
+Only **Datasets** and **Variables** are required. Every other sheet may
+be left empty and artoo omits what it finds nothing in.
+
+Two things to know before you start. A **column** artoo does not
+recognise is kept and written back out, so a sponsor column of your own
+survives. A **sheet** artoo does not recognise is not — add rows to the
+sheets above rather than a sheet of your own.
+
+## Two shapes, and how to tell them apart
+
+Workbooks come in two generations, and artoo reads both. You will
+recognise which one you have from three things:
+
+|  | Older | Newer |
+|----|----|----|
+| The study sheet is called | `Study` | `Define` |
+| Conditions live | on a `WhereClauses` sheet | in the `ValueLevel` cell |
+| The label column is called | `Description` | `Label` |
+
+If your workbook came out of a validation tool, it is whichever that
+tool writes. If you are starting fresh, use the template above: it names
+the study sheet `Study` and keeps conditions on `WhereClauses`, which is
+what every generation of tooling reads, while spelling the label column
+`Label`. Read on; anywhere the two shapes differ, this article says so.
+
+## Define / Study — the study sheet
+
+Two columns, `Attribute` and `Value`, one row per attribute.
+
+These five are the ones to fill in:
+
+| Attribute | Why it matters |
+|----|----|
+| `StudyName` | The study’s short name. |
+| `StudyDescription` | One line describing the study. |
+| `ProtocolName` | The protocol identifier. |
+| `StandardName` | `SDTM-IG`, `ADaM-IG`, `SEND-IG`. Unhyphenated spellings are understood too. |
+| `StandardVersion` | `3.4`, `1.1`, and so on. |
+
+**`StandardName` and `StandardVersion` are the two that bite.**
+Define-XML 2.0 refuses to be written without them; 2.1, which artoo
+writes by default, warns and carries on. Fill them in either way —
+everything downstream reads better for it. Write the older version with
+`write_spec(spec, path, version = "2.0")`.
+
+A workbook artoo wrote from an existing define.xml carries more, because
+that document had identifiers this sheet is where to keep:
+
+``` r
+
+book3 <- tempfile(fileext = ".xlsx")
+suppressWarnings(write_spec(adam_spec, book3))
+readxl::read_excel(book3, sheet = "Study")
+#> # A tibble: 13 × 2
+#>    Attribute                  Value                                             
+#>    <chr>                      <chr>                                             
+#>  1 StudyName                  CDISC-Sample                                      
+#>  2 StudyDescription           CDISC-Sample Data Definition                      
+#>  3 ProtocolName               CDISC-Sample                                      
+#>  4 DefineVersion              2.1.10                                            
+#>  5 StudyOID                   STDY.www.cdisc.org/CDISC-Sample/ADaM              
+#>  6 FileOID                    www.cdisc.org/CDISC-Sample/ADaM/1/Define-XML_2.1.0
+#>  7 Context                    Submission                                        
+#>  8 MetaDataVersionOID         MDV.CDISC01.ADaMIG.1.1.ADaM.2.1                   
+#>  9 MetaDataVersionName        Study CDISC-Sample, Data Definitions              
+#> 10 MetaDataVersionDescription Study CDISC-Sample, Data Definitions              
+#> 11 Originator                 CDISC Data Exchange Standards Team                
+#> 12 StandardName               ADaM-IG                                           
+#> 13 StandardVersion            1.1
+```
+
+You do not have to supply any of those; artoo mints what a new document
+needs. Leave them alone if they are there.
+
+Anything else you put on this sheet is kept and written back out, so a
+sponsor field of your own survives a round trip.
+
+## Datasets — one row per dataset
+
+`Dataset` and one of `Description` / `Label` are the minimum.
+
+| Column | Notes |
+|----|----|
+| `Dataset` | The name, `DM`, `ADSL`. |
+| `Description` or `Label` | The dataset label. |
+| `Class` | `EVENTS`, `FINDINGS`, `BASIC DATA STRUCTURE`, … |
+| `Structure` | Prose: “One record per subject”. **Required** — Define-XML has no default for it. |
+| `Key Variables` | Space- or comma-separated. This is where a variable’s key sequence comes from, so you do not fill that in twice. |
+| `Purpose` | `Tabulation` or `Analysis`. Derived from the standard when blank. |
+| `Repeating`, `Reference Data` | `Yes` / `No`. |
+| `Domain` | The two-letter domain, for SDTM. Named in the not-submission-grade warning when blank. |
+| `SubClass` | A subclass of `Class`, where the standard defines one. |
+| `SAS Dataset Name` | When it differs from `Dataset`. Defaults to it. |
+| `Has No Data` | `Yes` when the dataset is empty. Needs a `Comment` explaining why. |
+| `Standard` | Which standard this dataset follows, when a study mixes versions. |
+| `Comment` | A **Comment ID**, matching a row on the Comments sheet — not free text. |
+
+## Variables — one row per variable per dataset
+
+| Column | Notes |
+|----|----|
+| `Order` | Position within the dataset. |
+| `Dataset`, `Variable` | Together they identify the row. |
+| `Label` | The variable label. |
+| `Data Type` | `text`, `integer`, `float`, `date`, `datetime`, `time`. |
+| `Length` | Expected on text, integer and float. **Leave it blank on dates and times** — a validator flags one there. |
+| `Significant Digits` | Only with `float`. |
+| `Format` | The display format. |
+| `Mandatory` | `Yes` / `No`. |
+| `Codelist` | A Codelist ID **or a Dictionary ID** — one column serves both. |
+| `Origin` | `Collected`, `Derived`, `Assigned`, `Protocol`, `Predecessor`, `Not Available`, `Other`. **The capitals matter.** |
+| `Pages` | CRF page numbers. See *Pages* below. |
+| `Method` | A Method ID, for a derived variable. |
+| `Predecessor` | Where an ADaM variable came from, e.g. `DM.AGE`. |
+| `Role` | `Identifier`, `Topic`, `Timing`, … |
+| `Origin Document` | Which document `Pages` refers to. Defaults to the annotated CRF. |
+| `Source` | Who provided a collected value: `Investigator`, `Sponsor`, `Subject`, `Vendor`. |
+| `Assigned Value` | The value, for an `Assigned` origin. |
+| `SAS Field Name` | When it differs from `Variable`. |
+| `Has No Data` | `Yes` when the variable is always empty. |
+| `Comment` | A Comment ID. |
+
+**Origin decides what else you must fill.** `Derived` wants a `Method`;
+`Predecessor` wants a `Predecessor`; `Collected` wants `Pages`. artoo
+writes what you give it, and a reviewer reading the rendered document
+sees a blank where you left one.
+
+## ValueLevel — when one variable means several things
+
+A `QVAL` in a SUPP dataset, or an `AVAL` that is a different measurement
+per `PARAMCD`, needs one row per meaning. The columns are the Variables
+ones, plus the one that matters most:
+
+`Where Clause` says **which records this row describes**. In the newer
+shape you write the condition itself; in the older shape you write an ID
+and define the condition on the WhereClauses sheet.
+
+The condition grammar, written out:
+
+    PARAMCD EQ ACTOT                              a single value
+    PARAMCD IN (ACITM01, ACITM02, ACITM03)        a set, in parentheses
+    LBTESTCD EQ HCT and LBSPEC EQ BLOOD           several conditions, ANDed
+    AVISIT EQ "Week 24"                           quote a value with a space
+    LBCAT EQ "CHEMISTRY, LOCAL"                   or with a comma
+    DM.COUNTRY EQ USA                             a variable in another dataset
+
+Four rules worth knowing:
+
+- **A value runs to the end of the condition.** `AVISIT EQ Week 24`
+  already means the seven characters `Week 24`, and
+  `LBCAT EQ CHEMISTRY, LOCAL` already means the sixteen. You do not need
+  quotes for a space or a comma after `EQ`.
+- **Double quotes are stripped when you use them**, so writing
+  `AVISIT EQ "Week 24"` gets the same answer. Single quotes are not:
+  they stay in the value.
+- **The one place quotes are load-bearing is inside a set.** `IN` splits
+  on commas, so a member that contains one has to be quoted:
+  `PARAMCD IN ("A, B", C)` is two members, not three. Parentheses round
+  a set are optional.
+- **Qualify a variable from another dataset**, as `DM.COUNTRY`. Without
+  the prefix, the condition is read as naming a variable in the row’s
+  own dataset — a different question with a different answer.
+
+**`or` is not a general operator.** Conditions are ANDed. artoo folds an
+`or` between values of the *same* variable into a set —
+`SEX EQ M or SEX EQ F` becomes `SEX IN (M, F)` — and refuses one across
+different variables, because Define-XML has no way to say it. Split
+those into separate value-level rows.
+
+**One thing cannot be written inline at all:** a value containing the
+word `and` or `or`, because that is what separates conditions.
+`ATPT EQ 4 hours and 30 minutes` cannot be parsed. Use a WhereClauses
+sheet, which needs no parsing.
+
+## WhereClauses — the older shape only
+
+One row per comparison; several rows sharing an `ID` are ANDed together.
+
+| Column | Notes |
+|----|----|
+| `ID` | Referenced from the ValueLevel `Where Clause` cell. |
+| `Dataset`, `Variable` | What is being tested. |
+| `Comparator` | `EQ`, `NE`, `IN`, `NOTIN`, `LT`, `LE`, `GT`, `GE`. |
+| `Value` | One value, or a comma-separated list for `IN` / `NOTIN`. |
+| `Comment` | A Comment ID, when the condition needs explaining. |
+
+If your workbook has no such sheet, write the condition in the
+ValueLevel cell instead; artoo works out which shape you used from
+whether the sheet is there.
+
+## Codelists — one row per term
+
+The list-level columns repeat on every term row. That looks redundant
+and is how the format works.
+
+| Column | Notes |
+|----|----|
+| `ID` | The codelist identifier, referenced from `Variables.Codelist`. |
+| `Name` | The codelist name. Fill it in — artoo falls back to the ID, which is not a name. |
+| `Data Type` | `text`, `integer`, `float`. Should match the variables that use it. |
+| `NCI Codelist Code` | The C-code for the list, e.g. `C66731`. |
+| `Order` | Position of the term. |
+| `Term` | The submitted value. |
+| `Decoded Value` | What it means. |
+| `NCI Term Code` | The C-code for the term. |
+| `Rank` | The term’s rank, where the terminology defines one. |
+| `SAS Format Name` | The format name, `$SEX`. |
+| `Comment` | A **Comment ID**. |
+
+## Dictionaries — MedDRA, WHODrug, ISO 3166
+
+An external dictionary has no terms to list, so it gets its own sheet:
+`ID`, `Name`, `Data Type`, `Dictionary`, `Version`. A variable points at
+one from its **`Codelist`** column, exactly as it would an enumerated
+codelist — there is one column for both, and artoo resolves against
+both.
+
+## Standards
+
+Define-XML 2.1 records every standard the study uses, not just the one
+the study sheet names: the implementation guide, the controlled
+terminology releases, any prior versions still in play. One row each —
+`ID`, `Name`, `Type` (`IG`, `CT`, `MODEL`), `Version`, `Status`,
+`Publishing Set` — and the Datasets sheet’s `Standard` column points at
+them.
+
+Leave it empty and artoo writes one row from the study sheet’s
+`StandardName` and `StandardVersion`, which is enough for a document
+that follows a single standard.
+
+## Methods, Comments, Documents
+
+**Methods** — `ID`, `Name`, `Type` (`Computation`, `Imputation`,
+`Transpose`, `Other`), and `Description`, the prose a reviewer reads.
+`Expression Context` and `Expression Code` carry one formal expression:
+the language, and the code. `Document` and `Pages` point at where the
+method is written up.
+
+**Comments** — `ID`, `Description`, and a `Document` and `Pages` of
+their own. Every `Comment` cell elsewhere in the workbook is an ID
+matching a row here. This is the single most common workbook mistake:
+writing the comment text into the `Comment` cell of the Variables sheet,
+where an ID belongs. artoo reports it as an unresolved reference rather
+than guessing.
+
+**Documents** — `ID`, `Title`, `Href`. The `Href` is a filename, and it
+is also how artoo knows which document is the annotated CRF: **a
+filename ending in `crf`** (`acrf.pdf`, `blankcrf.pdf`,
+`oncology-crf.pdf`) is the annotated CRF, and everything else is a
+supplemental document. If your CRF is called something else, say so with
+a `Role` column of `Annotated CRF`.
+
+## Pages
+
+A page reference means nothing without a document. Write pages as `4 5`,
+`4, 5`, or a range `4-5`: all three are understood, commas are
+normalised to the spaces Define-XML wants, and a range is written out as
+a first and last page rather than a list.
+
+**Which document the pages belong to** comes from one of two places. Set
+`Origin Document` on the row to name a specific one; leave it blank and
+a `Collected` origin’s pages default to the annotated CRF. Methods and
+Comments have their own `Document` column for the same reason. If a row
+has pages and there is no document to attach them to, artoo refuses
+rather than attaching them to a document nobody named.
+
+## Analysis Displays and Analysis Results
+
+For ADaM specifications with analysis results metadata.
+
+**Analysis Displays** — `ID`, `Title`, and the `Document` and `Pages`
+where the display appears.
+
+**Analysis Results** — `Display`, `ID`, `Description`, `Reason`,
+`Purpose`, the documentation and the programming code. The column that
+carries the selection is:
+
+- newer shape: `Selection Criteria`, one bracket group per analysis
+  dataset — `ADAE[AESER EQ Y] ADSL[SAFFL EQ Y]`, and `ADSL[]` for every
+  record;
+- older shape: an `Analysis Criteria` sheet, one row per analysis
+  dataset, keyed by `Display` and `Result`, with its own `Variables` and
+  `Where Clause` — the same condition grammar as ValueLevel.
+
+`Variables` names the analysis variables, qualified by dataset when the
+result spans more than one: `ADAE.AEBODSYS, ADAE.AEDECOD`.
+`Documentation Refs` and `Programming Document` name a Document ID each.
+`Join Comment` is a Comment ID explaining how several analysis datasets
+relate.
+
+## Fill it in, then check it
+
+Reading tells you what artoo understood. Read the workbook back and look
+at the slots before you write anything:
+
+``` r
+
+spec <- read_spec(system.file("extdata", "adam-spec.xlsx", package = "artoo"))
+spec
+#> <artoo_spec>
+#> Study: CDISC-Sample
+#> Standard: ADaMIG 1.1
+#> Datasets:  2
+#> Variables: 104
+#> Codelists: 20
+#> Methods: 45
+#> Comments: 11
+#> Documents: 8
+#> Spec for: ADSL, ADAE
+```
+
+[`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
+checks the spec against itself — every reference resolving, every key
+sequence contiguous — without needing the data. It reports notes as well
+as errors, so expect to see some on a real spec:
+
+``` r
+
+validate_spec(spec)
+#> artoo Spec Check
+#> ================
+#> 
+#> Spec Summary
+#> ------------
+#> Study: CDISC-Sample
+#> Scope: ADSL, ADAE
+#> Datasets: 2    Variables: 104
+#> Methods referenced: 45    Comments referenced: 7
+#> 
+#> Findings Summary
+#> ----------------
+#>   error    0
+#>   warning  0
+#>   note     10
+#> 
+#> Notes
+#> -----
+#> [comment_unused] Comment 'COM.JOIN-ADSL-ADAE' is defined but never referenced.  (COM.JOIN-ADSL-ADAE)
+#> [comment_unused] Comment 'COM.STDCT.01' is defined but never referenced.  (COM.STDCT.01)
+#> [comment_unused] Comment 'COM.STDCT.02' is defined but never referenced.  (COM.STDCT.02)
+#> [comment_unused] Comment 'COM.STD5' is defined but never referenced.  (COM.STD5)
+#> [document_unused] Document 'LF.ADSL' is defined but never referenced.  (LF.ADSL)
+#> [document_unused] Document 'LF.ADQSADAS' is defined but never referenced.  (LF.ADQSADAS)
+#> [document_unused] Document 'LF.ADAE' is defined but never referenced.  (LF.ADAE)
+#> [document_unused] Document 'LF.ADRG' is defined but never referenced.  (LF.ADRG)
+#> [document_unused] Document 'LF.CSR' is defined but never referenced.  (LF.CSR)
+#> [document_unused] Document 'LF.at14-5-02.sas' is defined but never referenced.  (LF.at14-5-02.sas)
+```
+
+Then write the define.xml. artoo validates the document against the
+CDISC schemas before the file reaches its destination, so an invalid one
+never overwrites a good file:
+
+``` r
+
+define <- tempfile(fileext = ".xml")
+write_spec(spec, define)
+#> Warning: The spec is not submission-grade.
+#> ✖ Nothing fills "datasets$archive_location_id".
+#> ℹ A conformance report will raise 1 finding; fill them in the source spec.
+validate_define(define)
+#> artoo Define-XML Schema Check
+#> =============================
+#> 
+#> Summary
+#> -------
+#> Document: file201f65a5c172.xml
+#> Define-XML version: 2.1
+#> Schema valid: yes
+#> 
+#> No findings.
+```
+
+Pass `html = TRUE` to also render the document through the CDISC
+stylesheet. One quirk of that stylesheet to not chase: every 2.1 dataset
+heading ends `... -` with the class blank, because the heading reads the
+2.0 class *attribute* and 2.1 records the class as an *element* —
+CDISC’s own published 2.1 examples render the same bare dash, and the
+class does appear in the Datasets summary table.
+
+And
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+walks the reference graph the schema cannot see — an OID in Define-XML
+is a plain string as far as the schema is concerned, so a reference
+pointing at nothing is schema-valid:
+
+``` r
+
+lint_define(define)
+#> artoo Define-XML Reference Check
+#> ================================
+#> 
+#> Summary
+#> -------
+#> Document: file201f65a5c172.xml
+#> Definitions: 198    References: 244
+#> External codelists (exempt from the orphan check): 2
+#> 
+#> Findings Summary
+#> ----------------
+#>   error    0
+#>   warning  4
+#>   note     0
+#> 
+#> Warnings
+#> --------
+#> [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+#> [define_orphan_standard] Standard STD.CT.01 is defined but nothing references it.
+#> [define_orphan_standard] Standard STD.CT.02 is defined but nothing references it.
+#> [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+```
+
+Read the severities, not the count. An **error** is a reference pointing
+at nothing, and it means the document is wrong. A **warning** is usually
+an orphan — something defined that nothing uses — which a valid document
+may well have, and this bundled spec does: it is scoped to two datasets
+and still names documents and standards the others used. Nothing here is
+dangling, which is the line that matters.
+
+## What a workbook cannot carry
+
+A workbook is an interchange format, not a lossless one. A spec that
+came from a define.xml knows things no sheet has a column for — the OIDs
+the sponsor chose, which standard each dataset follows, whether a
+codelist was extended. artoo names them rather than dropping them
+quietly:
+
+``` r
+
+book2 <- tempfile(fileext = ".xlsx")
+write_spec(adam_spec, book2)
+#> Warning: A Pinnacle 21 workbook cannot carry all of this spec.
+#> ✖ datasets: "itemgroupoid" and "archive_location_id"
+#> ✖ variables: "itemoid" and "origin_description"
+#> ✖ where_clauses: "itemoid"
+#> ✖ codelists: "extended", "standard_id", and "is_non_standard"
+#> ✖ standards: "is_primary" and "order"
+#> ✖ arm_displays: "page_type", "page_title", and "order"
+#> ✖ arm_results: "documentation_pages", "documentation_page_type",
+#>   "documentation_page_title", and "order"
+#> ℹ That is dropped here; write ".json" to keep the spec whole.
+```
+
+Each line names the columns that sheet has no place for. Write a `.json`
+path instead when you need the spec back exactly — that format is
+lossless by construction, and it is the one to archive.
+
+## Where to next
+
+- [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
+  the same workbook from the R side: read, inspect, repair, and write.
+- [Conform &
+  validate](https://vthanik.github.io/artoo/articles/conform.md) — apply
+  the spec to data and see every finding.
+- [Get started](https://vthanik.github.io/artoo/articles/artoo.md) — the
+  whole round trip.
 # Authors and Citation
 
 ## Authors
@@ -1526,20 +2285,31 @@ read_spec("define.xml") |> write_spec("spec.xlsx")
 - **[Vignesh Thanikachalam](https://github.com/vthanik)**. Author,
   maintainer, copyright holder.
 
+- **Lex Jansen**. Copyright holder.  
+  Author of the bundled CDISC Define-XML stylesheets
+
+- **Clinical Data Interchange Standards Consortium (CDISC)**. Copyright
+  holder.  
+  Author of the bundled Define-XML, ODM and ARM schemas and example
+  documents
+
+- **World Wide Web Consortium**. Copyright holder.  
+  Author of the bundled xml, xlink and xmldsig schemas
+
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/v0.1.3/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/vthanik/artoo/blob/main/DESCRIPTION)
 
 Thanikachalam V (2026). *artoo: Lossless CDISC-Native Input and Output
-for Clinical Datasets*. R package version 0.1.3,
+for Clinical Datasets*. R package version 0.2.0,
 <https://vthanik.github.io/artoo/>.
 
     @Manual{,
       title = {artoo: Lossless CDISC-Native Input and Output for Clinical Datasets},
       author = {Vignesh Thanikachalam},
       year = {2026},
-      note = {R package version 0.1.3},
+      note = {R package version 0.2.0},
       url = {https://vthanik.github.io/artoo/},
     }
 # artoo
@@ -1548,7 +2318,9 @@ for Clinical Datasets*. R package version 0.1.3,
 clinical-trial datasets. It moves data between **SAS XPORT (XPT)**,
 **CDISC Dataset-JSON v1.1**, **NDJSON**, **Apache Parquet**, and **RDS**
 through one canonical metadata model, so converting between any two is
-lossless *by construction* — not by best effort.
+lossless *by construction* — not by best effort. It also reads and
+writes the specification itself: **Define-XML 2.1 and 2.0**, Pinnacle 21
+workbooks, and a native lossless JSON.
 
 ## Installation
 
@@ -1593,6 +2365,54 @@ adsl <- cdisc_adsl |>
 # Read it back — labels, formats, types, and record count intact.
 get_meta(read_xpt(path))@dataset$records
 #> [1] 60
+```
+
+The same spec is the submission’s define.xml.
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+dispatches on the extension, schema-validates the document before it
+reaches its destination, and
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+checks the references the schema cannot see:
+
+``` r
+
+define <- tempfile(fileext = ".xml")
+write_spec(adam_spec, define)
+
+# 227 definitions, 248 references, nothing dangling and nothing orphaned.
+lint_define(define)
+#> artoo Define-XML Reference Check
+#> ================================
+#> 
+#> Summary
+#> -------
+#> Document: file8588416783eb.xml
+#> Definitions: 227    References: 248
+#> 
+#> Findings Summary
+#> ----------------
+#>   error    0
+#>   warning  32
+#>   note     0
+#> 
+#> Warnings
+#> --------
+#> [define_orphan_codelist] Codelist CL.AVISIT is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AVISITN is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AWU is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.DTYPE is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAMCD_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAMN_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAM_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AWRANGE_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.VISIT is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.VISITNUM is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.AVISIT is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.ADY is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.ADT is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.BASE is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.CHG is defined but nothing references it.
+#> ... and 17 more (see x@findings)
 ```
 
 [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) is
@@ -1667,8 +2487,10 @@ columns(adsl)
 - **Pure R and lightweight.** No external SAS or Java runtime, and no
   heavy I/O dependency.
 - **CDISC-native.** Types, dates and `--DTC` text, and codelists follow
-  the Dataset-JSON v1.1 vocabulary; specs read from Define-XML, Pinnacle
-  21 workbooks, or native JSON.
+  the Dataset-JSON v1.1 vocabulary. Specs read from and write back to
+  Define-XML 2.1 and 2.0, Pinnacle 21 workbooks, and a native lossless
+  JSON — so a workbook becomes a submission-grade define.xml in one
+  line.
 
 ## Where artoo fits
 
@@ -1698,6 +2520,27 @@ The generic
 dispatch on the file extension; every reader supports partial reads via
 `col_select` and `n_max`.
 
+Specifications travel the same way, through
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+and
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md):
+
+| Format      | Extension | Use                                    |
+|-------------|-----------|----------------------------------------|
+| Define-XML  | `.xml`    | The submission deliverable, 2.1 or 2.0 |
+| Pinnacle 21 | `.xlsx`   | The workbook a spec is authored in     |
+| Native JSON | `.json`   | Lossless checkpoint, nothing dropped   |
+
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+schema-validates a define.xml before the file reaches its destination,
+so an invalid one never overwrites a good file.
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+checks any vendor’s document against the bundled CDISC schemas offline;
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+walks the OID graph the schema cannot see;
+[`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+writes a blank workbook shaped exactly like the reader.
+
 Partial ISO 8601 dates are first-class: a character `--DTC` column typed
 `date` writes to XPT as ISO text — `"1951-12"` survives byte for byte —
 while `targetDataType = "integer"` drives the ADaM numeric-date
@@ -1709,7 +2552,7 @@ and `>24h`, negative, and fractional times round-trip every format.
 - [Get started](https://vthanik.github.io/artoo/articles/artoo.html) —
   the whole round-trip, start to finish, on bundled data.
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
-  — read, inspect, and repair a spec.
+  — read, inspect, and repair a spec, and write the define.xml.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.html) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
@@ -1730,6 +2573,641 @@ MIT © Vignesh Thanikachalam
     YEAR: 2026
     COPYRIGHT HOLDER: Vignesh Thanikachalam
 # Changelog
+
+## artoo 0.2.0
+
+- [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)
+  and
+  [`members()`](https://vthanik.github.io/artoo/reference/members.md)
+  refuse an empty `format` with a classed condition. `format = ""`
+  reached `base::exists("")`, which throws an unclassed `simpleError`,
+  so it escaped every `artoo_error_*` handler a caller could have
+  written.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML reports which files informed the document when `data` is
+  a folder, on every call rather than only when something is unmatched.
+  A define is a submission artefact and the files behind it cannot be
+  recovered from it afterwards.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML warns when a file records a different dataset than the
+  name it was matched by, and when a derived archive location names a
+  file the folder does not hold. Matching is by basename, so `vs.json`
+  copied to `dm.json` used to widen DM’s lengths from VS bytes in
+  silence.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` documents what a workbook cannot carry: a method with
+  several formal expressions keeps only the first, because a workbook
+  gives each method one row with one code cell. The write already named
+  the methods it truncated; the help page claimed the table survived
+  whole.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  reads back a native JSON spec that names no datasets.
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  wrote the file and
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  refused it, saying to “pass at least a `dataset` table” to a caller
+  who had passed a path. A key that is present but empty means the spec
+  has none, which is not the same as the key being absent.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML names every unreadable file at once when `data` is a
+  folder, rather than stopping at the first. A folder holding three
+  corrupt datasets took three runs to discover. It still aborts rather
+  than skipping them: a define written from a silently reduced set of
+  files is the wrong document produced without complaint.
+
+- [`members()`](https://vthanik.github.io/artoo/reference/members.md)
+  reads a gzipped dataset. `members("dm.ndjson.gz")` aborted with
+  `No codec handles the "gz" extension` on a file
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md)
+  produces and
+  [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)
+  reads. Gzip is peeled for the codecs that support it, so `dm.json.gz`
+  inventories as `dm` and `dm.parquet.gz` stays unhandled, which is what
+  [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)
+  does with it too.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML accepts a folder for `data =`, not only a named list of
+  frames. Each dataset the spec names is matched to a file whose
+  basename is that name, ignoring case, so a submission folder of
+  `dm.xpt` and `ae.xpt` no longer has to be retyped as
+  `list(DM = dm, AE = ae)`. The folder is inventoried, not descended. A
+  dataset with no file is reported, not an error; a file the spec does
+  not name is left alone; a dataset matching two files aborts rather
+  than choosing, because two formats can disagree about byte width and
+  picking one silently would change the document.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML gains `data_format =`, restricting a folder to the named
+  formats. It takes format names as
+  [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
+  lists them. Adding it means
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  no longer accepts `dat =` as an abbreviation of `data =`, which R had
+  been resolving by partial matching.
+
+- [`members()`](https://vthanik.github.io/artoo/reference/members.md)
+  gains `format =`, restricting the inventory to the named formats. It
+  takes format names as
+  [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
+  lists them, not file extensions, so `"parquet"` claims both `.parquet`
+  and `.pq`; several names are a set rather than a precedence order. The
+  default `NULL` inventories every format, which is what
+  [`members()`](https://vthanik.github.io/artoo/reference/members.md)
+  did before. The reason to pass it is a directory holding one dataset
+  in two formats, where the full inventory reports both.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  refuses an `Analysis Criteria` sheet missing `Display`, `Result` or
+  `Dataset`, naming the column. It used to tolerate the absence
+  silently: the join key matched nothing, the whole sheet was discarded
+  without a word, and the failure surfaced later at write time naming
+  the analysis results rather than the sheet that caused it. `Variables`
+  and `Where Clause` stay optional, which is the split the format itself
+  declares.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  links each dataset to the standard its `Standard` cell names, minting
+  a `standards` row where none defines it — so a workbook-sourced define
+  carries `def:StandardOID` on every `ItemGroupDef` and the rendered
+  dataset headings show the standard, as CDISC’s own examples do. A
+  `Standard` column naming several standards no longer aborts: each row
+  keeps its own and `@standard` holds only the primary.
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` accordingly writes each dataset’s own standard rather than
+  stamping the primary over every row.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  reads an `Analysis Criteria` sheet that omits its optional columns —
+  one naming only datasets used to die mid-read — and warns when that
+  sheet overrides a result’s non-blank `Selection Criteria` cell instead
+  of discarding the cell silently.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  keeps a sheet’s own `Description` column when `Label` supplied the
+  label: it is unconsumed sponsor text, not a second spelling of one.
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` likewise no longer overwrites a foreign `Description` on
+  the ValueLevel sheet with the label.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML derives a dataset’s archive location (`LF.<DATASET>`
+  pointing at `<dataset>.xpt`) when the spec states none, reusing a
+  document already carrying that id rather than minting a second leaf
+  beside it — two leaves with one `xs:ID` failed schema validation on
+  artoo’s own workbook round trip. A dataset flagged as having no data
+  derives none, the carve-out CDISC’s own examples make.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to Define-XML writes the partly-decoded and duplicated codelist shapes
+  real sponsor specifications carry, instead of refusing them at the
+  schema gate as an artoo defect: a term without a decode in a decoded
+  list gets an empty `Decode` (never the string `"NA"`), a coded value
+  listed twice identically collapses to its first row with a warning,
+  one defined two ways is refused naming the codelist and values, and a
+  codelist seating two terms at one `OrderNumber` is written in source
+  order without the attribute. Identical repeated method and comment
+  rows collapse the same way; contradictory ones are refused by id.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` writes the one workbook shape both generations of tooling
+  imports. The study sheet is named `Study`, a value-level row names its
+  condition by ID and a `WhereClauses` sheet defines it, an analysis
+  result’s datasets sit on an `Analysis Criteria` sheet, and a label is
+  carried under both `Label` and `Description`. Measured against the
+  importer that the open-source edition of the reference tooling ships:
+  it makes the study sheet its initialising sheet and therefore
+  required, so a workbook naming it `Define` was refused before a row
+  was read, and it treats the value-level cell as a foreign key, so a
+  condition written there as an expression cost every value-level row.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  reads a value-level label from a `Description` column, which is how
+  the older workbook generation spells it. Reading one used to give
+  every value-level row no label, and artoo’s own submission-grade
+  notice then reported the absence, on a workbook that had them.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  round-trip a workbook artoo wrote. A workbook-sourced spec carries its
+  value-level link in a different column from a define-sourced one, and
+  the writer only understood the second, so its own output could not be
+  read back. No test covered it; one does now.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a define.xml keeps a variable’s reference to an external
+  dictionary. The referential scrub predates dictionaries being modelled
+  and stripped every such binding, so an adverse-events define came back
+  with `AEDECOD` naming no terminology at all while the dictionary it
+  named was written out beside it.
+
+- [`check_spec()`](https://vthanik.github.io/artoo/reference/check_spec.md)
+  no longer aborts on a variable whose terminology is an external
+  dictionary. A dictionary enumerates nothing, so there is no membership
+  to check; checking anyway stopped the conformance run on every
+  adverse-events dataset.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  writes an external dictionary as the `ExternalCodeList` it is, and
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a define.xml reads one back. A variable naming MedDRA or WHODrug
+  used to write a `CodeListRef` pointing at nothing – schema-valid, and
+  rejected by artoo’s own reference check – while a document carrying
+  one lost it and every reference to it on the way in.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook reads the `Analysis Criteria` sheet, which is where the
+  older workbook generation keeps an analysis result’s datasets. artoo
+  recognised the sheet name and never read the sheet, so a result
+  authored that way reached the writer naming no analysis dataset and
+  the write refused it.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` no longer re-homes a where-clause check that names a
+  variable in another dataset. Which dataset an unqualified name belongs
+  to is decided by the row the condition sits on, and the writer was
+  deciding it from the condition’s first check instead – so a VS value
+  conditioned on `DM.COUNTRY` came back conditioned on `VS.COUNTRY`,
+  selecting different records, with nothing said.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  handle a where-clause value containing the word `and` or `or`.
+  `"Nausea and vomiting"` is a real preferred term, and the condition
+  splitter was blind to quotes, so reading artoo’s own workbook turned
+  one check into two whose values were `"Nausea` and `vomiting"`.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xml` writes a page list separated by spaces. A page cell written
+  `4, 5` shipped its comma into `PageRefs`, which is a space-separated
+  list.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xlsx` writes the study sheet in the format’s own vocabulary. A
+  spec read from a define.xml carries the document’s identifiers, and
+  none of them had a workbook spelling, so the sheet went out reading
+  `define_version`, `study_oid` and `metadata_version_oid` – artoo’s
+  internal column names on a sheet a person reads and another tool
+  imports. It also states `StandardName` and `StandardVersion`, which
+  artoo read and never wrote back, so a workbook it produced could not
+  say which standard it described.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook resolves the standard its Study sheet states. The sheet
+  carries a name and a version as two attributes; artoo kept both as
+  unmodelled study fields, so
+  [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md)
+  was `NA` and writing Define-XML 2.0 refused for want of the standard
+  the sheet had named. A Study sheet that names one now also yields the
+  `def:Standards` row Define-XML 2.1 asks for.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook works out which documents are the annotated CRF from
+  their filenames, since the sheet has no column for it. A document
+  whose name ends in `crf` is the annotated CRF, one with no filename
+  belongs to no category, and an explicit `Role` still wins.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xml` gives a method, comment, codelist, document or standard
+  named on a workbook sheet an OID of its own kind, so a method called
+  `EXTRT` is written as `MT.EXTRT`. Names taken straight from the sheet
+  collided across kinds and the document failed its own schema. The spec
+  keeps the names the author wrote.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook reads a method’s formal expression. The `Methods` sheet
+  carries one, in its expression context and code columns, and artoo
+  read those into the spec and then used them nowhere: a method authored
+  with a formal expression produced a define.xml with none. Writing a
+  workbook puts the expression back in the same two columns.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  reads a value-level condition from either carrier: an expression in
+  the `ValueLevel` sheet’s `Where Clause` cell, or a clause ID there
+  with a `WhereClauses` sheet defining it. An analysis result’s datasets
+  are likewise read from a `Selection Criteria` cell or an
+  `Analysis Criteria` sheet. Which one a workbook uses is a property of
+  the sheet it came from, not of the workbook, so both are read wherever
+  they appear.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook no longer loses a value-level row’s `Assigned Value`,
+  `Source`, `Pages` or `Predecessor`. All four are columns of the sheet,
+  and all four were mapped for `Variables` and not for `ValueLevel`, so
+  a value-level `Origin = Predecessor` wrote an origin describing
+  nothing.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook no longer keeps the quote characters that delimit a
+  where-clause value. `AVISIT EQ "Week 24"` selected records whose
+  AVISIT was the eight characters `"Week 24"` rather than the seven.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a workbook reads a codelist’s `Comment` as the comment reference it
+  is, and a variable may name an external dictionary in its `Codelist`
+  column, which is where a workbook puts it. Reading an adverse events
+  spec aborted asking for terms a dictionary does not have.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  keep an analysis variable’s dataset qualifier straight, and a
+  where-clause check that leaves its own dataset now says so.
+
+- `define_lint()` is now
+  [`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md),
+  matching the verb-first grammar of every other export. The function is
+  new in this development version and has never been released, so
+  nothing that ran before breaks.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  with `datasets =` no longer keeps the codelists, methods, comments and
+  documents belonging to the datasets it dropped. Scoping removes the
+  referrers, so what was left over was an orphan artoo had just created:
+  a spec narrowed to two ADaM datasets wrote a define.xml its own linter
+  flagged 32 times. An orphan in an unscoped spec is left exactly where
+  the author put it.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a define.xml is about four times faster and no longer grows
+  super-linearly. Every XPath matches by `local-name()`, but `xml2`
+  rebuilt a namespace prefix table from the whole document on each one.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a define.xml reads a value-level `ItemRef/@Role`, and reports the
+  codelist aliases, `CodeList` descriptions and declared languages it
+  has no column for, rather than dropping them in silence.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xml` no longer aborts when `data =` covers only some of the
+  datasets sharing an `ItemDef` OID; the widest measurement applies to
+  the whole group.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xml` no longer reports an ADaM spec as missing `datasets$domain`,
+  which is an SDTM concept ADaM leaves blank.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to `.xml` says what a bare data frame is when `data =` gets one. A
+  data frame is a named list, so it reached the per-element check and
+  was refused for a column not being a data frame, naming the column.
+
+- The bundled `sdtm-spec.xlsx` and `adam-spec.xlsx` are rebuilt. They
+  were written before the where-clause fix below, so reading the
+  package’s own example workbook warned that 23 value-level rows named a
+  clause it did not define.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  on a Pinnacle 21 workbook now names the individual columns a workbook
+  cannot carry, not just the one slot it has no sheet for. The sheets
+  added for Define-XML closed the slot-level gaps and opened
+  column-level ones: `Standards` has no column for which standard is
+  primary, and none of the sheets has one for an ItemOID.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  on a Pinnacle 21 workbook keys a ValueLevel row to the `WhereClauses`
+  sheet by ID. It wrote the rendered expression there, which left every
+  value-level row of an SDTM define naming a clause the same workbook
+  did not define.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  renders HTML through the stylesheet the document’s processing
+  instruction actually names, so `stylesheet = "acme.xsl"` and
+  `html = TRUE` no longer render through the bundled sheet and disagree
+  with the browser.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  writes Define-XML when given a `.xml` path, so a Pinnacle 21 workbook
+  or a native JSON spec becomes a submission-grade define.xml in one
+  call. The document is schema-validated before it reaches its
+  destination, so an invalid one never overwrites a good file.
+  Value-level metadata is emitted whole: the parent variable’s
+  `def:ValueListRef`, the `def:ValueListDef`, an `ItemDef` per
+  value-level row, and the `def:WhereClauseRef` and `def:WhereClauseDef`
+  behind it. External dictionaries are the one thing not written yet; a
+  populated `dictionaries` table is reported rather than emitted. Needs
+  the `xml2` package.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  no longer lose a multi-value `IN` where clause through a Pinnacle 21
+  workbook. The workbook holds one row per range check and the spec
+  holds one per value, and writing them row for row made
+  `PARAMCD IN (A, B, C)` read back as three ANDed one-value checks,
+  which select nothing.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Pinnacle 21 workbook reads an `Origin Document` column on the
+  Variables sheet, so a page reference keeps what it points at.
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now records which dataset defines a where
+  clause’s target, which a workbook has a column for and an OID does
+  not.
+
+- Reading a spec scoped to some datasets no longer leaves its where
+  clauses and analysis results referencing the others.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  now emits a variable’s predecessor and assigned value. Define-XML has
+  no attribute for either, so both go in the origin’s description, which
+  is where the CDISC stylesheet renders them; artoo read them and wrote
+  an empty origin, so an ADaM define lost its traceability.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  now emits CRF page references from a workbook. A page number with no
+  document defaults to the annotated CRF when the spec names one, and is
+  refused rather than dropped when it does not.
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Pinnacle 21 workbook reads a `Role` column on the Documents
+  sheet, so an author can designate which document is the annotated CRF.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  refuses a value-level row with no where clause. Written out it was an
+  `ItemRef` with no children: schema-valid, nothing dangling, and
+  asserting that the definition applies to every row of its parent.
+
+- [`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+  gains `define_unconditional_value` and `define_no_data_uncommented`.
+  Both catch things the schema cannot see (a well-formed element, an
+  optional attribute) and the reference checks cannot see (nothing to
+  dangle).
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  on a `.xlsx` path now writes the `WhereClauses`, `Dictionaries`,
+  `Standards` and analysis-results sheets.
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  learned them when the Define-XML work landed, so a workbook round trip
+  was losing exactly what artoo had just taught itself to read.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  gains `data`, which lets the datasets a define describes inform what
+  it says. A blank `length` is filled from the real maximum byte width
+  and a stated one shorter than the data is widened, because a length
+  below the real maximum is a conformance finding; a length longer than
+  the data is left alone, because it is a claim about the domain rather
+  than about one extract. Value-level metadata is derived for the
+  standard findings shapes (a result keyed by its test code, `TSVAL` by
+  `TSPARMCD`, `QVAL` by `QNAM`, `AVAL` and `AVALC` by `PARAMCD`), each
+  derived row carrying the type and width of the rows it covers, and a
+  variable the spec already describes is never touched. A dataset with
+  no records is flagged `def:HasNoData` when it carries a comment
+  explaining the absence.
+
+- [`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+  writes a blank Pinnacle 21 workbook with the sheets and headers
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  recognises, so a specification can be authored from the shape the
+  reader wants rather than guessed at. Every header comes from the
+  reader’s own maps, so the template cannot offer a column that would be
+  silently ignored. A `version = "2.0"` template omits the four columns
+  Define-XML 2.1 introduced.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  gains `html`, which renders the define.xml through its own CDISC
+  stylesheet into real HTML. Browsers are dropping XSLT support, so a
+  document that renders only by being opened in one is on its way to
+  being unreadable. Needs the `xslt` and `callr` packages; the transform
+  runs in a separate process because libxslt and libxml2’s schema
+  validator corrupt each other’s state in one session.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  no longer overwrites a stylesheet already sitting beside the output,
+  so a customised rendering survives a rewrite.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  warns when the define.xml it wrote is valid but not submission-grade,
+  naming every column nothing fills. None of them is required by the
+  schema, and every one draws a conformance finding, so a spec that is
+  incomplete partway through a study is still written rather than
+  refused.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Pinnacle 21 workbook now forward-fills the merged cells on the
+  analysis-results sheets, as it already did for every other sheet. A
+  workbook merges the display cell across a display’s results and the
+  result id across a result’s analysis datasets; without the fill those
+  rows were dropped.
+
+- A where clause may now qualify a variable in a different dataset,
+  which is what a value-level condition on `DM.COUNTRY` means. A
+  variable two datasets define is refused rather than resolved to one of
+  them.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML 2.0 document now reads its standard as a `standards`
+  row rather than one concatenated string. A version containing a space
+  (`3.1.2 Amendment 1` is a real one) used to have half of it moved into
+  the standard’s name on the way back out, and a document naming no
+  standard at all used to be written back asserting the standard was
+  `NA`.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now reports every place it reads one of
+  several: a second `def:DocumentRef`, `def:PDFPageRef`, or
+  `TranslatedText`. All four bundled CDISC examples lose a
+  `def:DocumentRef` this way, and the loss was invisible because the
+  writer dropped it too.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  now carry the document’s build provenance (`Originator`,
+  `SourceSystem`, `SourceSystemVersion`) and the MetaDataVersion’s own
+  comment.
+
+- Analysis Results Metadata (ARM v1.0) is read and written, in both
+  Define-XML versions.
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  fills `arm_displays` and `arm_results` from
+  `arm:AnalysisResultDisplays`, and
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  emits them back. One analysis result over several analysis datasets
+  keeps each dataset’s own where clause and analysis variables, which is
+  why `arm_results` is one row per result and dataset. Before this,
+  reading an ADaM define and writing it back orphaned every leaf, where
+  clause and comment that only its analysis results referenced.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now reads `def:PDFPageRef/@Title`, which
+  names the table or listing a page holds. Every analysis-results page
+  reference in the CDISC ADaM example carries one. It is 2.1-only, and
+  is withheld when writing 2.0.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  writes Define-XML 2.0 as well as 2.1, and converts between them. The
+  version follows the spec’s own `define_version` unless `version` says
+  otherwise. The switch is exactly what the two standards renamed:
+  `def:Standards` against `def:StandardName`/`def:StandardVersion`,
+  `def:Class` as an element against an attribute, `def:Context` and
+  `def:Origin/@Source` in 2.1 only, and the origin vocabulary (2.0’s
+  `CRF` and `eDT` are 2.1’s `Collected`). A downgrade warns once, naming
+  everything 2.0 cannot carry; a 2.1 origin with no 2.0 spelling is
+  refused rather than approximated.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now reads a PDF page RANGE. A
+  `def:PDFPageRef` states its pages as either a `PageRefs` list or a
+  `FirstPage`/`LastPage` range, and only the list was read, so every
+  range was dropped silently. Both now land in `pages`, a range written
+  as `"4-5"`.
+
+- [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  gains `...`, which the Define-XML path reads for `version`, `created`,
+  `stylesheet`, and `validate`. Freeze `created` for a byte-reproducible
+  submission build.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now keeps the document’s own identity:
+  `Study/@OID`, `FileOID`, the MetaDataVersion’s OID, name and
+  description, and the ODM `@Context`.
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  writes them back, so a document read and written keeps every
+  identifier an external reference may already name, rather than having
+  fresh ones minted from the study name.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now reports what it drops. An external
+  codelist (`MedDRA`, WHODrug, ISO 3166) and every reference to it are
+  still dropped, and an `ItemDef` carrying more than one `def:Origin`
+  still keeps only the first, but both now warn: a loss that reader and
+  writer share is invisible to a round trip, and one nothing reports is
+  worse than one that fails. A value-level item selected by more than
+  one `def:WhereClauseRef` is now refused outright, because those are
+  combined with OR and keeping the first silently narrows which rows the
+  definition applies to.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now carries a value-level row’s whole
+  `ItemDef`: its origin, comment, display format, significant digits,
+  and SAS field name, alongside the `def:WhereClauseRef` it names.
+  Previously only the label, type, length and codelist survived, so a
+  document read and written back lost every value-level origin.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Pinnacle 21 workbook now reads the `WhereClauses`,
+  `Dictionaries`, `Standards`, and analysis-results sheets. A workbook
+  with no `WhereClauses` sheet has its value-level conditions parsed
+  from the free-text column instead, so both workbook generations are
+  read.
+
+- Where-clause values are now parsed correctly for every comparator. A
+  value list is split only outside quotes, so a value containing a comma
+  survives, and parentheses are stripped from scalar comparisons as well
+  as list ones. An unknown comparator, or a disjunction that Define-XML
+  cannot express, is refused with an explanation rather than silently
+  reinterpreted.
+
+- [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
+  gains six tables: `standards`, `where_clauses`, `method_expressions`,
+  `arm_displays`, `arm_results`, and a reserved `dictionaries`.
+  [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now fills the first three, so the
+  `def:Standards` block, the structured `RangeCheck`s behind every
+  value-level condition, and each method’s formal expressions survive a
+  read instead of being discarded.
+
+- A specification saved by an earlier version of artoo is upgraded
+  automatically the first time any artoo function touches it, and says
+  so once. Previously such an object passed every type check and then
+  failed on the first new field. Save it again with
+  [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+  to make the upgrade permanent.
+
+- The native spec JSON format is now version 2, carrying the six new
+  tables. Reading a version 1 file still works.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  on a Define-XML document now reads the metadata it previously
+  discarded: `SASFieldName`, `def:Origin/@Source`, the Origin document
+  and page reference, NCI controlled-terminology codes at both codelist
+  and term level, codelist `Name`/`DataType`/`SASFormatName`, and the
+  `ItemGroupDef` attributes a submission needs (`Domain`,
+  `SASDatasetName`, `Purpose`, `Repeating`, `IsReferenceData`,
+  `ArchiveLocationID`). Each document leaf now records which container
+  owns it.
+
+- [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+  no longer loses `class` on Define-XML 2.0 documents. `def:Class` is a
+  child element in 2.1 but an attribute in 2.0, and only the element was
+  read, so every 2.0 document came back with an empty `class` column.
+
+- [`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+  reports the reference-integrity defects XML Schema cannot express: an
+  OID reference that resolves to nothing, and a definition nothing
+  references. Findings are directional, and an orphaned
+  `def:ValueListDef` is an error rather than a warning because every
+  value-level definition it holds then renders nowhere. Codelists backed
+  by an external dictionary, and those reached through
+  `RoleCodeListOID`, are exempt from the orphan check.
+
+- [`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+  schema-validates a Define-XML 2.0 or 2.1 document against the CDISC
+  schemas, which artoo now bundles, so validation runs offline with no
+  network round trip. The version is detected from the document’s
+  namespace unless you assert one. Note that schema validity is a floor:
+  a reference that points at nothing, and a definition nothing points
+  at, are both invisible to XML Schema.
+
+- [`write_json()`](https://vthanik.github.io/artoo/reference/write_json.md)
+  and
+  [`write_ndjson()`](https://vthanik.github.io/artoo/reference/write_ndjson.md)
+  now emit columns that conform to the Dataset-JSON v1.1 schema’s closed
+  Column vocabulary: `origin`, `codelist`, and `significantDigits` moved
+  out of the `columns` array into the namespaced `_artoo` extension
+  block (joining `informats`), and `label` is always emitted, as `""`
+  when a variable or dataset has none, instead of being omitted.
+  `strict = TRUE` output now validates against the official CDISC
+  schema, and third-party Dataset-JSON readers that require the
+  per-column `label` key can read artoo’s files. Reads map an empty
+  label back to absent, so round-trips remain lossless.
 
 ## artoo 0.1.3
 
@@ -2517,10 +3995,12 @@ enc[enc$sas == "WLATIN1", ]
 # Report which formats are available
 
 List every registered codec and whether it can read and write in this
-session. The pure-R formats (xpt, json, rds) are always available;
-optional-engine formats (parquet) report `FALSE` until their package is
-installed. Purely informational, modelled on the diagnostic helpers in
-the wider ecosystem; it never aborts.
+session. Every format artoo ships is available: the pure-R codecs need
+nothing, and the one engine-backed codec (parquet) names a package artoo
+depends on rather than suggests. The columns exist because the registry
+supports an engine that may be absent, not because one currently is.
+Purely informational, modelled on the diagnostic helpers in the wider
+ecosystem; it never aborts.
 
 ## Usage
 
@@ -2576,7 +4056,13 @@ artoo_spec(
   methods = NULL,
   comments = NULL,
   documents = NULL,
-  standard = NULL
+  standard = NULL,
+  standards = NULL,
+  where_clauses = NULL,
+  method_expressions = NULL,
+  arm_displays = NULL,
+  arm_results = NULL,
+  dictionaries = NULL
 )
 ```
 
@@ -2639,13 +4125,56 @@ artoo_spec(
 
 - standard:
 
-  *The CDISC standard the spec implements.* `<character(1)> | NULL`.
-  E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When `NULL` (default) it is
-  resolved from `datasets$standard` or `study$standard`; absent
-  everywhere, `@standard` is `NA`.
+  *The primary CDISC standard the spec implements.*
+  `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
+  `NULL` (default) it is resolved from `study$standard`, or from the
+  value most rows of `datasets$standard` name; absent everywhere,
+  `@standard` is `NA`.
 
-  **Restriction:** all sources must agree on one value; conflicting
-  standards abort with `artoo_error_spec`.
+  **Restriction:** an explicit value that matches nothing the source
+  names aborts with `artoo_error_spec`.
+
+- standards:
+
+  *CDISC standards this spec claims.* `<data.frame> | NULL`. Must carry
+  `standard_id`, `name` and `version`. Define-XML 2.1 emits these as a
+  `def:Standards` block that datasets and codelists reference by id; 2.0
+  has room for only one, taken from the row flagged `is_primary`.
+
+- where_clauses:
+
+  *Structured value-level conditions.* `<data.frame> | NULL`. Must carry
+  `where_clause_id` and `comparator`. One row per check value, because a
+  check value is free text and may itself contain a comma, so any
+  collapsed form would be lossy.
+
+- method_expressions:
+
+  *Formal expressions for derivation methods.* `<data.frame> | NULL`.
+  Must carry `method_id`. A separate table because a method may carry
+  several expressions in different languages, which extra rows on
+  `methods` could not express without changing what the published
+  one-row-per-method rule means.
+
+- arm_displays:
+
+  *Analysis result displays.* `<data.frame> | NULL`. Must carry
+  `display_id`. Analysis Results Metadata is version-neutral: the
+  vocabulary is identical for Define-XML 2.0 and 2.1.
+
+- arm_results:
+
+  *Analysis results.* `<data.frame> | NULL`. Must carry `display_id` and
+  `result_id`. One row per result and analysis dataset, since each
+  analysis dataset carries its own where-clause reference.
+
+- dictionaries:
+
+  *External codelists.* `<data.frame> | NULL`. Must carry
+  `dictionary_id`. A terminology too large to enumerate, named rather
+  than listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and
+  a variable points at one from the same `codelist_id` column it would
+  use for an enumerated list.
 
 ## Value
 
@@ -2675,14 +4204,17 @@ SAS / P21 spellings resolve automatically (`"text"`, `"Char"`,
 variable names a dataset absent from `datasets`, or references a
 `codelist_id` absent from `codelists`.
 
-**One spec, one standard.** A `artoo_spec` carries exactly one CDISC
-standard, stored as the scalar `@standard` property. The constructor
-resolves it from the `standard` argument, a `standard` column in
-`datasets` (the P21 workbook shape), and a `standard` field in `study`
-(the Define-XML shape) — those columns are consumed, so `@standard` is
-the single home. More than one distinct value aborts with
-`artoo_error_spec`; scope the source to one standard (e.g.
-`read_spec(path, datasets = ...)`) instead of mixing.
+**One primary standard, linked per dataset.** The scalar `@standard`
+property holds the spec's primary CDISC standard, resolved from the
+`standard` argument, a `standard` column in `datasets` (the P21 workbook
+shape), and a `standard` field in `study` (the Define-XML shape) — those
+columns are consumed, so `@standard` is the single home. A `datasets`
+column naming several standards is legitimate (a study may mix
+implementation-guide versions): each row is linked to its standard via
+`datasets$standard_id`, minting a `standards` row where none defines the
+name, and `@standard` takes the study's stated standard, or failing that
+the one most datasets name. An explicit `standard` argument
+contradicting every value in the source aborts with `artoo_error_spec`.
 
 **One study vocabulary.** Well-known study fields are canonicalised to
 the CDISC ODM GlobalVariables names, snake_cased: `study_name`,
@@ -2742,10 +4274,15 @@ Model (ADaM) datasets. A single canonical metadata model carries labels,
 CDISC data types, lengths, 'SAS' display formats, controlled-terminology
 references, and sort keys identically across every format, so conversion
 between any two formats is lossless by construction. Pure 'R' and
-lightweight, with no external 'SAS' or 'Java' runtime. Implements the
-published format specifications for CDISC Dataset-JSON
-(<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>)
-and 'SAS' XPORT
+lightweight, with no external 'SAS' or 'Java' runtime. Reads and writes
+CDISC Define-XML, the specification document that accompanies a
+submission, and renders it as HTML through the bundled Define-XML
+stylesheet. Implements the published format specifications for CDISC
+Dataset-JSON
+(<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>),
+CDISC Define-XML
+(<https://www.cdisc.org/standards/data-exchange/define-xml>), and 'SAS'
+XPORT
 (<https://www.loc.gov/preservation/digital/formats/fdd/fdd000466.shtml>).
 
 ## See also
@@ -2766,6 +4303,18 @@ Useful links:
 Authors:
 
 - Vignesh Thanikachalam <about.vignesh@gmail.com> \[copyright holder\]
+
+Other contributors:
+
+- Lex Jansen (Author of the bundled CDISC Define-XML stylesheets)
+  \[copyright holder\]
+
+- Clinical Data Interchange Standards Consortium (CDISC) (Author of the
+  bundled Define-XML, ODM and ARM schemas and example documents)
+  \[copyright holder\]
+
+- World Wide Web Consortium (Author of the bundled xml, xlink and
+  xmldsig schemas) \[copyright holder\]
 # Demo adverse events analysis dataset (ADaM ADAE)
 
 A 60-row sample of the CDISC pilot ADaM adverse events analysis dataset
@@ -3826,16 +5375,19 @@ identical(get_meta(restamped)@columns, meta@columns)
 
 Build a artoo_spec — the canonical CDISC-shaped description of your
 datasets, one CDISC standard each — or read one from native JSON, a
-Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
-R when the data disagrees, then read any slot back with the spec\_\*
-accessors.
+Pinnacle 21 workbook, or Define-XML, and write it back out as any of the
+three: a .xml path writes a schema-validated Define-XML 2.1 or 2.0.
+Amend it in R when the data disagrees, then read any slot back with the
+spec\_\* accessors.
 
 - [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
   : Construct a CDISC specification
 - [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
   : Read a specification from JSON, Excel, or Define-XML
 - [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
-  : Write a specification to native JSON or a P21 Excel workbook
+  : Write a specification to JSON, an Excel workbook, or Define-XML
+- [`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+  : Write a blank Pinnacle 21 workbook to fill in
 - [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
   : Override a variable's dataType in a spec
 - [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
@@ -3867,7 +5419,9 @@ Apply the spec to a raw frame — coerce, order, sort, stamp metadata —
 decode single variables through its codelists, and read or replace the
 artoo_meta the result carries. Then surface every conformance finding
 for one dataset or a whole study, plus the spec’s own integrity, with
-the control object that scopes both.
+the control object that scopes both. Schema-validate any vendor’s
+Define-XML offline against the bundled CDISC schemas, and lint the OID
+reference graph the schema is blind to.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   : Conform a data frame to its spec
@@ -3887,6 +5441,10 @@ the control object that scopes both.
   : Check a whole study against its spec
 - [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
   : Validate a specification for submission-readiness
+- [`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+  : Validate a Define-XML document against its CDISC schema
+- [`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+  : Check the reference integrity of a Define-XML document
 - [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
   : Read the conformance findings a dataset carries
 - [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)
@@ -4106,6 +5664,91 @@ is_artoo_spec(spec)
 is_artoo_spec(cdisc_dm)
 #> [1] FALSE
 ```
+# Check the reference integrity of a Define-XML document
+
+Reports OID references that resolve to nothing, and definitions that
+nothing references. Neither is expressible in XML Schema, so a document
+can pass
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+and still fail here.
+
+## Usage
+
+``` r
+lint_define(path)
+```
+
+## Arguments
+
+- path:
+
+  *Define-XML document to check.* `<character(1)>: required`.
+
+## Value
+
+*An `artoo_check` object.* Its `@findings` data frame has columns
+`check`, `dimension`, `severity`, `dataset`, `variable`, `message`, and
+is empty when every reference resolves and every definition is used.
+
+## Details
+
+**Findings are directional.** A dangling reference and an orphan
+definition have different causes and different consequences, so they are
+separate conditions. Dangling references are errors. Orphans are
+warnings, except for an orphaned value list: a `def:ValueListDef` that
+no `def:ValueListRef` points at means every value-level definition it
+holds renders nowhere, which is a silent loss of submission metadata
+rather than untidiness.
+
+**Two exemptions prevent false positives.** A `CodeList` backed by an
+`ExternalCodeList` (MedDRA, WHODrug, ISO 3166) is a dictionary reference
+and is not expected to be referenced by a `CodeListRef`. A `CodeList`
+reached through `ItemRef/@RoleCodeListOID` counts as referenced. Without
+these, every real adverse-event or medication define reports spurious
+orphans.
+
+## See also
+
+**Validate first:**
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+for schema conformance, which this complements rather than repeats.
+
+## Examples
+
+``` r
+# ---- Example 1: a sound document ----
+#
+# The bundled minimal example resolves cleanly, so the findings table is
+# empty and the summary counts what was inspected.
+minimal <- system.file("extdata", "define-minimal.xml", package = "artoo")
+report <- lint_define(minimal)
+nrow(report@findings)
+#> [1] 0
+report@summary$n_definitions
+#> [1] 9
+
+# ---- Example 2: a reference that resolves to nothing ----
+#
+# Point a variable's codelist reference at an OID no CodeList defines. The
+# document still passes schema validation; only the lint sees it.
+broken <- tempfile(fileext = ".xml")
+writeLines(
+  sub('CodeListOID="CL.SEX"', 'CodeListOID="CL.MISSING"',
+    readLines(minimal),
+    fixed = TRUE
+  ),
+  broken
+)
+validate_define(broken)@summary$valid
+#> [1] TRUE
+lint_define(broken)@findings[, c("check", "severity", "message")]
+#>                      check severity
+#> 1 define_dangling_codelist    error
+#> 2   define_orphan_codelist  warning
+#>                                                                            message
+#> 1 A codelist reference on CodeListRef references CL.MISSING, which is not defined.
+#> 2                            Codelist CL.SEX is defined but nothing references it.
+```
 # List the datasets in a file or directory
 
 Inventory the dataset(s) a path contains, one row per dataset,
@@ -4120,7 +5763,7 @@ xpt-specific
 ## Usage
 
 ``` r
-members(path)
+members(path, format = NULL)
 ```
 
 ## Arguments
@@ -4132,13 +5775,36 @@ members(path)
   a directory holding such files. A path that does not exist, or a file
   whose extension no codec claims, aborts.
 
+- format:
+
+  *Restrict the inventory to these formats.* `<character> | NULL`.
+  Defaults to `NULL`, which inventories every format. Format names as
+  [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
+  lists them, not file extensions: `"parquet"` claims both `.parquet`
+  and `.pq`. `NULL` inventories every format. Several names are a set,
+  not an order, so `c("xpt", "json")` lists both and says nothing about
+  which wins.
+
+  **Tip:** the reason to pass it is a directory holding the same dataset
+  in more than one format, where the full inventory lists `dm.xpt` and
+  `dm.json` as two rows.
+
+  **Restriction:** it filters, it does not override. Unlike
+  [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)'s
+  `format`, which reads a file AS the named format whatever its
+  extension, this narrows which files are inventoried and leaves
+  extension resolution alone. Naming one file whose format the
+  restriction excludes aborts, rather than returning an empty inventory
+  that could not be told apart from an empty directory.
+
 ## Value
 
 *A `<artoo_members>` data frame*, one row per dataset, with columns
 `file` (source basename), `member` (dataset name), `label`, `records`
 (row count), `variables` (column count), and `format` (the codec
-format). Empty when a directory holds no dataset files. It is an
-ordinary data frame underneath.
+format). Empty when a directory holds no dataset files, and likewise
+when `format` excludes every one it holds. It is an ordinary data frame
+underneath.
 
 ## Details
 
@@ -4180,7 +5846,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                  member  label         records  variables  format
-#> file1a019a22425.json  DM      Demographics  60       25         json
+#> file1b05678f426.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
@@ -4195,6 +5861,15 @@ members(dir)
 #> file     member  label         records  variables  format
 #> dm.json  DM      Demographics  60       25         json
 #> dm.rds   DM      Demographics  60       25         rds
+
+# ---- Example 3: one dataset, two formats, one of them wanted ----
+#
+# The same dataset stored twice is two rows, because the inventory reports
+# what is on disk. Name the format to see only that half.
+members(dir, format = "json")
+#> <artoo_members> 1 dataset
+#> file     member  label         records  variables  format
+#> dm.json  DM      Demographics  60       25         json
 ```
 # Read a dataset from any supported format
 
@@ -4655,9 +6330,11 @@ read_spec(path, datasets = NULL, on_duplicate = c("error", "first", "warn"))
 - path:
 
   *The specification file to read.* `<character(1)>: required`. A
-  `.json` (native) or `.xlsx` / `.xls` (P21) file.
+  `.json` (native), `.xlsx` / `.xls` (P21), or `.xml` (Define-XML 2.0 or
+  2.1) file.
 
-  **Requirement:** reading a P21 workbook needs the `readxl` package.
+  **Requirement:** reading a P21 workbook needs the `readxl` package,
+  and reading a define.xml needs `xml2`.
 
 - datasets:
 
@@ -4709,10 +6386,11 @@ CommentDefs / leaves become the supporting slots, and ValueListDefs land
 in the value-level slot with their where-clauses rendered as readable
 text.
 
-**Note:** an `ExternalCodeList` (MedDRA, ISO-3166) names a dictionary,
-not an enumerable membership list; it is dropped, and variables that
-referenced it carry no codelist. Define-XML v1.0 (the 2005 model) is
-refused with guidance.
+**Note:** an `ExternalCodeList` (MedDRA, ISO-3166) names a dictionary
+rather than an enumerable membership list, so it lands in `dictionaries`
+rather than `codelists`; a variable that references one keeps the
+reference, because a workbook has one column for both. Define-XML v1.0
+(the 2005 model) is refused with guidance.
 
 **P21 ingestion.** Sheets are located by a tolerant alias match (case-,
 space-, and spelling-variant insensitive). Datasets and Variables are
@@ -5283,11 +6961,16 @@ spec_codelists(spec, "C66731")
 #> 2      C66731                M             Male     2       NA
 #> 3      C66731                U          Unknown     3       NA
 #> 4      C66731 UNDIFFERENTIATED Undifferentiated     4       NA
-#>   comment_id
-#> 1       <NA>
-#> 2       <NA>
-#> 3       <NA>
-#> 4       <NA>
+#>   comment_id name data_type sas_format_name nci_code standard_id
+#> 1       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 2       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 3       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 4       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#>   is_non_standard term_nci_code rank term_description
+#> 1              NA          <NA>   NA             <NA>
+#> 2              NA          <NA>   NA             <NA>
+#> 3              NA          <NA>   NA             <NA>
+#> 4              NA          <NA>   NA             <NA>
 
 # ---- Example 2: the whole codelists table ----
 #
@@ -5298,11 +6981,16 @@ head(spec_codelists(spec))
 #> 2      C66731                M             Male     2       NA
 #> 3      C66731                U          Unknown     3       NA
 #> 4      C66731 UNDIFFERENTIATED Undifferentiated     4       NA
-#>   comment_id
-#> 1       <NA>
-#> 2       <NA>
-#> 3       <NA>
-#> 4       <NA>
+#>   comment_id name data_type sas_format_name nci_code standard_id
+#> 1       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 2       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 3       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 4       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#>   is_non_standard term_nci_code rank term_description
+#> 1              NA          <NA>   NA             <NA>
+#> 2              NA          <NA>   NA             <NA>
+#> 3              NA          <NA>   NA             <NA>
+#> 4              NA          <NA>   NA             <NA>
 ```
 # Comment definitions in a spec
 
@@ -5354,6 +7042,8 @@ spec <- artoo_spec(
 spec_comments(spec)
 #>   comment_id                       description document_id pages
 #> 1      C.AGE Age in years at informed consent.        <NA>  <NA>
+#>   page_type page_title
+#> 1      <NA>       <NA>
 ```
 # Dataset names in a spec
 
@@ -5443,8 +7133,8 @@ spec <- artoo_spec(
   )
 )
 spec_documents(spec)
-#>   document_id                     title href
-#> 1         SAP Statistical Analysis Plan <NA>
+#>   document_id                     title href role
+#> 1         SAP Statistical Analysis Plan <NA> <NA>
 ```
 # Sort keys for a dataset
 
@@ -5548,8 +7238,8 @@ spec <- artoo_spec(
 spec_methods(spec)
 #>   method_id         description name type expression_context
 #> 1 MT.AGEGR1 Age group from AGE. <NA> <NA>               <NA>
-#>   expression_code document_id pages
-#> 1            <NA>        <NA>  <NA>
+#>   expression_code document_id pages page_type page_title
+#> 1            <NA>        <NA>  <NA>      <NA>       <NA>
 ```
 # The CDISC standard a spec implements
 
@@ -5855,6 +7545,99 @@ synced2 <- sync_meta(adsl)
 get_meta(synced2)@columns$AGEGR9$dataType
 #> [1] "string"
 ```
+# Validate a Define-XML document against its CDISC schema
+
+Schema-validates a `define.xml` against the Clinical Data Interchange
+Standards Consortium (CDISC) XML Schema that artoo bundles, offline. Use
+it on a document from any source, whether or not artoo wrote it, as the
+first gate before a submission package leaves your hands.
+
+## Usage
+
+``` r
+validate_define(path, version = NULL)
+```
+
+## Arguments
+
+- path:
+
+  *Define-XML document to validate.* `<character(1)>: required`.
+
+- version:
+
+  *Define-XML version to validate against.* `<character(1)> | NULL`.
+  `NULL` (default) reads it from the document's `def` namespace. Supply
+  `"2.0"` or `"2.1"` to assert a version instead, which turns a version
+  mismatch into findings rather than silent success.
+
+## Value
+
+*An `artoo_check` object.* Its `@findings` data frame has columns
+`check`, `dimension`, `severity`, `dataset`, `variable`, `message`, and
+is empty when the document is valid. Print it for the sectioned report.
+
+## Details
+
+**The version is detected, not assumed.** Define-XML 2.0 and 2.1 declare
+different `def` namespaces, so the document says which schema applies.
+Passing `version` overrides that, which is how you confirm a file really
+is the version it claims.
+
+**Schema validity is a floor, not a ceiling.** A document can satisfy
+the schema and still be unfit to submit. Two whole classes of defect are
+invisible here: a reference that points at nothing, and a definition
+that nothing points at. Neither is expressible in XML Schema. Use
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for those.
+
+## See also
+
+**Check further:**
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for reference integrity, which schema validation cannot see.
+
+**Specs:**
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+reads a Define-XML document into an
+[`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md).
+
+## Examples
+
+``` r
+# ---- Example 1: a conforming document ----
+#
+# artoo bundles both CDISC schema trees, so validation runs offline. The
+# bundled minimal example conforms, so the findings table comes back empty
+# and the summary records which version was detected.
+minimal <- system.file("extdata", "define-minimal.xml", package = "artoo")
+report <- validate_define(minimal)
+nrow(report@findings)
+#> [1] 0
+report@summary[c("define_version", "valid")]
+#> $define_version
+#> [1] "2.1"
+#> 
+#> $valid
+#> [1] TRUE
+#> 
+
+# ---- Example 2: a document that breaks the schema ----
+#
+# Give ItemGroupDef/@Repeating a value outside its enumeration. The schema
+# catches it, and each violation becomes one finding naming the element and
+# the line it sits on.
+broken <- tempfile(fileext = ".xml")
+writeLines(
+  sub('Repeating="No"', 'Repeating="Maybe"', readLines(minimal), fixed = TRUE),
+  broken
+)
+bad <- validate_define(broken)
+bad@summary$valid
+#> [1] FALSE
+substr(bad@findings$message[1], 1, 60)
+#> [1] "Element '{http://www.cdisc.org/ns/odm/v1.3}ItemGroupDef', at"
+```
 # Validate a specification for submission-readiness
 
 Run artoo's bundled, self-contained checks over a `artoo_spec`, **scoped
@@ -6100,13 +7883,17 @@ write_json(
 
   *Suppress the `_artoo` extension block.*
   `<logical(1)>: default FALSE`. By default the file carries a single
-  namespaced `_artoo` object when (and only when) there is content
-  strict CDISC cannot express: SAS special-missing tags (`.A`-`.Z`,
-  `._`), the recorded source encoding, and informats. Data values stay
-  plain `null`s either way, so a foreign reader degrades gracefully.
+  namespaced `_artoo` object when (and only when) there is content the
+  closed Dataset-JSON vocabulary cannot express: SAS special-missing
+  tags (`.A`-`.Z`, `._`), the recorded source encoding, and the
+  per-variable informats, origins, codelist references, and significant
+  digits. The `columns` array itself always uses only schema-legal keys.
+  Data values stay plain `null`s either way, so a foreign reader
+  degrades gracefully.
 
-  **Note:** `strict = TRUE` writes a pure closed-vocabulary file and
-  warns (`artoo_warning_codec`) naming exactly what was dropped; those
+  **Note:** `strict = TRUE` writes a pure closed-vocabulary file that
+  validates against the official CDISC schema, and warns
+  (`artoo_warning_codec`) naming exactly what was dropped; those
   attributes will not survive a read-back.
 
 ## Value
@@ -6489,20 +8276,21 @@ back <- read_rds(path)
 identical(get_meta(back)@columns, get_meta(adsl)@columns)
 #> [1] TRUE
 ```
-# Write a specification to native JSON or a P21 Excel workbook
+# Write a specification to JSON, an Excel workbook, or Define-XML
 
 Serialise a `artoo_spec`, dispatching on the file extension: a `.json`
 path writes artoo's native, lossless JSON; a `.xlsx` path writes a
-Pinnacle 21 (P21) style Excel workbook. Both are inverses of
+Pinnacle 21 (P21) style Excel workbook; a `.xml` path writes a
+submission-grade Define-XML 2.1 or 2.0 document. Each is the inverse of
 [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
-on their format, which makes the spec converters free compositions:
-`read_spec("define.xml") |> write_spec("spec.xlsx")` is a Define-XML to
-P21 bridge in one line.
+on its format, which makes the spec converters free compositions:
+`read_spec("spec.xlsx") |> write_spec("define.xml")` turns a workbook
+into a define.xml in one line.
 
 ## Usage
 
 ``` r
-write_spec(spec, path)
+write_spec(spec, path, ...)
 ```
 
 ## Arguments
@@ -6518,9 +8306,46 @@ write_spec(spec, path)
 - path:
 
   *Destination file.* `<character(1)>: required`. The extension picks
-  the format: `.json` (native, lossless) or `.xlsx` (P21 interchange;
-  needs the `writexl` package). Any other extension aborts with
-  `artoo_error_input`.
+  the format: `.json` (native, lossless), `.xlsx` (P21 interchange;
+  needs the `writexl` package), or `.xml` (Define-XML; needs the `xml2`
+  package). Any other extension aborts with `artoo_error_input`.
+
+- ...:
+
+  *Format-specific options.* Ignored by the JSON and xlsx paths.
+  Define-XML accepts:
+
+  - `version` – `<character(1)> | NULL`. `"2.1"` (default) or `"2.0"`,
+    resolved from the spec's own `define_version` when unset. Writing
+    2.0 from a 2.1-shaped spec warns about each construct 2.0 cannot
+    carry.
+
+  - `created` – the `CreationDateTime` stamp, formatted as UTC. Freeze
+    it for a reproducible submission build; the default is the current
+    time.
+
+  - `stylesheet` – `<logical(1)> | <character(1)>: default TRUE`. `TRUE`
+    writes the `xml-stylesheet` processing instruction and copies the
+    bundled CDISC stylesheet beside the output; a string names a
+    stylesheet without copying one; `FALSE` writes neither.
+
+  - `data` – `<list of <data.frame>> | <character(1)> | NULL`. The
+    datasets the define describes: a list named for each dataset, or one
+    path to the folder holding them. artoo reads them and fills what the
+    spec leaves blank; see **Data-aware writing**.
+
+  - `data_format` – `<character> | NULL`. When `data` is a folder,
+    restrict it to these formats, named as
+    [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
+    lists them. Use it when a folder holds one dataset in two formats.
+
+  - `html` – `<logical(1)> | <character(1)>: default FALSE`. `TRUE` also
+    renders the document through its stylesheet into a sibling `.html`;
+    a string renders it to that path. Needs the `xslt` and `callr`
+    packages.
+
+  - `validate` – `<logical(1)>: default TRUE`. Schema-validate before
+    the file is put in place.
 
 ## Value
 
@@ -6555,10 +8380,79 @@ Columns the P21 vocabulary does not model are not lost: a foreign column
 carried on a slot is re-emitted verbatim under its own header, so an
 xlsx round-trip keeps user columns.
 
-**Note:** fields with no P21 column (`itemoid`, `target_data_type`,
-per-variable `key_sequence`) do not survive an xlsx round-trip; persist
-to JSON when you need the spec back exactly. The `Data Type` re-encoding
-is also non-injective: `decimal`, `double`, `boolean`, and `URI` fold to
+**Note:** the xlsx writer emits every sheet the spec has content for, so
+`standards`, `where_clauses`, `arm_displays`, `arm_results` and
+`dictionaries` survive a round trip. `method_expressions` does not
+survive whole: a workbook gives each method one row with one code cell,
+so a method carrying several formal expressions keeps only the first and
+the write says which methods it truncated. Write JSON when a spec has
+multi-expression methods, or when you need back the OIDs a Define-XML
+document chose.
+
+**Define-XML is the submission format.** The `.xml` path emits
+Define-XML 2.1 or 2.0 (needs the `xml2` package) and SCHEMA-VALIDATES
+what it built before the file reaches its destination, so an invalid
+document never overwrites a good one. Value-level metadata is emitted
+whole: the parent variable's `def:ValueListRef`, the `def:ValueListDef`,
+a real `ItemDef` per value-level row, and the `def:WhereClauseRef` and
+`def:WhereClauseDef` that say which rows it applies to.
+
+Identifiers already on the spec are reused verbatim, so a document read
+and written back keeps every OID a reviewer may have bookmarked; the
+rest are minted readably (`IG.DM`, `IT.DM.USUBJID`, `VL.VS.VSORRES`).
+Two schema-required attributes are derived rather than demanded:
+`def:Structure` falls back to the dataset keys, and `Purpose` follows
+the CDISC standard. A dataset with neither a structure nor keys aborts
+with `artoo_error_define` rather than being given an invented one.
+
+**HTML.** A define.xml renders through an XSLT stylesheet, and the
+written document names one in a processing instruction and gets a copy
+of it alongside (a reference to a stylesheet that is not there is itself
+a conformance finding). An existing stylesheet beside the output is
+never overwritten, so a customised rendering survives. Pass
+`html = TRUE` to also materialise the rendered HTML: browsers are
+removing XSLT support, and a reviewer working from a submission archive
+should not need one.
+
+**What a folder measures.** A named list describes the frames in memory;
+a folder describes the bytes on disk. Where the two differ the folder is
+right about what will be submitted – a transport file pads to fixed
+width, so a value's trailing blanks are part of it there and not in R. A
+gzipped `.json` or `.ndjson` is matched like any other file; `.xpt.gz`
+is not, because
+[`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)
+does not read one either.
+
+**A folder instead of a list.** `data` also takes one path to the folder
+holding the datasets. Each dataset the spec names is matched to a file
+whose basename is that name, ignoring case: `DM` to `dm.xpt`, `dm.json`,
+`dm.parquet`. The folder is inventoried, not descended. A dataset with
+no file is normal and reported, not an error, and a file the spec does
+not name is left alone. A dataset matching MORE than one file aborts
+rather than choosing: two formats can disagree about byte width, so
+picking one silently would change the document. Name the format with
+`data_format` to resolve it. A file that cannot be read aborts too,
+naming every unreadable file at once rather than stopping at the first.
+
+**Data-aware writing.** Pass `data` and artoo reads the datasets the
+define describes, which a spec-only tool cannot. A blank `length` is
+filled from the real maximum byte width; a stated one shorter than the
+data is widened, because a length below the real maximum is a
+conformance finding, and the write says which variables it widened. A
+stated length LONGER than the data is left alone: a length is a claim
+about the domain, not about one extract. Value-level metadata is derived
+for the standard findings shapes – a result keyed by its test code,
+`TSVAL` by `TSPARMCD`, `QVAL` by `QNAM`, `AVAL` and `AVALC` by `PARAMCD`
+– with each derived row carrying the type and width of the rows it
+covers. A variable the spec already gives value-level rows to is never
+touched. A dataset with no records is flagged `def:HasNoData` when it
+also carries a comment explaining the absence, and left unflagged with a
+warning when it does not.
+
+Fields with no P21 column (`itemoid`, `target_data_type`, per-variable
+`key_sequence`) likewise do not survive an xlsx round-trip; persist to
+JSON when you need the spec back exactly. The `Data Type` re-encoding is
+also non-injective: `decimal`, `double`, `boolean`, and `URI` fold to
 `float` or `text` on a read-back. A Define-XML `partialDate` /
 `partialDatetime` (and the other partial / incomplete subtypes) is read
 as the base `date` / `datetime` – CDISC Dataset-JSON v1.1 has no partial
@@ -6570,6 +8464,12 @@ dataType – so it is written back as the base type.
 [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
 reads native JSON, a P21 Excel workbook, or Define-XML back into a
 `artoo_spec`.
+
+**Check the Define-XML written:**
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+schema-validates it,
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+checks its reference integrity.
 
 **Build / inspect:**
 [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md),
@@ -6603,6 +8503,189 @@ if (requireNamespace("writexl", quietly = TRUE)) {
   spec_datasets(read_spec(xlsx))
 }
 #> [1] "ADSL"
+
+# ---- Example 3: the same spec as a submission-grade define.xml ----
+#
+# Read the bundled minimal Define-XML, write it back with a frozen
+# timestamp, and confirm the result is schema-valid. The write itself
+# validates, so reaching this line already proves it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  dm <- read_spec(
+    system.file("extdata", "define-minimal.xml", package = "artoo")
+  )
+  xml <- file.path(tempdir(), "define.xml")
+  write_spec(dm, xml, created = "2020-01-01 00:00:00")
+  validate_define(xml)
+}
+#> artoo Define-XML Schema Check
+#> =============================
+#> 
+#> Summary
+#> -------
+#> Document: define.xml
+#> Define-XML version: 2.1
+#> Schema valid: yes
+#> 
+#> No findings.
+#> 
+
+# ---- Example 4: let a folder of datasets fill the blanks ----
+#
+# A spec states a variable's length or leaves it blank. Point `data` at
+# the folder holding the datasets and artoo matches each one the spec
+# names to a file called after it, then fills the blanks from the real
+# maximum byte width. It reports which files it used, because a define is
+# a submission document and that is what a reader cannot recover from it.
+if (requireNamespace("xml2", quietly = TRUE)) {
+  folder <- file.path(tempdir(), "datasets")
+  dir.create(folder, showWarnings = FALSE)
+  write_json(
+    apply_spec(cdisc_adsl, adam_spec, "ADSL", conformance = "off"),
+    file.path(folder, "adsl.json")
+  )
+  from_folder <- file.path(tempdir(), "from-folder.xml")
+  write_spec(adam_spec, from_folder, data = folder)
+  lint_define(from_folder)
+}
+#> 6 variables the spec declares are absent from the data (not added):
+#> `TRTDURD`, `DISONDT`, `EOSSTT`, `DCSREAS`, `EOSDISP`, and `MMS1TSBL`.
+#> Read 1 of 2 datasets from /tmp/RtmpzXfLdJ/datasets.
+#> ℹ Used adsl.json.
+#> ℹ No file for "ADAE".
+#> artoo Define-XML Reference Check
+#> ================================
+#> 
+#> Summary
+#> -------
+#> Document: from-folder.xml
+#> Definitions: 198    References: 255
+#> External codelists (exempt from the orphan check): 2
+#> 
+#> Findings Summary
+#> ----------------
+#>   error    0
+#>   warning  2
+#>   note     0
+#> 
+#> Warnings
+#> --------
+#> [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+#> [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+#> 
+```
+# Write a blank Pinnacle 21 workbook to fill in
+
+Emit an empty Excel workbook with the sheets and column headers
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+recognises, so a specification can be authored from the shape the reader
+wants rather than guessed at. Fill it in, read it back with
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md),
+and write a define.xml with
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md).
+
+## Usage
+
+``` r
+write_template(path, version = "2.1")
+```
+
+## Arguments
+
+- path:
+
+  *Destination workbook.* `<character(1)>: required`. An `.xlsx` path.
+  Needs the `writexl` package.
+
+- version:
+
+  *Define-XML version the workbook is for.*
+  `<character(1)>: default "2.1"`.
+
+  - `"2.1"` (default)
+
+  - `"2.0"` – omits the columns 2.1 introduced.
+
+## Value
+
+*The output `path`, invisibly.* Fill it in, then read it with
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md).
+
+## Details
+
+**The headers are the reader's own.** Every sheet name and every column
+comes from the same maps
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+matches against, so a template cannot offer a column that would be
+silently ignored, and a column added to the reader appears here without
+a second list to maintain.
+
+**A 2.0 template is narrower.** Columns Define-XML 2.1 introduced
+(`SubClass` and `Has No Data` on Datasets, `Source` and `Has No Data` on
+Variables) are omitted from a 2.0 template, because a column no 2.0
+document can carry is one an author fills for nothing.
+
+**Only Datasets and Variables are required.** Every other sheet may be
+left empty;
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+omits what it finds nothing in.
+
+**Conditions live on the `WhereClauses` sheet.** A value-level row names
+a condition by its `ID` and the `WhereClauses` sheet defines it, one row
+per comparison, rows sharing an `ID` being ANDed together. This is the
+shape the widest range of tools import.
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+also reads the newer shape, which drops that sheet and writes the
+condition into the `Where Clause` cell as an expression.
+
+**`Standards` is an artoo extension.** Define-XML 2.1 carries a
+`def:Standards` block that the workbook format has no sheet for, so
+artoo offers one rather than lose it.
+
+## See also
+
+**Fill it in:**
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+reads the completed workbook.
+
+**Then write:**
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+turns the spec into a define.xml,
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+and
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+check the result.
+
+## Examples
+
+``` r
+# ---- Example 1: a blank workbook, and what it offers ----
+#
+# The template carries every sheet read_spec() recognises. Datasets and
+# Variables are the two it requires; the rest may be left empty.
+path <- tempfile(fileext = ".xlsx")
+write_template(path)
+if (requireNamespace("readxl", quietly = TRUE)) {
+  readxl::excel_sheets(path)
+}
+#>  [1] "Study"             "Datasets"          "Variables"        
+#>  [4] "ValueLevel"        "WhereClauses"      "Codelists"        
+#>  [7] "Dictionaries"      "Methods"           "Comments"         
+#> [10] "Documents"         "Standards"         "Analysis Displays"
+#> [13] "Analysis Results"  "Analysis Criteria"
+
+# ---- Example 2: the 2.0 template omits what 2.0 cannot carry ----
+#
+# `Source` records who collected a value, which Define-XML 2.1 added. A
+# 2.0 workbook has no column for it, so the template does not offer one.
+old <- tempfile(fileext = ".xlsx")
+write_template(old, version = "2.0")
+if (requireNamespace("readxl", quietly = TRUE)) {
+  setdiff(
+    names(readxl::read_excel(path, sheet = "Variables")),
+    names(readxl::read_excel(old, sheet = "Variables"))
+  )
+}
+#> [1] "Source"      "Has No Data"
 ```
 # Write a dataset to SAS XPORT
 
@@ -6846,8 +8929,9 @@ xpt_members(multi)
 name: artoo
 description: >
   Read and write clinical-trial datasets losslessly across SAS XPORT, CDISC
-  Dataset-JSON v1.1, Apache Parquet, and RDS from R. Use when writing R code
-  that uses the artoo package.
+  Dataset-JSON v1.1, Apache Parquet, and RDS from R, and author the
+  submission's Define-XML 2.1 or 2.0 from the same spec. Use when writing R
+  code that uses the artoo package.
 license: MIT
 compatibility: Requires R >=4.3.
 ---
@@ -6857,8 +8941,11 @@ compatibility: Requires R >=4.3.
 Read and write clinical-trial datasets losslessly across SAS XPORT (v5/v8),
 CDISC Dataset-JSON v1.1, NDJSON, Apache Parquet, and RDS from R. One
 canonical metadata model (`artoo_meta`) is carried by every codec, so
-any-to-any conversion is lossless by construction. Pure R, no Java, no SAS,
-and no compiled runtime beyond a small Parquet engine.
+any-to-any conversion is lossless by construction. The same model authors
+the submission's **define.xml** (Define-XML 2.1 and 2.0), validates any
+vendor's document against the bundled CDISC schemas offline, and lints the
+OID graph the schema cannot see. Pure R, no Java, no SAS, and no compiled
+runtime beyond a small Parquet engine.
 
 ## Installation
 
@@ -6900,11 +8987,13 @@ character with no standards-backed ASCII form (the Euro sign).
 
 Build a spec from metadata tables, or read one from native JSON, a
 Pinnacle 21 xlsx workbook, or Define-XML; write it back, or amend it in R
-when the data disagrees.
+when the data disagrees. `write_spec()` dispatches on the extension, so a
+workbook becomes a submission-grade define.xml in one line.
 
 - `artoo_spec`: Build and validate a CDISC spec from metadata tables
-- `read_spec`: Read a spec from native JSON, a Pinnacle 21 xlsx workbook, or Define-XML
-- `write_spec`: Write a spec to JSON (lossless) or xlsx (interchange)
+- `read_spec`: Read a spec from native JSON, a Pinnacle 21 xlsx workbook, or Define-XML 2.0 / 2.1
+- `write_spec`: Write a spec to JSON (lossless), xlsx (interchange), or xml (Define-XML 2.1 or 2.0, schema-validated before the file lands)
+- `write_template`: Write a blank Pinnacle 21 workbook shaped exactly like the reader
 - `set_type`: Retype a variable in R when the data disagrees with the spec's dataType
 - `repair_spec`: Flip every `integer_fraction` / `integer_overflow` variable to `float` from a study findings frame, in one call
 
@@ -6933,6 +9022,14 @@ spec's own structural integrity, with the control object that scopes both.
 - `validate_spec`: Structural integrity of the spec itself (no data)
 - `conformance`: Read the findings `apply_spec()` attached to a frame
 - `artoo_checks`: Toggle which conformance dimensions run (only `integer_fraction` / `integer_overflow` are fatal coercion checks; `type_mismatch` is informational; `invalid_encoding` flags character bytes that are not valid UTF-8, the signature of a mis-declared source encoding)
+
+### Define-XML
+
+Check any vendor's define.xml, and render the one you wrote. Both work
+offline against the CDISC schemas bundled with artoo.
+
+- `validate_define`: Schema-validate a define.xml (2.0 or 2.1, ARM included)
+- `lint_define`: Walk the OID reference graph the schema is blind to, reporting dangling references and orphaned definitions per kind
 
 ### Read and write (lossless any-to-any)
 
@@ -6999,7 +9096,14 @@ instead of inventing toy data.
   passes foreign columns through untouched.
 - **Errors are classed cli conditions** — `artoo_error_<kind>` where kind
   is one of `input`, `spec`, `type`, `codelist`, `codec`, `validation`,
-  `conformance`. Catch by class, never by message.
+  `conformance`, `define`, `install`. Catch by class, never by message.
+  `input` means a bad argument; a malformed spec FILE is `spec`, whichever
+  format it arrived in.
+- **Define-XML degrades loudly or not at all** — `write_spec()` to `.xml`
+  warns once, before a node exists, about everything the target version
+  cannot carry, aborts rather than write an invalid document, and
+  schema-validates before the file reaches its destination. Writing 2.0
+  from a 2.1-shaped spec names each construct 2.0 drops.
 
 ## Resources
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">artoo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,6 +20,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/workbook.html">Authoring a specification workbook</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
     <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
@@ -42,7 +43,7 @@
     <div class="section level2">
       <h2 id="specs">Specs<a class="anchor" aria-label="anchor" href="#specs"></a></h2>
 
-      <div class="section-desc"><p>Build a artoo_spec — the canonical CDISC-shaped description of your datasets, one CDISC standard each — or read one from native JSON, a Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in R when the data disagrees, then read any slot back with the spec_* accessors.</p></div>
+      <div class="section-desc"><p>Build a artoo_spec — the canonical CDISC-shaped description of your datasets, one CDISC standard each — or read one from native JSON, a Pinnacle 21 workbook, or Define-XML, and write it back out as any of the three: a .xml path writes a schema-validated Define-XML 2.1 or 2.0. Amend it in R when the data disagrees, then read any slot back with the spec_* accessors.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -68,7 +69,14 @@
           <code><a href="write_spec.html">write_spec()</a></code>
 
         </dt>
-        <dd>Write a specification to native JSON or a P21 Excel workbook</dd>
+        <dd>Write a specification to JSON, an Excel workbook, or Define-XML</dd>
+
+        <dt>
+
+          <code><a href="write_template.html">write_template()</a></code>
+
+        </dt>
+        <dd>Write a blank Pinnacle 21 workbook to fill in</dd>
 
         <dt>
 
@@ -156,7 +164,7 @@
       </dl></div><div class="section level2">
       <h2 id="conform-validate">Conform &amp; validate<a class="anchor" aria-label="anchor" href="#conform-validate"></a></h2>
 
-      <div class="section-desc"><p>Apply the spec to a raw frame — coerce, order, sort, stamp metadata — decode single variables through its codelists, and read or replace the artoo_meta the result carries. Then surface every conformance finding for one dataset or a whole study, plus the spec’s own integrity, with the control object that scopes both.</p></div>
+      <div class="section-desc"><p>Apply the spec to a raw frame — coerce, order, sort, stamp metadata — decode single variables through its codelists, and read or replace the artoo_meta the result carries. Then surface every conformance finding for one dataset or a whole study, plus the spec’s own integrity, with the control object that scopes both. Schema-validate any vendor’s Define-XML offline against the bundled CDISC schemas, and lint the OID reference graph the schema is blind to.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -225,6 +233,20 @@
 
         </dt>
         <dd>Validate a specification for submission-readiness</dd>
+
+        <dt>
+
+          <code><a href="validate_define.html">validate_define()</a></code>
+
+        </dt>
+        <dd>Validate a Define-XML document against its CDISC schema</dd>
+
+        <dt>
+
+          <code><a href="lint_define.html">lint_define()</a></code>
+
+        </dt>
+        <dd>Check the reference integrity of a Define-XML document</dd>
 
         <dt>
 

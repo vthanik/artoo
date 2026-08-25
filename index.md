@@ -4,7 +4,9 @@
 clinical-trial datasets. It moves data between **SAS XPORT (XPT)**,
 **CDISC Dataset-JSON v1.1**, **NDJSON**, **Apache Parquet**, and **RDS**
 through one canonical metadata model, so converting between any two is
-lossless *by construction* — not by best effort.
+lossless *by construction* — not by best effort. It also reads and
+writes the specification itself: **Define-XML 2.1 and 2.0**, Pinnacle 21
+workbooks, and a native lossless JSON.
 
 ## Installation
 
@@ -49,6 +51,54 @@ adsl <- cdisc_adsl |>
 # Read it back — labels, formats, types, and record count intact.
 get_meta(read_xpt(path))@dataset$records
 #> [1] 60
+```
+
+The same spec is the submission’s define.xml.
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+dispatches on the extension, schema-validates the document before it
+reaches its destination, and
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+checks the references the schema cannot see:
+
+``` r
+
+define <- tempfile(fileext = ".xml")
+write_spec(adam_spec, define)
+
+# 227 definitions, 248 references, nothing dangling and nothing orphaned.
+lint_define(define)
+#> artoo Define-XML Reference Check
+#> ================================
+#> 
+#> Summary
+#> -------
+#> Document: file8588416783eb.xml
+#> Definitions: 227    References: 248
+#> 
+#> Findings Summary
+#> ----------------
+#>   error    0
+#>   warning  32
+#>   note     0
+#> 
+#> Warnings
+#> --------
+#> [define_orphan_codelist] Codelist CL.AVISIT is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AVISITN is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AWU is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.DTYPE is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAMCD_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAMN_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.PARAM_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.AWRANGE_ADQSADAS is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.VISIT is defined but nothing references it.
+#> [define_orphan_codelist] Codelist CL.VISITNUM is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.AVISIT is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.ADY is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.ADT is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.BASE is defined but nothing references it.
+#> [define_orphan_method] Method MT.ADQSADAS.CHG is defined but nothing references it.
+#> ... and 17 more (see x@findings)
 ```
 
 [`columns()`](https://vthanik.github.io/artoo/reference/columns.md) is
@@ -123,8 +173,10 @@ columns(adsl)
 - **Pure R and lightweight.** No external SAS or Java runtime, and no
   heavy I/O dependency.
 - **CDISC-native.** Types, dates and `--DTC` text, and codelists follow
-  the Dataset-JSON v1.1 vocabulary; specs read from Define-XML, Pinnacle
-  21 workbooks, or native JSON.
+  the Dataset-JSON v1.1 vocabulary. Specs read from and write back to
+  Define-XML 2.1 and 2.0, Pinnacle 21 workbooks, and a native lossless
+  JSON — so a workbook becomes a submission-grade define.xml in one
+  line.
 
 ## Where artoo fits
 
@@ -154,6 +206,27 @@ The generic
 dispatch on the file extension; every reader supports partial reads via
 `col_select` and `n_max`.
 
+Specifications travel the same way, through
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+and
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md):
+
+| Format      | Extension | Use                                    |
+|-------------|-----------|----------------------------------------|
+| Define-XML  | `.xml`    | The submission deliverable, 2.1 or 2.0 |
+| Pinnacle 21 | `.xlsx`   | The workbook a spec is authored in     |
+| Native JSON | `.json`   | Lossless checkpoint, nothing dropped   |
+
+[`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
+schema-validates a define.xml before the file reaches its destination,
+so an invalid one never overwrites a good file.
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+checks any vendor’s document against the bundled CDISC schemas offline;
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+walks the OID graph the schema cannot see;
+[`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+writes a blank workbook shaped exactly like the reader.
+
 Partial ISO 8601 dates are first-class: a character `--DTC` column typed
 `date` writes to XPT as ISO text — `"1951-12"` survives byte for byte —
 while `targetDataType = "integer"` drives the ADaM numeric-date
@@ -165,7 +238,7 @@ and `>24h`, negative, and fractional times round-trip every format.
 - [Get started](https://vthanik.github.io/artoo/articles/artoo.html) —
   the whole round-trip, start to finish, on bundled data.
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
-  — read, inspect, and repair a spec.
+  — read, inspect, and repair a spec, and write the define.xml.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.html) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)

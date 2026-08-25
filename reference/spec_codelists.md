@@ -69,11 +69,16 @@ spec_codelists(spec, "C66731")
 #> 2      C66731                M             Male     2       NA
 #> 3      C66731                U          Unknown     3       NA
 #> 4      C66731 UNDIFFERENTIATED Undifferentiated     4       NA
-#>   comment_id
-#> 1       <NA>
-#> 2       <NA>
-#> 3       <NA>
-#> 4       <NA>
+#>   comment_id name data_type sas_format_name nci_code standard_id
+#> 1       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 2       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 3       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 4       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#>   is_non_standard term_nci_code rank term_description
+#> 1              NA          <NA>   NA             <NA>
+#> 2              NA          <NA>   NA             <NA>
+#> 3              NA          <NA>   NA             <NA>
+#> 4              NA          <NA>   NA             <NA>
 
 # ---- Example 2: the whole codelists table ----
 #
@@ -84,9 +89,14 @@ head(spec_codelists(spec))
 #> 2      C66731                M             Male     2       NA
 #> 3      C66731                U          Unknown     3       NA
 #> 4      C66731 UNDIFFERENTIATED Undifferentiated     4       NA
-#>   comment_id
-#> 1       <NA>
-#> 2       <NA>
-#> 3       <NA>
-#> 4       <NA>
+#>   comment_id name data_type sas_format_name nci_code standard_id
+#> 1       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 2       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 3       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#> 4       <NA> <NA>      <NA>            <NA>     <NA>        <NA>
+#>   is_non_standard term_nci_code rank term_description
+#> 1              NA          <NA>   NA             <NA>
+#> 2              NA          <NA>   NA             <NA>
+#> 3              NA          <NA>   NA             <NA>
+#> 4              NA          <NA>   NA             <NA>
 ```

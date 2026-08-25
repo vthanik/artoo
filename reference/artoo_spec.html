@@ -17,7 +17,7 @@ is the lingua franca the rest of artoo reads, applies, and serialises."><meta pr
 
     <a class="navbar-brand me-2" href="../index.html">artoo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,6 +30,7 @@ is the lingua franca the rest of artoo reads, applies, and serialises."><meta pr
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/workbook.html">Authoring a specification workbook</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
     <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
@@ -47,7 +48,7 @@ is the lingua franca the rest of artoo reads, applies, and serialises."><meta pr
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Construct a CDISC specification</h1>
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/v0.1.3/R/spec_construct.R" class="external-link"><code>R/spec_construct.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/main/R/spec_construct.R" class="external-link"><code>R/spec_construct.R</code></a></small>
       <div class="d-none name"><code>artoo_spec.Rd</code></div>
     </div>
 
@@ -71,7 +72,13 @@ is the lingua franca the rest of artoo reads, applies, and serialises.</p>
 <span>  methods <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  comments <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  documents <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  standard <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  standard <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  standards <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  where_clauses <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  method_expressions <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  arm_displays <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  arm_results <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  dictionaries <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -133,12 +140,55 @@ by <code>document_id</code>; must carry <code>document_id</code> when supplied.<
 
 
 <dt id="arg-standard">standard<a class="anchor" aria-label="anchor" href="#arg-standard"></a></dt>
-<dd><p><em>The CDISC standard the spec implements.</em>
+<dd><p><em>The primary CDISC standard the spec implements.</em>
 <code>&lt;character(1)&gt; | NULL</code>. E.g. <code>"ADaMIG 1.1"</code> or <code>"SDTMIG 3.2"</code>. When
-<code>NULL</code> (default) it is resolved from <code>datasets$standard</code> or
-<code>study$standard</code>; absent everywhere, <code>@standard</code> is <code>NA</code>.</p>
-<p><strong>Restriction:</strong> all sources must agree on one value; conflicting
-standards abort with <code>artoo_error_spec</code>.</p></dd>
+<code>NULL</code> (default) it is resolved from <code>study$standard</code>, or from the
+value most rows of <code>datasets$standard</code> name; absent everywhere,
+<code>@standard</code> is <code>NA</code>.</p>
+<p><strong>Restriction:</strong> an explicit value that matches nothing the source
+names aborts with <code>artoo_error_spec</code>.</p></dd>
+
+
+<dt id="arg-standards">standards<a class="anchor" aria-label="anchor" href="#arg-standards"></a></dt>
+<dd><p><em>CDISC standards this spec claims.</em> <code>&lt;data.frame&gt; | NULL</code>.
+Must carry <code>standard_id</code>, <code>name</code> and <code>version</code>. Define-XML 2.1 emits these
+as a <code>def:Standards</code> block that datasets and codelists reference by id;
+2.0 has room for only one, taken from the row flagged <code>is_primary</code>.</p></dd>
+
+
+<dt id="arg-where-clauses">where_clauses<a class="anchor" aria-label="anchor" href="#arg-where-clauses"></a></dt>
+<dd><p><em>Structured value-level conditions.</em>
+<code>&lt;data.frame&gt; | NULL</code>. Must carry <code>where_clause_id</code> and <code>comparator</code>. One
+row per check value, because a check value is free text and may itself
+contain a comma, so any collapsed form would be lossy.</p></dd>
+
+
+<dt id="arg-method-expressions">method_expressions<a class="anchor" aria-label="anchor" href="#arg-method-expressions"></a></dt>
+<dd><p><em>Formal expressions for derivation methods.</em>
+<code>&lt;data.frame&gt; | NULL</code>. Must carry <code>method_id</code>. A separate table because a
+method may carry several expressions in different languages, which extra
+rows on <code>methods</code> could not express without changing what the published
+one-row-per-method rule means.</p></dd>
+
+
+<dt id="arg-arm-displays">arm_displays<a class="anchor" aria-label="anchor" href="#arg-arm-displays"></a></dt>
+<dd><p><em>Analysis result displays.</em> <code>&lt;data.frame&gt; | NULL</code>.
+Must carry <code>display_id</code>. Analysis Results Metadata is version-neutral:
+the vocabulary is identical for Define-XML 2.0 and 2.1.</p></dd>
+
+
+<dt id="arg-arm-results">arm_results<a class="anchor" aria-label="anchor" href="#arg-arm-results"></a></dt>
+<dd><p><em>Analysis results.</em> <code>&lt;data.frame&gt; | NULL</code>. Must carry
+<code>display_id</code> and <code>result_id</code>. One row per result and analysis dataset,
+since each analysis dataset carries its own where-clause reference.</p></dd>
+
+
+<dt id="arg-dictionaries">dictionaries<a class="anchor" aria-label="anchor" href="#arg-dictionaries"></a></dt>
+<dd><p><em>External codelists.</em> <code>&lt;data.frame&gt; | NULL</code>. Must carry
+<code>dictionary_id</code>. A terminology too large to enumerate, named rather than
+listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and a
+variable points at one from the same <code>codelist_id</code> column it would use
+for an enumerated list.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -163,14 +213,17 @@ SAS / P21 spellings resolve automatically (<code>"text"</code>, <code>"Char"</co
 <p><strong>Cross-slot integrity.</strong> Construction fails (<code>artoo_error_spec</code>) if a
 variable names a dataset absent from <code>datasets</code>, or references a
 <code>codelist_id</code> absent from <code>codelists</code>.</p>
-<p><strong>One spec, one standard.</strong> A <code>artoo_spec</code> carries exactly one CDISC
-standard, stored as the scalar <code>@standard</code> property. The constructor
-resolves it from the <code>standard</code> argument, a <code>standard</code> column in
-<code>datasets</code> (the P21 workbook shape), and a <code>standard</code> field in <code>study</code>
-(the Define-XML shape) — those columns are consumed, so <code>@standard</code> is
-the single home. More than one distinct value aborts with
-<code>artoo_error_spec</code>; scope the source to one standard (e.g.
-<code>read_spec(path, datasets = ...)</code>) instead of mixing.</p>
+<p><strong>One primary standard, linked per dataset.</strong> The scalar <code>@standard</code>
+property holds the spec's primary CDISC standard, resolved from the
+<code>standard</code> argument, a <code>standard</code> column in <code>datasets</code> (the P21 workbook
+shape), and a <code>standard</code> field in <code>study</code> (the Define-XML shape) — those
+columns are consumed, so <code>@standard</code> is the single home. A <code>datasets</code>
+column naming several standards is legitimate (a study may mix
+implementation-guide versions): each row is linked to its standard via
+<code>datasets$standard_id</code>, minting a <code>standards</code> row where none defines the
+name, and <code>@standard</code> takes the study's stated standard, or failing that
+the one most datasets name. An explicit <code>standard</code> argument contradicting
+every value in the source aborts with <code>artoo_error_spec</code>.</p>
 <p><strong>One study vocabulary.</strong> Well-known study fields are canonicalised to
 the CDISC ODM GlobalVariables names, snake_cased: <code>study_name</code>,
 <code>study_description</code>, <code>protocol_name</code>. Source spellings resolve

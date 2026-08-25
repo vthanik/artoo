@@ -138,8 +138,7 @@ read_parquet(pq)
 ```
 
     Error in `read_parquet()`:
-    ! Could not read '/tmp/RtmpBzuEaV/file1e6527f95aa5.parquet' as
-      "parquet".
+    ! Could not read '/tmp/Rtmp7ffKpB/file1faa2cb95fe.parquet' as "parquet".
     ✖ entry 2 has wrong Encoding; marked as "UTF-8" but leading byte 0xDC followed
       by invalid continuation byte (0x4E) at position 3
 
@@ -205,13 +204,7 @@ evidence as data, so a harness asserts on it programmatically:
 
 ``` r
 
-vars <- spec_variables(adam_spec)
-vars$data_type[vars$variable == "AGE"] <- "integer"
-strict <- artoo_spec(
-  adam_spec@datasets, vars,
-  codelists = adam_spec@codelists,
-  study = spec_study(adam_spec)
-)
+strict <- set_type(adam_spec, "ADSL", AGE = "integer")
 raw <- cdisc_adsl
 raw$AGE[1] <- raw$AGE[1] + 0.5
 tryCatch(
@@ -240,7 +233,8 @@ Unicode NFC (UAX \#15).
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  the spec whose metadata every codec carries.
+  the spec whose metadata every codec carries, and the define.xml it
+  writes.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md) —
   produce the conformed frame these writers persist.

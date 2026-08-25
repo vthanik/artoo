@@ -8,10 +8,15 @@ Model (ADaM) datasets. A single canonical metadata model carries labels,
 CDISC data types, lengths, 'SAS' display formats, controlled-terminology
 references, and sort keys identically across every format, so conversion
 between any two formats is lossless by construction. Pure 'R' and
-lightweight, with no external 'SAS' or 'Java' runtime. Implements the
-published format specifications for CDISC Dataset-JSON
-(<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>)
-and 'SAS' XPORT
+lightweight, with no external 'SAS' or 'Java' runtime. Reads and writes
+CDISC Define-XML, the specification document that accompanies a
+submission, and renders it as HTML through the bundled Define-XML
+stylesheet. Implements the published format specifications for CDISC
+Dataset-JSON
+(<https://cdisc-org.github.io/DataExchange-DatasetJson/doc/dataset-json1-1.html>),
+CDISC Define-XML
+(<https://www.cdisc.org/standards/data-exchange/define-xml>), and 'SAS'
+XPORT
 (<https://www.loc.gov/preservation/digital/formats/fdd/fdd000466.shtml>).
 
 ## See also
@@ -32,3 +37,15 @@ Useful links:
 Authors:
 
 - Vignesh Thanikachalam <about.vignesh@gmail.com> \[copyright holder\]
+
+Other contributors:
+
+- Lex Jansen (Author of the bundled CDISC Define-XML stylesheets)
+  \[copyright holder\]
+
+- Clinical Data Interchange Standards Consortium (CDISC) (Author of the
+  bundled Define-XML, ODM and ARM schemas and example documents)
+  \[copyright holder\]
+
+- World Wide Web Consortium (Author of the bundled xml, xlink and
+  xmldsig schemas) \[copyright holder\]

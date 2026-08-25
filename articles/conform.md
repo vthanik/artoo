@@ -83,19 +83,23 @@ strict <- artoo_spec(
   codelists = adam_spec@codelists,
   study = spec_study(adam_spec)
 )
+```
+
+    Error:
+    ! Some variables reference a codelist not in `codelists`.
+    ✖ Unresolved codelist_ids: "CL.AEDICT" and "CL.AEDICTN".
+    ℹ Add the codelist's terms to `codelists`, or the external dictionary to
+      `dictionaries`.
+
+``` r
+
 raw <- cdisc_adsl
 raw$AGE[1] <- raw$AGE[1] + 0.5
 apply_spec(raw, strict, "ADSL", conformance = "off")
 ```
 
     Error:
-    ! Coercion to the spec dataTypes would lose data.
-    ✖ Integer coercion would truncate fractional values in: AGE (1).
-    ℹ This gate is separate from `conformance`; `conformance = "off"` does not
-      bypass it.
-    ℹ To keep these values in R, set `apply_spec(on_coercion_loss = "keep")`, or
-      retype the spec with `set_type()` (dataType "float" or "decimal").
-    ℹ To see every finding at once, run `check_spec(x, spec, dataset)`.
+    ! object 'strict' not found
 
 You have two honest one-line exits: keep the wider source type with
 `apply_spec(on_coercion_loss = "keep")` (the value is preserved and the
@@ -265,7 +269,8 @@ duplicates a definition.)
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  build, inspect, and repair the spec this verb consumes.
+  build, inspect, and repair the spec this verb consumes, and write it
+  out as the submission’s define.xml.
 - [Formats & lossless
   conversion](https://vthanik.github.io/artoo/articles/convert.md) —
   write the conformed frame to any format, and the qualification

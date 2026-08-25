@@ -8,6 +8,7 @@
 <url><loc>https://vthanik.github.io/artoo/articles/migrate-encoding.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/recipes.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/articles/specs.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/articles/workbook.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/authors.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/index.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/news/index.html</loc></url>
@@ -35,6 +36,7 @@
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_checks.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_meta.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/is_artoo_spec.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/lint_define.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/members.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_dataset.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/read_json.html</loc></url>
@@ -56,6 +58,7 @@
 <url><loc>https://vthanik.github.io/artoo/reference/spec_study.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/spec_variables.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/sync_meta.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/validate_define.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/validate_spec.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/write_dataset.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/write_json.html</loc></url>
@@ -63,6 +66,7 @@
 <url><loc>https://vthanik.github.io/artoo/reference/write_parquet.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/write_rds.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/write_spec.html</loc></url>
+<url><loc>https://vthanik.github.io/artoo/reference/write_template.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/write_xpt.html</loc></url>
 <url><loc>https://vthanik.github.io/artoo/reference/xpt_members.html</loc></url>
 </urlset>

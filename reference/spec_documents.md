@@ -42,6 +42,6 @@ spec <- artoo_spec(
   )
 )
 spec_documents(spec)
-#>   document_id                     title href
-#> 1         SAP Statistical Analysis Plan <NA>
+#>   document_id                     title href role
+#> 1         SAP Statistical Analysis Plan <NA> <NA>
 ```

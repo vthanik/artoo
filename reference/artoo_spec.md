@@ -20,7 +20,13 @@ artoo_spec(
   methods = NULL,
   comments = NULL,
   documents = NULL,
-  standard = NULL
+  standard = NULL,
+  standards = NULL,
+  where_clauses = NULL,
+  method_expressions = NULL,
+  arm_displays = NULL,
+  arm_results = NULL,
+  dictionaries = NULL
 )
 ```
 
@@ -83,13 +89,56 @@ artoo_spec(
 
 - standard:
 
-  *The CDISC standard the spec implements.* `<character(1)> | NULL`.
-  E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When `NULL` (default) it is
-  resolved from `datasets$standard` or `study$standard`; absent
-  everywhere, `@standard` is `NA`.
+  *The primary CDISC standard the spec implements.*
+  `<character(1)> | NULL`. E.g. `"ADaMIG 1.1"` or `"SDTMIG 3.2"`. When
+  `NULL` (default) it is resolved from `study$standard`, or from the
+  value most rows of `datasets$standard` name; absent everywhere,
+  `@standard` is `NA`.
 
-  **Restriction:** all sources must agree on one value; conflicting
-  standards abort with `artoo_error_spec`.
+  **Restriction:** an explicit value that matches nothing the source
+  names aborts with `artoo_error_spec`.
+
+- standards:
+
+  *CDISC standards this spec claims.* `<data.frame> | NULL`. Must carry
+  `standard_id`, `name` and `version`. Define-XML 2.1 emits these as a
+  `def:Standards` block that datasets and codelists reference by id; 2.0
+  has room for only one, taken from the row flagged `is_primary`.
+
+- where_clauses:
+
+  *Structured value-level conditions.* `<data.frame> | NULL`. Must carry
+  `where_clause_id` and `comparator`. One row per check value, because a
+  check value is free text and may itself contain a comma, so any
+  collapsed form would be lossy.
+
+- method_expressions:
+
+  *Formal expressions for derivation methods.* `<data.frame> | NULL`.
+  Must carry `method_id`. A separate table because a method may carry
+  several expressions in different languages, which extra rows on
+  `methods` could not express without changing what the published
+  one-row-per-method rule means.
+
+- arm_displays:
+
+  *Analysis result displays.* `<data.frame> | NULL`. Must carry
+  `display_id`. Analysis Results Metadata is version-neutral: the
+  vocabulary is identical for Define-XML 2.0 and 2.1.
+
+- arm_results:
+
+  *Analysis results.* `<data.frame> | NULL`. Must carry `display_id` and
+  `result_id`. One row per result and analysis dataset, since each
+  analysis dataset carries its own where-clause reference.
+
+- dictionaries:
+
+  *External codelists.* `<data.frame> | NULL`. Must carry
+  `dictionary_id`. A terminology too large to enumerate, named rather
+  than listed: MedDRA, WHODrug, ISO 3166. Both readers populate it, and
+  a variable points at one from the same `codelist_id` column it would
+  use for an enumerated list.
 
 ## Value
 
@@ -119,14 +168,17 @@ SAS / P21 spellings resolve automatically (`"text"`, `"Char"`,
 variable names a dataset absent from `datasets`, or references a
 `codelist_id` absent from `codelists`.
 
-**One spec, one standard.** A `artoo_spec` carries exactly one CDISC
-standard, stored as the scalar `@standard` property. The constructor
-resolves it from the `standard` argument, a `standard` column in
-`datasets` (the P21 workbook shape), and a `standard` field in `study`
-(the Define-XML shape) — those columns are consumed, so `@standard` is
-the single home. More than one distinct value aborts with
-`artoo_error_spec`; scope the source to one standard (e.g.
-`read_spec(path, datasets = ...)`) instead of mixing.
+**One primary standard, linked per dataset.** The scalar `@standard`
+property holds the spec's primary CDISC standard, resolved from the
+`standard` argument, a `standard` column in `datasets` (the P21 workbook
+shape), and a `standard` field in `study` (the Define-XML shape) — those
+columns are consumed, so `@standard` is the single home. A `datasets`
+column naming several standards is legitimate (a study may mix
+implementation-guide versions): each row is linked to its standard via
+`datasets$standard_id`, minting a `standards` row where none defines the
+name, and `@standard` takes the study's stated standard, or failing that
+the one most datasets name. An explicit `standard` argument
+contradicting every value in the source aborts with `artoo_error_spec`.
 
 **One study vocabulary.** Well-known study fields are canonicalised to
 the CDISC ODM GlobalVariables names, snake_cased: `study_name`,

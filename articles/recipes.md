@@ -109,7 +109,7 @@ members(json)
 
     <artoo_members> 1 dataset
     file                   member  label         records  variables  format
-    file1e9f7d3affea.json  DM      Demographics  60       15         json
+    file1fe52df7c6a5.json  DM      Demographics  60       15         json
 
 ``` r
 
@@ -221,7 +221,7 @@ identical(read_json(p)$TRTSDT, adsl$TRTSDT)
 ## Where to next
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md) —
-  the spec each recipe starts from.
+  the spec each recipe starts from, and the define.xml it writes.
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)

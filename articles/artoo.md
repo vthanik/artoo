@@ -37,10 +37,10 @@ adam_spec
     Standard: ADaMIG 1.1
     Datasets:  2
     Variables: 104
-    Codelists: 30
-    Methods: 54
-    Comments: 22
-    Documents: 9
+    Codelists: 20
+    Methods: 45
+    Comments: 11
+    Documents: 8
     Spec for: ADSL, ADAE
 
 ``` r
@@ -203,6 +203,77 @@ parquet <- tempfile(fileext = ".parquet")
 write_parquet(read_json(json), parquet)
 ```
 
+## 4b. Write the define.xml
+
+The datasets are half of a submission; the other half is the Define-XML
+document that describes them. It is the same spec, written out:
+
+``` r
+
+define <- file.path(tempdir(), "define.xml")
+write_spec(adam_spec, define)
+```
+
+artoo schema-validates what it built before the file reaches its
+destination, so an invalid document never replaces a good one. Two
+checks read it back —
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+against the bundled CDISC schemas, and
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for the reference integrity a schema cannot see:
+
+``` r
+
+validate_define(define)
+```
+
+    artoo Define-XML Schema Check
+    =============================
+
+    Summary
+    -------
+    Document: define.xml
+    Define-XML version: 2.1
+    Schema valid: yes
+
+    No findings.
+
+``` r
+
+lint_define(define)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: define.xml
+    Definitions: 198    References: 255
+    External codelists (exempt from the orphan check): 2
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  2
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+
+Two orphans, no dangling references. An orphan is something defined that
+nothing points at — here a leaf and a CDISC standard the pilot spec’s
+other datasets used — and the document is valid with them. A dangling
+reference, one pointing at nothing, is the error case.
+
+Pass `data =` and the datasets inform the document: a blank length is
+filled from the real maximum byte width, and value-level metadata is
+derived for the standard findings shapes. Pass `html = TRUE` and the
+document is also rendered through its own CDISC stylesheet, which
+matters because browsers are dropping XSLT support.
+
 ## 5. Read back, intact
 
 Reading restores the values, the R classes (dates as `Date`, times as
@@ -286,10 +357,13 @@ archived is what you analysed.
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.html)
   — read a spec from Define-XML or a workbook, inspect it with the
-  `spec_*` accessors, and fix it in place with
+  `spec_*` accessors, fix it in place with
   [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
   /
-  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md).
+  [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md),
+  and write it back out as Define-XML 2.0 or 2.1 — or as a blank
+  workbook to fill in, with
+  [`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md).
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.html) —
   [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
@@ -304,4 +378,4 @@ archived is what you analysed.
   qualification evidence a regulated pipeline needs.
 - [Recipes](https://vthanik.github.io/artoo/articles/recipes.html) —
   end-to-end ADaM and SDTM builds, dates and `--DTC`, and codelist
-  decoding, each rendered live on the demo data. \`\`\`
+  decoding, each rendered live on the demo data.

@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">artoo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,6 +45,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/workbook.html">Authoring a specification workbook</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
     <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
@@ -71,7 +72,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/v0.1.3/vignettes/articles/conform.qmd" class="external-link"><code>vignettes/articles/conform.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/main/vignettes/articles/conform.qmd" class="external-link"><code>vignettes/articles/conform.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -135,19 +136,21 @@ and `MMSETOT`</code></pre>
 <span>  <span class="va">adam_spec</span><span class="op">@</span><span class="va">datasets</span>, <span class="va">vars</span>,</span>
 <span>  codelists <span class="op">=</span> <span class="va">adam_spec</span><span class="op">@</span><span class="va">codelists</span>,</span>
 <span>  study <span class="op">=</span> <span class="fu"><a href="../reference/spec_study.html">spec_study</a></span><span class="op">(</span><span class="va">adam_spec</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_adsl</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output cell-output-error">
+<pre><code>Error:
+! Some variables reference a codelist not in `codelists`.
+✖ Unresolved codelist_ids: "CL.AEDICT" and "CL.AEDICTN".
+ℹ Add the codelist's terms to `codelists`, or the external dictionary to
+  `dictionaries`.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="va">cdisc_adsl</span></span>
 <span><span class="va">raw</span><span class="op">$</span><span class="va">AGE</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">raw</span><span class="op">$</span><span class="va">AGE</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">+</span> <span class="fl">0.5</span></span>
 <span><span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">raw</span>, <span class="va">strict</span>, <span class="st">"ADSL"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error:
-! Coercion to the spec dataTypes would lose data.
-✖ Integer coercion would truncate fractional values in: AGE (1).
-ℹ This gate is separate from `conformance`; `conformance = "off"` does not
-  bypass it.
-ℹ To keep these values in R, set `apply_spec(on_coercion_loss = "keep")`, or
-  retype the spec with `set_type()` (dataType "float" or "decimal").
-ℹ To see every finding at once, run `check_spec(x, spec, dataset)`.</code></pre>
+! object 'strict' not found</code></pre>
 </div>
 </div>
 <p>You have two honest one-line exits: keep the wider source type with <code>apply_spec(on_coercion_loss = "keep")</code> (the value is preserved and the mismatch is left as an <code>integer_fraction</code> finding), or retype the spec with <code><a href="../reference/set_type.html">set_type()</a></code>.</p>
@@ -155,7 +158,7 @@ and `MMSETOT`</code></pre>
 </h2>
 <p><code><a href="../reference/apply_spec.html">apply_spec()</a></code> stops at the first thing that would lose data; to <em>list</em> every issue instead, ask. <code><a href="../reference/check_spec.html">check_spec()</a></code> returns all of them as a tidy frame — one row per finding, no abort:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">findings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/check_spec.html">check_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span><span class="op">)</span></span>
 <span><span class="va">findings</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -196,7 +199,7 @@ Notes
 </div>
 <p>The same report rides along on a conformed result under the default <code>conformance = "warn"</code>; read it back with <code><a href="../reference/conformance.html">conformance()</a></code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu"><a href="../reference/conformance.html">conformance</a></span><span class="op">(</span><span class="va">adsl</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 12</code></pre>
@@ -204,7 +207,7 @@ Notes
 </div>
 <p>Scaling to a whole study is one call: <code><a href="../reference/check_study.html">check_study()</a></code> takes a named list of datasets and returns the same shape, so “is my study submittable?” has a single answer.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu"><a href="../reference/check_study.html">check_study</a></span><span class="op">(</span><span class="va">adam_spec</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ADSL <span class="op">=</span> <span class="va">cdisc_adsl</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 26</code></pre>
@@ -214,7 +217,7 @@ Notes
 </h2>
 <p><code><a href="../reference/artoo_checks.html">artoo_checks()</a></code> toggles each conformance dimension on or off; pass the result to <code><a href="../reference/check_spec.html">check_spec()</a></code> / <code><a href="../reference/check_study.html">check_study()</a></code> to narrow a run to what you care about (here, everything except the type-mismatch note):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ck</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/artoo_checks.html">artoo_checks</a></span><span class="op">(</span>type_mismatch <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu"><a href="../reference/check_spec.html">check_spec</a></span><span class="op">(</span><span class="va">cdisc_adsl</span>, <span class="va">adam_spec</span>, <span class="st">"ADSL"</span>, checks <span class="op">=</span> <span class="va">ck</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -226,7 +229,7 @@ Notes
 <p>Every abort artoo raises carries a class of the form <code>artoo_error_&lt;kind&gt;</code> (plus <code>artoo_error</code> and <code>artoo_condition</code>, so one <code>tryCatch(artoo_error = )</code> catches them all), and the data-protection conditions carry their evidence as data, so a qualification harness can assert on <code>cnd$variables</code> / <code>cnd$findings</code> rather than match message text. The kinds, each triggered live:</p>
 <p><code>artoo_error_input</code> — the call is malformed (here, an unknown dataset):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"NOPE"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error:
@@ -237,7 +240,7 @@ Notes
 </div>
 <p><code>artoo_error_conformance</code> — <code>apply_spec(conformance = "abort")</code> met error-severity findings:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="va">cdisc_dm</span></span>
 <span><span class="va">dm</span><span class="op">$</span><span class="va">SEX</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"X9"</span></span>
 <span><span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"abort"</span><span class="op">)</span></span></code></pre></div>
@@ -249,7 +252,7 @@ Notes
 </div>
 <p><code>artoo_error_codelist</code> — <code><a href="../reference/decode_column.html">decode_column()</a></code> met a value outside the codelist’s terms (pass <code>no_match = "keep"</code> / <code>"na"</code> to carry it through):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/decode_column.html">decode_column</a></span><span class="op">(</span><span class="va">dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, from <span class="op">=</span> <span class="st">"SEX"</span>, to <span class="op">=</span> <span class="st">"SEXDECD"</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output cell-output-error">
 <pre><code>Error:
@@ -260,7 +263,7 @@ Notes
 </div>
 <p><code>artoo_error_codec</code> — the bytes cannot travel (an invalid-UTF-8 value for Dataset-JSON); re-read with the true <code>encoding=</code>, or set an <code>on_invalid</code> policy on the writer:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clean</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/apply_spec.html">apply_spec</a></span><span class="op">(</span><span class="va">cdisc_dm</span>, <span class="va">sdtm_spec</span>, <span class="st">"DM"</span>, conformance <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span>
 <span><span class="va">clean</span><span class="op">$</span><span class="va">USUBJID</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">rawToChar</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0x63</span>, <span class="fl">0xE9</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/write_json.html">write_json</a></span><span class="op">(</span><span class="va">clean</span>, <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".json"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -276,7 +279,7 @@ Notes
 </h2>
 <ul>
 <li>
-<a href="specs.html">Specifications</a> — build, inspect, and repair the spec this verb consumes.</li>
+<a href="specs.html">Specifications</a> — build, inspect, and repair the spec this verb consumes, and write it out as the submission’s define.xml.</li>
 <li>
 <a href="convert.html">Formats &amp; lossless conversion</a> — write the conformed frame to any format, and the qualification evidence behind “lossless”.</li>
 <li>

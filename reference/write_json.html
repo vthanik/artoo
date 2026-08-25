@@ -15,7 +15,7 @@ write_dataset() with format = "json".'><meta property="og:image" content="https:
 
     <a class="navbar-brand me-2" href="../index.html">artoo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,6 +28,7 @@ write_dataset() with format = "json".'><meta property="og:image" content="https:
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/workbook.html">Authoring a specification workbook</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
     <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
@@ -45,7 +46,7 @@ write_dataset() with format = "json".'><meta property="og:image" content="https:
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Write a dataset to CDISC Dataset-JSON</h1>
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/v0.1.3/R/codec_json.R" class="external-link"><code>R/codec_json.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/main/R/codec_json.R" class="external-link"><code>R/codec_json.R</code></a></small>
       <div class="d-none name"><code>write_json.Rd</code></div>
     </div>
 
@@ -103,11 +104,14 @@ freeze it for byte-stable output.</p></dd>
 
 <dt id="arg-strict">strict<a class="anchor" aria-label="anchor" href="#arg-strict"></a></dt>
 <dd><p><em>Suppress the <code>_artoo</code> extension block.</em> <code>&lt;logical(1)&gt;: default FALSE</code>. By default the file carries a single namespaced <code>_artoo</code>
-object when (and only when) there is content strict CDISC cannot
-express: SAS special-missing tags (<code>.A</code>-<code>.Z</code>, <code>._</code>), the recorded source
-encoding, and informats. Data values stay plain <code>null</code>s either way, so a
-foreign reader degrades gracefully.</p>
-<p><strong>Note:</strong> <code>strict = TRUE</code> writes a pure closed-vocabulary file and warns
+object when (and only when) there is content the closed Dataset-JSON
+vocabulary cannot express: SAS special-missing tags (<code>.A</code>-<code>.Z</code>, <code>._</code>),
+the recorded source encoding, and the per-variable informats, origins,
+codelist references, and significant digits. The <code>columns</code> array itself
+always uses only schema-legal keys. Data values stay plain <code>null</code>s
+either way, so a foreign reader degrades gracefully.</p>
+<p><strong>Note:</strong> <code>strict = TRUE</code> writes a pure closed-vocabulary file that
+validates against the official CDISC schema, and warns
 (<code>artoo_warning_codec</code>) naming exactly what was dropped; those
 attributes will not survive a read-back.</p></dd>
 

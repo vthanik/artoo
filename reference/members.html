@@ -17,7 +17,7 @@ xpt-specific xpt_members()."><meta property="og:image" content="https://vthanik.
 
     <a class="navbar-brand me-2" href="../index.html">artoo</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -30,6 +30,7 @@ xpt-specific xpt_members()."><meta property="og:image" content="https://vthanik.
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/specs.html">Specifications</a></li>
+    <li><a class="dropdown-item" href="../articles/workbook.html">Authoring a specification workbook</a></li>
     <li><a class="dropdown-item" href="../articles/conform.html">Conform &amp; validate</a></li>
     <li><a class="dropdown-item" href="../articles/convert.html">Formats &amp; lossless conversion</a></li>
     <li><a class="dropdown-item" href="../articles/migrate-encoding.html">Migrating clinical data from WLATIN1 to UTF-8</a></li>
@@ -47,7 +48,7 @@ xpt-specific xpt_members()."><meta property="og:image" content="https://vthanik.
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>List the datasets in a file or directory</h1>
-      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/v0.1.3/R/members.R" class="external-link"><code>R/members.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/vthanik/artoo/blob/main/R/members.R" class="external-link"><code>R/members.R</code></a></small>
       <div class="d-none name"><code>members.Rd</code></div>
     </div>
 
@@ -62,7 +63,7 @@ xpt-specific <code><a href="xpt_members.html">xpt_members()</a></code>.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">members</span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">members</span><span class="op">(</span><span class="va">path</span>, format <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -75,14 +76,32 @@ path to a dataset file (<code>.xpt</code>, <code>.json</code>, <code>.ndjson</co
 or to a directory holding such files. A path that does not exist, or a
 file whose extension no codec claims, aborts.</p></dd>
 
+
+<dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
+<dd><p><em>Restrict the inventory to these formats.</em> <code>&lt;character&gt; | NULL</code>. Defaults to <code>NULL</code>, which inventories every format. Format names
+as <code><a href="artoo_formats.html">artoo_formats()</a></code> lists them, not
+file extensions: <code>"parquet"</code> claims both <code>.parquet</code> and <code>.pq</code>. <code>NULL</code>
+inventories every format. Several names are a set, not an order, so
+<code>c("xpt", "json")</code> lists both and says nothing about which wins.</p>
+<p><strong>Tip:</strong> the reason to pass it is a directory holding the same dataset
+in more than one format, where the full inventory lists <code>dm.xpt</code> and
+<code>dm.json</code> as two rows.</p>
+<p><strong>Restriction:</strong> it filters, it does not override. Unlike
+<code><a href="read_dataset.html">read_dataset()</a></code>'s <code>format</code>, which reads a file AS the named format
+whatever its extension, this narrows which files are inventoried and
+leaves extension resolution alone. Naming one file whose format the
+restriction excludes aborts, rather than returning an empty inventory
+that could not be told apart from an empty directory.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p><em>A <code>&lt;artoo_members&gt;</code> data frame</em>, one row per dataset, with columns
 <code>file</code> (source basename), <code>member</code> (dataset name), <code>label</code>, <code>records</code>
 (row count), <code>variables</code> (column count), and <code>format</code> (the codec
-format). Empty when a directory holds no dataset files. It is an ordinary
-data frame underneath.</p>
+format). Empty when a directory holds no dataset files, and likewise when
+<code>format</code> excludes every one it holds. It is an ordinary data frame
+underneath.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -118,7 +137,7 @@ a large directory it reads every dataset.</p>
 <span class="r-in"><span><span class="fu">members</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_members&gt; 1 dataset</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> file                  member  label         records  variables  format</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> file1a019a22425.json  DM      Demographics  60       25         json</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> file1b05678f426.json  DM      Demographics  60       25         json</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ---- Example 2: every dataset in a directory ----</span></span></span>
 <span class="r-in"><span><span class="co">#</span></span></span>
@@ -133,6 +152,15 @@ a large directory it reads every dataset.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> file     member  label         records  variables  format</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> dm.json  DM      Demographics  60       25         json</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> dm.rds   DM      Demographics  60       25         rds</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># ---- Example 3: one dataset, two formats, one of them wanted ----</span></span></span>
+<span class="r-in"><span><span class="co">#</span></span></span>
+<span class="r-in"><span><span class="co"># The same dataset stored twice is two rows, because the inventory reports</span></span></span>
+<span class="r-in"><span><span class="co"># what is on disk. Name the format to see only that half.</span></span></span>
+<span class="r-in"><span><span class="fu">members</span><span class="op">(</span><span class="va">dir</span>, format <span class="op">=</span> <span class="st">"json"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;artoo_members&gt; 1 dataset</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> file     member  label         records  variables  format</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> dm.json  DM      Demographics  60       25         json</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

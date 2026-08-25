@@ -2,8 +2,9 @@
 name: artoo
 description: >
   Read and write clinical-trial datasets losslessly across SAS XPORT, CDISC
-  Dataset-JSON v1.1, Apache Parquet, and RDS from R. Use when writing R code
-  that uses the artoo package.
+  Dataset-JSON v1.1, Apache Parquet, and RDS from R, and author the
+  submission's Define-XML 2.1 or 2.0 from the same spec. Use when writing R
+  code that uses the artoo package.
 license: MIT
 compatibility: Requires R >=4.3.
 ---
@@ -13,8 +14,11 @@ compatibility: Requires R >=4.3.
 Read and write clinical-trial datasets losslessly across SAS XPORT (v5/v8),
 CDISC Dataset-JSON v1.1, NDJSON, Apache Parquet, and RDS from R. One
 canonical metadata model (`artoo_meta`) is carried by every codec, so
-any-to-any conversion is lossless by construction. Pure R, no Java, no SAS,
-and no compiled runtime beyond a small Parquet engine.
+any-to-any conversion is lossless by construction. The same model authors
+the submission's **define.xml** (Define-XML 2.1 and 2.0), validates any
+vendor's document against the bundled CDISC schemas offline, and lints the
+OID graph the schema cannot see. Pure R, no Java, no SAS, and no compiled
+runtime beyond a small Parquet engine.
 
 ## Installation
 
@@ -56,11 +60,13 @@ character with no standards-backed ASCII form (the Euro sign).
 
 Build a spec from metadata tables, or read one from native JSON, a
 Pinnacle 21 xlsx workbook, or Define-XML; write it back, or amend it in R
-when the data disagrees.
+when the data disagrees. `write_spec()` dispatches on the extension, so a
+workbook becomes a submission-grade define.xml in one line.
 
 - `artoo_spec`: Build and validate a CDISC spec from metadata tables
-- `read_spec`: Read a spec from native JSON, a Pinnacle 21 xlsx workbook, or Define-XML
-- `write_spec`: Write a spec to JSON (lossless) or xlsx (interchange)
+- `read_spec`: Read a spec from native JSON, a Pinnacle 21 xlsx workbook, or Define-XML 2.0 / 2.1
+- `write_spec`: Write a spec to JSON (lossless), xlsx (interchange), or xml (Define-XML 2.1 or 2.0, schema-validated before the file lands)
+- `write_template`: Write a blank Pinnacle 21 workbook shaped exactly like the reader
 - `set_type`: Retype a variable in R when the data disagrees with the spec's dataType
 - `repair_spec`: Flip every `integer_fraction` / `integer_overflow` variable to `float` from a study findings frame, in one call
 
@@ -89,6 +95,14 @@ spec's own structural integrity, with the control object that scopes both.
 - `validate_spec`: Structural integrity of the spec itself (no data)
 - `conformance`: Read the findings `apply_spec()` attached to a frame
 - `artoo_checks`: Toggle which conformance dimensions run (only `integer_fraction` / `integer_overflow` are fatal coercion checks; `type_mismatch` is informational; `invalid_encoding` flags character bytes that are not valid UTF-8, the signature of a mis-declared source encoding)
+
+### Define-XML
+
+Check any vendor's define.xml, and render the one you wrote. Both work
+offline against the CDISC schemas bundled with artoo.
+
+- `validate_define`: Schema-validate a define.xml (2.0 or 2.1, ARM included)
+- `lint_define`: Walk the OID reference graph the schema is blind to, reporting dangling references and orphaned definitions per kind
 
 ### Read and write (lossless any-to-any)
 
@@ -155,7 +169,14 @@ instead of inventing toy data.
   passes foreign columns through untouched.
 - **Errors are classed cli conditions** — `artoo_error_<kind>` where kind
   is one of `input`, `spec`, `type`, `codelist`, `codec`, `validation`,
-  `conformance`. Catch by class, never by message.
+  `conformance`, `define`, `install`. Catch by class, never by message.
+  `input` means a bad argument; a malformed spec FILE is `spec`, whichever
+  format it arrived in.
+- **Define-XML degrades loudly or not at all** — `write_spec()` to `.xml`
+  warns once, before a node exists, about everything the target version
+  cannot carry, aborts rather than write an invalid document, and
+  schema-validates before the file reaches its destination. Writing 2.0
+  from a 2.1-shaped spec names each construct 2.0 drops.
 
 ## Resources
 

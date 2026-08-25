@@ -4,16 +4,19 @@
 
 Build a artoo_spec — the canonical CDISC-shaped description of your
 datasets, one CDISC standard each — or read one from native JSON, a
-Pinnacle 21 workbook, or Define-XML, and write it back out. Amend it in
-R when the data disagrees, then read any slot back with the spec\_\*
-accessors.
+Pinnacle 21 workbook, or Define-XML, and write it back out as any of the
+three: a .xml path writes a schema-validated Define-XML 2.1 or 2.0.
+Amend it in R when the data disagrees, then read any slot back with the
+spec\_\* accessors.
 
 - [`artoo_spec()`](https://vthanik.github.io/artoo/reference/artoo_spec.md)
   : Construct a CDISC specification
 - [`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
   : Read a specification from JSON, Excel, or Define-XML
 - [`write_spec()`](https://vthanik.github.io/artoo/reference/write_spec.md)
-  : Write a specification to native JSON or a P21 Excel workbook
+  : Write a specification to JSON, an Excel workbook, or Define-XML
+- [`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+  : Write a blank Pinnacle 21 workbook to fill in
 - [`set_type()`](https://vthanik.github.io/artoo/reference/set_type.md)
   : Override a variable's dataType in a spec
 - [`repair_spec()`](https://vthanik.github.io/artoo/reference/repair_spec.md)
@@ -45,7 +48,9 @@ Apply the spec to a raw frame — coerce, order, sort, stamp metadata —
 decode single variables through its codelists, and read or replace the
 artoo_meta the result carries. Then surface every conformance finding
 for one dataset or a whole study, plus the spec’s own integrity, with
-the control object that scopes both.
+the control object that scopes both. Schema-validate any vendor’s
+Define-XML offline against the bundled CDISC schemas, and lint the OID
+reference graph the schema is blind to.
 
 - [`apply_spec()`](https://vthanik.github.io/artoo/reference/apply_spec.md)
   : Conform a data frame to its spec
@@ -65,6 +70,10 @@ the control object that scopes both.
   : Check a whole study against its spec
 - [`validate_spec()`](https://vthanik.github.io/artoo/reference/validate_spec.md)
   : Validate a specification for submission-readiness
+- [`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+  : Validate a Define-XML document against its CDISC schema
+- [`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+  : Check the reference integrity of a Define-XML document
 - [`conformance()`](https://vthanik.github.io/artoo/reference/conformance.md)
   : Read the conformance findings a dataset carries
 - [`artoo_checks()`](https://vthanik.github.io/artoo/reference/artoo_checks.md)

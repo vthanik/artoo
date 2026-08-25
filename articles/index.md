@@ -3,6 +3,8 @@
 ### Articles
 
 - [Specifications](https://vthanik.github.io/artoo/articles/specs.md):
+- [Authoring a specification
+  workbook](https://vthanik.github.io/artoo/articles/workbook.md):
 - [Conform &
   validate](https://vthanik.github.io/artoo/articles/conform.md):
 - [Formats & lossless

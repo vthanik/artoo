@@ -49,6 +49,6 @@ spec <- artoo_spec(
 spec_methods(spec)
 #>   method_id         description name type expression_context
 #> 1 MT.AGEGR1 Age group from AGE. <NA> <NA>               <NA>
-#>   expression_code document_id pages
-#> 1            <NA>        <NA>  <NA>
+#>   expression_code document_id pages page_type page_title
+#> 1            <NA>        <NA>  <NA>      <NA>       <NA>
 ```

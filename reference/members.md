@@ -12,7 +12,7 @@ xpt-specific
 ## Usage
 
 ``` r
-members(path)
+members(path, format = NULL)
 ```
 
 ## Arguments
@@ -24,13 +24,36 @@ members(path)
   a directory holding such files. A path that does not exist, or a file
   whose extension no codec claims, aborts.
 
+- format:
+
+  *Restrict the inventory to these formats.* `<character> | NULL`.
+  Defaults to `NULL`, which inventories every format. Format names as
+  [`artoo_formats()`](https://vthanik.github.io/artoo/reference/artoo_formats.md)
+  lists them, not file extensions: `"parquet"` claims both `.parquet`
+  and `.pq`. `NULL` inventories every format. Several names are a set,
+  not an order, so `c("xpt", "json")` lists both and says nothing about
+  which wins.
+
+  **Tip:** the reason to pass it is a directory holding the same dataset
+  in more than one format, where the full inventory lists `dm.xpt` and
+  `dm.json` as two rows.
+
+  **Restriction:** it filters, it does not override. Unlike
+  [`read_dataset()`](https://vthanik.github.io/artoo/reference/read_dataset.md)'s
+  `format`, which reads a file AS the named format whatever its
+  extension, this narrows which files are inventoried and leaves
+  extension resolution alone. Naming one file whose format the
+  restriction excludes aborts, rather than returning an empty inventory
+  that could not be told apart from an empty directory.
+
 ## Value
 
 *A `<artoo_members>` data frame*, one row per dataset, with columns
 `file` (source basename), `member` (dataset name), `label`, `records`
 (row count), `variables` (column count), and `format` (the codec
-format). Empty when a directory holds no dataset files. It is an
-ordinary data frame underneath.
+format). Empty when a directory holds no dataset files, and likewise
+when `format` excludes every one it holds. It is an ordinary data frame
+underneath.
 
 ## Details
 
@@ -72,7 +95,7 @@ write_json(dm, p)
 members(p)
 #> <artoo_members> 1 dataset
 #> file                  member  label         records  variables  format
-#> file1a019a22425.json  DM      Demographics  60       25         json
+#> file1b05678f426.json  DM      Demographics  60       25         json
 
 # ---- Example 2: every dataset in a directory ----
 #
@@ -87,4 +110,13 @@ members(dir)
 #> file     member  label         records  variables  format
 #> dm.json  DM      Demographics  60       25         json
 #> dm.rds   DM      Demographics  60       25         rds
+
+# ---- Example 3: one dataset, two formats, one of them wanted ----
+#
+# The same dataset stored twice is two rows, because the inventory reports
+# what is on disk. Name the format to see only that half.
+members(dir, format = "json")
+#> <artoo_members> 1 dataset
+#> file     member  label         records  variables  format
+#> dm.json  DM      Demographics  60       25         json
 ```

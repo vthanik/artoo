@@ -26,10 +26,10 @@ spec
     Standard: ADaMIG 1.1
     Datasets:  2
     Variables: 104
-    Codelists: 30
-    Methods: 54
-    Comments: 22
-    Documents: 9
+    Codelists: 20
+    Methods: 45
+    Comments: 11
+    Documents: 8
     Spec for: ADSL, ADAE
 
 A workbook can carry several standards or duplicate roles; scope the
@@ -87,13 +87,27 @@ spec_keys(spec, "ADSL")
 head(spec_codelists(spec))
 ```
 
-      codelist_id order  term decode extended comment_id
-    1   CL.AGEGR1    NA   <65   <NA>       NA       <NA>
-    2   CL.AGEGR1    NA 65-80   <NA>       NA       <NA>
-    3   CL.AGEGR1    NA   >80   <NA>       NA       <NA>
-    4  CL.AGEGR1N     1     1    <65       NA       <NA>
-    5  CL.AGEGR1N     2     2  65-80       NA       <NA>
-    6  CL.AGEGR1N     3     3    >80       NA       <NA>
+      codelist_id order  term decode          name data_type nci_code
+    1   CL.AGEGR1    NA   <65   <NA>     Age Group      text     <NA>
+    2   CL.AGEGR1    NA 65-80   <NA>     Age Group      text     <NA>
+    3   CL.AGEGR1    NA   >80   <NA>     Age Group      text     <NA>
+    4  CL.AGEGR1N     1     1    <65 Age Group (N)   integer     <NA>
+    5  CL.AGEGR1N     2     2  65-80 Age Group (N)   integer     <NA>
+    6  CL.AGEGR1N     3     3    >80 Age Group (N)   integer     <NA>
+      sas_format_name comment_id term_nci_code rank extended standard_id
+    1            <NA>       <NA>          <NA>    1       NA        <NA>
+    2            <NA>       <NA>          <NA>    2       NA        <NA>
+    3            <NA>       <NA>          <NA>    3       NA        <NA>
+    4            <NA>       <NA>          <NA>   NA       NA        <NA>
+    5            <NA>       <NA>          <NA>   NA       NA        <NA>
+    6            <NA>       <NA>          <NA>   NA       NA        <NA>
+      is_non_standard term_description
+    1              NA             <NA>
+    2              NA             <NA>
+    3              NA             <NA>
+    4              NA             <NA>
+    5              NA             <NA>
+    6              NA             <NA>
 
 [`spec_standard()`](https://vthanik.github.io/artoo/reference/spec_standard.md),
 [`spec_study()`](https://vthanik.github.io/artoo/reference/spec_study.md),
@@ -157,6 +171,189 @@ composition:
 
 read_spec("define.xml") |> write_spec("spec.xlsx")
 ```
+
+## 5. Write the define.xml
+
+A `.xml` path writes Define-XML. The version follows the spec’s own
+`define_version` unless you say otherwise, and both 2.0 and 2.1 are
+written, so a spec read from one converts to the other:
+
+``` r
+
+define <- file.path(tempdir(), "define.xml")
+write_spec(adam_spec, define)
+write_spec(adam_spec, file.path(tempdir(), "define20.xml"), version = "2.0")
+```
+
+    Warning: Define-XML 2.0 cannot carry everything this spec holds.
+    ✖ Dropped or rewritten: "def:Standards (only the primary standard survives)",
+      "def:StandardOID", "def:IsNonStandard", "def:Origin/@Source", "def:SubClass",
+      "ODM/@def:Context", and "def:PDFPageRef/@Title".
+    ℹ Write the spec as "2.1", or to native JSON, to keep it whole.
+
+artoo schema-validates what it built against the bundled CDISC schemas
+*before* the file reaches its destination, so an invalid document never
+replaces a good one. Read it back with the two checks —
+[`validate_define()`](https://vthanik.github.io/artoo/reference/validate_define.md)
+for the schema,
+[`lint_define()`](https://vthanik.github.io/artoo/reference/lint_define.md)
+for the reference integrity a schema cannot see, because an OID is
+`odm:oidref` rather than `xs:ID` and libxml2 never resolves one:
+
+``` r
+
+validate_define(define)
+```
+
+    artoo Define-XML Schema Check
+    =============================
+
+    Summary
+    -------
+    Document: define.xml
+    Define-XML version: 2.1
+    Schema valid: yes
+
+    No findings.
+
+``` r
+
+lint_define(define)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: define.xml
+    Definitions: 198    References: 255
+    External codelists (exempt from the orphan check): 2
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  2
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.ADQSADAS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+
+The two orphan warnings are honest: the bundled pilot spec is scoped to
+ADSL and ADAE, and it still names a leaf and a CDISC standard that only
+the datasets outside that scope used. An orphan is a warning rather than
+an error because a define.xml with one is valid and loads — a *dangling*
+reference is the error, and there are none.
+
+The write also says what the document is missing. None of these is
+required by the schema — the document validates without them — and every
+one draws a conformance finding, so the write names them rather than
+refusing:
+
+``` r
+
+sparse <- artoo_spec(
+  datasets = data.frame(dataset = "DM", structure = "One record per subject"),
+  variables = data.frame(dataset = "DM", variable = "USUBJID", data_type = "string"),
+  standard = "SDTMIG 3.4"
+)
+invisible(write_spec(sparse, file.path(tempdir(), "sparse.xml")))
+```
+
+    Warning: The spec is not submission-grade.
+    ✖ Nothing fills "datasets$label", "datasets$class", "datasets$domain",
+      "datasets$purpose", "datasets$repeating", "datasets$archive_location_id",
+      "variables$label", "variables$origin", and "variables$length".
+    ℹ A conformance report will raise 9 findings; fill them in the source spec.
+
+    Warning: The `def:Standards` block was not written.
+    ✖ The spec names "SDTMIG 3.4" but carries no `standards` table.
+    ℹ Define-XML 2.1 needs a name, version, type and status for each standard.
+
+### Let the data fill in what it knows
+
+artoo can read the datasets a define describes, which a spec-only tool
+cannot. Pass `data =` and a blank length is filled from the real maximum
+byte width, and value-level metadata is derived for the standard
+findings shapes — a result keyed by its test code, `AVAL` by `PARAMCD` —
+each derived row carrying the type and width of the rows it covers:
+
+``` r
+
+informed <- file.path(tempdir(), "informed.xml")
+invisible(
+  write_spec(sdtm_spec, informed, data = list(VS = cdisc_vs, DM = cdisc_dm))
+)
+```
+
+    Warning: 4 declared lengths are shorter than the data.
+    ✖ "DM.STUDYID", "VS.STUDYID", "VS.VSPOS", and "VS.VISIT": widened to the real
+      maximum.
+    ℹ A length below the real maximum is a conformance finding, so the data wins.
+
+    8 declared lengths are longer than this data.
+    ℹ Left as declared: a length is a claim about the domain, not about one
+      extract.
+
+``` r
+
+lint_define(informed)
+```
+
+    artoo Define-XML Reference Check
+    ================================
+
+    Summary
+    -------
+    Document: informed.xml
+    Definitions: 198    References: 299
+    External codelists (exempt from the orphan check): 1
+
+    Findings Summary
+    ----------------
+      error    0
+      warning  10
+      note     0
+
+    Warnings
+    --------
+    [define_orphan_leaf] Document LF.DI is defined but nothing references it.
+    [define_orphan_leaf] Document LF.EC is defined but nothing references it.
+    [define_orphan_leaf] Document LF.EX is defined but nothing references it.
+    [define_orphan_leaf] Document LF.LB is defined but nothing references it.
+    [define_orphan_leaf] Document LF.XS is defined but nothing references it.
+    [define_orphan_standard] Standard STD.2 is defined but nothing references it.
+    [define_orphan_standard] Standard STD.2_1 is defined but nothing references it.
+    [define_orphan_standard] Standard STD.5 is defined but nothing references it.
+    [define_missing_origin] Variable IT.VS.VSTPT carries no Origin, and neither do its value-level items.
+    [define_missing_origin] Variable IT.VS.VSTPTNUM carries no Origin, and neither do its value-level items.
+
+A stated length shorter than the data is widened, because a length below
+the real maximum is a conformance finding. One *longer* is left alone: a
+length is a claim about the domain, not about one extract.
+
+### Start from a blank workbook
+
+[`write_template()`](https://vthanik.github.io/artoo/reference/write_template.md)
+writes an empty Pinnacle 21 workbook with the sheets and headers
+[`read_spec()`](https://vthanik.github.io/artoo/reference/read_spec.md)
+recognises, so a spec can be authored from the shape the reader wants
+rather than guessed at:
+
+``` r
+
+template <- tempfile(fileext = ".xlsx")
+write_template(template)
+readxl::excel_sheets(template)
+```
+
+     [1] "Study"             "Datasets"          "Variables"
+     [4] "ValueLevel"        "WhereClauses"      "Codelists"
+     [7] "Dictionaries"      "Methods"           "Comments"
+    [10] "Documents"         "Standards"         "Analysis Displays"
+    [13] "Analysis Results"  "Analysis Criteria"
 
 ## Where to next
 
